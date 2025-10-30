@@ -104,3 +104,6 @@ pids
 # Misc development
 .turbo/
 .contentlayer/
+
+# Sensitive credentials
+PARTNERS_CREDENTIALS.md
