@@ -320,7 +320,7 @@ ${Object.keys(context.entities || {}).length > 0 ? `Known entities: ${JSON.strin
 ${context.history.length > 0 ? `Recent history: ${context.history.slice(-4).map(m => `${m.role}: ${m.content}`).join('\\n')}` : ''}`
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await (anthropic as any).messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
       system: systemPrompt,
