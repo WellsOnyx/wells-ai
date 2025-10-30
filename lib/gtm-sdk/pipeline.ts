@@ -42,7 +42,7 @@ export class PipelineTracker {
     }
 
     if (filters?.minICPScore) {
-      filtered = filtered.filter(p => p.icpScore >= filters.minICPScore)
+      filtered = filtered.filter(p => p.icpScore >= filters.minICPScore!)
     }
 
     if (filters?.limit) {
