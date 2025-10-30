@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/gtm/automation/run",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

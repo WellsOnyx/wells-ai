@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .constellation-bg {
+    background-image: radial-gradient(circle at 20% 50%, rgba(24, 59, 109, 0.1) 0%, transparent 50%),
+                      radial-gradient(circle at 80% 80%, rgba(219, 166, 63, 0.1) 0%, transparent 50%);
+  }
+}
