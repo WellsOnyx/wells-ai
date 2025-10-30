@@ -102,7 +102,7 @@ export class PipelineTracker {
     }
 
     if (filters?.minAmount) {
-      filtered = filtered.filter(o => o.amount >= filters.minAmount)
+      filtered = filtered.filter(o => o.amount >= filters.minAmount!)
     }
 
     return filtered
