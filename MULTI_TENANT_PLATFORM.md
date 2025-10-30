@@ -314,10 +314,28 @@ headers: {
 - **After**: Salesforce **IS** the CRM platform (multi-tenant)
 
 **Market Size:**
-- 30M+ businesses in US
-- Every business with 2+ partners could use this
-- **TAM**: Massive
+- **Global TAM: $33 TRILLION** in partner-driven commerce
+- 30M+ businesses in US alone
+- 300M+ businesses globally
+- Every business with 2+ partners is a potential customer
+- Partner ecosystem is the entire B2B economy
+
+**What capturing tiny fractions means:**
+
+| Market Share | Deal Volume Tracked | Wells Revenue (33 bps) |
+|--------------|---------------------|------------------------|
+| 0.01% | $3.3B | $10.9M/year |
+| 0.1% | $33B | $109M/year |
+| 1% | $330B | $1.09B/year |
+| 5% | $1.65T | $5.4B/year |
+| 10% | $3.3T | $10.9B/year |
+
+**To put in perspective:**
+- Salesforce: $31B market cap
+- ServiceNow: $150B market cap
+- If Wells captures just 0.1% of partner economy → $109M/year revenue
+- At 10x revenue multiple → $1B+ valuation
 
 ---
 
-**This is the pivot from tool → platform. One supplier (Wells Onyx) becomes 10,000 suppliers.**
+**This is the pivot from tool → platform. One supplier (Wells Onyx) becomes 10,000+ suppliers globally.**
