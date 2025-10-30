@@ -24,7 +24,7 @@ async function testPlaybookFlow() {
       partnerId: 'ibm',
       dealValue: 500000,
       expectedCloseDate: '2025-12-31',
-      competitorInfo: 'AWS, Azure',
+      competitorInfo: ['AWS', 'Azure'],
       partnerManagerEmail: 'pm@ibm.com'
     }
   })
