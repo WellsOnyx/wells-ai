@@ -164,16 +164,14 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs text-green-600 font-medium mb-1">Wells Revenue (33 bps)</div>
+                <div className="text-xs text-green-600 font-medium mb-1">Wells Revenue</div>
                 <div className="text-lg font-bold text-green-700">
-                  ${opportunity.wellsOpportunity.estimatedWellsRevenue.toLocaleString()}
+                  ${opportunity.wellsOpportunity.estimatedFee.toLocaleString()}
                 </div>
               </div>
-              {opportunity.wellsOpportunity.potentialWellsOpportunity && (
-                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                  Paired Opportunity
-                </span>
-              )}
+              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                {opportunity.wellsOpportunity.searchType}
+              </span>
             </div>
           </div>
         )}
