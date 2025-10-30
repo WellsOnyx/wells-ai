@@ -63,14 +63,17 @@ export async function POST(request: Request) {
     }
 
     const request = requestsQuery.results[0];
-    const bodyLower = body.toLowerCase();
+    const bodyLower = body.toLowerCase().trim();
 
+    // Handle numeric responses (1=Interested, 2=Pass)
     let responseStatus = 'Unknown';
-    if (bodyLower.includes('interested') || bodyLower.includes('yes')) {
+    if (bodyLower === '1' || bodyLower.includes('interested') || bodyLower.includes('yes')) {
       responseStatus = 'Interested';
-    } else if (bodyLower.includes('pass') || bodyLower.includes('no')) {
+    } else if (bodyLower === '2' || bodyLower.includes('pass') || bodyLower.includes('no')) {
       responseStatus = 'Declined';
     }
+
+    console.log(`[SMS Webhook] Supplier: ${supplierName} | Response: "${body}" | Status: ${responseStatus}`);
 
     await notion.comments.create({
       parent: { page_id: request.id },
@@ -83,10 +86,19 @@ export async function POST(request: Request) {
       ],
     });
 
+    // Wells Onyx Voice: Precise confirmation, clear next step
+    const confirmationMessage = responseStatus === 'Interested'
+      ? `Thanks ${supplierName}! We've recorded your interest. The buyer will connect with you within 24 hours.`
+      : responseStatus === 'Declined'
+      ? `Thanks ${supplierName}! We've recorded your response. We'll reach out with other opportunities.`
+      : `Thanks ${supplierName}! We've recorded your response.`;
+
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Message>Thanks ${supplierName}! We've recorded your response. Wells AI team will follow up shortly.</Message>
+  <Message>${confirmationMessage}</Message>
 </Response>`;
+
+    console.log(`[SMS Webhook] Sent confirmation to ${supplierName}`);
 
     return new NextResponse(twiml, {
       headers: {

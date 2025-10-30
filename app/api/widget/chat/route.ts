@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { monitorAPI } from '@/lib/monitoring'
+import {
+  parseIntent,
+  executeIntent,
+  generateResponse,
+  getConversationContext,
+  updateConversationContext,
+  generateConversationId,
+} from '@/lib/conversational-engine'
 
 /**
  * Widget Chat API
  * POST /api/widget/chat
  *
  * Handles chat messages from embedded widget
+ * Now powered by conversational ERP engine (Phase 4)
  */
 export async function POST(req: NextRequest) {
   const monitor = monitorAPI('/api/widget/chat', 'POST')
@@ -21,49 +30,97 @@ export async function POST(req: NextRequest) {
     }
 
     // Note: In production, validate API key against database
-    // For now, accept any key except 'demo' for tracking purposes
+    // For now, accept any key for tracking purposes
+    const userId = apiKey || 'widget_anonymous'
 
-    // Simple response system (avoiding Anthropic TypeScript issues)
-    const lowerMessage = message.toLowerCase()
+    // Generate conversation ID if not provided
+    const actualConversationId =
+      conversationId || generateConversationId(userId, 'widget')
 
-    let aiResponse: string
-
-    if (lowerMessage.includes('hello') || lowerMessage.includes('hi ') || lowerMessage === 'hi') {
-      aiResponse = "Hi! I'm Wells AI, your procurement assistant. I can help you find suppliers, get quotes, and streamline your purchasing process. What are you looking for today?"
-    } else if (lowerMessage.includes('rfq') || lowerMessage.includes('quote') || lowerMessage.includes('request')) {
-      aiResponse = "I can help you create an RFQ! Please tell me: What product or service do you need, what quantity, and when do you need it by?"
-    } else if (lowerMessage.includes('supplier') || lowerMessage.includes('vendor')) {
-      aiResponse = "I can connect you with verified suppliers in our network. What type of supplier are you looking for? You can specify industry, location, or product category."
-    } else if (lowerMessage.includes('price') || lowerMessage.includes('cost') || lowerMessage.includes('how much')) {
-      aiResponse = "Wells AI charges just 33 basis points (0.33%) on closed deals. We handle everything: supplier matching, negotiation, contracts, and ERP integration. Want to start a quote request?"
-    } else if (lowerMessage.includes('help') || lowerMessage.includes('what can you do')) {
-      aiResponse = "I can help you:\n• Find and match suppliers\n• Create RFQs (Request for Quote)\n• Negotiate deals in real-time\n• Auto-generate contracts\n• Sync to your ERP system\n\nWhat would you like to do?"
-    } else {
-      aiResponse = "I understand you're looking for: \"" + message.substring(0, 50) + (message.length > 50 ? '..."' : '"') + ". Let me help! Would you like to create an RFQ for this? I'll need to know the quantity and deadline."
-    }
-
-    // Log conversation (simplified - could store in database)
     console.log('[WIDGET] Chat:', {
       apiKey: apiKey?.substring(0, 8) + '...',
       url: context?.url,
       message: message.substring(0, 50),
-      conversationId,
+      conversationId: actualConversationId,
     })
 
-    monitor.end(true, { conversationId })
+    // Load conversation context
+    const convContext = await getConversationContext(actualConversationId, userId, 'widget')
+
+    // Parse user intent using conversational engine
+    const parsedIntent = await parseIntent(message, convContext)
+
+    console.log('[WIDGET] Intent parsed:', {
+      intent: parsedIntent.intent,
+      confidence: parsedIntent.confidence,
+    })
+
+    // Handle clarification requests
+    if (parsedIntent.needsClarification) {
+      await updateConversationContext(actualConversationId, {
+        currentIntent: parsedIntent.intent,
+        entities: parsedIntent.entities,
+        history: [
+          ...convContext.history,
+          { role: 'user', content: message },
+          { role: 'assistant', content: parsedIntent.clarificationQuestion || '' },
+        ],
+      })
+
+      monitor.end(true, { needsClarification: true })
+
+      return NextResponse.json({
+        response: parsedIntent.clarificationQuestion || 'Could you provide more details?',
+        conversationId: actualConversationId,
+        timestamp: new Date().toISOString(),
+        needsClarification: true,
+      })
+    }
+
+    // Execute the intent
+    const executionResult = await executeIntent(parsedIntent, userId)
+
+    // Generate conversational response (optimized for widget - concise)
+    const aiResponse = await generateResponse(parsedIntent, executionResult, {
+      ...convContext,
+      platform: 'widget', // Ensures concise responses for embedded chat
+    })
+
+    // Update conversation context
+    await updateConversationContext(actualConversationId, {
+      currentIntent: parsedIntent.intent,
+      entities: parsedIntent.entities,
+      history: [
+        ...convContext.history,
+        { role: 'user', content: message },
+        { role: 'assistant', content: aiResponse },
+      ],
+      metadata: {
+        ...convContext.metadata,
+        lastIntent: parsedIntent.intent,
+        lastExecutionSuccess: executionResult.success,
+        widgetUrl: context?.url,
+      },
+    })
+
+    monitor.end(true, { conversationId: actualConversationId, intent: parsedIntent.intent })
 
     return NextResponse.json({
       response: aiResponse,
-      conversationId,
+      conversationId: actualConversationId,
       timestamp: new Date().toISOString(),
+      success: executionResult.success,
+      data: executionResult.data, // Include data for widget to display (optional)
     })
   } catch (error) {
     monitor.end(false)
-    console.error('[API] Widget chat error:', error)
+    console.error('[WIDGET] Chat error:', error)
 
     return NextResponse.json(
       {
         error: 'Failed to process message',
+        response:
+          "I'm sorry, I had trouble with that request. Try asking:\n• 'What can you do?'\n• 'Create a PO for 100 chairs'\n• 'Check inventory status'",
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

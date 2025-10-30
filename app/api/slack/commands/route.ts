@@ -7,13 +7,14 @@ import {
   formatErrorMessage,
   SlackCommands,
 } from '@/lib/slack'
-import { RFQs } from '@/lib/db'
-import { matchSuppliers } from '@/lib/matching'
-import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
+import {
+  parseIntent,
+  executeIntent,
+  generateResponse,
+  getConversationContext,
+  updateConversationContext,
+  generateConversationId,
+} from '@/lib/conversational-engine'
 
 /**
  * Slack Slash Commands Handler
@@ -42,39 +43,102 @@ export async function POST(req: NextRequest) {
 
     console.log('[SLACK] Command received:', { command, text, userId, userName })
 
-    // Route to appropriate handler
+    // Route to conversational engine (Phase 4)
     let response
 
-    switch (command) {
-      case SlackCommands.CREATE_RFQ:
-        response = await handleCreateRFQ(text, userId, userName, channelId)
-        break
+    // For help command, use formatted blocks
+    if (command === SlackCommands.HELP || text === 'help') {
+      response = {
+        response_type: 'ephemeral',
+        blocks: formatHelpMessage(),
+      }
+      monitor.end(true)
+      return NextResponse.json(response)
+    }
 
-      case SlackCommands.FIND:
-        response = await handleFindSuppliers(text, userId, channelId)
-        break
+    // All other commands go through conversational engine
+    try {
+      // Generate conversation ID for this Slack user
+      const conversationId = generateConversationId(userId, 'slack')
 
-      case SlackCommands.NEGOTIATE:
-        response = await handleNegotiate(text, userId, channelId)
-        break
+      // Load conversation context
+      const context = await getConversationContext(conversationId, userId, 'slack')
 
-      case SlackCommands.QUOTE:
-        response = await handleGetQuotes(text, userId, channelId)
-        break
+      // Parse the command text as a natural language request
+      const fullMessage = text || command.replace('/wells-', '')
+      const parsedIntent = await parseIntent(fullMessage, context)
 
-      case SlackCommands.DEALS:
-        response = await handleViewDeals(userId, channelId)
-        break
+      console.log('[SLACK] Intent parsed:', {
+        command,
+        text,
+        intent: parsedIntent.intent,
+        confidence: parsedIntent.confidence,
+      })
 
-      case SlackCommands.HELP:
-        response = await handleHelp(channelId)
-        break
+      // Handle clarification
+      if (parsedIntent.needsClarification) {
+        await updateConversationContext(conversationId, {
+          currentIntent: parsedIntent.intent,
+          entities: parsedIntent.entities,
+          history: [
+            ...context.history,
+            { role: 'user', content: fullMessage },
+            { role: 'assistant', content: parsedIntent.clarificationQuestion || '' },
+          ],
+        })
 
-      default:
         response = {
           response_type: 'ephemeral',
-          text: `Unknown command: ${command}. Type \`${SlackCommands.HELP}\` for help.`,
+          text: parsedIntent.clarificationQuestion || 'Could you provide more details?',
         }
+        monitor.end(true)
+        return NextResponse.json(response)
+      }
+
+      // Execute intent
+      const executionResult = await executeIntent(parsedIntent, userId)
+
+      // Generate Slack-friendly response
+      const aiResponse = await generateResponse(parsedIntent, executionResult, {
+        ...context,
+        platform: 'slack',
+      })
+
+      // Update conversation context
+      await updateConversationContext(conversationId, {
+        currentIntent: parsedIntent.intent,
+        entities: parsedIntent.entities,
+        history: [
+          ...context.history,
+          { role: 'user', content: fullMessage },
+          { role: 'assistant', content: aiResponse },
+        ],
+        metadata: {
+          ...context.metadata,
+          slackUserId: userId,
+          slackChannelId: channelId,
+          lastCommand: command,
+        },
+      })
+
+      // Format response for Slack
+      response = {
+        response_type: executionResult.success ? 'in_channel' : 'ephemeral',
+        text: aiResponse,
+        blocks: executionResult.success
+          ? formatSuccessBlocks(parsedIntent.intent, executionResult.data, aiResponse)
+          : undefined,
+      }
+    } catch (error) {
+      console.error('[SLACK] Conversational engine error:', error)
+      response = {
+        response_type: 'ephemeral',
+        text: 'Sorry, something went wrong processing your request.',
+        blocks: formatErrorMessage(
+          'Processing Error',
+          error instanceof Error ? error.message : 'Unknown error'
+        ),
+      }
     }
 
     monitor.end(true)
@@ -95,9 +159,71 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Handle /wells-rfq command
+ * Format success blocks for Slack
  */
-async function handleCreateRFQ(
+function formatSuccessBlocks(intent: string, data: any, message: string): any[] {
+  const blocks: any[] = [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: message,
+      },
+    },
+  ]
+
+  // Add intent-specific formatting
+  if (intent === 'create_po' && data?.poNumber) {
+    blocks.push({
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `PO Number: *${data.poNumber}* | Supplier: *${data.supplier}* | Amount: *$${data.totalAmount?.toLocaleString()}*`,
+        },
+      ],
+    })
+  } else if (intent === 'check_inventory' && data?.items) {
+    const itemList = data.items
+      .slice(0, 5)
+      .map((item: any) => `• ${item.productName}: ${item.quantity} ${item.unit}`)
+      .join('\n')
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: itemList,
+      },
+    })
+  } else if (intent === 'find_supplier' && data?.suppliers) {
+    const supplierList = data.suppliers
+      .slice(0, 5)
+      .map(
+        (s: any, i: number) =>
+          `${i + 1}. *${s.name}* - ${s.industry || 'N/A'} (${s.rating || 0}/5.0)`
+      )
+      .join('\n')
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: supplierList,
+      },
+    })
+  }
+
+  return blocks
+}
+
+// ============================================
+// Legacy Handlers (Deprecated - kept for reference)
+// ============================================
+
+/**
+ * Handle /wells-rfq command
+ * @deprecated Use conversational engine instead
+ */
+async function handleCreateRFQ_DEPRECATED(
   text: string,
   userId: string,
   userName: string,

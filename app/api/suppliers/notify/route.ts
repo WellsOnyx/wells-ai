@@ -52,20 +52,26 @@ export async function POST(request: Request) {
 
       const responseToken = randomBytes(16).toString('hex');
 
-      const message = `Wells AI Opportunity - ${category}
+      // Wells Onyx Voice: Precise, concise, action-oriented
+      const message = `🔷 WELLS AI - NEW RFQ
 
 Buyer: ${buyerName}
-Requirements: ${requirements}
+Need: ${requirements}
+Category: ${category}
 
-Respond: ${process.env.NEXT_PUBLIC_APP_URL}/respond/${responseToken}
+Reply: 1=Interested | 2=Pass
 
-Reply INTERESTED or PASS`;
+View: ${process.env.NEXT_PUBLIC_APP_URL}/respond/${responseToken}`;
+
+      console.log(`[SMS] Sending to ${name} (${phone}):`, message)
 
       const sms = await twilioClient.messages.create({
         body: message,
         from: process.env.TWILIO_PHONE_NUMBER,
         to: phone,
       });
+
+      console.log(`[SMS] Sent to ${name} - Status: ${sms.status} - SID: ${sms.sid}`);
 
       notifications.push({
         supplier: name,
