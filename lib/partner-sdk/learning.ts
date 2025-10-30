@@ -189,7 +189,11 @@ export class LearningSystem {
   /**
    * Extract patterns from opportunity
    */
-  private extractPatterns(opp: PartnerOpportunity): Record<string, any> {
+  private extractPatterns(opp: PartnerOpportunity): {
+    customer_profile: Record<string, any>
+    timing: Record<string, any>
+    success_factors: string[]
+  } {
     return {
       customer_profile: {
         industry: opp.customer.industry,
