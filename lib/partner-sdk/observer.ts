@@ -123,7 +123,7 @@ export class Observer {
 
     // Emit significant patterns
     const totalOpps = this.opportunities.size
-    for (const [pattern, count] of this.patterns.entries()) {
+    for (const [pattern, count] of Array.from(this.patterns.entries())) {
       const frequency = count / totalOpps
       if (frequency > 0.5 && count >= 3) {
         this.emit('pattern_detected', {
