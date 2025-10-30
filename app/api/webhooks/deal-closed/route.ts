@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     })
 
     // Create and send Stripe invoice
-    if (body.customerEmail && trackingResult.attribution) {
+    if (body.customerEmail && trackingResult.attribution && trackingResult.dealId) {
       try {
         const stripeBilling = new StripeBillingService()
 
