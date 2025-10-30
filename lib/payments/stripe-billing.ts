@@ -143,7 +143,7 @@ export class StripeBillingService {
         success: true,
         invoiceId: sentInvoice.id,
         hostedInvoiceUrl: sentInvoice.hosted_invoice_url || undefined,
-        paymentIntentId: sentInvoice.payment_intent as string | undefined,
+        paymentIntentId: (sentInvoice as any).payment_intent as string | undefined,
       }
     } catch (error: any) {
       console.error('[Stripe] Error creating invoice:', error)
