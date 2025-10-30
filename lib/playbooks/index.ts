@@ -145,7 +145,7 @@ export async function runPlaybook(params: {
   }
 
   // Queue for consent
-  const consentAction = queueConsentAction({
+  const consentAction = await queueConsentAction({
     actionType: 'partner_outreach',
     title: `${getPlaybookTitle(type)} - ${partner.toUpperCase()}`,
     description: getPlaybookDescription(type, oppId, partner),
