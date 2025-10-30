@@ -4,6 +4,12 @@
  */
 
 import { Client } from '@notionhq/client'
+import {
+  writeAuditPayload,
+  writeAuditAction,
+  AuditActionType,
+  AuditDecision
+} from './audit-ledger'
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY })
 
@@ -65,14 +71,14 @@ const pendingActions = new Map<string, ConsentAction>()
  * Queue an action for consent approval
  * Returns actionId to track the decision
  */
-export function queueAction(params: {
+export async function queueAction(params: {
   actionType: ConsentActionType
   title: string
   description: string
   recipient?: string
   messagePreview?: string
   metadata?: Record<string, any>
-}): ConsentAction {
+}): Promise<ConsentAction> {
   const actionId = `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
   const action: ConsentAction = {
@@ -89,6 +95,19 @@ export function queueAction(params: {
 
   // Store in pending queue
   pendingActions.set(actionId, action)
+
+  // Write immutable audit payload
+  await writeAuditPayload({
+    actionId,
+    actionType: params.actionType as AuditActionType,
+    payload: {
+      title: params.title,
+      description: params.description,
+      recipient: params.recipient,
+      messagePreview: params.messagePreview,
+      metadata: params.metadata
+    }
+  })
 
   return action
 }
@@ -124,7 +143,20 @@ export async function decide(
     reason
   }
 
-  // Log to Notion audit database
+  // Write immutable audit action
+  await writeAuditAction({
+    actionId,
+    actionType: action.actionType as AuditActionType,
+    title: action.title,
+    description: action.description,
+    recipient: action.recipient,
+    decision: decision as AuditDecision,
+    decidedBy,
+    reason,
+    metadata: action.metadata
+  })
+
+  // Log to Notion audit database (legacy)
   await logToAudit(action, decision, decidedBy, reason)
 
   // Remove from pending queue
