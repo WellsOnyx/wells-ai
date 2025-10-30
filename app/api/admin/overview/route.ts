@@ -59,7 +59,7 @@ async function getRFQs() {
   }
 
   try {
-    const response = await notion.databases.query({
+    const response = await (notion.databases as any).query({
       database_id: process.env.NOTION_REQUESTS_DB,
       sorts: [{ property: 'Created', direction: 'descending' }],
       page_size: 50,

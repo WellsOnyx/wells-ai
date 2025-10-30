@@ -57,15 +57,12 @@ export async function POST(req: NextRequest) {
 
     // Handle clarification requests
     if (parsedIntent.needsClarification) {
-      await updateConversationContext(actualConversationId, {
-        currentIntent: parsedIntent.intent,
-        entities: parsedIntent.entities,
-        history: [
-          ...convContext.history,
-          { role: 'user', content: message },
-          { role: 'assistant', content: parsedIntent.clarificationQuestion || '' },
-        ],
-      })
+      await updateConversationContext(
+        actualConversationId,
+        message,
+        parsedIntent.clarificationQuestion || '',
+        parsedIntent
+      )
 
       monitor.end(true, { needsClarification: true })
 
@@ -87,21 +84,12 @@ export async function POST(req: NextRequest) {
     })
 
     // Update conversation context
-    await updateConversationContext(actualConversationId, {
-      currentIntent: parsedIntent.intent,
-      entities: parsedIntent.entities,
-      history: [
-        ...convContext.history,
-        { role: 'user', content: message },
-        { role: 'assistant', content: aiResponse },
-      ],
-      metadata: {
-        ...convContext.metadata,
-        lastIntent: parsedIntent.intent,
-        lastExecutionSuccess: executionResult.success,
-        widgetUrl: context?.url,
-      },
-    })
+    await updateConversationContext(
+      actualConversationId,
+      message,
+      aiResponse,
+      parsedIntent
+    )
 
     monitor.end(true, { conversationId: actualConversationId, intent: parsedIntent.intent })
 
