@@ -386,7 +386,7 @@ export async function generateResponse(
   const systemPrompt = generateResponseSystemPrompt(context.platform)
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await (anthropic as any).messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 500,
       system: systemPrompt,
@@ -642,7 +642,7 @@ export async function summarizeConversation(context: ConversationContext): Promi
 3. What might be needed next`
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await (anthropic as any).messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 150,
       system: systemPrompt,
