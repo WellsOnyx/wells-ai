@@ -107,3 +107,4 @@ pids
 
 # Sensitive credentials
 PARTNERS_CREDENTIALS.md
+/out
