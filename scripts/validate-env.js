@@ -238,6 +238,12 @@ function checkEnvExample() {
  * Main execution
  */
 function main() {
+  // Skip validation in CI/production builds (Vercel, GitHub Actions, etc.)
+  if (process.env.VERCEL || process.env.CI || process.env.NODE_ENV === 'production') {
+    console.log(`${colors.yellow}⚠ Skipping env validation (CI/production build)${colors.reset}`);
+    return;
+  }
+
   console.log(`${colors.cyan}
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
