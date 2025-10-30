@@ -135,11 +135,15 @@ export async function POST(request: Request) {
     // Get Claude's response with user-type-aware system prompt
     const systemPrompt = getSystemPrompt(userData?.userType)
 
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
@@ -150,8 +154,22 @@ export async function POST(request: Request) {
       })
     })
 
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('Anthropic API error:', errorData)
+      return NextResponse.json({
+        error: 'Failed to get AI response',
+        details: errorData
+      }, { status: 500 })
+    }
+
     const data = await response.json()
-    const assistantMessage = data.content?.[0]?.text || 'Error processing request'
+    const assistantMessage = data.content?.[0]?.text
+
+    if (!assistantMessage) {
+      console.error('No assistant message in response:', data)
+      return NextResponse.json({ error: 'Invalid AI response' }, { status: 500 })
+    }
 
     // Analyze intent based on user type
     const intent = await analyzeProcurementIntent(messages)
