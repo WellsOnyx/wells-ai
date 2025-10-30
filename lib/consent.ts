@@ -264,16 +264,24 @@ export async function getAuditLogs(limit: number = 100): Promise<AuditLog[]> {
   }
 
   try {
-    const response = await notion.databases.query({
-      database_id: AUDIT_ACTIONS_DB,
-      page_size: limit,
-      sorts: [
-        {
-          property: 'Decided At',
-          direction: 'descending'
-        }
-      ]
-    })
+    // TODO: Fix Notion SDK query method
+    // const response = await notion.databases.query({
+    //   database_id: AUDIT_ACTIONS_DB,
+    //   page_size: limit,
+    //   sorts: [
+    //     {
+    //       property: 'Decided At',
+    //       direction: 'descending'
+    //     }
+    //   ]
+    // })
+
+    console.warn('Notion audit log query temporarily disabled')
+    return []
+
+    /*
+    // Commented out temporarily - Notion SDK issue
+    const response = {} as any
 
     return response.results.map((page: any) => ({
       id: page.id,
@@ -289,6 +297,7 @@ export async function getAuditLogs(limit: number = 100): Promise<AuditLog[]> {
         reason: page.properties['Reason']?.rich_text?.[0]?.text?.content
       }
     }))
+    */
   } catch (error) {
     console.error('Failed to retrieve audit logs:', error)
     return []
