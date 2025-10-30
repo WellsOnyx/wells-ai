@@ -432,7 +432,7 @@ export class WellsPartnerSDK {
     // In production: Fetch from partner portal docs or API
     // For Phase 0: Return sensible defaults
 
-    const defaultRules: Record<PartnerPlatform, Partial<PartnerRules>> = {
+    const defaultRules: Partial<Record<PartnerPlatform, Partial<PartnerRules>>> = {
       ibm: {
         dealRegistration: {
           required: true,
