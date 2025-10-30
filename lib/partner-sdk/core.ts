@@ -146,7 +146,11 @@ export class WellsPartnerSDK {
       opportunity: action.opportunity,
       action,
       rules: this.playbooks.getRules()!,
-      user: approver,
+      user: {
+        id: approver.userId,
+        name: approver.name,
+        email: approver.email,
+      },
       session: {
         startedAt: new Date(),
         authenticated: true,
