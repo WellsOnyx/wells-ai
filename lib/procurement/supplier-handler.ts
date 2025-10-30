@@ -332,7 +332,7 @@ export async function compareSuppliers(
     // Rank by criteria
     const rankings = {}
     for (const criterion of criteria) {
-      let sorted = []
+      let sorted: any[] = []
       if (criterion === 'price') {
         sorted = [...comparison].sort((a, b) => a.metrics.avgOrderValue - b.metrics.avgOrderValue)
       } else if (criterion === 'quality') {
