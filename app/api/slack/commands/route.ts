@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { monitorAPI } from '@/lib/monitoring'
+import { RFQs } from '@/lib/db'
+import { matchSuppliers } from '@/lib/matching'
 import {
   sendSlackMessage,
   formatRFQMessage,
@@ -77,15 +79,12 @@ export async function POST(req: NextRequest) {
 
       // Handle clarification
       if (parsedIntent.needsClarification) {
-        await updateConversationContext(conversationId, {
-          currentIntent: parsedIntent.intent,
-          entities: parsedIntent.entities,
-          history: [
-            ...context.history,
-            { role: 'user', content: fullMessage },
-            { role: 'assistant', content: parsedIntent.clarificationQuestion || '' },
-          ],
-        })
+        await updateConversationContext(
+          conversationId,
+          fullMessage,
+          parsedIntent.clarificationQuestion || '',
+          parsedIntent
+        )
 
         response = {
           response_type: 'ephemeral',
@@ -105,21 +104,12 @@ export async function POST(req: NextRequest) {
       })
 
       // Update conversation context
-      await updateConversationContext(conversationId, {
-        currentIntent: parsedIntent.intent,
-        entities: parsedIntent.entities,
-        history: [
-          ...context.history,
-          { role: 'user', content: fullMessage },
-          { role: 'assistant', content: aiResponse },
-        ],
-        metadata: {
-          ...context.metadata,
-          slackUserId: userId,
-          slackChannelId: channelId,
-          lastCommand: command,
-        },
-      })
+      await updateConversationContext(
+        conversationId,
+        fullMessage,
+        aiResponse,
+        parsedIntent
+      )
 
       // Format response for Slack
       response = {
