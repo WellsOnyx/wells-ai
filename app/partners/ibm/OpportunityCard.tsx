@@ -58,7 +58,7 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
 
   const getStageColor = (stage: OpportunityStage) => {
     switch (stage) {
-      case OpportunityStage.Discovery:
+      case OpportunityStage.Lead:
         return 'bg-blue-100 text-blue-800'
       case OpportunityStage.Qualified:
         return 'bg-green-100 text-green-800'
@@ -66,7 +66,9 @@ export function OpportunityCard({ opportunity }: OpportunityCardProps) {
         return 'bg-yellow-100 text-yellow-800'
       case OpportunityStage.Negotiation:
         return 'bg-orange-100 text-orange-800'
-      case OpportunityStage.Closed:
+      case OpportunityStage.ClosedWon:
+        return 'bg-green-100 text-green-800'
+      case OpportunityStage.ClosedLost:
         return 'bg-gray-100 text-gray-800'
       default:
         return 'bg-gray-100 text-gray-800'
