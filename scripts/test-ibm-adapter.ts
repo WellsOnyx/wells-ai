@@ -85,9 +85,9 @@ async function testIBMAdapter() {
 
   let opportunitiesWithRevenue = 0
   opportunities.forEach((opp) => {
-    if (opp.wellsOpportunity && opp.wellsOpportunity.estimatedWellsRevenue !== undefined) {
+    if (opp.wellsOpportunity && opp.wellsOpportunity.estimatedFee !== undefined) {
       const expectedRevenue = Math.round(opp.estimatedValue * 0.0033)
-      const actualRevenue = opp.wellsOpportunity.estimatedWellsRevenue
+      const actualRevenue = opp.wellsOpportunity.estimatedFee
 
       console.log(`   ${opp.companyName}:`)
       console.log(`   - Deal Value: $${opp.estimatedValue.toLocaleString()}`)
@@ -102,7 +102,7 @@ async function testIBMAdapter() {
   })
 
   const totalWellsRevenue = opportunities.reduce(
-    (sum, opp) => sum + (opp.wellsOpportunity?.estimatedWellsRevenue || 0),
+    (sum, opp) => sum + (opp.wellsOpportunity?.estimatedFee || 0),
     0
   )
 
