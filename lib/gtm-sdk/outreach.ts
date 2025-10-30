@@ -49,7 +49,7 @@ ${prospect.company.recentNews ? `Recent: ${prospect.company.recentNews.map(n => 
 
 Generate a personalized LinkedIn InMail or email.`
 
-    const response = await this.anthropic.messages.create({
+    const response = await (this.anthropic as any).messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 300,
       system: systemPrompt,
