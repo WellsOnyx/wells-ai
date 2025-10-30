@@ -231,7 +231,7 @@ export function calculateMetrics(): DealMetrics {
 
   // By partner
   const byPartner: Record<string, any> = {}
-  const partners = [...new Set(allDeals.map(d => d.partnerId))]
+  const partners = Array.from(new Set(allDeals.map(d => d.partnerId)))
 
   partners.forEach(partnerId => {
     const partnerDeals = allDeals.filter(d => d.partnerId === partnerId)
