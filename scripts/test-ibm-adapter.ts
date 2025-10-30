@@ -139,8 +139,8 @@ IBM Adapter Summary:
 
 Opportunities by Stage:
   - Qualified: ${opportunities.filter(o => o.stage === OpportunityStage.Qualified).length}
-  - Discovery: ${opportunities.filter(o => o.stage === OpportunityStage.Discovery).length}
-  - Other: ${opportunities.filter(o => o.stage !== OpportunityStage.Qualified && o.stage !== OpportunityStage.Discovery).length}
+  - Lead: ${opportunities.filter(o => o.stage === OpportunityStage.Lead).length}
+  - Other: ${opportunities.filter(o => o.stage !== OpportunityStage.Qualified && o.stage !== OpportunityStage.Lead).length}
 
 Ready for UI testing at: /partners/ibm
 `)
