@@ -166,13 +166,13 @@ export class StripeBillingService {
     if (!stripe) return null
 
     try {
-      const invoice = await stripe.invoices.retrieve(stripeInvoiceId)
+      const invoice = await stripe.invoices.retrieve(stripeInvoiceId) as any
 
       return {
         status: invoice.status || 'unknown',
         paid: invoice.paid,
         amount: invoice.amount_paid / 100, // Convert from cents
-        paidAt: invoice.status_transitions.paid_at
+        paidAt: invoice.status_transitions?.paid_at
           ? new Date(invoice.status_transitions.paid_at * 1000)
           : undefined,
       }
