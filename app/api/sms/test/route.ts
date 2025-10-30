@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       process.env.TEST_PHONE_1,
       process.env.TEST_PHONE_2,
       process.env.TEST_PHONE_3,
-    ].filter(Boolean) // Remove undefined phones
+    ].filter(Boolean) as string[] // Remove undefined phones
 
     if (testPhones.length === 0) {
       return NextResponse.json(
