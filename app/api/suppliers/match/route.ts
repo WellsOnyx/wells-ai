@@ -8,34 +8,32 @@ export async function POST(request: Request) {
   try {
     const { category, requirements } = await request.json();
 
-    // TODO: Fix Notion SDK
-    const response = { results: [] as any[] }
-    // const response = await notion.databases.query({
-    //   database_id: process.env.NOTION_SUPPLIERS_DB!,
-    //   filter: {
-    //     and: [
-    //       {
-    //         property: 'Status',
-    //         select: {
-    //           equals: 'Active',
-    //         },
-    //       },
-    //       {
-    //         property: 'Capabilities',
-    //         multi_select: {
-    //           contains: category,
-    //         },
-    //       },
-    //     ],
-    //   },
-    //   sorts: [
-    //     {
-    //       property: 'Response Time',
-    //       direction: 'ascending',
-    //     },
-    //   ],
-    //   page_size: 5,
-    // });
+    const response = await notion.databases.query({
+      database_id: process.env.NOTION_SUPPLIERS_DB!,
+      filter: {
+        and: [
+          {
+            property: 'Status',
+            select: {
+              equals: 'Active',
+            },
+          },
+          {
+            property: 'Capabilities',
+            multi_select: {
+              contains: category,
+            },
+          },
+        ],
+      },
+      sorts: [
+        {
+          property: 'Response Time',
+          direction: 'ascending',
+        },
+      ],
+      page_size: 5,
+    });
 
     const suppliers = response.results.map((page: any) => ({
       id: page.id,

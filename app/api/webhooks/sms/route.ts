@@ -10,17 +10,15 @@ export async function POST(request: Request) {
     const from = formData.get('From') as string;
     const body = formData.get('Body') as string;
 
-    // TODO: Fix Notion SDK
-    const supplierQuery = { results: [] as any[] }
-    // const supplierQuery = await notion.databases.query({
-    //   database_id: process.env.NOTION_SUPPLIERS_DB!,
-    //   filter: {
-    //     property: 'Phone',
-    //     phone_number: {
-    //       equals: from,
-    //     },
-    //   },
-    // });
+    const supplierQuery = await notion.databases.query({
+      database_id: process.env.NOTION_SUPPLIERS_DB!,
+      filter: {
+        property: 'Phone',
+        phone_number: {
+          equals: from,
+        },
+      },
+    });
 
     if (supplierQuery.results.length === 0) {
       return NextResponse.json({ error: 'Supplier not found' }, { status: 404 });
@@ -29,34 +27,32 @@ export async function POST(request: Request) {
     const supplier = supplierQuery.results[0] as any;
     const supplierName = supplier.properties.Name.title[0]?.plain_text;
 
-    // TODO: Fix Notion SDK
-    const requestsQuery = { results: [] as any[] }
-    // const requestsQuery = await notion.databases.query({
-    //   database_id: process.env.NOTION_REQUESTS_DB!,
-    //   filter: {
-    //     and: [
-    //       {
-    //         property: 'Matched Suppliers',
-    //         relation: {
-    //           contains: supplier.id,
-    //         },
-    //       },
-    //       {
-    //         property: 'Status',
-    //         select: {
-    //           equals: 'Suppliers Notified',
-    //         },
-    //       },
-    //     ],
-    //   },
-    //   sorts: [
-    //     {
-    //       property: 'Created',
-    //       direction: 'descending',
-    //     },
-    //   ],
-    //   page_size: 1,
-    // });
+    const requestsQuery = await notion.databases.query({
+      database_id: process.env.NOTION_REQUESTS_DB!,
+      filter: {
+        and: [
+          {
+            property: 'Matched Suppliers',
+            relation: {
+              contains: supplier.id,
+            },
+          },
+          {
+            property: 'Status',
+            select: {
+              equals: 'Suppliers Notified',
+            },
+          },
+        ],
+      },
+      sorts: [
+        {
+          property: 'Created',
+          direction: 'descending',
+        },
+      ],
+      page_size: 1,
+    });
 
     if (requestsQuery.results.length === 0) {
       return NextResponse.json({ error: 'No active requests found' }, { status: 404 });

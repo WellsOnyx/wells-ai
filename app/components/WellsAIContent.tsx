@@ -161,6 +161,26 @@ export default function WellsAIContent() {
 
       const data = await response.json()
 
+      // Check if API returned an error
+      if (!response.ok || data.error) {
+        console.error('API error:', data.error || data.details || 'Unknown error')
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `I apologize, but I encountered an error: ${data.error || 'Failed to process your request'}. Please try again.`
+        }])
+        return
+      }
+
+      // Check if we have a valid message
+      if (!data.message) {
+        console.error('No message in response:', data)
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'I apologize, but I received an invalid response. Please try again.'
+        }])
+        return
+      }
+
       const assistantMessage: Message = {
         role: 'assistant',
         content: data.message,
