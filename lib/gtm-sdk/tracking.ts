@@ -8,6 +8,7 @@ import { RevenueCalculator } from './billing'
 export interface DealClosedEvent {
   revenue: number
   customer: string
+  customerEmail?: string
   dealName?: string
   source: 'wells_linkedin_outreach' | 'wells_email_outreach' | 'wells_inbound' | 'manual' | string
   campaign?: string
