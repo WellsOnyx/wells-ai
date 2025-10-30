@@ -50,10 +50,11 @@ function normalizeStatus(partnerStatus: string): OpportunityStatus {
 export class IBMOpportunityParser implements OpportunityParser {
   partnerId = 'ibm'
 
-  parse(raw: any): Opportunity {
+  parse(raw: any, supplierId: string = 'wells-onyx'): Opportunity {
     const normalized: Opportunity = {
       // Identity
       id: `ibm-${raw.opportunityId}`,
+      supplierId, // Multi-tenant: which supplier owns this opportunity
       partnerId: 'ibm',
       partnerName: 'IBM',
       partnerOpportunityId: raw.opportunityId,
@@ -123,10 +124,11 @@ export class IBMOpportunityParser implements OpportunityParser {
 export class CiscoOpportunityParser implements OpportunityParser {
   partnerId = 'cisco'
 
-  parse(raw: any): Opportunity {
+  parse(raw: any, supplierId: string = 'wells-onyx'): Opportunity {
     const normalized: Opportunity = {
       // Identity
       id: `cisco-${raw.dealId}`,
+      supplierId, // Multi-tenant: which supplier owns this opportunity
       partnerId: 'cisco',
       partnerName: 'Cisco',
       partnerOpportunityId: raw.dealId,
@@ -196,10 +198,11 @@ export class CiscoOpportunityParser implements OpportunityParser {
 export class PlaidOpportunityParser implements OpportunityParser {
   partnerId = 'plaid'
 
-  parse(raw: any): Opportunity {
+  parse(raw: any, supplierId: string = 'wells-onyx'): Opportunity {
     const normalized: Opportunity = {
       // Identity
       id: `plaid-${raw.referralId}`,
+      supplierId, // Multi-tenant: which supplier owns this opportunity
       partnerId: 'plaid',
       partnerName: 'Plaid',
       partnerOpportunityId: raw.referralId,
@@ -283,9 +286,9 @@ export function getParser(partnerId: string): OpportunityParser {
 }
 
 /**
- * Parse opportunity from any partner
+ * Parse opportunity from any partner (multi-tenant)
  */
-export function parseOpportunity(partnerId: string, rawData: any): Opportunity {
+export function parseOpportunity(partnerId: string, rawData: any, supplierId?: string): Opportunity {
   const parser = getParser(partnerId)
-  return parser.parse(rawData)
+  return parser.parse(rawData, supplierId)
 }
