@@ -24,7 +24,7 @@ interface PartnerStatus {
     dealReg: boolean
     coSell: boolean
   }
-  projectStatus: 'active' | 'beta' | 'coming_soon'
+  projectStatus: 'active' | 'beta' | 'coming_soon' | 'deprecated'
 }
 
 function getPartnerStatus(partnerId: string): 'observe' | 'pending_oauth' | 'ready' {
