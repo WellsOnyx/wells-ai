@@ -1,0 +1,79 @@
+{
+  "referralId": "PLAID-REF-2025-1247",
+  "projectTitle": "Consumer Lending App - Payment Infrastructure Integration",
+  "companyInfo": {
+    "companyName": "NextGen Lending Co.",
+    "industry": "Financial Technology",
+    "companyStage": "Series B",
+    "employeeCount": "150-200",
+    "fundingRaised": "$45M"
+  },
+  "projectOverview": "NextGen Lending is building a consumer lending application with integrated bank account verification, income verification, and ACH payment processing. Requires Plaid Auth, Identity, Income, and Payment Initiation APIs.",
+  "contractValue": 425000,
+  "currencyCode": "USD",
+  "opportunityPhase": "In Negotiation",
+  "opportunityState": "Active",
+  "submittedAt": "2025-10-10T14:30:00Z",
+  "updatedAt": "2025-10-30T09:15:00Z",
+  "projectedSignDate": "2025-11-30T00:00:00Z",
+  "keyStakeholder": {
+    "fullName": "Amanda Rodriguez",
+    "emailAddress": "amanda@nextgenlending.com",
+    "phoneNumber": "+1-646-555-0892",
+    "position": "Co-Founder & CFO"
+  },
+  "technicalLead": {
+    "fullName": "Kevin Patel",
+    "emailAddress": "kevin@nextgenlending.com",
+    "phoneNumber": "+1-646-555-0893",
+    "position": "Head of Engineering"
+  },
+  "plaidProducts": [
+    "Plaid Auth",
+    "Plaid Identity",
+    "Plaid Income",
+    "Plaid Payment Initiation",
+    "Plaid Balance"
+  ],
+  "technicalDetails": {
+    "expectedAPIVolume": "500K requests/month (projected 2M/month by EOY 2026)",
+    "integrationTimeline": "3-month implementation",
+    "useCases": [
+      "Bank account verification for loan applications",
+      "Income and employment verification",
+      "ACH payment initiation for loan disbursement",
+      "Recurring payment collection"
+    ],
+    "existingStack": ["Node.js", "PostgreSQL", "AWS", "Stripe (for card payments)"]
+  },
+  "location": {
+    "region": "North America",
+    "country": "United States",
+    "state": "New York",
+    "city": "New York"
+  },
+  "referralDetails": {
+    "referralType": "Partner Referral",
+    "referralSource": "Partner Portal",
+    "plaidAccountExecutive": "Maria Santos",
+    "plaidAccountExecutiveEmail": "maria.santos@plaid.com",
+    "partnerEngagement": "Low",
+    "referralPortalUrl": "https://dashboard.plaid.com/partners/referrals/PLAID-REF-2025-1247"
+  },
+  "businessDrivers": {
+    "pain_points": [
+      "Manual bank account verification slowing onboarding",
+      "High fraud rates from fake paystubs",
+      "Expensive wire transfers for loan disbursement"
+    ],
+    "expectedOutcomes": [
+      "60% faster loan approval process",
+      "90% reduction in income verification fraud",
+      "50% lower payment processing costs"
+    ]
+  },
+  "competitiveContext": {
+    "alternativesConsidered": ["Yodlee", "Finicity", "MX"],
+    "plaidDifferentiators": "Best-in-class coverage (12K+ institutions), superior UX, fastest integration"
+  }
+}

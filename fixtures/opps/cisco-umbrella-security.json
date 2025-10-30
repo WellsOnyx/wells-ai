@@ -1,0 +1,63 @@
+{
+  "dealId": "CISCO-2025-Q4-8943",
+  "dealName": "Mid-Market Manufacturing - Cisco Umbrella Enterprise Security",
+  "customerName": "Precision Manufacturing Group",
+  "customerIndustry": "Manufacturing",
+  "dealDescription": "Precision Manufacturing Group is implementing Cisco Umbrella DNS security across 12 manufacturing sites (2,500 users). Includes Secure Internet Gateway, Cloud-Delivered Firewall, DNS-layer security, and integration with existing Cisco networking infrastructure.",
+  "dealSize": 850000,
+  "currency": "USD",
+  "dealStage": "Proposal Submitted",
+  "dealStatus": "Open",
+  "registrationDate": "2025-10-01T10:15:00Z",
+  "lastUpdate": "2025-10-29T16:45:00Z",
+  "forecastCloseDate": "2025-12-20T00:00:00Z",
+  "primaryCustomerContact": {
+    "name": "Robert Martinez",
+    "email": "r.martinez@precisionmfg.com",
+    "phoneNumber": "+1-512-555-0234",
+    "role": "VP of IT Security"
+  },
+  "technicalContacts": [
+    {
+      "name": "Lisa Wong",
+      "email": "l.wong@precisionmfg.com",
+      "phoneNumber": "+1-512-555-0235",
+      "role": "Director of Network Operations"
+    }
+  ],
+  "solution": {
+    "products": [
+      "Cisco Umbrella Enterprise",
+      "Secure Internet Gateway",
+      "Cloud-Delivered Firewall",
+      "DNS-Layer Security",
+      "Cisco SecureX Integration"
+    ],
+    "architecture": "Multi-site deployment with redundant datacenters",
+    "deployment": "Cloud-managed with on-premises integration"
+  },
+  "geography": {
+    "region": "North America",
+    "country": "USA",
+    "stateProvince": "Texas",
+    "city": "Austin"
+  },
+  "partnerDetails": {
+    "partnerType": "Cisco Solution Partner",
+    "dealRegistration": "Approved",
+    "coSellMotion": "Partner-led with Cisco overlay support",
+    "ciscoAccountManager": "Jennifer Kim",
+    "ciscoAccountManagerEmail": "jennifer.kim@cisco.com",
+    "partnerEngagementLevel": "Medium",
+    "dealRoomUrl": "https://cisco.com/partners/deal/CISCO-2025-Q4-8943"
+  },
+  "competitiveSituation": {
+    "competitors": ["Zscaler", "Palo Alto Prisma Access"],
+    "ciscoAdvantage": "Existing Cisco infrastructure, integrated security platform, lower TCO"
+  },
+  "customerNeeds": {
+    "driverForChange": "Recent ransomware attack, board mandate for enhanced security",
+    "complianceRequirements": ["NIST Cybersecurity Framework", "ISO 27001"],
+    "timelineDrivers": "Cyber insurance renewal requires enhanced DNS security by Q1 2026"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "opportunityId": "IBM-OPP-2025-04782",
+  "opportunityName": "Healthcare Corp - IBM Cloud Migration & Watsonx AI Implementation",
+  "clientName": "HealthTech Solutions Inc.",
+  "clientIndustry": "Healthcare",
+  "opportunityDescription": "HealthTech Solutions is migrating their on-premises infrastructure to IBM Cloud and implementing Watsonx AI for clinical decision support. Project includes hybrid cloud architecture, data migration, security compliance (HIPAA), and AI/ML model deployment.",
+  "estimatedValue": 3500000,
+  "currency": "USD",
+  "opportunityStage": "Qualified",
+  "opportunityStatus": "Active",
+  "createdDate": "2025-09-15T08:30:00Z",
+  "lastModifiedDate": "2025-10-28T14:22:00Z",
+  "expectedCloseDate": "2026-01-15T00:00:00Z",
+  "primaryContact": {
+    "firstName": "Sarah",
+    "lastName": "Johnson",
+    "email": "sarah.johnson@healthtechsolutions.com",
+    "phone": "+1-415-555-0187",
+    "jobTitle": "VP of Technology"
+  },
+  "additionalContacts": [
+    {
+      "firstName": "Michael",
+      "lastName": "Chen",
+      "email": "michael.chen@healthtechsolutions.com",
+      "phone": "+1-415-555-0188",
+      "jobTitle": "CTO"
+    }
+  ],
+  "products": [
+    "IBM Cloud",
+    "IBM Watsonx.ai",
+    "IBM Cloud Pak for Data",
+    "Red Hat OpenShift"
+  ],
+  "geography": {
+    "region": "North America",
+    "country": "United States",
+    "state": "California"
+  },
+  "partnerInfo": {
+    "partnerType": "IBM Business Partner",
+    "coSellType": "IBM Co-Sell",
+    "partnerManager": "David Rodriguez",
+    "partnerManagerEmail": "david.rodriguez@ibm.com",
+    "partnerEngagement": "High",
+    "portalUrl": "https://partnerportal.ibm.com/s/opportunity/IBM-OPP-2025-04782"
+  },
+  "technicalRequirements": {
+    "migrationScope": "Full datacenter migration (200+ VMs)",
+    "complianceNeeds": ["HIPAA", "SOC 2 Type II"],
+    "aiUseCases": ["Clinical decision support", "Patient risk stratification"],
+    "timeline": "6-month implementation"
+  },
+  "competitorInfo": {
+    "competingWith": ["AWS", "Microsoft Azure"],
+    "ibmAdvantage": "Healthcare-specific AI models, HIPAA compliance expertise"
+  }
+}
