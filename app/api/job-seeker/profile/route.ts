@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const client = await clerkClient()
     const user = await client.users.getUser(userId)
 
-    const profile = user.publicMetadata?.jobSeekerProfile
+    const profile = (user.publicMetadata as any)?.jobSeekerProfile
 
     if (!profile) {
       return NextResponse.json(
@@ -124,7 +124,7 @@ export const PATCH = withValidation(jobSeekerProfileUpdateSchema, async (request
     // Get existing profile
     const client = await clerkClient()
     const user = await client.users.getUser(userId)
-    const existingProfile = user.publicMetadata?.jobSeekerProfile
+    const existingProfile = (user.publicMetadata as any)?.jobSeekerProfile
 
     if (!existingProfile) {
       return NextResponse.json(

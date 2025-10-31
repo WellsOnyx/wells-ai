@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     // Get job seeker profile
     const client = await clerkClient()
     const user = await client.users.getUser(userId)
-    const profile = user.publicMetadata?.jobSeekerProfile
+    const profile = (user.publicMetadata as any)?.jobSeekerProfile
 
     if (!profile) {
       return NextResponse.json(
