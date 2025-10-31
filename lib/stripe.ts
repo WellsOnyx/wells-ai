@@ -402,7 +402,7 @@ export async function getOrCreateCustomer(userId: string): Promise<Stripe.Custom
  */
 export async function getCustomer(customerId: string): Promise<Stripe.Customer | null> {
   try {
-    const customer = await stripe.customers.retrieve(customerId)
+    const customer = await stripe().customers.retrieve(customerId)
     if (customer.deleted) {
       return null
     }
