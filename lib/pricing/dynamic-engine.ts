@@ -13,10 +13,15 @@
 
 import Stripe from 'stripe'
 
-// Initialize Stripe to get real-time fees
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-10-29.clover',
-})
+// Lazy-initialize Stripe only when needed
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY not configured')
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-10-29.clover',
+  })
+}
 
 // ===== PAYMENT METHOD COSTS =====
 
