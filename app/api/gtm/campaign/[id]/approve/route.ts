@@ -9,7 +9,7 @@ import { sendCampaign } from '@/lib/gtm/campaign-engine'
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth()
@@ -17,7 +17,8 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const campaignId = params.id
+    const resolvedParams = await params
+    const campaignId = resolvedParams.id
 
     // Get user's campaigns
     const client = await clerkClient()
