@@ -1,8 +1,6 @@
-import WellsAIContent from './components/WellsAIContent'
+import EnterpriseLanding from './components/EnterpriseLanding'
 
-// Force dynamic rendering to fix useSearchParams issue
-export const dynamic = 'force-dynamic'
-
+// Public marketing landing page
 export default function Home() {
-  return <WellsAIContent />
+  return <EnterpriseLanding />
 }
