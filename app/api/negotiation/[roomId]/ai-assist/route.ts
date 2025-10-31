@@ -16,12 +16,13 @@ import { sendAISuggestion } from '@/lib/pusher'
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   const monitor = monitorAPI('/api/negotiation/[roomId]/ai-assist', 'POST')
 
   try {
-    const roomId = params.roomId
+    const resolvedParams = await params
+    const roomId = resolvedParams.roomId
     const { type, userType, currentContext } = await req.json()
 
     // Get room

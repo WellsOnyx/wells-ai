@@ -17,12 +17,13 @@ import { monitorAPI } from '@/lib/monitoring'
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   const monitor = monitorAPI('/api/negotiation/[roomId]', 'GET')
 
   try {
-    const roomId = params.roomId
+    const resolvedParams = await params
+    const roomId = resolvedParams.roomId
 
     // Check if it's a room code (NEG-XXXXX) or UUID
     const isCode = roomId.startsWith('NEG-')
