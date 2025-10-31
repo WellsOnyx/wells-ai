@@ -98,7 +98,7 @@ export default function GTMTierProgress({ userId, trailing12MonthGMV }: GTMTierP
       )}
 
       {/* Incentive Message */}
-      {incentive && (
+      {incentive && incentive.nextTier && (
         <div
           className="p-4 rounded-lg border-2 mb-4"
           style={{
@@ -132,7 +132,7 @@ export default function GTMTierProgress({ userId, trailing12MonthGMV }: GTMTierP
       </div>
 
       {/* Next Tier Preview */}
-      {incentive && (
+      {incentive && incentive.nextTier && (
         <div className="border-t border-gray-200 pt-4 mt-4">
           <h4 className="text-sm font-semibold text-gray-900 mb-3">
             Unlock with {incentive.nextTier.name}:
