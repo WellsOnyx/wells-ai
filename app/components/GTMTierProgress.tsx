@@ -74,7 +74,7 @@ export default function GTMTierProgress({ userId, trailing12MonthGMV }: GTMTierP
       </div>
 
       {/* Progress to Next Tier */}
-      {incentive && (
+      {incentive && incentive.nextTier && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">
