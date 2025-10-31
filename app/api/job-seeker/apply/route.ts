@@ -114,7 +114,7 @@ export const POST = withValidation(jobSeekerApplySchema, async (request) => {
     }
 
     // Store application in job seeker's metadata
-    const existingApplications = user.publicMetadata?.jobApplications || []
+    const existingApplications = (user.publicMetadata?.jobApplications as any[]) || []
     await client.users.updateUser(userId, {
       publicMetadata: {
         ...user.publicMetadata,
@@ -199,7 +199,7 @@ export async function GET(request: NextRequest) {
     // Get applications from Clerk metadata
     const client = await clerkClient()
     const user = await client.users.getUser(userId)
-    const applications = user.publicMetadata?.jobApplications || []
+    const applications = (user.publicMetadata?.jobApplications as any[]) || []
 
     return NextResponse.json({
       success: true,
