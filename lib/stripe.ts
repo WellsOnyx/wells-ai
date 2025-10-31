@@ -665,4 +665,4 @@ export async function createRefund(params: {
 }
 
 export { stripe }
-export default stripe()
+export default stripe
