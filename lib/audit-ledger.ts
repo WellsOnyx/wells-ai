@@ -65,6 +65,7 @@ export type AuditActionType =
   | 'deal_registration'
   | 'supplier_notification'
   | 'candidate_outreach'
+  | 'validation'
 
 export type AuditDecision = 'approve' | 'reject' | 'timeout' | 'error'
 

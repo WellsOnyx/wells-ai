@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { detectCategory, isNewCategory, getCategoryOpportunity } from '@/lib/categories'
+import { withValidation } from '@/lib/validation'
+import { chatRequestSchema } from '@/lib/schemas'
 
 // System prompt for Wells AI with function calling
 function getSystemPrompt(userType?: string) {
@@ -128,9 +130,9 @@ async function analyzeProcurementIntent(messages: any[]): Promise<ProcurementInt
   }
 }
 
-export async function POST(request: Request) {
+export const POST = withValidation(chatRequestSchema, async (request) => {
   try {
-    const { messages, userData } = await request.json()
+    const { messages, userData } = request.validatedBody
 
     // Get Claude's response with user-type-aware system prompt
     const systemPrompt = getSystemPrompt(userData?.userType)
@@ -256,4 +258,4 @@ export async function POST(request: Request) {
     console.error('Chat error:', error)
     return NextResponse.json({ error: 'Failed to process message' }, { status: 500 })
   }
-}
+})

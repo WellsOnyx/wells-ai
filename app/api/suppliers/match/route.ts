@@ -1,12 +1,14 @@
 // @ts-nocheck
 import { Client } from '@notionhq/client';
 import { NextResponse } from 'next/server';
+import { withValidation } from '@/lib/validation';
+import { supplierMatchSchema } from '@/lib/schemas';
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
-export async function POST(request: Request) {
+export const POST = withValidation(supplierMatchSchema, async (request) => {
   try {
-    const { category, requirements } = await request.json();
+    const { category, requirements } = request.validatedBody;
 
     const response = await notion.databases.query({
       database_id: process.env.NOTION_SUPPLIERS_DB!,
@@ -57,4 +59,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+})

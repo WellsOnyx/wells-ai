@@ -3,27 +3,14 @@
  * Process a consent decision (approve/reject) for a pending action
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { decide, getAction } from '@/lib/consent'
+import { withValidation } from '@/lib/validation'
+import { consentDecideSchema } from '@/lib/schemas'
 
-export async function POST(request: NextRequest) {
+export const POST = withValidation(consentDecideSchema, async (request) => {
   try {
-    const { actionId, decision, decidedBy, reason } = await request.json()
-
-    // Validate input
-    if (!actionId || !decision) {
-      return NextResponse.json(
-        { error: 'Missing required fields: actionId, decision' },
-        { status: 400 }
-      )
-    }
-
-    if (decision !== 'approve' && decision !== 'reject') {
-      return NextResponse.json(
-        { error: 'Invalid decision. Must be "approve" or "reject"' },
-        { status: 400 }
-      )
-    }
+    const { actionId, decision, decidedBy, reason } = request.validatedBody
 
     // Check if action exists
     const action = getAction(actionId)
@@ -59,4 +46,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

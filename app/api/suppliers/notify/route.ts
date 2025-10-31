@@ -3,6 +3,8 @@ import { Client } from '@notionhq/client';
 import twilio from 'twilio';
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
+import { withValidation } from '@/lib/validation';
+import { supplierNotifySchema } from '@/lib/schemas';
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const twilioClient = twilio(
@@ -10,14 +12,14 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
-export async function POST(request: Request) {
+export const POST = withValidation(supplierNotifySchema, async (request) => {
   try {
-    const { 
-      supplierIds, 
-      buyerName, 
-      requirements, 
-      category 
-    } = await request.json();
+    const {
+      supplierIds,
+      buyerName,
+      requirements,
+      category
+    } = request.validatedBody;
 
     const requestRecord = await notion.pages.create({
       parent: { database_id: process.env.NOTION_REQUESTS_DB! },
@@ -114,4 +116,4 @@ View: ${process.env.NEXT_PUBLIC_APP_URL}/respond/${responseToken}`;
       { status: 500 }
     );
   }
-}
+})

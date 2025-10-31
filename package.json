@@ -20,6 +20,7 @@
     "test:load": "artillery run scripts/load-test.yml",
     "test:api": "node scripts/test-api.js",
     "test:conversation": "node scripts/test-conversation.js",
+    "test:validation": "npx tsx scripts/test-validation.ts",
     "gen:onepager": "npx tsx scripts/gen-onepager.ts",
     "gen:ibm": "npx tsx scripts/gen-ibm-customer-ops.ts",
     "queue:ibm-emails": "npx tsx scripts/queue-ibm-emails.ts",
@@ -53,7 +54,8 @@
     "recharts": "^2.10.3",
     "stripe": "^19.2.0",
     "twilio": "^5.10.4",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20",
