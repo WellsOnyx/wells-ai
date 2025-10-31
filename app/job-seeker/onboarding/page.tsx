@@ -407,7 +407,7 @@ export default function JobSeekerOnboarding() {
                   value={formData.preferences.salaryExpectation || ''}
                   onChange={(e) => setFormData({
                     ...formData,
-                    preferences: { ...formData.preferences, salaryExpectation: parseInt(e.target.value) }
+                    preferences: { ...formData.preferences, salaryExpectation: e.target.value ? parseInt(e.target.value) : undefined }
                   })}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="150000"
