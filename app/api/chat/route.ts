@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { detectCategory, isNewCategory, getCategoryOpportunity } from '@/lib/categories'
 import { withValidation } from '@/lib/validation'
 import { chatRequestSchema } from '@/lib/schemas'
+import { detectGTMIntent, extractProductDescription } from '@/lib/gtm/intent-detection'
+import { checkGTMOnboarding } from '@/lib/gtm/onboarding-check'
 
 // System prompt for Wells AI with function calling
 function getSystemPrompt(userType?: string) {
@@ -43,11 +45,25 @@ function getSystemPrompt(userType?: string) {
    - User can say "send payment" or "process invoice"
    - Stripe integration
 
+9. **Job Seeker Services** - Find your next career opportunity
+   - User can say "looking for a job", "find me a position", "career search"
+   - AI-powered resume parsing and optimization
+   - Match with Executive Talent positions
+   - Auto-generate cover letters
+
 **HOW TO HELP USERS DISCOVER FEATURES:**
-- Listen for intent keywords: "send", "email", "approve", "partners", "quote", "generate", "pay", "prospects"
+- Listen for intent keywords: "send", "email", "approve", "partners", "quote", "generate", "pay", "prospects", "job", "career", "resume"
 - Proactively suggest relevant features: "I can help you with that - would you like me to [action]?"
 - Be specific: Instead of "I can help", say "I can send an email for you" or "I can show you pending approvals"
 - Always mention the feature exists even if implementation is incomplete
+
+**JOB SEEKER MODE:**
+When users mention job searching, career change, or looking for work:
+- Ask if they've completed their job seeker profile
+- Offer to help parse their resume
+- Show matching Executive Talent opportunities
+- Suggest onboarding if they're new
+- Guide them to /job-seeker/onboarding or /job-seeker/dashboard
 
 Be conversational, ask clarifying questions if needed, but don't be too chatty.
 Once you have clear requirements, confirm and proceed.`
@@ -166,7 +182,8 @@ async function analyzeProcurementIntent(messages: any[]): Promise<ProcurementInt
 
 export const POST = withValidation(chatRequestSchema, async (request) => {
   try {
-    const { messages, userData, organizationId } = request.validatedBody
+    const { messages, userData } = request.validatedBody
+    const organizationId = null // Not in schema yet, will be added later for org support
 
     // Get Claude's response with user-type-aware system prompt
     const systemPrompt = getSystemPrompt(userData?.userType)
@@ -212,12 +229,125 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
 
     let procurementData = null
     let pioneerData = null
+    let gtmData = null
+    let jobSeekerData = null
+
+    // CHECK FOR GTM INTENT (sales, leads, customers)
+    const lastUserMessage = messages[messages.length - 1]?.content || ''
+    const conversationHistory = messages.map((m: any) => m.content)
+
+    // CHECK FOR JOB SEEKER INTENT (career, job search, resume)
+    const jobSeekerKeywords = ['job', 'career', 'resume', 'looking for work', 'find a job', 'hire me', 'employment', 'position']
+    const hasJobSeekerIntent = jobSeekerKeywords.some(keyword =>
+      lastUserMessage.toLowerCase().includes(keyword)
+    )
+
+    if (hasJobSeekerIntent) {
+      console.log('[JOB SEEKER] Intent detected')
+
+      // Check if user has profile
+      if (userData?.userId) {
+        try {
+          const profileCheck = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/job-seeker/profile`, {
+            headers: {
+              'Cookie': request.headers.get('cookie') || ''
+            }
+          })
+          const profileData = await profileCheck.json()
+
+          if (profileData.success) {
+            // User has profile - show matches
+            const matchCheck = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/job-seeker/match`, {
+              headers: {
+                'Cookie': request.headers.get('cookie') || ''
+              }
+            })
+            const matchData = await matchCheck.json()
+
+            jobSeekerData = {
+              hasProfile: true,
+              matchCount: matchData.success ? matchData.count : 0,
+              topMatches: matchData.success ? matchData.matches.slice(0, 3) : []
+            }
+          } else {
+            // User doesn't have profile
+            jobSeekerData = {
+              hasProfile: false,
+              needsOnboarding: true
+            }
+          }
+        } catch (error) {
+          console.error('[JOB SEEKER] Error checking profile:', error)
+          jobSeekerData = {
+            hasProfile: false,
+            needsOnboarding: true
+          }
+        }
+      } else {
+        // Not logged in
+        jobSeekerData = {
+          hasProfile: false,
+          needsLogin: true
+        }
+      }
+    }
+
+    const gtmIntent = await detectGTMIntent(lastUserMessage, conversationHistory)
+
+    if (gtmIntent.isGTMRequest && gtmIntent.confidence > 0.6) {
+      console.log('[GTM] Intent detected:', gtmIntent)
+
+      // Check if user has GTM set up
+      if (userData?.userId) {
+        try {
+          const onboardingStatus = await checkGTMOnboarding(userData.userId)
+
+          if (onboardingStatus.isComplete) {
+            // User is onboarded - offer to create campaign
+            gtmData = {
+              detected: true,
+              intent: gtmIntent,
+              onboardingComplete: true,
+              canSendEmails: onboardingStatus.canSendEmails,
+              canSendSMS: onboardingStatus.canSendSMS,
+              usingWellsStack: onboardingStatus.usingWellsStack
+            }
+          } else {
+            // User NOT onboarded - show what's missing
+            gtmData = {
+              detected: true,
+              intent: gtmIntent,
+              onboardingComplete: false,
+              missingSteps: onboardingStatus.missingSteps
+            }
+          }
+        } catch (error) {
+          console.error('[GTM] Onboarding check error:', error)
+          // User not logged in or error - tell them to log in
+          gtmData = {
+            detected: true,
+            intent: gtmIntent,
+            onboardingComplete: false,
+            needsLogin: true
+          }
+        }
+      } else {
+        // No user ID - not logged in
+        gtmData = {
+          detected: true,
+          intent: gtmIntent,
+          onboardingComplete: false,
+          needsLogin: true
+        }
+      }
+    }
 
     // CHECK FOR CATEGORY PIONEER OPPORTUNITY FIRST
     if (intent.isPioneerOpportunity && intent.pioneerCategory) {
       return NextResponse.json({
         message: assistantMessage,
         procurementData: null,
+        gtmData,
         pioneerOpportunity: {
           detected: true,
           category: intent.pioneerCategory,
@@ -288,7 +418,9 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
 
     return NextResponse.json({
       message: assistantMessage,
-      procurementData
+      procurementData,
+      gtmData,
+      jobSeekerData
     })
   } catch (error) {
     console.error('Chat error:', error)
