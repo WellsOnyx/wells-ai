@@ -220,16 +220,16 @@ export function createTextMessage(content: string, role: 'user' | 'assistant' = 
   }
 }
 
-export function createComponentMessage<T extends ChatMessage>(
-  type: T['type'],
-  data: T['data'],
+export function createComponentMessage(
+  type: Exclude<ChatMessage['type'], 'text'>,
+  data: any,
   role: 'assistant' = 'assistant'
-): T {
+): ChatMessage {
   return {
     id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     role,
     type,
     data,
     timestamp: new Date().toISOString()
-  } as T
+  } as ChatMessage
 }

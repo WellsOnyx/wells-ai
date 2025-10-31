@@ -7,10 +7,14 @@ import PartnershipPitch from './PartnershipPitch'
 import PartnershipTiers from './PartnershipTiers'
 import PartnershipBooking from './PartnershipBooking'
 import { CategoryPioneerOpportunity } from '@/lib/categories'
+import ChatMessageRenderer from './chat/ChatMessageRenderer'
+import { ChatMessage } from '@/types/chat'
 
 interface Message {
   role: string
   content: string
+  type?: ChatMessage['type'] // Support new message types
+  data?: any // Component data
   procurementData?: {
     detected: boolean
     requestId?: string
@@ -347,17 +351,31 @@ export default function WellsAIContent() {
               <div className="max-w-4xl mx-auto space-y-8">
                 {messages.map((message, index) => (
                   <div key={index}>
-                    <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div
-                        className={`max-w-[75%] rounded-sm px-6 py-4 ${
-                          message.role === 'user'
-                            ? 'bg-[#183b6d] text-white'
-                            : 'bg-white border border-[#9ea1a7]/20'
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+                    {/* New component-based messages (email, consent, partners, etc.) */}
+                    {message.type && message.type !== 'text' ? (
+                      <ChatMessageRenderer
+                        message={{
+                          id: `msg_${index}`,
+                          role: message.role as any,
+                          type: message.type,
+                          data: message.data,
+                          timestamp: new Date().toISOString()
+                        } as ChatMessage}
+                      />
+                    ) : (
+                      /* Traditional text messages */
+                      <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className={`max-w-[75%] rounded-sm px-6 py-4 ${
+                            message.role === 'user'
+                              ? 'bg-[#183b6d] text-white'
+                              : 'bg-white border border-[#9ea1a7]/20'
+                          }`}
+                        >
+                          <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Procurement notification - gold accent */}
                     {message.procurementData?.detected && (
