@@ -2,20 +2,22 @@
  * GTM Stack Subscription Tiers
  *
  * Freemium model based on transaction volume (Stripe playbook):
- * - Start at $79/mo
- * - Hit volume thresholds → Get discounts
- * - Hit $250K GMV → Stack becomes FREE
+ * - Start at $0/mo (FREE until $100K GMV - Jonathan's feedback: "reduce friction")
+ * - Hit $100K GMV → $79/mo (they can afford it now)
+ * - Hit $250K GMV → Stack becomes FREE again (we make enough on transaction fees)
  *
- * Why? If someone does $1M in deals, we make $100K in fees.
- * The $948/year GTM stack cost is <1% of revenue.
- * Just give it to them for free.
+ * Why give it free until $100K?
+ * - NO FRICTION for new users (Jonathan: "we want them to depend on us, be appreciative")
+ * - They build dependency on the system risk-free
+ * - Once they hit $100K GMV, $79/month is nothing
+ * - At $250K+ GMV, we make enough on transaction fees (0.5-10%)
  *
  * This creates a growth flywheel:
- * 1. User starts with $79/mo stack
+ * 1. User starts with FREE stack (no friction)
  * 2. Wells AI helps close deals
- * 3. Hit volume threshold → Stack becomes free
- * 4. More profit margin → Grow faster
- * 5. Close more deals → Wells AI makes more money
+ * 3. Hit $100K GMV → Pay $79/mo (can easily afford it)
+ * 4. Hit $250K GMV → Stack becomes FREE again
+ * 5. More profit margin → Grow faster → Close more deals
  */
 
 export type SubscriptionTier = 'bronze' | 'silver' | 'gold' | 'platinum'
@@ -35,28 +37,29 @@ export const SUBSCRIPTION_TIERS: TierConfig[] = [
     tier: 'bronze',
     name: 'Bronze',
     minGMV: 0,
-    maxGMV: 50000, // $50K/year
-    monthlyCost: 79,
+    maxGMV: 100000, // $100K/year (CHANGED: was $50K)
+    monthlyCost: 0, // FREE! (CHANGED: was $79 - Jonathan's feedback)
     features: [
-      'Notion CRM',
-      'Instantly Email Automation',
-      'Apollo Prospecting (500 credits/mo)',
-      'Cal.com Calendar',
-      'Standard support',
+      'Notion CRM (FREE)',
+      'Instantly Email Automation (FREE)',
+      'Apollo Prospecting - 500 credits/mo (FREE)',
+      'Cal.com Calendar (FREE)',
+      'Standard support (FREE)',
+      '💡 FREE until you hit $100K GMV - zero friction!',
     ],
     color: '#CD7F32',
   },
   {
     tier: 'silver',
     name: 'Silver',
-    minGMV: 50000, // $50K/year
+    minGMV: 100000, // $100K/year (CHANGED: was $50K)
     maxGMV: 250000, // $250K/year
-    monthlyCost: 39,
+    monthlyCost: 79, // CHANGED: was $39, now $79 (you can afford it at $100K+)
     features: [
       'Everything in Bronze',
-      '50% discount on GTM stack',
-      'Apollo Prospecting (1,000 credits/mo)',
+      'Apollo Prospecting - 1,000 credits/mo',
       'Priority support',
+      '💰 You\'re closing $100K+/year - $79/mo is worth it!',
     ],
     color: '#C0C0C0',
   },
