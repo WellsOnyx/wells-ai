@@ -150,13 +150,13 @@ export default function GTMTierProgress({ userId, trailing12MonthGMV }: GTMTierP
         </div>
       )}
 
-      {/* Enterprise Achievement */}
-      {currentTier.tier === 'enterprise' && (
+      {/* Platinum Achievement */}
+      {currentTier.tier === 'platinum' && (
         <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
           <div className="flex items-center gap-3">
             <div className="text-3xl">👑</div>
             <div>
-              <h4 className="font-bold text-purple-900">Enterprise Member!</h4>
+              <h4 className="font-bold text-purple-900">Platinum Member!</h4>
               <p className="text-sm text-purple-700 mt-1">
                 You've unlocked the highest tier with unlimited prospects, dedicated success manager,
                 white-glove service, and API access - all 100% FREE!
