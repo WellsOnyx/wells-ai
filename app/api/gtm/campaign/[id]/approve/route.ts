@@ -48,7 +48,7 @@ export async function POST(
 
     // Send campaign
     console.log(`Sending campaign ${campaignId}...`)
-    const result = await sendCampaign(campaign, instantlyApiKey)
+    const result = await sendCampaign({ campaign, instantlyApiKey })
 
     // Update campaign status
     campaign.status = 'sent'
