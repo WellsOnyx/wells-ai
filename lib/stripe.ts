@@ -1,15 +1,25 @@
 import Stripe from 'stripe'
 import { clerkClient } from '@clerk/nextjs/server'
 
-// Initialize Stripe with secret key
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not configured')
+// Lazy-initialize Stripe only when needed
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-10-29.clover',
+    typescript: true,
+  })
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-10-29.clover',
-  typescript: true,
-})
+// Cached stripe instance for reuse within a single request
+let stripeInstance: Stripe | null = null
+function stripe(): Stripe {
+  if (!stripeInstance) {
+    stripeInstance = getStripeClient()
+  }
+  return stripeInstance
+}
 
 /**
  * Stripe Integration for Wells AI
@@ -50,7 +60,7 @@ export async function createConnectAccount(
   const { email, country = 'US', type = 'express' } = params
 
   try {
-    const account = await stripe.accounts.create({
+    const account = await stripe().accounts.create({
       type,
       country,
       email,
@@ -85,7 +95,7 @@ export async function createAccountLink(
   const { accountId, refreshUrl, returnUrl, type = 'account_onboarding' } = params
 
   try {
-    const accountLink = await stripe.accountLinks.create({
+    const accountLink = await stripe().accountLinks.create({
       account: accountId,
       refresh_url: refreshUrl,
       return_url: returnUrl,
@@ -111,7 +121,7 @@ export async function getAccountStatus(
   account: Stripe.Account
 }> {
   try {
-    const account = await stripe.accounts.retrieve(accountId)
+    const account = await stripe().accounts.retrieve(accountId)
 
     // Check if account is fully onboarded
     const isComplete =
@@ -138,7 +148,7 @@ export async function getAccountStatus(
  */
 export async function createLoginLink(accountId: string): Promise<Stripe.LoginLink> {
   try {
-    const loginLink = await stripe.accounts.createLoginLink(accountId)
+    const loginLink = await stripe().accounts.createLoginLink(accountId)
     return loginLink
   } catch (error) {
     console.error('Error creating login link:', error)
@@ -168,7 +178,7 @@ export async function createPaymentIntentWithFee(
   } = params
 
   try {
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await stripe().paymentIntents.create({
       amount,
       currency,
       application_fee_amount: applicationFeeAmount,
@@ -278,7 +288,7 @@ export async function getSellerTransfers(
   limit: number = 10
 ): Promise<Stripe.Transfer[]> {
   try {
-    const transfers = await stripe.transfers.list({
+    const transfers = await stripe().transfers.list({
       destination: accountId,
       limit,
     })
@@ -297,7 +307,7 @@ export async function getUpcomingPayout(
   accountId: string
 ): Promise<Stripe.Payout | null> {
   try {
-    const payouts = await stripe.payouts.list(
+    const payouts = await stripe().payouts.list(
       {
         limit: 1,
         status: 'pending',
@@ -319,7 +329,7 @@ export async function getUpcomingPayout(
  */
 export async function getSellerBalance(accountId: string): Promise<Stripe.Balance> {
   try {
-    const balance = await stripe.balance.retrieve({
+    const balance = await stripe().balance.retrieve({
       stripeAccount: accountId,
     })
 
@@ -346,7 +356,7 @@ export async function getOrCreateCustomer(userId: string): Promise<Stripe.Custom
     // If customer exists, retrieve it
     if (existingCustomerId) {
       try {
-        const customer = await stripe.customers.retrieve(existingCustomerId)
+        const customer = await stripe().customers.retrieve(existingCustomerId)
         if (!customer.deleted) {
           return customer as Stripe.Customer
         }
@@ -362,7 +372,7 @@ export async function getOrCreateCustomer(userId: string): Promise<Stripe.Custom
       ? `${user.firstName} ${user.lastName}`
       : user.firstName || undefined
 
-    const customer = await stripe.customers.create({
+    const customer = await stripe().customers.create({
       email,
       name,
       metadata: {
@@ -412,7 +422,7 @@ export async function attachPaymentMethod(
   paymentMethodId: string,
   customerId: string
 ): Promise<Stripe.PaymentMethod> {
-  return await stripe.paymentMethods.attach(paymentMethodId, {
+  return await stripe().paymentMethods.attach(paymentMethodId, {
     customer: customerId
   })
 }
@@ -423,7 +433,7 @@ export async function attachPaymentMethod(
 export async function detachPaymentMethod(
   paymentMethodId: string
 ): Promise<Stripe.PaymentMethod> {
-  return await stripe.paymentMethods.detach(paymentMethodId)
+  return await stripe().paymentMethods.detach(paymentMethodId)
 }
 
 /**
@@ -433,7 +443,7 @@ export async function listPaymentMethods(
   customerId: string,
   type: 'card' | 'us_bank_account' = 'card'
 ): Promise<Stripe.PaymentMethod[]> {
-  const paymentMethods = await stripe.paymentMethods.list({
+  const paymentMethods = await stripe().paymentMethods.list({
     customer: customerId,
     type
   })
@@ -447,7 +457,7 @@ export async function setDefaultPaymentMethod(
   customerId: string,
   paymentMethodId: string
 ): Promise<Stripe.Customer> {
-  return await stripe.customers.update(customerId, {
+  return await stripe().customers.update(customerId, {
     invoice_settings: {
       default_payment_method: paymentMethodId
     }
@@ -604,7 +614,7 @@ export async function createCheckoutSession(
   }
 
   // Create session
-  const session = await stripe.checkout.sessions.create(sessionParams)
+  const session = await stripe().checkout.sessions.create(sessionParams)
 
   console.log(`✅ Created checkout session: ${session.id} for ${buyerEmail}`)
   console.log(`   Amount: $${(amountInCents / 100).toFixed(2)} + Wells AI Fee: $${(wellsAIFee / 100).toFixed(2)} = Total: $${(total / 100).toFixed(2)}`)
@@ -616,7 +626,7 @@ export async function createCheckoutSession(
  * Retrieve checkout session
  */
 export async function getCheckoutSession(sessionId: string): Promise<Stripe.Checkout.Session> {
-  return await stripe.checkout.sessions.retrieve(sessionId, {
+  return await stripe().checkout.sessions.retrieve(sessionId, {
     expand: ['payment_intent', 'customer']
   })
 }
@@ -625,14 +635,14 @@ export async function getCheckoutSession(sessionId: string): Promise<Stripe.Chec
  * Retrieve payment intent
  */
 export async function getPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
-  return await stripe.paymentIntents.retrieve(paymentIntentId)
+  return await stripe().paymentIntents.retrieve(paymentIntentId)
 }
 
 /**
  * Cancel payment intent
  */
 export async function cancelPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
-  return await stripe.paymentIntents.cancel(paymentIntentId)
+  return await stripe().paymentIntents.cancel(paymentIntentId)
 }
 
 // ===== REFUNDS =====
@@ -646,7 +656,7 @@ export async function createRefund(params: {
   reason?: 'duplicate' | 'fraudulent' | 'requested_by_customer'
   metadata?: Record<string, string>
 }): Promise<Stripe.Refund> {
-  return await stripe.refunds.create({
+  return await stripe().refunds.create({
     payment_intent: params.paymentIntentId,
     amount: params.amount,
     reason: params.reason,
@@ -655,4 +665,4 @@ export async function createRefund(params: {
 }
 
 export { stripe }
-export default stripe
+export default stripe()
