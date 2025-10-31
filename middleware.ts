@@ -8,9 +8,31 @@ const isPublicRoute = createRouteMatcher([
   '/sms-opt-in(.*)', // SMS opt-in page
 ])
 
+// Organization-only routes (require being part of an organization)
+const isOrgRoute = createRouteMatcher([
+  '/org/(.*)',
+  '/organizations/(.*)',
+])
+
 export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect()
+  // Allow public routes
+  if (isPublicRoute(request)) {
+    return
+  }
+
+  // Protect all authenticated routes
+  await auth.protect()
+
+  // For organization routes, verify user has an organization
+  if (isOrgRoute(request)) {
+    const { orgId } = await auth()
+
+    // If no organization, redirect to create one
+    if (!orgId) {
+      const createOrgUrl = new URL('/organizations/create', request.url)
+      createOrgUrl.searchParams.set('redirect_url', request.url)
+      return Response.redirect(createOrgUrl)
+    }
   }
 })
 

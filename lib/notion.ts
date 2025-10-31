@@ -76,16 +76,27 @@ export interface Supplier {
 
 // ===== RFQ FUNCTIONS =====
 
-export async function getRFQs(limit: number = 50): Promise<RFQ[]> {
+export async function getRFQs(limit: number = 50, organizationId?: string): Promise<RFQ[]> {
   if (!REQUESTS_DB) return []
 
   try {
+    // Build filter for organization if provided
+    const filter: any = organizationId
+      ? {
+          property: 'Organization ID',
+          rich_text: {
+            equals: organizationId,
+          },
+        }
+      : undefined
+
     // TODO: Fix Notion SDK query compatibility
     const response = { results: [] as any[] }
     // const response = await notion.databases.query({
     //   database_id: REQUESTS_DB,
     //   page_size: limit,
-    //   sorts: [{ property: 'Created', direction: 'descending' }]
+    //   sorts: [{ property: 'Created', direction: 'descending' }],
+    //   ...(filter && { filter })
     // })
 
     return response.results.map((page: any) => ({
@@ -157,19 +168,30 @@ export async function updateRFQStatus(rfqId: string, status: RFQ['status'], quot
 
 // ===== DEAL FUNCTIONS =====
 
-export async function getDeals(limit: number = 50): Promise<Deal[]> {
+export async function getDeals(limit: number = 50, organizationId?: string): Promise<Deal[]> {
   if (!TRANSACTIONS_DB) {
     console.warn('NOTION_TRANSACTIONS_DB not configured, returning mock data')
     return []
   }
 
   try {
+    // Build filter for organization if provided
+    const filter: any = organizationId
+      ? {
+          property: 'Organization ID',
+          rich_text: {
+            equals: organizationId,
+          },
+        }
+      : undefined
+
     // TODO: Fix Notion SDK query compatibility
     const response = { results: [] as any[] }
     // const response = await notion.databases.query({
     //   database_id: TRANSACTIONS_DB,
     //   page_size: limit,
-    //   sorts: [{ property: 'Close Date', direction: 'descending' }]
+    //   sorts: [{ property: 'Close Date', direction: 'descending' }],
+    //   ...(filter && { filter })
     // })
 
     return response.results.map((page: any) => {
@@ -199,7 +221,10 @@ export async function getDeals(limit: number = 50): Promise<Deal[]> {
   }
 }
 
-export async function createDeal(deal: Omit<Deal, 'id' | 'wellsAIFee' | 'titheAmount'>): Promise<Deal | null> {
+export async function createDeal(
+  deal: Omit<Deal, 'id' | 'wellsAIFee' | 'titheAmount'>,
+  organizationId?: string
+): Promise<Deal | null> {
   if (!TRANSACTIONS_DB) {
     console.warn('NOTION_TRANSACTIONS_DB not configured')
     return null
@@ -249,6 +274,11 @@ export async function createDeal(deal: Omit<Deal, 'id' | 'wellsAIFee' | 'titheAm
           'Payment Intent ID': {
             rich_text: [{ text: { content: deal.paymentIntentId } }]
           }
+        }),
+        ...(organizationId && {
+          'Organization ID': {
+            rich_text: [{ text: { content: organizationId } }]
+          }
         })
       }
     })
@@ -287,16 +317,27 @@ export async function updateDealStatus(dealId: string, status: Deal['status'], p
 
 // ===== SUPPLIER FUNCTIONS =====
 
-export async function getSuppliers(limit: number = 100): Promise<Supplier[]> {
+export async function getSuppliers(limit: number = 100, organizationId?: string): Promise<Supplier[]> {
   if (!SUPPLIERS_DB) return []
 
   try {
+    // Build filter for organization if provided
+    const filter: any = organizationId
+      ? {
+          property: 'Organization ID',
+          rich_text: {
+            equals: organizationId,
+          },
+        }
+      : undefined
+
     // TODO: Fix Notion SDK query compatibility
     const response = { results: [] as any[] }
     // const response = await notion.databases.query({
     //   database_id: SUPPLIERS_DB,
     //   page_size: limit,
-    //   sorts: [{ property: 'Created', direction: 'descending' }]
+    //   sorts: [{ property: 'Created', direction: 'descending' }],
+    //   ...(filter && { filter })
     // })
 
     return response.results.map((page: any) => ({
@@ -330,10 +371,10 @@ export interface DashboardStats {
   conversionRate: number
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(organizationId?: string): Promise<DashboardStats> {
   const [rfqs, deals] = await Promise.all([
-    getRFQs(),
-    getDeals()
+    getRFQs(50, organizationId),
+    getDeals(50, organizationId)
   ])
 
   const activeStatuses = ['New', 'Suppliers Notified', 'Quotes Received', 'Negotiating']

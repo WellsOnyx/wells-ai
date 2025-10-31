@@ -166,7 +166,7 @@ async function analyzeProcurementIntent(messages: any[]): Promise<ProcurementInt
 
 export const POST = withValidation(chatRequestSchema, async (request) => {
   try {
-    const { messages, userData } = request.validatedBody
+    const { messages, userData, organizationId } = request.validatedBody
 
     // Get Claude's response with user-type-aware system prompt
     const systemPrompt = getSystemPrompt(userData?.userType)
@@ -245,7 +245,8 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             category: intent.category,
-            requirements: intent.requirements
+            requirements: intent.requirements,
+            organizationId: organizationId || null
           })
         })
 
@@ -263,7 +264,8 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
               supplierIds: matchData.suppliers.map((s: any) => s.id),
               buyerName: buyerName,
               requirements: intent.requirements,
-              category: intent.category
+              category: intent.category,
+              organizationId: organizationId || null
             })
           })
 

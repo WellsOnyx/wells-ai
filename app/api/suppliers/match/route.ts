@@ -8,25 +8,38 @@ const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
 export const POST = withValidation(supplierMatchSchema, async (request) => {
   try {
-    const { category, requirements } = request.validatedBody;
+    const { category, requirements, organizationId } = request.validatedBody;
+
+    // Build filter - include orgId if provided
+    const filters: any[] = [
+      {
+        property: 'Status',
+        select: {
+          equals: 'Active',
+        },
+      },
+      {
+        property: 'Capabilities',
+        multi_select: {
+          contains: category,
+        },
+      },
+    ];
+
+    // Add organization filter if provided
+    if (organizationId) {
+      filters.push({
+        property: 'Organization ID',
+        rich_text: {
+          equals: organizationId,
+        },
+      });
+    }
 
     const response = await notion.databases.query({
       database_id: process.env.NOTION_SUPPLIERS_DB!,
       filter: {
-        and: [
-          {
-            property: 'Status',
-            select: {
-              equals: 'Active',
-            },
-          },
-          {
-            property: 'Capabilities',
-            multi_select: {
-              contains: category,
-            },
-          },
-        ],
+        and: filters,
       },
       sorts: [
         {

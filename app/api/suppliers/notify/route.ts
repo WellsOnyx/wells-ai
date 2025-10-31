@@ -18,7 +18,8 @@ export const POST = withValidation(supplierNotifySchema, async (request) => {
       supplierIds,
       buyerName,
       requirements,
-      category
+      category,
+      organizationId
     } = request.validatedBody;
 
     const requestRecord = await notion.pages.create({
@@ -39,6 +40,12 @@ export const POST = withValidation(supplierNotifySchema, async (request) => {
         'Status': {
           select: { name: 'Suppliers Notified' },
         },
+        // Add Organization ID if provided
+        ...(organizationId && {
+          'Organization ID': {
+            rich_text: [{ text: { content: organizationId } }],
+          },
+        }),
       },
     });
 

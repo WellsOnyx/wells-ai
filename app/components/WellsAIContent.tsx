@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
+import { useUser, useOrganization } from '@clerk/nextjs'
 import Onboarding, { UserData } from './Onboarding'
 import PartnershipPitch from './PartnershipPitch'
 import PartnershipTiers from './PartnershipTiers'
@@ -10,6 +10,8 @@ import PartnershipBooking from './PartnershipBooking'
 import { CategoryPioneerOpportunity } from '@/lib/categories'
 import ChatMessageRenderer from './chat/ChatMessageRenderer'
 import { ChatMessage } from '@/types/chat'
+import OrganizationSelector from './OrganizationSelector'
+import Link from 'next/link'
 
 interface Message {
   role: string
@@ -35,6 +37,7 @@ export default function WellsAIContent() {
   const searchParams = useSearchParams()
   const isEmbedded = searchParams.get('embed') === 'true'
   const { user, isLoaded } = useUser()
+  const { organization } = useOrganization()
 
   const [userData, setUserData] = useState<UserData | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -175,7 +178,8 @@ export default function WellsAIContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: cleanMessages,
-          userData: userData
+          userData: userData,
+          organizationId: organization?.id || null
         }),
       })
 
@@ -363,6 +367,22 @@ export default function WellsAIContent() {
                       <div className="font-medium text-[#183b6d] text-sm tracking-wide">Wells AI</div>
                       <div className="text-xs text-[#575757]">Conversational Commerce Platform</div>
                     </div>
+                  </div>
+
+                  {/* Organization Selector + Dashboard Link */}
+                  <div className="flex items-center gap-3">
+                    {organization && (
+                      <Link
+                        href={`/org/${organization.id}/dashboard`}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#183b6d] hover:bg-gray-50 rounded-sm transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        Dashboard
+                      </Link>
+                    )}
+                    <OrganizationSelector />
                   </div>
                 </div>
               </div>

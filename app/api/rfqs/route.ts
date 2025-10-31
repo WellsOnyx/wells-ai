@@ -1,15 +1,32 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { getRFQs, getRFQById } from '@/lib/notion'
 
 /**
  * GET /api/rfqs
- * Fetch all RFQs from Notion
+ * Fetch RFQs from Notion - Organization-scoped
+ *
+ * Query params:
+ * - id: Get specific RFQ by ID
+ * - orgId: Filter RFQs by organization ID
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    // Authenticate user
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    const orgId = searchParams.get('orgId')
 
+    // Get specific RFQ by ID
     if (id) {
       const rfq = await getRFQById(id)
       if (!rfq) {
@@ -21,11 +38,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, rfq })
     }
 
-    const rfqs = await getRFQs()
+    // Get RFQs with optional organization filter
+    const rfqs = await getRFQs(50, orgId || undefined)
 
     return NextResponse.json({
       success: true,
-      rfqs
+      rfqs,
+      count: rfqs.length,
+      organizationId: orgId || null
     })
 
   } catch (error: any) {
