@@ -10,9 +10,19 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+// Lazy initialization - only create client when needed (not during Next.js build)
+let anthropic: Anthropic | null = null
+function getAnthropicClient(): Anthropic {
+  if (!anthropic) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY is required for industry detection')
+    }
+    anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    })
+  }
+  return anthropic
+}
 
 export type IndustryTier = 'commodities' | 'standard' | 'high-value' | 'gtm-service'
 
@@ -121,7 +131,8 @@ Respond in JSON format:
 }`
 
   try {
-    const response = await anthropic.messages.create({
+    const client = getAnthropicClient()
+    const response = await client.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 500,
       messages: [
