@@ -13,13 +13,14 @@
  * where margins are often <2%.
  */
 
-import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } from 'plaid'
-
 // Lazy-initialize Plaid client to avoid build-time errors
-let plaidClient: PlaidApi | null = null
+// Import is deferred to prevent module-level initialization
+let plaidClient: any = null
 
-function getPlaidClient(): PlaidApi {
+async function getPlaidClient(): Promise<any> {
   if (!plaidClient) {
+    // Dynamic import to avoid build-time initialization
+    const { Configuration, PlaidApi, PlaidEnvironments } = await import('plaid')
     const configuration = new Configuration({
       basePath: process.env.PLAID_ENV === 'production'
         ? PlaidEnvironments.production
