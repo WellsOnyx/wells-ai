@@ -26,7 +26,7 @@ export default function JobSeekerOnboarding() {
     preferences: {
       remotePreferred: false,
       willingToRelocate: false,
-      salaryExpectation: undefined,
+      salaryExpectation: undefined as number | undefined,
       availabilityDate: ''
     }
   })
