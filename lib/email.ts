@@ -1,20 +1,16 @@
 /**
  * Wells AI - Email Service
- * Consent-gated email sending with SendGrid integration
+ * Consent-gated email sending with Instantly.ai integration
  */
 
-import sgMail from '@sendgrid/mail'
 import { queueAction } from './consent'
 import { writeAuditAction } from './audit-ledger'
+import { sendEmailViaInstantly, listCampaigns } from './instantly'
 
-// Configure SendGrid
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || ''
+// Configure defaults
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@wellsonyx.com'
 const FROM_NAME = process.env.FROM_NAME || 'Wells Onyx'
-
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY)
-}
+const DEFAULT_CAMPAIGN_ID = process.env.INSTANTLY_DEFAULT_CAMPAIGN_ID || ''
 
 // ===== TYPES =====
 
@@ -92,15 +88,17 @@ export async function queueEmail(params: EmailParams): Promise<string> {
  * Send email after approval
  * Called by consent system after user approves
  */
-export async function sendEmail(actionId: string, params: EmailParams): Promise<void> {
+export async function sendEmail(actionId: string, params: EmailParams, campaignId?: string): Promise<void> {
   const queuedEmail = emailQueue.get(actionId)
   if (!queuedEmail) {
     throw new Error(`Email ${actionId} not found in queue`)
   }
 
-  // Check if SendGrid is configured
-  if (!SENDGRID_API_KEY) {
-    console.warn('SendGrid not configured - email not sent (dry run mode)')
+  // Use provided campaign ID or default
+  const useCampaignId = campaignId || DEFAULT_CAMPAIGN_ID
+
+  if (!useCampaignId) {
+    console.warn('⚠️  No Instantly campaign ID - email not sent (configure INSTANTLY_DEFAULT_CAMPAIGN_ID)')
 
     // Update queue status
     emailQueue.set(actionId, {
@@ -112,48 +110,36 @@ export async function sendEmail(actionId: string, params: EmailParams): Promise<
     await writeAuditAction({
       actionId,
       actionType: 'email',
-      title: `Email sent (dry run): ${params.subject}`,
+      title: `Email queued (no campaign): ${params.subject}`,
       description: `To: ${params.to}`,
       recipient: params.to,
       decision: 'approve',
       decidedBy: 'system',
       metadata: {
         mode: 'dry_run',
-        reason: 'SendGrid not configured'
+        reason: 'No Instantly campaign ID configured'
       }
     })
 
     return
   }
 
-  // Prepare email
-  const msg: any = {
-    to: {
-      email: params.to,
-      name: params.toName
-    },
-    from: {
-      email: FROM_EMAIL,
-      name: FROM_NAME
-    },
-    subject: params.subject,
-    html: params.html,
-    text: params.text || params.html.replace(/<[^>]*>/g, '')
-  }
-
-  // Add attachments if present
-  if (params.attachments && params.attachments.length > 0) {
-    msg.attachments = params.attachments.map(att => ({
-      filename: att.filename,
-      content: att.content,
-      type: att.type || 'application/pdf',
-      disposition: att.disposition || 'attachment'
-    }))
-  }
-
   try {
-    // Send via SendGrid
-    await sgMail.send(msg)
+    // Send via Instantly.ai
+    await sendEmailViaInstantly({
+      actionId,
+      to: params.to,
+      toName: params.toName,
+      subject: params.subject,
+      campaignId: useCampaignId,
+      metadata: {
+        html: params.html.substring(0, 500), // Store preview
+        text: params.text?.substring(0, 500),
+        hasAttachments: (params.attachments?.length || 0) > 0,
+        attachmentCount: params.attachments?.length || 0,
+        ...params.metadata
+      }
+    })
 
     // Update queue status
     emailQueue.set(actionId, {
@@ -161,43 +147,12 @@ export async function sendEmail(actionId: string, params: EmailParams): Promise<
       status: 'sent'
     })
 
-    // Log to audit
-    await writeAuditAction({
-      actionId,
-      actionType: 'email',
-      title: `Email sent: ${params.subject}`,
-      description: `To: ${params.to}`,
-      recipient: params.to,
-      decision: 'approve',
-      decidedBy: 'system',
-      metadata: {
-        mode: 'live',
-        provider: 'sendgrid',
-        attachmentCount: params.attachments?.length || 0
-      }
-    })
-
-    console.log(`✅ Email sent: ${params.to} - ${params.subject}`)
+    console.log(`✅ Email queued via Instantly: ${params.to} - ${params.subject}`)
   } catch (error: any) {
     // Update queue status
     emailQueue.set(actionId, {
       ...queuedEmail,
       status: 'failed'
-    })
-
-    // Log failure to audit
-    await writeAuditAction({
-      actionId,
-      actionType: 'email',
-      title: `Email failed: ${params.subject}`,
-      description: `To: ${params.to} - Error: ${error.message}`,
-      recipient: params.to,
-      decision: 'error',
-      decidedBy: 'system',
-      metadata: {
-        error: error.message,
-        code: error.code
-      }
     })
 
     console.error(`❌ Email failed: ${params.to} - ${error.message}`)
