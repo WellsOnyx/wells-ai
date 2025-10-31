@@ -19,6 +19,7 @@ export const chatMessageSchema = z.object({
 export const chatRequestSchema = z.object({
   messages: z.array(chatMessageSchema).min(1).max(50),
   userData: z.object({
+    userId: z.string().max(255).optional(),
     userType: z.enum(['buyer', 'seller', 'both']).optional(),
     name: z.string().max(255).optional(),
     company: z.string().max(255).optional(),
@@ -205,3 +206,68 @@ export type HRCreateEmployment = z.infer<typeof hrCreateEmploymentSchema>
 export type PaymentCreateIntent = z.infer<typeof paymentCreateIntentSchema>
 export type SMSWebhook = z.infer<typeof smsWebhookSchema>
 export type PlaybookExecute = z.infer<typeof playbookExecuteSchema>
+
+// ============================================================================
+// JOB SEEKER APIs
+// ============================================================================
+
+export const jobSeekerOnboardSchema = z.object({
+  name: validators.nonEmpty(255),
+  email: validators.email(),
+  phone: validators.phone().optional(),
+  currentRole: validators.nonEmpty(255),
+  desiredRole: validators.nonEmpty(255),
+  skills: z.array(z.string()).min(1).max(50),
+  experience: validators.nonEmpty(5000),
+  location: validators.nonEmpty(255),
+  resumeText: validators.nonEmpty(50000).optional(),
+  careerGoals: validators.nonEmpty(2000).optional(),
+  preferences: z.object({
+    remotePreferred: z.boolean().optional(),
+    willingToRelocate: z.boolean().optional(),
+    salaryExpectation: z.number().positive().optional(),
+    availabilityDate: validators.isoDate().optional()
+  }).optional()
+})
+
+export const jobSeekerApplySchema = z.object({
+  rfqId: z.string().min(1),
+  jobSeekerId: z.string().min(1),
+  coverLetter: validators.nonEmpty(10000).optional(),
+  customMessage: validators.nonEmpty(2000).optional()
+})
+
+export const jobSeekerMatchSchema = z.object({
+  jobSeekerId: z.string().min(1),
+  category: validators.nonEmpty(100).optional(),
+  limit: z.number().int().min(1).max(50).default(20)
+})
+
+export const jobSeekerProfileUpdateSchema = z.object({
+  jobSeekerId: z.string().min(1),
+  updates: z.object({
+    currentRole: validators.nonEmpty(255).optional(),
+    desiredRole: validators.nonEmpty(255).optional(),
+    skills: z.array(z.string()).min(1).max(50).optional(),
+    experience: validators.nonEmpty(5000).optional(),
+    location: validators.nonEmpty(255).optional(),
+    resumeText: validators.nonEmpty(50000).optional(),
+    careerGoals: validators.nonEmpty(2000).optional(),
+    preferences: z.object({
+      remotePreferred: z.boolean().optional(),
+      willingToRelocate: z.boolean().optional(),
+      salaryExpectation: z.number().positive().optional(),
+      availabilityDate: validators.isoDate().optional()
+    }).optional()
+  })
+})
+
+export const resumeParseSchema = z.object({
+  resumeText: validators.nonEmpty(50000)
+})
+
+export type JobSeekerOnboard = z.infer<typeof jobSeekerOnboardSchema>
+export type JobSeekerApply = z.infer<typeof jobSeekerApplySchema>
+export type JobSeekerMatch = z.infer<typeof jobSeekerMatchSchema>
+export type JobSeekerProfileUpdate = z.infer<typeof jobSeekerProfileUpdateSchema>
+export type ResumeParse = z.infer<typeof resumeParseSchema>

@@ -59,18 +59,17 @@ export default function GTMTierProgress({ userId, trailing12MonthGMV }: GTMTierP
           </div>
           <div className="text-xs text-gray-600 mt-1">12-Month GMV</div>
         </div>
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
-          <div className="text-2xl font-bold text-gray-900">
-            ${currentTier.monthlyCost}
-            <span className="text-sm text-gray-600">/mo</span>
-          </div>
-          <div className="text-xs text-gray-600 mt-1">Current Cost</div>
-        </div>
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
+        <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
           <div className="text-2xl font-bold text-green-600">
-            {currentTier.monthlyCost === 0 ? 'FREE!' : `$${currentTier.monthlyCost * 12}/yr`}
+            FREE
           </div>
-          <div className="text-xs text-gray-600 mt-1">Annual Cost</div>
+          <div className="text-xs text-gray-600 mt-1">Monthly Cost</div>
+        </div>
+        <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+          <div className="text-2xl font-bold text-green-600">
+            0.33%
+          </div>
+          <div className="text-xs text-gray-600 mt-1">Fee on Deals Closed</div>
         </div>
       </div>
 
@@ -111,9 +110,7 @@ export default function GTMTierProgress({ userId, trailing12MonthGMV }: GTMTierP
             <div className="text-2xl">🎯</div>
             <div className="flex-1">
               <h4 className="font-semibold text-gray-900 mb-1">
-                {incentive.nextTier.monthlyCost === 0
-                  ? 'Unlock FREE GTM Stack!'
-                  : `Save $${incentive.savings.toLocaleString()}/year`}
+                Unlock {incentive.nextTier.name} Tier!
               </h4>
               <p className="text-sm text-gray-700">{incentive.message}</p>
             </div>
@@ -153,16 +150,16 @@ export default function GTMTierProgress({ userId, trailing12MonthGMV }: GTMTierP
         </div>
       )}
 
-      {/* Platinum Achievement */}
-      {currentTier.tier === 'platinum' && (
+      {/* Enterprise Achievement */}
+      {currentTier.tier === 'enterprise' && (
         <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
           <div className="flex items-center gap-3">
             <div className="text-3xl">👑</div>
             <div>
-              <h4 className="font-bold text-purple-900">Platinum Member!</h4>
+              <h4 className="font-bold text-purple-900">Enterprise Member!</h4>
               <p className="text-sm text-purple-700 mt-1">
-                You've unlocked the highest tier. Your GTM stack is completely free, and you have
-                access to our white-glove service.
+                You've unlocked the highest tier with unlimited prospects, dedicated success manager,
+                white-glove service, and API access - all 100% FREE!
               </p>
             </div>
           </div>

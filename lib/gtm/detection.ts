@@ -216,33 +216,33 @@ export async function provisionMissingTools(
   calendar?: string
   enrichment?: string
   prospecting?: string
-  cost: number // Monthly cost
+  wellsAICost: number // Wells AI's internal cost to provide FREE stack (user pays $0)
 }> {
   const provisioned: any = {}
-  let cost = 0
+  let wellsAICost = 0 // USER PAYS $0 - This is Wells AI's cost, recovered via 0.33% transaction fees
 
   // CRM
   if (detected.crm === 'none') {
     provisioned.crm = 'notion' // Free, familiar to most users
-    cost += 0
+    wellsAICost += 0 // FREE for Wells AI too
   }
 
   // Email automation
   if (detected.email === 'none') {
-    provisioned.email = 'instantly' // $30/month for unlimited sends
-    cost += 30
+    provisioned.email = 'instantly' // $30/month Wells AI internal cost (user pays $0)
+    wellsAICost += 30 // Wells AI cost, recovered via 0.33% transaction fees
   }
 
   // Calendar
   if (detected.calendar === 'none') {
     provisioned.calendar = 'cal.com' // Free, open source
-    cost += 0
+    wellsAICost += 0 // FREE for Wells AI too
   }
 
   // Enrichment
   if (detected.enrichment === 'none') {
-    provisioned.enrichment = 'apollo' // $49/month for 500 credits
-    cost += 49
+    provisioned.enrichment = 'apollo' // $49/month Wells AI internal cost (user pays $0)
+    wellsAICost += 49 // Wells AI cost, recovered via 0.33% transaction fees
   }
 
   // Prospecting
@@ -251,7 +251,7 @@ export async function provisionMissingTools(
 
   return {
     ...provisioned,
-    cost,
+    wellsAICost, // Wells AI's internal cost (USER PAYS $0)
   }
 }
 
@@ -318,7 +318,8 @@ export async function detectAndProvisionStack(
 ): Promise<{
   detected: DetectedStack
   provisioned: any
-  monthlyCost: number
+  userCost: number // What user pays (ALWAYS $0)
+  wellsAICost: number // Wells AI's internal cost
 }> {
   // Step 1: Conversation analysis
   let detected = await detectStackFromConversation(conversationHistory)
@@ -342,12 +343,14 @@ export async function detectAndProvisionStack(
   console.log(`✅ Stack detection complete for user ${userId}`)
   console.log(`   Detected: ${JSON.stringify(detected)}`)
   console.log(`   Provisioned: ${JSON.stringify(provisioned)}`)
-  console.log(`   Monthly cost: $${provisioned.cost}`)
+  console.log(`   User cost: $0 (FREE - they pay 0.33% on deals only)`)
+  console.log(`   Wells AI internal cost: $${provisioned.wellsAICost}/month (recovered via transaction fees)`)
 
   return {
     detected,
     provisioned,
-    monthlyCost: provisioned.cost,
+    userCost: 0, // USER ALWAYS PAYS $0 upfront
+    wellsAICost: provisioned.wellsAICost, // Wells AI's internal cost
   }
 }
 
