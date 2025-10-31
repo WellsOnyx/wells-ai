@@ -15,20 +15,26 @@
 
 import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } from 'plaid'
 
-// Initialize Plaid client
-const configuration = new Configuration({
-  basePath: process.env.PLAID_ENV === 'production'
-    ? PlaidEnvironments.production
-    : PlaidEnvironments.sandbox,
-  baseOptions: {
-    headers: {
-      'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
-      'PLAID-SECRET': process.env.PLAID_SECRET,
-    },
-  },
-})
+// Lazy-initialize Plaid client to avoid build-time errors
+let plaidClient: PlaidApi | null = null
 
-const plaidClient = new PlaidApi(configuration)
+function getPlaidClient(): PlaidApi {
+  if (!plaidClient) {
+    const configuration = new Configuration({
+      basePath: process.env.PLAID_ENV === 'production'
+        ? PlaidEnvironments.production
+        : PlaidEnvironments.sandbox,
+      baseOptions: {
+        headers: {
+          'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID || '',
+          'PLAID-SECRET': process.env.PLAID_SECRET || '',
+        },
+      },
+    })
+    plaidClient = new PlaidApi(configuration)
+  }
+  return plaidClient
+}
 
 /**
  * Create Plaid Link Token for ACH account connection
@@ -36,7 +42,8 @@ const plaidClient = new PlaidApi(configuration)
  */
 export async function createLinkToken(userId: string, userName: string) {
   try {
-    const response = await plaidClient.linkTokenCreate({
+    const client = getPlaidClient()
+    const response = await client.linkTokenCreate({
       user: {
         client_user_id: userId,
       },
@@ -63,7 +70,8 @@ export async function createLinkToken(userId: string, userName: string) {
  */
 export async function exchangePublicToken(publicToken: string) {
   try {
-    const response = await plaidClient.itemPublicTokenExchange({
+    const client = getPlaidClient()
+    const response = await client.itemPublicTokenExchange({
       public_token: publicToken,
     })
 
@@ -82,7 +90,8 @@ export async function exchangePublicToken(publicToken: string) {
  */
 export async function getAccounts(accessToken: string) {
   try {
-    const response = await plaidClient.accountsGet({
+    const client = getPlaidClient()
+    const response = await client.accountsGet({
       access_token: accessToken,
     })
 
@@ -114,8 +123,9 @@ export async function createACHPayment(params: {
   metadata?: Record<string, string>
 }) {
   try {
+    const client = getPlaidClient()
     // Get account and routing numbers
-    const authResponse = await plaidClient.authGet({
+    const authResponse = await client.authGet({
       access_token: params.accessToken,
     })
 
@@ -204,4 +214,4 @@ export function comparePaymentMethods(amount: number): {
   }
 }
 
-export default plaidClient
+export default getPlaidClient
