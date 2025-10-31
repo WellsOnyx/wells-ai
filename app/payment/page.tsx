@@ -5,6 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getPersonalityMessage, formatFeeMessage, formatTitheMessage } from '@/lib/personality'
 
+// Force dynamic rendering to prevent build-time prerendering
+export const dynamic = 'force-dynamic'
+
 export default function PaymentPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
