@@ -162,7 +162,7 @@ colors: {
 ⏳ **Week 3+ - Planned:**
 - Quote comparison dashboard
 - Transaction tracking
-- Billing automation (33bps fee)
+- Billing automation (5.5% platform fee - includes all processing)
 - Analytics & reporting
 
 ---
@@ -180,10 +180,10 @@ colors: {
 - **Total: $0.10 per RFQ**
 
 ### ROI:
-- Wells AI fee: 33bps (0.33%)
-- Avg semiconductor deal: $12.5M → $41,250 revenue
-- Avg exec search: $100K → $330 revenue
-- **Margin: 99.99%**
+- Wells AI platform fee: 5.5% (includes all payment processing costs)
+- Avg semiconductor deal: $12.5M → $687,500 revenue
+- Avg exec search: $100K → $5,500 revenue
+- **Margin: ~95%** (after operational costs)
 
 ---
 
