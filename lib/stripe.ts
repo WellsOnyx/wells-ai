@@ -197,10 +197,77 @@ export async function createPaymentIntentWithFee(
  * Calculate Wells AI's platform fee (5.5% includes all processing costs)
  * @param amount - Transaction amount in cents
  * @returns Fee amount in cents (5.5%)
+ * @deprecated Use calculateDynamicWellsAIFee for tier-based pricing
  */
 export function calculateWellsAIFee(amount: number): number {
   // 5.5% platform fee (includes Stripe processing fees)
   return Math.round(amount * 0.055)
+}
+
+/**
+ * Calculate dynamic Wells AI fee based on industry tier
+ * @param amountInCents - Transaction amount in cents
+ * @param productDescription - Description of product/service being sold
+ * @param paymentMethod - Payment method (defaults to 'stripe')
+ * @returns Promise with fee breakdown
+ */
+export async function calculateDynamicWellsAIFee(
+  amountInCents: number,
+  productDescription: string,
+  paymentMethod: 'stripe' | 'ach' | 'wire' | 'grain' = 'stripe'
+): Promise<{
+  totalFee: number // Total fee in cents
+  processingCost: number // Payment processor cost in cents
+  wellsAIMargin: number // Wells AI margin in cents
+  industryTier: string
+  confidence: number
+  reasoning: string
+}> {
+  try {
+    // Call pricing calculation API
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/pricing/calculate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: amountInCents / 100, // Convert to dollars
+        paymentMethod,
+        productDescription,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to calculate dynamic pricing')
+    }
+
+    const data = await response.json()
+
+    return {
+      totalFee: Math.round(data.pricing.totalFee * 100), // Convert to cents
+      processingCost: Math.round(data.pricing.processingCostTotal * 100),
+      wellsAIMargin: Math.round(data.pricing.wellsAIRevenue * 100),
+      industryTier: data.detection.tier,
+      confidence: data.detection.confidence,
+      reasoning: data.detection.reasoning,
+    }
+  } catch (error) {
+    console.error('Error calculating dynamic fee, falling back to 10%:', error)
+    // Fallback: 10% default (gtm-service tier)
+    const amountInDollars = amountInCents / 100
+    const totalFee = amountInDollars * 0.10
+    const processingCost = amountInDollars * 0.029 + 0.30 // Stripe costs
+    const wellsAIMargin = totalFee - processingCost
+
+    return {
+      totalFee: Math.round(totalFee * 100),
+      processingCost: Math.round(processingCost * 100),
+      wellsAIMargin: Math.round(wellsAIMargin * 100),
+      industryTier: 'gtm-service',
+      confidence: 0.5,
+      reasoning: 'Fallback: Default 10% tier (API unavailable)',
+    }
+  }
 }
 
 /**
