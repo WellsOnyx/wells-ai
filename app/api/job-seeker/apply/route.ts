@@ -45,7 +45,7 @@ export const POST = withValidation(jobSeekerApplySchema, async (request) => {
     // Get job seeker profile
     const client = await clerkClient()
     const user = await client.users.getUser(userId)
-    const profile = user.publicMetadata?.jobSeekerProfile
+    const profile = user.publicMetadata?.jobSeekerProfile as any
 
     if (!profile) {
       return NextResponse.json(
