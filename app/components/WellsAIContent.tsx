@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useUser } from '@clerk/nextjs'
 import Onboarding, { UserData } from './Onboarding'
 import PartnershipPitch from './PartnershipPitch'
 import PartnershipTiers from './PartnershipTiers'
@@ -33,6 +34,7 @@ interface Message {
 export default function WellsAIContent() {
   const searchParams = useSearchParams()
   const isEmbedded = searchParams.get('embed') === 'true'
+  const { user, isLoaded } = useUser()
 
   const [userData, setUserData] = useState<UserData | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -42,21 +44,26 @@ export default function WellsAIContent() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Load user data from localStorage
+  // Load user data from Clerk metadata
   useEffect(() => {
-    const stored = localStorage.getItem('wellsai_user')
-    if (stored) {
-      try {
-        setUserData(JSON.parse(stored))
-      } catch (e) {
-        console.error('Failed to parse user data')
+    if (isLoaded && user?.publicMetadata) {
+      const metadata = user.publicMetadata as Partial<UserData>
+      if (metadata.userType && metadata.name && metadata.email) {
+        setUserData(metadata as UserData)
       }
     }
-  }, [])
+  }, [isLoaded, user])
 
-  const handleOnboardingComplete = (data: UserData) => {
-    setUserData(data)
-    localStorage.setItem('wellsai_user', JSON.stringify(data))
+  const handleOnboardingComplete = async (data: UserData) => {
+    // Save to Clerk user metadata
+    try {
+      await user?.update({
+        unsafeMetadata: data as Record<string, any>
+      })
+      setUserData(data)
+    } catch (error) {
+      console.error('Failed to save user data:', error)
+    }
   }
 
   // Constellation animation - Wells Onyx brand element
@@ -231,6 +238,18 @@ export default function WellsAIContent() {
     setMessages(prev => prev.map((msg, idx) =>
       idx === messageIndex ? { ...msg, selectedTier: tier } : msg
     ))
+  }
+
+  // Show loading while Clerk initializes
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-[#183b6d] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm text-[#575757]">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   // Show onboarding if no user data
