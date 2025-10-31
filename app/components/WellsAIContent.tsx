@@ -150,11 +150,17 @@ export default function WellsAIContent() {
     if (!showChat) setShowChat(true)
 
     try {
+      // Clean messages to only send role and content (strip UI-only fields)
+      const cleanMessages = [...messages, userMessage].map(({ role, content }) => ({
+        role,
+        content
+      }))
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: cleanMessages,
           userData: userData
         }),
       })
