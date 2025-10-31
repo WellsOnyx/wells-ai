@@ -28,8 +28,8 @@ export default function GTMSettingsPage() {
   const [testResults, setTestResults] = useState<Record<string, { success: boolean; message: string }>>({})
 
   useEffect(() => {
-    if (user?.privateMetadata) {
-      const metadata = user.privateMetadata as any
+    if (user?.unsafeMetadata) {
+      const metadata = user.unsafeMetadata as any
       setSettings({
         notionApiKey: metadata.notionApiKey || '',
         notionDealsDbId: metadata.notionDealsDbId || '',

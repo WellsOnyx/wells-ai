@@ -13,11 +13,11 @@ import Link from 'next/link'
 export default function OrganizationSettingsPage() {
   const params = useParams()
   const router = useRouter()
-  const { organization, membership, memberships, invitations } = useOrganization({
-    memberships: { pageSize: 50 },
-    invitations: { pageSize: 50 }
+  const { organization, membership, memberships } = useOrganization({
+    memberships: { pageSize: 50 }
   })
   const { user } = useUser()
+  const [invitations, setInvitations] = useState<any>(null)
 
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'org:admin' | 'org:member'>('org:member')
@@ -32,6 +32,13 @@ export default function OrganizationSettingsPage() {
   useEffect(() => {
     if (organization) {
       setOrganizationName(organization.name)
+    }
+  }, [organization])
+
+  // Load invitations
+  useEffect(() => {
+    if (organization) {
+      organization.getInvitations({ pageSize: 50 }).then(setInvitations)
     }
   }, [organization])
 
@@ -148,7 +155,13 @@ export default function OrganizationSettingsPage() {
     if (!organization || !isAdmin) return
 
     try {
-      await organization.invitations?.revoke({ invitationId })
+      const invitation = invitations?.data?.find((inv: any) => inv.id === invitationId)
+      if (invitation) {
+        await invitation.revoke()
+        // Reload invitations
+        const updatedInvitations = await organization.getInvitations({ pageSize: 50 })
+        setInvitations(updatedInvitations)
+      }
     } catch (error: any) {
       console.error('Failed to revoke invitation:', error)
       alert(`Failed to revoke invitation: ${error.message}`)
@@ -287,7 +300,7 @@ export default function OrganizationSettingsPage() {
                     Pending Invitations ({invitations.data.length})
                   </h3>
                   <div className="space-y-2">
-                    {invitations.data.map((invitation) => (
+                    {invitations.data.map((invitation: any) => (
                       <div
                         key={invitation.id}
                         className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-sm"

@@ -276,7 +276,11 @@ export async function sendSMSMessage(params: {
   }
 
   try {
-    await sendSMS(params.to, params.body, params.from)
+    await sendSMS({
+      to: params.to,
+      body: params.body,
+      from: params.from,
+    })
     return { sent: true }
   } catch (error: any) {
     return { sent: false, error: error.message }

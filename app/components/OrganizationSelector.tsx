@@ -12,12 +12,12 @@ import Link from 'next/link'
  */
 export default function OrganizationSelector() {
   const { organization } = useOrganization()
-  const { organizationList, setActive } = useOrganizationList()
+  const { userMemberships, setActive } = useOrganizationList()
   const { user } = useUser()
   const [isOpen, setIsOpen] = useState(false)
 
   // If no organizations, show create button
-  if (!organizationList || organizationList.length === 0) {
+  if (!userMemberships?.data || userMemberships.data.length === 0) {
     return (
       <div className="relative">
         <Link
@@ -117,7 +117,7 @@ export default function OrganizationSelector() {
               <div className="px-3 py-2 text-xs font-medium text-[#9ea1a7] uppercase tracking-wide">
                 Organizations
               </div>
-              {organizationList.map((org) => (
+              {userMemberships.data.map((org) => (
                 <button
                   key={org.organization.id}
                   onClick={async () => {
@@ -140,7 +140,7 @@ export default function OrganizationSelector() {
                       {org.organization.name}
                     </div>
                     <div className="text-xs text-[#575757]">
-                      {org.membership.role}
+                      {org.role}
                     </div>
                   </div>
                   {organization?.id === org.organization.id && (
