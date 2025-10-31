@@ -185,15 +185,19 @@ export function clearUser() {
 
 /**
  * Start a transaction for distributed tracing
+ * Updated for Sentry v10 API
  */
 export function startTransaction(name: string, op: string) {
-  return Sentry.startTransaction({
-    name,
-    op,
-    tags: {
-      timestamp: new Date().toISOString(),
+  return Sentry.startSpan(
+    {
+      name,
+      op,
+      attributes: {
+        timestamp: new Date().toISOString(),
+      },
     },
-  })
+    (span) => span
+  )
 }
 
 /**
