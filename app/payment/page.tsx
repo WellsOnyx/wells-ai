@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getPersonalityMessage, formatFeeMessage, formatTitheMessage } from '@/lib/personality'
@@ -8,7 +8,7 @@ import { getPersonalityMessage, formatFeeMessage, formatTitheMessage } from '@/l
 // Force dynamic rendering to prevent build-time prerendering
 export const dynamic = 'force-dynamic'
 
-export default function PaymentPage() {
+function PaymentContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -284,5 +284,17 @@ export default function PaymentPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-[#9ea1a7]">Loading payment details...</div>
+      </div>
+    }>
+      <PaymentContent />
+    </Suspense>
   )
 }
