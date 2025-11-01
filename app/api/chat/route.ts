@@ -238,7 +238,13 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     console.log('[CHAT] Successfully got response from Claude')
 
     // Analyze intent based on user type
-    const intent = await analyzeProcurementIntent(messages)
+    let intent = null
+    try {
+      intent = await analyzeProcurementIntent(messages)
+    } catch (error) {
+      console.error('[CHAT] Intent analysis failed (non-critical):', error)
+      intent = null
+    }
 
     let procurementData = null
     let pioneerData = null
@@ -305,7 +311,13 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       }
     }
 
-    const gtmIntent = await detectGTMIntent(lastUserMessage, conversationHistory)
+    let gtmIntent = null
+    try {
+      gtmIntent = await detectGTMIntent(lastUserMessage, conversationHistory)
+    } catch (error) {
+      console.error('[CHAT] GTM intent detection failed (non-critical):', error)
+      gtmIntent = { isGTMRequest: false, confidence: 0 }
+    }
 
     if (gtmIntent.isGTMRequest && gtmIntent.confidence > 0.6) {
       console.log('[GTM] Intent detected:', gtmIntent)
@@ -356,7 +368,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     }
 
     // CHECK FOR CATEGORY PIONEER OPPORTUNITY FIRST
-    if (intent.isPioneerOpportunity && intent.pioneerCategory) {
+    if (intent?.isPioneerOpportunity && intent?.pioneerCategory) {
       return NextResponse.json({
         message: assistantMessage,
         procurementData: null,
@@ -370,7 +382,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     }
 
     // SELLER: Add them to supplier database (we'll build this next)
-    if ((userData?.userType === 'seller' || userData?.userType === 'both') && intent.shouldMatch) {
+    if ((userData?.userType === 'seller' || userData?.userType === 'both') && intent?.shouldMatch) {
       // TODO: Build seller onboarding flow
       // For now, just acknowledge
       return NextResponse.json({
@@ -380,7 +392,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     }
 
     // BUYER: If this is a procurement request, trigger matching
-    if (userData?.userType === 'buyer' && intent.shouldMatch && intent.category && intent.requirements) {
+    if (userData?.userType === 'buyer' && intent?.shouldMatch && intent?.category && intent?.requirements) {
       try {
         // Match suppliers
         const matchResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/suppliers/match`, {
