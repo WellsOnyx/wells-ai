@@ -7,14 +7,33 @@ import { monitorDB } from './monitoring'
  * Stores product category knowledge, specs, pricing, and supplier info
  */
 
-// Initialize clients
-const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!,
-})
+// Lazy initialization - only create clients when needed
+let pinecone: Pinecone | null = null
+let openai: OpenAI | null = null
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY, // Fallback
-})
+function getPinecone(): Pinecone {
+  if (!pinecone && process.env.PINECONE_API_KEY) {
+    pinecone = new Pinecone({
+      apiKey: process.env.PINECONE_API_KEY,
+    })
+  }
+  if (!pinecone) {
+    throw new Error('PINECONE_API_KEY is not configured')
+  }
+  return pinecone
+}
+
+function getOpenAI(): OpenAI {
+  if (!openai && (process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY)) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY,
+    })
+  }
+  if (!openai) {
+    throw new Error('OPENAI_API_KEY or ANTHROPIC_API_KEY is not configured')
+  }
+  return openai
+}
 
 // Index name for category knowledge
 const INDEX_NAME = 'wells-ai-categories'
@@ -72,7 +91,8 @@ export interface SupplierCategoryKnowledge {
  */
 async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const response = await openai.embeddings.create({
+    const client = getOpenAI()
+    const response = await client.embeddings.create({
       model: 'text-embedding-3-small',
       input: text,
     })
@@ -91,7 +111,8 @@ export class VectorDB {
 
   async initialize() {
     try {
-      this.index = pinecone.index(INDEX_NAME)
+      const client = getPinecone()
+      this.index = client.index(INDEX_NAME)
       console.log('[VECTOR_DB] Initialized')
     } catch (error) {
       console.error('[VECTOR_DB] Initialization error:', error)

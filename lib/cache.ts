@@ -6,11 +6,21 @@ import { monitorCache } from './monitoring'
  * Uses Upstash Redis for serverless-friendly caching
  */
 
-// Initialize Redis client
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-})
+// Lazy initialization - only create client when needed
+let redis: Redis | null = null
+
+function getRedis(): Redis {
+  if (!redis && process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  }
+  if (!redis) {
+    throw new Error('UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are not configured')
+  }
+  return redis
+}
 
 export interface CacheOptions {
   ttl?: number // Time to live in seconds (default: 300 = 5 minutes)
@@ -28,7 +38,8 @@ class CacheManager {
     const monitor = monitorCache('get', key)
 
     try {
-      const value = await redis.get<T>(key)
+      const client = getRedis()
+      const value = await client.get<T>(key)
       monitor.end(true, { hit: value !== null })
       return value
     } catch (error) {
@@ -46,13 +57,14 @@ class CacheManager {
     const ttl = options.ttl || 300 // Default 5 minutes
 
     try {
-      await redis.setex(key, ttl, JSON.stringify(value))
+      const client = getRedis()
+      await client.setex(key, ttl, JSON.stringify(value))
 
       // Store tags for invalidation
       if (options.tags && options.tags.length > 0) {
         for (const tag of options.tags) {
-          await redis.sadd(`tag:${tag}`, key)
-          await redis.expire(`tag:${tag}`, ttl)
+          await client.sadd(`tag:${tag}`, key)
+          await client.expire(`tag:${tag}`, ttl)
         }
       }
 
@@ -72,7 +84,8 @@ class CacheManager {
     const monitor = monitorCache('del', key)
 
     try {
-      await redis.del(key)
+      const client = getRedis()
+      await client.del(key)
       monitor.end(true)
       return true
     } catch (error) {
@@ -87,11 +100,12 @@ class CacheManager {
    */
   async invalidateTag(tag: string): Promise<number> {
     try {
-      const keys = await redis.smembers(`tag:${tag}`)
+      const client = getRedis()
+      const keys = await client.smembers(`tag:${tag}`)
 
       if (keys.length > 0) {
-        await redis.del(...keys)
-        await redis.del(`tag:${tag}`)
+        await client.del(...keys)
+        await client.del(`tag:${tag}`)
       }
 
       return keys.length
@@ -106,7 +120,8 @@ class CacheManager {
    */
   async exists(key: string): Promise<boolean> {
     try {
-      const result = await redis.exists(key)
+      const client = getRedis()
+      const result = await client.exists(key)
       return result === 1
     } catch (error) {
       console.error('[CACHE] Exists error:', error)
@@ -139,7 +154,8 @@ class CacheManager {
    */
   async increment(key: string, by: number = 1): Promise<number> {
     try {
-      return await redis.incrby(key, by)
+      const client = getRedis()
+      return await client.incrby(key, by)
     } catch (error) {
       console.error('[CACHE] Increment error:', error)
       return 0
@@ -151,7 +167,8 @@ class CacheManager {
    */
   async decrement(key: string, by: number = 1): Promise<number> {
     try {
-      return await redis.decrby(key, by)
+      const client = getRedis()
+      return await client.decrby(key, by)
     } catch (error) {
       console.error('[CACHE] Decrement error:', error)
       return 0
@@ -163,7 +180,8 @@ class CacheManager {
    */
   async mget<T>(keys: string[]): Promise<(T | null)[]> {
     try {
-      const values = await redis.mget<T[]>(...keys)
+      const client = getRedis()
+      const values = await client.mget<T[]>(...keys)
       return values
     } catch (error) {
       console.error('[CACHE] Mget error:', error)
@@ -176,7 +194,8 @@ class CacheManager {
    */
   async mset(entries: Record<string, any>, ttl: number = 300): Promise<boolean> {
     try {
-      const pipeline = redis.pipeline()
+      const client = getRedis()
+      const pipeline = client.pipeline()
 
       for (const [key, value] of Object.entries(entries)) {
         pipeline.setex(key, ttl, JSON.stringify(value))
@@ -195,7 +214,8 @@ class CacheManager {
    */
   async clear(): Promise<boolean> {
     try {
-      await redis.flushdb()
+      const client = getRedis()
+      await client.flushdb()
       return true
     } catch (error) {
       console.error('[CACHE] Clear error:', error)
@@ -281,14 +301,15 @@ export class RateLimiter {
     const key = CacheKeys.rateLimit(identifier)
 
     try {
+      const client = getRedis()
       const count = await cache.increment(key)
 
       if (count === 1) {
         // First request, set expiry
-        await redis.expire(key, window)
+        await client.expire(key, window)
       }
 
-      const ttl = await redis.ttl(key)
+      const ttl = await client.ttl(key)
       const resetAt = Date.now() + (ttl * 1000)
 
       return {
