@@ -16,7 +16,7 @@ const isPublicRoute = createRouteMatcher([
 // Organization-only routes (require being part of an organization)
 const isOrgRoute = createRouteMatcher([
   '/org/(.*)',
-  '/organizations/(.*)',
+  '/organizations/(?!create).*', // Exclude /organizations/create
 ])
 
 export default clerkMiddleware(async (auth, request) => {
