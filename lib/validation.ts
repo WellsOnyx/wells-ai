@@ -156,19 +156,23 @@ export function withValidation<T extends ZodSchema>(
           }]
         }
 
-        // Log to audit
-        await writeAuditAction({
-          actionId: `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          actionType: 'validation',
-          title: 'Validation Failed: Invalid JSON',
-          description: 'Failed to parse JSON in request body',
-          decision: 'error',
-          decidedBy: 'system',
-          metadata: {
-            error: 'invalid_json',
-            path: request.url
-          }
-        })
+        // Log to audit (best effort - don't fail if audit logging fails)
+        try {
+          await writeAuditAction({
+            actionId: `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            actionType: 'validation',
+            title: 'Validation Failed: Invalid JSON',
+            description: 'Failed to parse JSON in request body',
+            decision: 'error',
+            decidedBy: 'system',
+            metadata: {
+              error: 'invalid_json',
+              path: request.url
+            }
+          })
+        } catch (auditError) {
+          console.warn('[VALIDATION] Failed to write audit log:', auditError)
+        }
 
         return NextResponse.json(error, { status: 400 })
       }
@@ -179,21 +183,25 @@ export function withValidation<T extends ZodSchema>(
       if (!result.success) {
         const validationError = formatValidationErrors(result.error)
 
-        // Log validation failure with redacted data
-        await writeAuditAction({
-          actionId: `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          actionType: 'validation',
-          title: 'Validation Failed: Schema Mismatch',
-          description: validationError.message,
-          decision: 'error',
-          decidedBy: 'system',
-          metadata: {
-            errors: validationError.errors,
-            requestBody: redactPII(body),
-            path: request.url,
-            method: request.method
-          }
-        })
+        // Log validation failure with redacted data (best effort)
+        try {
+          await writeAuditAction({
+            actionId: `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            actionType: 'validation',
+            title: 'Validation Failed: Schema Mismatch',
+            description: validationError.message,
+            decision: 'error',
+            decidedBy: 'system',
+            metadata: {
+              errors: validationError.errors,
+              requestBody: redactPII(body),
+              path: request.url,
+              method: request.method
+            }
+          })
+        } catch (auditError) {
+          console.warn('[VALIDATION] Failed to write audit log:', auditError)
+        }
 
         return NextResponse.json(validationError, { status: 400 })
       }
@@ -206,20 +214,24 @@ export function withValidation<T extends ZodSchema>(
       return await handler(validatedRequest)
 
     } catch (error: any) {
-      // Log unexpected errors
-      await writeAuditAction({
-        actionId: `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        actionType: 'validation',
-        title: 'Validation Error: Unexpected',
-        description: error.message || 'An unexpected error occurred during validation',
-        decision: 'error',
-        decidedBy: 'system',
-        metadata: {
-          error: error.message,
-          stack: error.stack,
-          path: request.url
-        }
-      })
+      // Log unexpected errors (best effort)
+      try {
+        await writeAuditAction({
+          actionId: `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          actionType: 'validation',
+          title: 'Validation Error: Unexpected',
+          description: error.message || 'An unexpected error occurred during validation',
+          decision: 'error',
+          decidedBy: 'system',
+          metadata: {
+            error: error.message,
+            stack: error.stack,
+            path: request.url
+          }
+        })
+      } catch (auditError) {
+        console.warn('[VALIDATION] Failed to write audit log:', auditError)
+      }
 
       return NextResponse.json({
         errorCode: 'INTERNAL_ERROR',
@@ -250,19 +262,23 @@ export function withQueryValidation<T extends ZodSchema>(
       if (!result.success) {
         const validationError = formatValidationErrors(result.error)
 
-        await writeAuditAction({
-          actionId: `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          actionType: 'validation',
-          title: 'Query Validation Failed',
-          description: validationError.message,
-          decision: 'error',
-          decidedBy: 'system',
-          metadata: {
-            errors: validationError.errors,
-            params: redactPII(params),
-            path: request.url
-          }
-        })
+        try {
+          await writeAuditAction({
+            actionId: `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            actionType: 'validation',
+            title: 'Query Validation Failed',
+            description: validationError.message,
+            decision: 'error',
+            decidedBy: 'system',
+            metadata: {
+              errors: validationError.errors,
+              params: redactPII(params),
+              path: request.url
+            }
+          })
+        } catch (auditError) {
+          console.warn('[VALIDATION] Failed to write audit log:', auditError)
+        }
 
         return NextResponse.json(validationError, { status: 400 })
       }
@@ -270,18 +286,22 @@ export function withQueryValidation<T extends ZodSchema>(
       return await handler(result.data, request)
 
     } catch (error: any) {
-      await writeAuditAction({
-        actionId: `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        actionType: 'validation',
-        title: 'Query Validation Error: Unexpected',
-        description: error.message || 'An unexpected error occurred during query validation',
-        decision: 'error',
-        decidedBy: 'system',
-        metadata: {
-          error: error.message,
-          path: request.url
-        }
-      })
+      try {
+        await writeAuditAction({
+          actionId: `validation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          actionType: 'validation',
+          title: 'Query Validation Error: Unexpected',
+          description: error.message || 'An unexpected error occurred during query validation',
+          decision: 'error',
+          decidedBy: 'system',
+          metadata: {
+            error: error.message,
+            path: request.url
+          }
+        })
+      } catch (auditError) {
+        console.warn('[VALIDATION] Failed to write audit log:', auditError)
+      }
 
       return NextResponse.json({
         errorCode: 'INTERNAL_ERROR',
