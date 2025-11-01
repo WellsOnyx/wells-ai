@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all waitlist entries sorted by position
+    // @ts-ignore - Notion SDK types issue
     const response = await notion.databases.query({
       database_id: waitlistDbId,
       sorts: [

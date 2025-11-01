@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if email already exists
+    // @ts-ignore - Notion SDK types issue
     const existingResponse = await notion.databases.query({
       database_id: waitlistDbId,
       filter: {
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     if (existingResponse.results.length > 0) {
       const existing = existingResponse.results[0] as any
       return NextResponse.json(
-        { error: 'You're already on the waitlist!' },
+        { error: "You're already on the waitlist!" },
         { status: 400 }
       )
     }
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
     let priority = false
 
     if (inviteCode) {
+      // @ts-ignore - Notion SDK types issue
       const inviterResponse = await notion.databases.query({
         database_id: waitlistDbId,
         filter: {
@@ -91,6 +93,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get current waitlist count for position
+    // @ts-ignore - Notion SDK types issue
     const allSignups = await notion.databases.query({
       database_id: waitlistDbId
     })
@@ -142,8 +145,8 @@ export async function POST(req: NextRequest) {
       inviteCode: newInviteCode,
       invitesRemaining: 3,
       message: priority
-        ? 'Welcome! You've been bumped up in line.'
-        : 'You're on the list!'
+        ? "Welcome! You've been bumped up in line."
+        : "You're on the list!"
     })
 
   } catch (error) {

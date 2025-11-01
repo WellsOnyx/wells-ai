@@ -7,6 +7,11 @@ import { Client } from '@notionhq/client'
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY })
 
+// Export a helper to create Notion client instances (for waitlist, etc.)
+export function createNotionClient() {
+  return new Client({ auth: process.env.NOTION_API_KEY })
+}
+
 // Database IDs from environment
 const SUPPLIERS_DB = process.env.NOTION_SUPPLIERS_DB || ''
 const REQUESTS_DB = process.env.NOTION_REQUESTS_DB || ''
