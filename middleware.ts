@@ -7,7 +7,9 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/webhooks(.*)', // Webhook endpoints
   '/api/chat/limited-demo', // Limited demo for marketing page
+  '/api/waitlist(.*)', // Waitlist API endpoints
   '/sms-opt-in(.*)', // SMS opt-in page
+  '/early-access(.*)', // Early access waitlist page
 ])
 
 // Organization-only routes (require being part of an organization)

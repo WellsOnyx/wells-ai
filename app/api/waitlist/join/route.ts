@@ -22,13 +22,25 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // REQUIRE invite code - no organic signups
+    if (!inviteCode) {
+      return NextResponse.json(
+        { error: 'Wells AI is invite-only. Please use an invite link to join the waitlist.' },
+        { status: 403 }
+      )
+    }
+
     const waitlistDbId = process.env.NOTION_WAITLIST_DATABASE_ID
+
+    // Founder invite codes (unlimited uses)
+    const FOUNDER_CODES = ['WELLS2025', 'JONAH', 'ONYX']
+    const isFounderCode = FOUNDER_CODES.includes(inviteCode.toUpperCase())
 
     // If Notion isn't configured, just log to console and return success
     if (!waitlistDbId) {
-      console.log('[WAITLIST] New signup:', email, inviteCode ? `(invited by ${inviteCode})` : '(organic)')
+      console.log('[WAITLIST] New signup:', email, `(invited by ${inviteCode})`)
 
-      // Generate a fake invite code
+      // Generate a new invite code for this person
       const newInviteCode = generateInviteCode()
 
       return NextResponse.json({
@@ -37,7 +49,7 @@ export async function POST(req: NextRequest) {
         totalSignups: 1,
         inviteCode: newInviteCode,
         invitesRemaining: 3,
-        message: "You're on the list!"
+        message: isFounderCode ? "Welcome to Wells AI! You're in." : "You're on the list!"
       })
     }
 
@@ -67,7 +79,11 @@ export async function POST(req: NextRequest) {
     let referredBy = null
     let priority = false
 
-    if (inviteCode) {
+    if (isFounderCode) {
+      // Founder codes give priority and don't track usage
+      priority = true
+    } else {
+      // Regular invite code - validate and track
       // @ts-ignore - Notion SDK types issue
       const inviterResponse = await notion.databases.query({
         database_id: waitlistDbId,
@@ -79,25 +95,35 @@ export async function POST(req: NextRequest) {
         }
       })
 
-      if (inviterResponse.results.length > 0) {
-        const inviter = inviterResponse.results[0] as any
-        const invitesUsed = inviter.properties['Invites Used']?.number || 0
-
-        if (invitesUsed < 3) {
-          referredBy = inviterResponse.results[0].id
-          priority = true
-
-          // Update inviter's invites used count
-          await notion.pages.update({
-            page_id: inviterResponse.results[0].id,
-            properties: {
-              'Invites Used': {
-                number: invitesUsed + 1
-              }
-            }
-          })
-        }
+      if (inviterResponse.results.length === 0) {
+        return NextResponse.json(
+          { error: 'Invalid invite code. Please check your invite link and try again.' },
+          { status: 400 }
+        )
       }
+
+      const inviter = inviterResponse.results[0] as any
+      const invitesUsed = inviter.properties['Invites Used']?.number || 0
+
+      if (invitesUsed >= 3) {
+        return NextResponse.json(
+          { error: 'This invite code has reached its limit. Ask your friend for a new code!' },
+          { status: 400 }
+        )
+      }
+
+      referredBy = inviterResponse.results[0].id
+      priority = true
+
+      // Update inviter's invites used count
+      await notion.pages.update({
+        page_id: inviterResponse.results[0].id,
+        properties: {
+          'Invites Used': {
+            number: invitesUsed + 1
+          }
+        }
+      })
     }
 
     // Get current waitlist count for position

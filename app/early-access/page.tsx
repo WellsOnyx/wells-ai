@@ -161,59 +161,68 @@ export default function EarlyAccessPage() {
               {/* Signup form */}
               <div className="max-w-xl mx-auto">
                 <div className="bg-white/5 backdrop-blur-lg border border-white/20 rounded-sm p-8">
-                  {inviteCode && (
-                    <div className="mb-6 p-4 bg-[#dba63f]/20 border border-[#dba63f] rounded-sm">
-                      <p className="text-[#dba63f] text-sm font-semibold">
-                        🎉 You've been invited! Skip the line.
-                      </p>
-                    </div>
-                  )}
-
-                  <h2 className="text-2xl font-serif mb-2">Join the waitlist</h2>
-                  <p className="text-white/60 text-sm mb-6">
-                    {inviteCode
-                      ? 'Use your invite code to get priority access + 3 invites of your own'
-                      : 'Get early access and invite 3 friends to skip the line'}
-                  </p>
-
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      required
-                      className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#dba63f] transition-all"
-                    />
-
-                    {!inviteCode && (
-                      <input
-                        type="text"
-                        value={inviteCode}
-                        onChange={(e) => setInviteCode(e.target.value)}
-                        placeholder="Invite code (optional)"
-                        className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#dba63f] transition-all"
-                      />
-                    )}
-
-                    {status === 'error' && (
-                      <div className="p-4 bg-red-500/20 border border-red-500 rounded-sm">
-                        <p className="text-red-400 text-sm">{message}</p>
+                  {!inviteCode ? (
+                    // No invite code - show locked state
+                    <div>
+                      <div className="mb-6 p-6 bg-[#dba63f]/20 border border-[#dba63f] rounded-sm text-center">
+                        <div className="text-4xl mb-3">🔒</div>
+                        <p className="text-[#dba63f] font-semibold mb-2">
+                          Invite Only
+                        </p>
+                        <p className="text-white/70 text-sm">
+                          Wells AI is currently invite-only. You need an invite link to join the waitlist.
+                        </p>
                       </div>
-                    )}
+                      <div className="text-center">
+                        <p className="text-white/50 text-sm">
+                          Know someone with access? Ask them to share their invite link with you.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    // Has invite code - show form
+                    <>
+                      <div className="mb-6 p-4 bg-[#dba63f]/20 border border-[#dba63f] rounded-sm">
+                        <p className="text-[#dba63f] text-sm font-semibold">
+                          🎉 You've been invited! Join now.
+                        </p>
+                      </div>
 
-                    <button
-                      type="submit"
-                      disabled={status === 'loading'}
-                      className="w-full px-8 py-4 bg-[#dba63f] text-black font-semibold rounded-sm hover:bg-[#c89430] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {status === 'loading' ? 'Joining...' : 'Request Early Access'}
-                    </button>
-                  </form>
+                      <h2 className="text-2xl font-serif mb-2">Join the waitlist</h2>
+                      <p className="text-white/60 text-sm mb-6">
+                        Get priority access + 3 invites of your own to share
+                      </p>
 
-                  <p className="text-white/40 text-xs mt-6">
-                    We respect your privacy. Unsubscribe anytime.
-                  </p>
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="your@email.com"
+                          required
+                          className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#dba63f] transition-all"
+                        />
+
+                        {status === 'error' && (
+                          <div className="p-4 bg-red-500/20 border border-red-500 rounded-sm">
+                            <p className="text-red-400 text-sm">{message}</p>
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={status === 'loading'}
+                          className="w-full px-8 py-4 bg-[#dba63f] text-black font-semibold rounded-sm hover:bg-[#c89430] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {status === 'loading' ? 'Joining...' : 'Request Early Access'}
+                        </button>
+                      </form>
+
+                      <p className="text-white/40 text-xs mt-6">
+                        We respect your privacy. Unsubscribe anytime.
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
 
