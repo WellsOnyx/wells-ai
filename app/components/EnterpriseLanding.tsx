@@ -335,15 +335,15 @@ export default function EnterpriseLanding() {
             <div>
               <div className="font-semibold text-lg mb-4">Wells AI</div>
               <p className="text-white/70 text-sm">
-                The enterprise conversational commerce platform trusted by Fortune 1000 companies.
+                Every enterprise transaction will one day begin with a conversation. We're building that future.
               </p>
             </div>
             <div>
-              <div className="font-semibold mb-4">Platform</div>
+              <div className="font-semibold mb-4">Resources</div>
               <ul className="space-y-2 text-sm text-white/70">
-                <li><a href="#" className="hover:text-white transition">Procurement</a></li>
-                <li><a href="#" className="hover:text-white transition">Executive Search</a></li>
-                <li><a href="#" className="hover:text-white transition">Professional Services</a></li>
+                <li><a href="#" className="hover:text-white transition">Documentation</a></li>
+                <li><a href="#" className="hover:text-white transition">API</a></li>
+                <li><a href="#" className="hover:text-white transition">Changelog</a></li>
               </ul>
             </div>
             <div>
