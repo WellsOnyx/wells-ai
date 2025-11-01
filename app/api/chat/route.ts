@@ -185,12 +185,23 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     const { messages, userData } = request.validatedBody
     const organizationId = null // Not in schema yet, will be added later for org support
 
+    // Validate messages array
+    if (!Array.isArray(messages) || messages.length === 0) {
+      console.error('[CHAT] Invalid messages array:', messages)
+      return NextResponse.json({
+        error: 'Messages array is required and must contain at least one message'
+      }, { status: 400 })
+    }
+
     // Get Claude's response with user-type-aware system prompt
     const systemPrompt = getSystemPrompt(userData?.userType)
 
     if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
+      console.error('[CHAT] ANTHROPIC_API_KEY not configured')
+      return NextResponse.json({ error: 'AI service not configured. Please contact support.' }, { status: 500 })
     }
+
+    console.log('[CHAT] Sending request to Anthropic with', messages.length, 'messages')
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -208,11 +219,11 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     })
 
     if (!response.ok) {
-      const errorData = await response.json()
-      console.error('Anthropic API error:', errorData)
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      console.error('[CHAT] Anthropic API error:', errorData)
       return NextResponse.json({
-        error: 'Failed to get AI response',
-        details: errorData
+        error: 'AI service temporarily unavailable. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? errorData : undefined
       }, { status: 500 })
     }
 
@@ -220,9 +231,11 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     const assistantMessage = data.content?.[0]?.text
 
     if (!assistantMessage) {
-      console.error('No assistant message in response:', data)
-      return NextResponse.json({ error: 'Invalid AI response' }, { status: 500 })
+      console.error('[CHAT] No assistant message in response:', data)
+      return NextResponse.json({ error: 'Invalid response from AI service. Please try again.' }, { status: 500 })
     }
+
+    console.log('[CHAT] Successfully got response from Claude')
 
     // Analyze intent based on user type
     const intent = await analyzeProcurementIntent(messages)
@@ -422,8 +435,12 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       gtmData,
       jobSeekerData
     })
-  } catch (error) {
-    console.error('Chat error:', error)
-    return NextResponse.json({ error: 'Failed to process message' }, { status: 500 })
+  } catch (error: any) {
+    console.error('[CHAT] Unexpected error:', error)
+    console.error('[CHAT] Error stack:', error.stack)
+    return NextResponse.json({
+      error: 'An unexpected error occurred. Please try again.',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }, { status: 500 })
   }
 })

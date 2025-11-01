@@ -417,15 +417,15 @@ export default function WellsAIContent() {
                         and enterprise transactions across any industry.
                       </p>
                       <div className="grid md:grid-cols-3 gap-4 text-sm">
-                        <div className="p-4 bg-[#183b6d]/5 rounded-sm">
+                        <div className="p-4 bg-[#183b6d]/5 rounded-sm cursor-pointer hover:bg-[#183b6d]/10 transition" onClick={() => setInput('I need to source materials')}>
                           <div className="font-semibold text-[#183b6d] mb-1">Procurement</div>
                           <div className="text-xs text-[#575757]">Source suppliers & materials</div>
                         </div>
-                        <div className="p-4 bg-[#183b6d]/5 rounded-sm">
-                          <div className="font-semibold text-[#183b6d] mb-1">Talent</div>
-                          <div className="text-xs text-[#575757]">Find executive candidates</div>
+                        <div className="p-4 bg-[#183b6d]/5 rounded-sm cursor-pointer hover:bg-[#183b6d]/10 transition" onClick={() => setInput('I am looking for a job')}>
+                          <div className="font-semibold text-[#183b6d] mb-1">Job Search</div>
+                          <div className="text-xs text-[#575757]">Find your next opportunity</div>
                         </div>
-                        <div className="p-4 bg-[#183b6d]/5 rounded-sm">
+                        <div className="p-4 bg-[#183b6d]/5 rounded-sm cursor-pointer hover:bg-[#183b6d]/10 transition" onClick={() => setInput('I need professional services')}>
                           <div className="font-semibold text-[#183b6d] mb-1">Services</div>
                           <div className="text-xs text-[#575757]">Connect with professionals</div>
                         </div>
