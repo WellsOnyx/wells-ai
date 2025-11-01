@@ -325,7 +325,7 @@ export default function WellsAIContent() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="I need..."
+                    placeholder="What are you looking for?"
                     className="w-full px-8 py-6 text-lg bg-white border-2 border-[#9ea1a7]/20 rounded-sm focus:outline-none focus:border-[#dba63f] transition-all placeholder:text-[#9ea1a7] shadow-sm"
                   />
                   <button
@@ -393,6 +393,47 @@ export default function WellsAIContent() {
             {/* Messages */}
             <div className={`flex-1 overflow-y-auto px-6 ${isEmbedded ? 'py-6' : 'py-12'}`}>
               <div className="max-w-4xl mx-auto space-y-8">
+                {/* Empty state explainer - only show when no messages */}
+                {messages.length === 0 && (
+                  <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="text-center max-w-2xl">
+                      <div className="mb-8">
+                        <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="mx-auto opacity-20">
+                          <circle cx="40" cy="24" r="6" fill="#183b6d" />
+                          <line x1="40" y1="30" x2="24" y2="56" stroke="#183b6d" strokeWidth="2" />
+                          <line x1="40" y1="30" x2="40" y2="64" stroke="#183b6d" strokeWidth="2" />
+                          <line x1="40" y1="30" x2="56" y2="56" stroke="#183b6d" strokeWidth="2" />
+                          <circle cx="24" cy="56" r="5" fill="#183b6d" />
+                          <circle cx="56" cy="56" r="5" fill="#183b6d" />
+                          <circle cx="40" cy="64" r="5" fill="#183b6d" />
+                          <circle cx="40" cy="24" r="3" fill="#dba63f" opacity="0.9" />
+                        </svg>
+                      </div>
+                      <h2 className="text-3xl font-serif text-[#183b6d] mb-4">
+                        Start a conversation
+                      </h2>
+                      <p className="text-[#575757] mb-8 leading-relaxed">
+                        Tell Wells what you need. We handle procurement, executive search, partnerships,
+                        and enterprise transactions across any industry.
+                      </p>
+                      <div className="grid md:grid-cols-3 gap-4 text-sm">
+                        <div className="p-4 bg-[#183b6d]/5 rounded-sm">
+                          <div className="font-semibold text-[#183b6d] mb-1">Procurement</div>
+                          <div className="text-xs text-[#575757]">Source suppliers & materials</div>
+                        </div>
+                        <div className="p-4 bg-[#183b6d]/5 rounded-sm">
+                          <div className="font-semibold text-[#183b6d] mb-1">Talent</div>
+                          <div className="text-xs text-[#575757]">Find executive candidates</div>
+                        </div>
+                        <div className="p-4 bg-[#183b6d]/5 rounded-sm">
+                          <div className="font-semibold text-[#183b6d] mb-1">Services</div>
+                          <div className="text-xs text-[#575757]">Connect with professionals</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {messages.map((message, index) => (
                   <div key={index}>
                     {/* New component-based messages (email, consent, partners, etc.) */}
@@ -523,7 +564,7 @@ export default function WellsAIContent() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Type your message..."
+                    placeholder="Continue the conversation..."
                     className="flex-1 px-4 py-3 text-sm bg-white border border-[#9ea1a7]/30 rounded-sm focus:outline-none focus:border-[#183b6d] transition-colors placeholder:text-[#9ea1a7]"
                   />
                   <button
@@ -531,7 +572,7 @@ export default function WellsAIContent() {
                     disabled={isLoading || !input.trim()}
                     className="px-8 py-3 bg-[#183b6d] text-white font-normal text-xs tracking-wider uppercase rounded-sm hover:bg-[#0d2545] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Send
+                    Send to Wells
                   </button>
                 </div>
               </div>
