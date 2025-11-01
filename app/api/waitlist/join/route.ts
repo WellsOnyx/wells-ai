@@ -22,18 +22,26 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const notion = createNotionClient()
-
-    // Get or create waitlist database
     const waitlistDbId = process.env.NOTION_WAITLIST_DATABASE_ID
 
+    // If Notion isn't configured, just log to console and return success
     if (!waitlistDbId) {
-      console.error('NOTION_WAITLIST_DATABASE_ID not set')
-      return NextResponse.json(
-        { error: 'Waitlist not configured. Please contact support.' },
-        { status: 500 }
-      )
+      console.log('[WAITLIST] New signup:', email, inviteCode ? `(invited by ${inviteCode})` : '(organic)')
+
+      // Generate a fake invite code
+      const newInviteCode = generateInviteCode()
+
+      return NextResponse.json({
+        success: true,
+        position: 1,
+        totalSignups: 1,
+        inviteCode: newInviteCode,
+        invitesRemaining: 3,
+        message: "You're on the list!"
+      })
     }
+
+    const notion = createNotionClient()
 
     // Check if email already exists
     // @ts-ignore - Notion SDK types issue

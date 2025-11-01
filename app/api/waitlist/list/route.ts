@@ -13,15 +13,17 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const notion = createNotionClient()
     const waitlistDbId = process.env.NOTION_WAITLIST_DATABASE_ID
 
     if (!waitlistDbId) {
-      return NextResponse.json(
-        { error: 'Waitlist not configured' },
-        { status: 500 }
-      )
+      // Return empty list if Notion isn't configured
+      return NextResponse.json({
+        total: 0,
+        waitlist: []
+      })
     }
+
+    const notion = createNotionClient()
 
     // Get all waitlist entries sorted by position
     // @ts-ignore - Notion SDK types issue
