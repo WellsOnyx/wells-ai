@@ -49,10 +49,11 @@ export default function WellsAIContent() {
 
   // Load user data from Clerk metadata
   useEffect(() => {
-    if (isLoaded && user?.publicMetadata) {
-      const metadata = user.publicMetadata as Partial<UserData>
+    if (isLoaded && user?.unsafeMetadata) {
+      const metadata = user.unsafeMetadata as Partial<UserData>
       if (metadata.userType && metadata.name && metadata.email) {
         setUserData(metadata as UserData)
+        setShowChat(true) // Auto-show chat for returning users
       }
     }
   }, [isLoaded, user])
@@ -64,6 +65,7 @@ export default function WellsAIContent() {
         unsafeMetadata: data as Record<string, any>
       })
       setUserData(data)
+      setShowChat(true) // Show chat after onboarding
     } catch (error) {
       console.error('Failed to save user data:', error)
     }

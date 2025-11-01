@@ -62,17 +62,20 @@ export const jobSeekerOnboardSchema = z.object({
 
 // Job seeker profile update schema
 export const jobSeekerProfileUpdateSchema = z.object({
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
-  location: z.string().optional(),
-  yearsOfExperience: z.number().optional(),
-  seniority: z.string().optional(),
-  skills: z.array(z.string()).optional(),
-  industries: z.array(z.string()).optional(),
-  desiredRole: z.string().optional(),
-  resumeText: z.string().optional(),
+  jobSeekerId: z.string(),
+  updates: z.object({
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    location: z.string().optional(),
+    yearsOfExperience: z.number().optional(),
+    seniority: z.string().optional(),
+    skills: z.array(z.string()).optional(),
+    industries: z.array(z.string()).optional(),
+    desiredRole: z.string().optional(),
+    resumeText: z.string().optional(),
+  })
 })
 
 // Job seeker application schema

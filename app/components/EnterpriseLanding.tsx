@@ -130,8 +130,8 @@ export default function EnterpriseLanding() {
               Platform
             </h1>
             <p className="text-xl md:text-2xl text-[#575757] max-w-3xl mb-12 font-light leading-relaxed">
-              From semiconductors to executive talent. From commodities to compliance.
-              One conversation powers every transaction.
+              Built to power enterprise transactions across industries. From semiconductors to executive talent.
+              From commodities to compliance. One conversation for every deal.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
@@ -151,25 +151,25 @@ export default function EnterpriseLanding() {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Value Props Section */}
       <section className="relative z-10 py-20 px-6 bg-[#183b6d]/5">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-12">
             <div className="text-center">
-              <div className="text-5xl font-bold text-[#183b6d] mb-2">$2.4B+</div>
-              <div className="text-sm text-[#575757] tracking-wide uppercase">Transaction Volume</div>
-            </div>
-            <div className="text-center">
-              <div className="text-5xl font-bold text-[#183b6d] mb-2">847</div>
-              <div className="text-sm text-[#575757] tracking-wide uppercase">Enterprise Clients</div>
-            </div>
-            <div className="text-center">
               <div className="text-5xl font-bold text-[#183b6d] mb-2">24/7</div>
-              <div className="text-sm text-[#575757] tracking-wide uppercase">AI-Powered</div>
+              <div className="text-sm text-[#575757] tracking-wide uppercase">AI-Powered Platform</div>
             </div>
             <div className="text-center">
-              <div className="text-5xl font-bold text-[#183b6d] mb-2">0.33%</div>
-              <div className="text-sm text-[#575757] tracking-wide uppercase">Success Fee</div>
+              <div className="text-5xl font-bold text-[#183b6d] mb-2">0.5%</div>
+              <div className="text-sm text-[#575757] tracking-wide uppercase">Starting Fee</div>
+            </div>
+            <div className="text-center">
+              <div className="text-5xl font-bold text-[#183b6d] mb-2">∞</div>
+              <div className="text-sm text-[#575757] tracking-wide uppercase">Industries Supported</div>
+            </div>
+            <div className="text-center">
+              <div className="text-5xl font-bold text-[#183b6d] mb-2">100%</div>
+              <div className="text-sm text-[#575757] tracking-wide uppercase">Transparent Pricing</div>
             </div>
           </div>
         </div>
@@ -317,7 +317,7 @@ export default function EnterpriseLanding() {
             Ready to Transform<br />Your Enterprise Transactions?
           </h2>
           <p className="text-xl text-white/90 mb-12">
-            Join 847 companies already trading on Wells AI
+            Be among the first to experience the future of conversational commerce
           </p>
           <Link
             href="/app"
