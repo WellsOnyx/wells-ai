@@ -36,3 +36,54 @@ export const supplierNotifySchema = z.object({
   category: z.string(),
   organizationId: z.string().nullable().optional(),
 })
+
+// Consent decision schema
+export const consentDecideSchema = z.object({
+  actionId: z.string(),
+  decision: z.enum(['approved', 'rejected']),
+  decidedBy: z.string().optional(),
+  reason: z.string().optional(),
+})
+
+// Job seeker onboarding schema
+export const jobSeekerOnboardSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  location: z.string().optional(),
+  yearsOfExperience: z.number().optional(),
+  seniority: z.string().optional(),
+  skills: z.array(z.string()).optional(),
+  industries: z.array(z.string()).optional(),
+  desiredRole: z.string().optional(),
+  resumeText: z.string().optional(),
+})
+
+// Job seeker profile update schema
+export const jobSeekerProfileUpdateSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  location: z.string().optional(),
+  yearsOfExperience: z.number().optional(),
+  seniority: z.string().optional(),
+  skills: z.array(z.string()).optional(),
+  industries: z.array(z.string()).optional(),
+  desiredRole: z.string().optional(),
+  resumeText: z.string().optional(),
+})
+
+// Job seeker application schema
+export const jobSeekerApplySchema = z.object({
+  rfqId: z.string(),
+  jobSeekerId: z.string(),
+  coverLetter: z.string().optional(),
+  customMessage: z.string().optional(),
+})
+
+// Resume parsing schema
+export const resumeParseSchema = z.object({
+  resumeText: z.string(),
+})
