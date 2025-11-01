@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/webhooks(.*)', // Webhook endpoints
   '/api/chat(.*)', // Chat API - public access
+  '/api/test-anthropic(.*)', // Test endpoint
   '/api/waitlist(.*)', // Waitlist API endpoints
   '/sms-opt-in(.*)', // SMS opt-in page
   '/early-access(.*)', // Early access waitlist page
