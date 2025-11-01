@@ -89,7 +89,7 @@ export default function EnterpriseLanding() {
       <canvas
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none"
-        style={{ opacity: 1 }}
+        style={{ opacity: 0.4 }}
       />
 
       {/* Navigation */}
@@ -124,12 +124,22 @@ export default function EnterpriseLanding() {
       <section className="relative z-10 pt-24 pb-32 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-4xl">
-            <h1 className="text-7xl md:text-8xl lg:text-9xl font-serif text-[#183b6d] leading-[0.9] mb-8 tracking-tight">
+            {/* Version Badge */}
+            <div className="flex items-center gap-3 mb-8">
+              <span className="px-4 py-2 bg-[#183b6d] text-white text-sm font-semibold rounded-sm">
+                v1.0.0
+              </span>
+              <span className="px-4 py-2 bg-[#dba63f]/20 text-[#dba63f] border-2 border-[#dba63f] text-sm font-semibold rounded-sm">
+                ALPHA
+              </span>
+            </div>
+
+            <h1 className="text-7xl md:text-8xl lg:text-9xl font-serif text-[#183b6d] leading-[0.9] mb-8 tracking-tight drop-shadow-sm">
               The Enterprise<br />
               <span className="text-[#dba63f]">Conversation</span><br />
               Platform
             </h1>
-            <p className="text-xl md:text-2xl text-[#575757] max-w-3xl mb-12 font-light leading-relaxed">
+            <p className="text-xl md:text-2xl text-[#000000] max-w-3xl mb-12 font-normal leading-relaxed bg-white/80 backdrop-blur-sm p-6 rounded-sm">
               Built to power enterprise transactions across industries. From semiconductors to executive talent.
               From commodities to compliance. One conversation for every deal.
             </p>
