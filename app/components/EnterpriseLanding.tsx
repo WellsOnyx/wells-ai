@@ -341,9 +341,9 @@ export default function EnterpriseLanding() {
             <div>
               <div className="font-semibold mb-4">Resources</div>
               <ul className="space-y-2 text-sm text-white/70">
-                <li><a href="#" className="hover:text-white transition">Documentation</a></li>
-                <li><a href="#" className="hover:text-white transition">API</a></li>
-                <li><a href="#" className="hover:text-white transition">Changelog</a></li>
+                <li><Link href="/docs" className="hover:text-white transition">Documentation</Link></li>
+                <li><Link href="/docs/sdk" className="hover:text-white transition">SDK</Link></li>
+                <li><Link href="/docs/changelog" className="hover:text-white transition">Changelog</Link></li>
               </ul>
             </div>
             <div>
@@ -357,9 +357,9 @@ export default function EnterpriseLanding() {
             <div>
               <div className="font-semibold mb-4">Legal</div>
               <ul className="space-y-2 text-sm text-white/70">
-                <li><a href="#" className="hover:text-white transition">Terms</a></li>
-                <li><a href="#" className="hover:text-white transition">Privacy</a></li>
-                <li><a href="#" className="hover:text-white transition">Security</a></li>
+                <li><Link href="/legal/terms" className="hover:text-white transition">Terms</Link></li>
+                <li><Link href="/legal/privacy" className="hover:text-white transition">Privacy</Link></li>
+                <li><Link href="/legal/security" className="hover:text-white transition">Security</Link></li>
               </ul>
             </div>
           </div>
