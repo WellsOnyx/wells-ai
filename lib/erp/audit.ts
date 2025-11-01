@@ -131,7 +131,7 @@ export async function extractHistoricalPOs(
 
     // Paginate through all results
     while (nextPage) {
-      const response = await fetch(nextPage, {
+      const response: Response = await fetch(nextPage, {
         headers: {
           Authorization: `Bearer ${MERGE_API_KEY}`,
           'X-Account-Token': accountToken,
@@ -142,7 +142,7 @@ export async function extractHistoricalPOs(
         throw new Error(`Failed to fetch POs: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
 
       // Convert Merge format to our format
       const pos = data.results.map((po: any) => ({
