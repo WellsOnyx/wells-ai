@@ -153,7 +153,7 @@ export default function DocsPage() {
                   Contact Support
                 </Link>
                 <a
-                  href="mailto:hello@wellsai.com"
+                  href="mailto:hello@wellsonyx.com"
                   className="px-8 py-3 bg-white/10 text-white font-medium rounded-sm hover:bg-white/20 transition-all"
                 >
                   Email Us

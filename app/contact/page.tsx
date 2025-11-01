@@ -93,8 +93,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-[#183b6d] mb-1">Email</h3>
-                    <a href="mailto:hello@wellsai.com" className="text-[#575757] hover:text-[#dba63f] transition">
-                      hello@wellsai.com
+                    <a href="mailto:hello@wellsonyx.com" className="text-[#575757] hover:text-[#dba63f] transition">
+                      hello@wellsonyx.com
                     </a>
                   </div>
                 </div>

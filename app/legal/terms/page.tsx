@@ -186,7 +186,7 @@ export default function TermsPage() {
           </p>
           <div className="bg-[#183b6d]/5 p-6 rounded-sm not-prose mt-4">
             <p className="text-[#575757] mb-2">
-              <strong>Email:</strong> <a href="mailto:hello@wellsai.com" className="text-[#dba63f] hover:text-[#c89430]">hello@wellsai.com</a>
+              <strong>Email:</strong> <a href="mailto:hello@wellsonyx.com" className="text-[#dba63f] hover:text-[#c89430]">hello@wellsonyx.com</a>
             </p>
             <p className="text-[#575757]">
               <strong>Website:</strong> <a href="https://www.wellsonyx.com" target="_blank" rel="noopener noreferrer" className="text-[#dba63f] hover:text-[#c89430]">www.wellsonyx.com</a>

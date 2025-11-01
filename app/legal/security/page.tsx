@@ -273,7 +273,7 @@ export default function SecurityPage() {
               <strong>Security Team:</strong> <a href="mailto:security@wellsai.com" className="text-[#dba63f] hover:text-[#c89430]">security@wellsai.com</a>
             </p>
             <p className="text-[#575757] mb-2">
-              <strong>General Contact:</strong> <a href="mailto:hello@wellsai.com" className="text-[#dba63f] hover:text-[#c89430]">hello@wellsai.com</a>
+              <strong>General Contact:</strong> <a href="mailto:hello@wellsonyx.com" className="text-[#dba63f] hover:text-[#c89430]">hello@wellsonyx.com</a>
             </p>
             <p className="text-[#575757]">
               <strong>Website:</strong> <a href="https://www.wellsonyx.com" target="_blank" rel="noopener noreferrer" className="text-[#dba63f] hover:text-[#c89430]">www.wellsonyx.com</a>

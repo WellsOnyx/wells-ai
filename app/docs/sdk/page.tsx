@@ -265,7 +265,7 @@ await gtm.initialize();
             Contact Support
           </Link>
           <a
-            href="mailto:hello@wellsai.com"
+            href="mailto:hello@wellsonyx.com"
             className="px-6 py-3 bg-white border-2 border-[#183b6d] text-[#183b6d] font-medium rounded-sm hover:bg-[#183b6d] hover:text-white transition-all"
           >
             Email Us
