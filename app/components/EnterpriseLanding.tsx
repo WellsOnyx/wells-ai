@@ -134,10 +134,10 @@ export default function EnterpriseLanding() {
               </span>
             </div>
 
-            <h1 className="text-7xl md:text-8xl lg:text-9xl font-serif text-[#183b6d] leading-[0.9] mb-8 tracking-tight drop-shadow-sm">
-              The Enterprise<br />
-              <span className="text-[#dba63f]">Conversation</span><br />
-              Platform
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif text-[#183b6d] leading-[0.95] mb-8 tracking-tight drop-shadow-sm">
+              Finally, true end-to-end<br />
+              <span className="text-[#dba63f]">conversational commerce</span><br />
+              for the enterprise
             </h1>
             <p className="text-xl md:text-2xl text-[#000000] max-w-3xl mb-12 font-normal leading-relaxed bg-white/80 backdrop-blur-sm p-6 rounded-sm">
               Built to power enterprise transactions across industries. From semiconductors to executive talent.
