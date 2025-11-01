@@ -40,7 +40,7 @@ export const supplierNotifySchema = z.object({
 // Consent decision schema
 export const consentDecideSchema = z.object({
   actionId: z.string(),
-  decision: z.enum(['approved', 'rejected']),
+  decision: z.enum(['approve', 'reject']),
   decidedBy: z.string().optional(),
   reason: z.string().optional(),
 })
