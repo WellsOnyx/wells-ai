@@ -167,14 +167,14 @@ export function generateOutreachMessage(
 
   if (confidential) {
     // Confidential variation - don't reveal company
-    body = `I am working with a client disrupting ${qualification.targeting.targetCompanies?.[0] || 'the industry'} and they are looking for a ${qualification.roleTitle} to join the team ${getLocationString(qualification.location)}.
+    body = `I am working with a client disrupting ${qualification.targeting?.targetCompanies?.[0] || 'the industry'} and they are looking for a ${qualification.roleTitle} to join the team ${getLocationString(qualification.location)}.
 
 I found your profile both as someone knowledgeable in ${candidate.expertise} but also whom could potentially contribute to ${candidate.potentialContribution}.
 
 I assume you are happy where you are but if you are keeping your eyes and ears open to an opportunity, please circle back.`
   } else {
     // Standard variation - reveal company
-    body = `I am working with the ${getTeamString(qualification)} at ${qualification.targeting.targetCompanies?.[0] || '[Company]'}, they are looking for a ${qualification.roleTitle} to join the team ${getLocationString(qualification.location)}.
+    body = `I am working with the ${getTeamString(qualification)} at ${qualification.targeting?.targetCompanies?.[0] || '[Company]'}, they are looking for a ${qualification.roleTitle} to join the team ${getLocationString(qualification.location)}.
 
 I found your profile both as someone knowledgeable in ${candidate.expertise} but also whom could potentially contribute to ${candidate.potentialContribution}.
 
