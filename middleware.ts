@@ -1,52 +1,12 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-// Public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
-  '/', // Homepage (marketing page)
-  '/app(.*)', // TEMP: Make app public for testing
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/api/webhooks(.*)', // Webhook endpoints
-  '/api/chat(.*)', // Chat API - public access
-  '/api/test-anthropic(.*)', // Test endpoint
-  '/api/waitlist(.*)', // Waitlist API endpoints
-  '/sms-opt-in(.*)', // SMS opt-in page
-  '/early-access(.*)', // Early access waitlist page
-])
-
-// Organization-only routes (require being part of an organization)
-const isOrgRoute = createRouteMatcher([
-  '/org/(.*)',
-  '/organizations/(?!create).*', // Exclude /organizations/create
-])
-
-export default clerkMiddleware(async (auth, request) => {
-  try {
-    // Allow public routes
-    if (isPublicRoute(request)) {
-      return
-    }
-
-    // Protect all authenticated routes
-    await auth.protect()
-
-    // For organization routes, verify user has an organization
-    if (isOrgRoute(request)) {
-      const { orgId } = await auth()
-
-      // If no organization, redirect to create one
-      if (!orgId) {
-        const createOrgUrl = new URL('/organizations/create', request.url)
-        createOrgUrl.searchParams.set('redirect_url', request.url)
-        return Response.redirect(createOrgUrl)
-      }
-    }
-  } catch (error) {
-    console.error('[MIDDLEWARE] Error:', error)
-    // Allow request to continue on error
-    return
-  }
-})
+// TEMP: Disable Clerk middleware to debug MIDDLEWARE_INVOCATION_FAILED error
+// Just allow all requests through for now
+export default function middleware(request: NextRequest) {
+  console.log('[MIDDLEWARE] Request:', request.nextUrl.pathname)
+  return NextResponse.next()
+}
 
 export const config = {
   matcher: [
