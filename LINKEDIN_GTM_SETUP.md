@@ -37,27 +37,36 @@ The LinkedIn GTM integration allows you to run outbound campaigns on LinkedIn fo
 - High-value prospects requiring personalization
 - Users concerned about LinkedIn account safety
 
-### 2. Phantombuster (Automated)
+### 2. Phantombuster (Automated - Slow & Safe)
 
 **How it works:**
 - Connect your Phantombuster account
 - Wells orchestrates campaigns via Phantombuster API
-- Automated sending within safe limits
+- **SLOW automation** with randomized delays (5-15 min between actions)
+- Only runs during work hours (9am-5pm, Mon-Fri)
 
 **Pros:**
-- Fully automated
+- Fully automated (zero manual work)
 - Consistent daily execution
-- Scalable to 50+ messages/day
+- Progressive scaling (starts slow, ramps up safely)
 
 **Cons:**
 - Requires Phantombuster subscription (~$60/mo)
-- Small risk of LinkedIn restrictions if overused
+- Risk of LinkedIn restrictions (mitigated with slow limits)
 - Requires API key setup
 
+**Safety Limits:**
+- **Week 1:** 5 connections/day, 10 messages/day
+- **Week 2-4:** 10 connections/day, 15 messages/day
+- **Month 2+:** 15 connections/day, 20 messages/day (max)
+- **Random delays:** 5-15 minutes between each action
+- **Work hours only:** 9am-5pm (your timezone)
+- **No weekends:** Saturday/Sunday paused
+
 **Best for:**
-- Users with existing Phantombuster accounts
-- High-volume campaigns (100+ prospects)
-- Experienced LinkedIn outreach users
+- Users who value time over manual control
+- Willing to accept small risk for automation
+- Patient approach (slow and steady)
 
 ### 3. Browser Extension (Coming Soon)
 
@@ -165,20 +174,31 @@ Feel free to reach out anytime.
 
 ## LinkedIn Safety Limits
 
-### Connection Requests:
-- **Max per week:** 100
-- **Recommended daily:** 10-15
-- **Wells enforces:** 15/day in manual mode, 20/day in automated
+Wells uses **ultra-conservative limits** to protect your account:
 
-### Messages:
-- **Max per day:** 50-100 (depending on account age)
-- **Recommended daily:** 20-30
-- **Wells enforces:** 20/day in manual mode, 50/day in automated
+### Automated Mode (Phantombuster):
 
-### Engagement:
-- Like/comment on 5-10 posts per day
-- Endorse skills of connections
-- Share relevant content
+**Progressive Scaling:**
+- **Week 1 (Testing):** 5 connections/day, 10 messages/day
+- **Week 2-4 (Ramping):** 10 connections/day, 15 messages/day
+- **Month 2+ (Steady):** 15 connections/day, 20 messages/day
+- **Never exceeds:** 100 connections/week (LinkedIn's weekly limit)
+
+**Humanization:**
+- **Random delays:** 5-15 minutes between each action
+- **Work hours only:** 9am-5pm in your timezone
+- **No weekends:** Automation paused Sat/Sun
+- **Daily variance:** ±20% volume randomization
+
+**Auto-pause triggers:**
+- Acceptance rate drops below 30%
+- LinkedIn sends warning/restriction
+- Unusual activity patterns detected
+
+### Manual Mode:
+- **No limits** - you control the pace
+- **Recommended:** 10-20 connections/day
+- **Best practice:** Engage with content before connecting
 
 ## Setup Instructions
 

@@ -35,8 +35,15 @@ export interface LinkedInCampaign {
 
   // Automation settings
   automationProvider?: 'manual' | 'phantombuster' | 'browser-extension'
-  dailyConnectionLimit: number // LinkedIn limit: ~100/week
-  dailyMessageLimit: number
+  dailyConnectionLimit: number // SAFE: 5-15/day max
+  dailyMessageLimit: number // SAFE: 10-20/day max
+
+  // Safety settings
+  accountAge?: 'new' | 'established' | 'aged' // Determines limits
+  randomDelayMin?: number // Min minutes between actions (default: 5)
+  randomDelayMax?: number // Max minutes between actions (default: 15)
+  workHoursOnly?: boolean // Only run 9am-5pm (default: true)
+  skipWeekends?: boolean // No automation Sat/Sun (default: true)
 
   // Tracking
   stats: CampaignStats
@@ -261,8 +268,15 @@ export async function createLinkedInCampaign(
     status: 'draft',
     searchCriteria,
     targetCandidates: [],
-    dailyConnectionLimit: 15, // Safe LinkedIn limit
-    dailyMessageLimit: 20,
+
+    // ULTRA-SAFE defaults (start slow, scale up)
+    dailyConnectionLimit: 5, // Week 1: 5/day
+    dailyMessageLimit: 10,   // Week 1: 10/day
+    accountAge: 'new',       // Assume new until proven otherwise
+    randomDelayMin: 5,       // 5-15 min delays between actions
+    randomDelayMax: 15,
+    workHoursOnly: true,     // Only 9am-5pm
+    skipWeekends: true,      // No weekend automation
     stats: {
       connectionRequestsSent: 0,
       connectionRequestsAccepted: 0,
@@ -423,8 +437,9 @@ export async function connectLinkedInIntegration(
     provider,
     credentials,
     connected: true,
-    dailyConnectionLimit: provider === 'manual' ? 15 : 50,
-    dailyMessageLimit: provider === 'manual' ? 20 : 50
+    // SAFE limits based on provider
+    dailyConnectionLimit: provider === 'manual' ? 20 : 5,  // Automated: start at 5/day
+    dailyMessageLimit: provider === 'manual' ? 30 : 10     // Automated: start at 10/day
   }
 
   // TODO: Store encrypted credentials in Clerk user metadata
