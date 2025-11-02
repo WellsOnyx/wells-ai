@@ -77,7 +77,7 @@
 ### Grain & Vault
 *Ideas for tokenomics and incentive alignment*
 
--
+- **Internal DeFi Program** - Use Grain/Vault as collateral for financing ANYTHING: B2B deals, equipment purchases, inventory, even personal mortgages. Wells becomes your bank, backed by your reputation in the network.
 
 ### Mobile Experience
 *Ideas for mobile/native apps*
@@ -124,6 +124,14 @@
 - $7T GMV milestone roadmap
 - Geographic expansion strategy
 - Category expansion plan
+
+### Wells DeFi Bank
+- Grain/Vault as collateral for ANY financing need
+- B2B equipment financing
+- Inventory and working capital loans
+- Personal mortgages backed by network reputation
+- Trust score = credit score
+- Eliminate traditional banks for Wells ecosystem
 
 ---
 
