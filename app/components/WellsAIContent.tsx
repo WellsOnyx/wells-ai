@@ -189,7 +189,7 @@ export default function WellsAIContent() {
         body: JSON.stringify({
           messages: cleanMessages,
           userData: userData,
-          organizationId: organization?.id || null
+          organizationId: null // Organizations not required for basic chat
         }),
       })
 
