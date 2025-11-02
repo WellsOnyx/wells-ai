@@ -21,24 +21,30 @@ const isOrgRoute = createRouteMatcher([
 ])
 
 export default clerkMiddleware(async (auth, request) => {
-  // Allow public routes
-  if (isPublicRoute(request)) {
-    return
-  }
-
-  // Protect all authenticated routes
-  await auth.protect()
-
-  // For organization routes, verify user has an organization
-  if (isOrgRoute(request)) {
-    const { orgId } = await auth()
-
-    // If no organization, redirect to create one
-    if (!orgId) {
-      const createOrgUrl = new URL('/organizations/create', request.url)
-      createOrgUrl.searchParams.set('redirect_url', request.url)
-      return Response.redirect(createOrgUrl)
+  try {
+    // Allow public routes
+    if (isPublicRoute(request)) {
+      return
     }
+
+    // Protect all authenticated routes
+    await auth.protect()
+
+    // For organization routes, verify user has an organization
+    if (isOrgRoute(request)) {
+      const { orgId } = await auth()
+
+      // If no organization, redirect to create one
+      if (!orgId) {
+        const createOrgUrl = new URL('/organizations/create', request.url)
+        createOrgUrl.searchParams.set('redirect_url', request.url)
+        return Response.redirect(createOrgUrl)
+      }
+    }
+  } catch (error) {
+    console.error('[MIDDLEWARE] Error:', error)
+    // Allow request to continue on error
+    return
   }
 })
 
