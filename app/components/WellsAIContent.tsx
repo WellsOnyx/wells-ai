@@ -10,6 +10,7 @@ import PartnershipBooking from './PartnershipBooking'
 import { CategoryPioneerOpportunity } from '@/lib/categories'
 import ChatMessageRenderer from './chat/ChatMessageRenderer'
 import { ChatMessage } from '@/types/chat'
+import GTMConversionCard from './chat/cards/GTMConversionCard'
 import Link from 'next/link'
 
 interface Message {
@@ -27,6 +28,19 @@ interface Message {
     detected: boolean
     category: CategoryPioneerOpportunity
     userRequest: string
+  }
+  gtmData?: {
+    detected: boolean
+    intent?: {
+      isGTMRequest: boolean
+      confidence: number
+      whatTheySell?: string
+      whoTheyTarget?: string
+      goal?: string
+    }
+    onboardingComplete?: boolean
+    needsLogin?: boolean
+    missingSteps?: string[]
   }
   partnershipPath?: 'standard' | 'partnership'
   selectedTier?: 1 | 2 | 3
@@ -219,7 +233,8 @@ export default function WellsAIContent() {
         role: 'assistant',
         content: data.message,
         procurementData: data.procurementData,
-        pioneerOpportunity: data.pioneerOpportunity
+        pioneerOpportunity: data.pioneerOpportunity,
+        gtmData: data.gtmData
       }
 
       setMessages(prev => [...prev, assistantMessage])
@@ -478,6 +493,28 @@ export default function WellsAIContent() {
                             <span>{message.procurementData.category}</span>
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {/* GTM Journey Detection - Early Conversion Card */}
+                    {message.gtmData?.detected && message.gtmData.intent && (
+                      <div className="mt-4">
+                        <GTMConversionCard
+                          intent={{
+                            whatTheySell: message.gtmData.intent.whatTheySell,
+                            whoTheyTarget: message.gtmData.intent.whoTheyTarget,
+                            goal: message.gtmData.intent.goal,
+                            confidence: message.gtmData.intent.confidence
+                          }}
+                          onStart={() => {
+                            // User clicked "Start GTM Journey"
+                            // TODO: Trigger qualification conversation
+                            console.log('[GTM] User started GTM Journey')
+                          }}
+                          onDismiss={() => {
+                            console.log('[GTM] User dismissed GTM card')
+                          }}
+                        />
                       </div>
                     )}
 
