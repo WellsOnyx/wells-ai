@@ -166,19 +166,19 @@ function getGoalCopy(goal?: string): { title: string; description: string } {
     case 'find_customers':
       return {
         title: 'Find Customers',
-        description: 'I can help you identify and reach qualified customers for your product or service. I'll handle the sourcing and outreach.'
+        description: "I can help you identify and reach qualified customers for your product or service. I'll handle the sourcing and outreach."
       }
 
     case 'generate_leads':
       return {
         title: 'Generate Leads',
-        description: 'I'll build a pipeline of qualified leads for your sales team. You focus on closing, I handle prospecting.'
+        description: "I'll build a pipeline of qualified leads for your sales team. You focus on closing, I handle prospecting."
       }
 
     case 'close_deals':
       return {
         title: 'Close More Deals',
-        description: 'I can help you optimize your sales process, from initial outreach to closing. Let's build your GTM engine.'
+        description: "I can help you optimize your sales process, from initial outreach to closing. Let's build your GTM engine."
       }
 
     default:
