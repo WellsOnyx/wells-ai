@@ -52,9 +52,9 @@ export default function EnterpriseLanding() {
       angle: number
     }
 
-    const ghostSize = 120
+    const ghostSize = 140  // Slightly larger for more presence
     const ghostX = canvas.width * 0.85
-    const ghostY = canvas.height * 0.45  // Aligned with hero text
+    const ghostY = canvas.height * 0.52  // Moved down more
     let rotation = 0
     let pulsePhase = 0
 
@@ -133,7 +133,7 @@ export default function EnterpriseLanding() {
 
       // Ghost outer shell - geometric panels
       ctx.strokeStyle = '#183b6d'
-      ctx.lineWidth = 2
+      ctx.lineWidth = 3  // Bolder lines for more pop
       ctx.beginPath()
       ghostVertices.forEach((vertex, i) => {
         const nextVertex = ghostVertices[(i + 1) % ghostVertices.length]
@@ -150,11 +150,12 @@ export default function EnterpriseLanding() {
       ctx.closePath()
       ctx.stroke()
 
-      // Ghost inner core - glowing center
-      const coreRadius = 15 + pulse * 0.5
+      // Ghost inner core - glowing center (enhanced)
+      const coreRadius = 25 + pulse * 0.8  // Larger glow
       const gradient = ctx.createRadialGradient(ghostX, ghostY, 0, ghostX, ghostY, coreRadius)
-      gradient.addColorStop(0, 'rgba(219, 166, 63, 0.9)')
-      gradient.addColorStop(0.5, 'rgba(219, 166, 63, 0.4)')
+      gradient.addColorStop(0, 'rgba(219, 166, 63, 1)')  // Full opacity at center
+      gradient.addColorStop(0.3, 'rgba(219, 166, 63, 0.8)')
+      gradient.addColorStop(0.6, 'rgba(219, 166, 63, 0.4)')
       gradient.addColorStop(1, 'rgba(219, 166, 63, 0)')
 
       ctx.fillStyle = gradient
@@ -162,11 +163,14 @@ export default function EnterpriseLanding() {
       ctx.arc(ghostX, ghostY, coreRadius, 0, Math.PI * 2)
       ctx.fill()
 
-      // Ghost core dot
+      // Ghost core dot (brighter and larger)
       ctx.fillStyle = '#dba63f'
+      ctx.shadowColor = 'rgba(219, 166, 63, 0.8)'
+      ctx.shadowBlur = 10
       ctx.beginPath()
-      ctx.arc(ghostX, ghostY, 4, 0, Math.PI * 2)
+      ctx.arc(ghostX, ghostY, 6, 0, Math.PI * 2)
       ctx.fill()
+      ctx.shadowBlur = 0  // Reset shadow
 
       // Ghost vertices (connection points)
       ghostVertices.forEach((vertex) => {
@@ -175,12 +179,12 @@ export default function EnterpriseLanding() {
 
         ctx.fillStyle = '#183b6d'
         ctx.beginPath()
-        ctx.arc(x, y, 3, 0, Math.PI * 2)
+        ctx.arc(x, y, 4, 0, Math.PI * 2)  // Slightly larger vertices
         ctx.fill()
 
         // Draw line from vertex to core
-        ctx.strokeStyle = 'rgba(24, 59, 109, 0.2)'
-        ctx.lineWidth = 0.5
+        ctx.strokeStyle = 'rgba(24, 59, 109, 0.3)'  // Slightly more visible
+        ctx.lineWidth = 1
         ctx.beginPath()
         ctx.moveTo(x, y)
         ctx.lineTo(ghostX, ghostY)
