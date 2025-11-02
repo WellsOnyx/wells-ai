@@ -13,45 +13,52 @@ export interface RoleQualification {
   roleTitle: string
   seniority?: string
 
+  // GTM-specific fields (for sales outreach use case)
+  whatTheySell?: string // Product/service description
+  whoTheyTarget?: string // ICP description
+
   // Technical/Role Specifics (varies by role type)
   technicalSpecs?: EngineeringSpecs | SalesSpecs | ExecutiveSpecs
 
   // Compensation & Benefits
-  compensation: {
+  compensation?: {
     baseRangeMin?: number
     baseRangeMax?: number
     totalComp?: string
     equity?: string
     negotiationCeiling?: number
     negotiationFloor?: number
+    productPricing?: string // GTM: What they charge
+    targetCustomerBudget?: string // GTM: Customer budget range
   }
 
   // Company & Product Targeting
-  targeting: {
+  targeting?: {
     targetCompanies?: string[]
     avoidCompanies?: string[]
     reasonsToAvoid?: string[]
+    targetIndustries?: string[] // GTM: Industries to target
   }
 
   // Location
-  location: {
-    type: 'remote' | 'hybrid' | 'on-site'
+  location?: {
+    type?: 'remote' | 'hybrid' | 'on-site'
     city?: string
     remoteScope?: 'us-only' | 'global' | 'timezone-specific'
   }
 
   // Timeline
-  timeline: {
+  timeline?: {
     startDate?: string
-    urgency: 'immediate' | 'normal' | 'flexible'
+    urgency?: 'immediate' | 'normal' | 'flexible'
     interviewRounds?: number
   }
 
   // The Critical Question - "How will this person be judged?"
-  judgmentCriteria: string[] // 3 things that determine success/failure
+  judgmentCriteria?: string[] // 3 things that determine success/failure
 
   // Completeness tracking
-  completeness: {
+  completeness?: {
     hasRoleSpecs: boolean
     hasCompensation: boolean
     hasTargeting: boolean
