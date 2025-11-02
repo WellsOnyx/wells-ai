@@ -43,7 +43,7 @@ export default function WellsAIContent() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [showChat, setShowChat] = useState(false)
+  const [showChat, setShowChat] = useState(true) // Always show chat - discovery through conversation
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -53,10 +53,20 @@ export default function WellsAIContent() {
       const metadata = user.unsafeMetadata as Partial<UserData>
       if (metadata.userType && metadata.name && metadata.email) {
         setUserData(metadata as UserData)
-        setShowChat(true) // Auto-show chat for returning users
       }
     }
   }, [isLoaded, user])
+
+  // Wells' magical welcome for new users
+  useEffect(() => {
+    if (isLoaded && !userData && messages.length === 0) {
+      // Wells introduces itself warmly
+      setMessages([{
+        role: 'assistant',
+        content: "Hi, I'm Wells.\n\nI'm here to help you with whatever you need—whether it's finding the right people, closing deals, or sourcing what your business needs.\n\nWhat brings you here today?"
+      }])
+    }
+  }, [isLoaded, userData, messages.length])
 
   const handleOnboardingComplete = async (data: UserData) => {
     // Save to Clerk user metadata
@@ -258,10 +268,9 @@ export default function WellsAIContent() {
     )
   }
 
-  // Show onboarding if no user data
-  if (!userData) {
-    return <Onboarding onComplete={handleOnboardingComplete} />
-  }
+  // Skip onboarding - go straight to chat with Wells introducing itself
+  // Wells will discover the user's journey through conversation
+  const needsWelcome = !userData && messages.length === 0
 
   return (
     <div className="relative min-h-screen bg-white text-[#000000] overflow-hidden">
