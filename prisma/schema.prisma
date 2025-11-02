@@ -1,0 +1,153 @@
+// Wells AI Database Schema
+// Transaction engine for $7T B2B platform
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Transaction statuses
+enum TransactionStatus {
+  DRAFT           // RFQ created, finding matches
+  QUOTED          // Suppliers sent quotes
+  ACCEPTED        // Buyer accepted, escrow pending
+  ESCROWED        // Funds in escrow
+  IN_PROGRESS     // Work happening
+  COMPLETED       // Work done, awaiting release
+  RELEASED        // Funds released, deal complete
+  DISPUTED        // Issue raised
+  CANCELLED       // Deal cancelled
+}
+
+// Main transaction model
+model Transaction {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // RFQ reference
+  rfqId String
+
+  // Parties
+  buyerId  String
+  sellerId String
+
+  // Status tracking
+  status TransactionStatus @default(DRAFT)
+
+  // Financial (all amounts in cents)
+  amount          Int    // Deal value
+  wellsFee        Int    // Platform fee
+  wellsFeePercent Float  // Fee percentage (e.g., 2.5)
+
+  // Airwallex payment details
+  airwallexPaymentIntentId String?
+  airwallexClientSecret    String?
+  escrowedAt               DateTime?
+  releasedAt               DateTime?
+
+  // Trust/ratings (1-5 stars)
+  buyerRating  Float?
+  sellerRating Float?
+  buyerReview  String?
+  sellerReview String?
+
+  // Completion tracking
+  completedAt DateTime?
+
+  // Audit trail
+  events TransactionEvent[]
+
+  // Metadata
+  metadata Json? // Flexible field for additional data
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([rfqId])
+}
+
+// Transaction event log (audit trail)
+model TransactionEvent {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // Link to transaction
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  // Event details
+  action   String // e.g., "transaction_created", "payment_escrowed", "funds_released"
+  actor    String // "buyer", "seller", or "system"
+  metadata Json?  // Additional event data
+
+  @@index([transactionId])
+  @@index([createdAt])
+}
+
+// User trust scores (for reputation system)
+model UserTrustScore {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User reference
+  userId String @unique
+
+  // Trust metrics
+  score            Int   @default(50) // 0-100
+  totalTransactions Int  @default(0)
+  completedDeals   Int   @default(0)
+  cancelledDeals   Int   @default(0)
+  disputedDeals    Int   @default(0)
+
+  // Rating stats
+  averageRating  Float @default(0) // 1-5 stars
+  totalRatings   Int   @default(0)
+
+  // Deal value stats (in cents)
+  totalGMV       BigInt @default(0)
+  averageDealSize BigInt @default(0)
+
+  // Completion rate (percentage)
+  completionRate Float @default(0)
+
+  // Verification level
+  verificationLevel String @default("none") // "none", "basic", "enhanced", "premium"
+
+  @@index([userId])
+  @@index([score])
+}
+
+// RFQ (Request for Quote) - minimal model, most data in Notion
+model RFQ {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Requester
+  userId String
+
+  // Category and details
+  category     String
+  title        String
+  description  String
+  requirements Json?
+
+  // Status
+  status String @default("open") // "open", "matched", "closed"
+
+  // Notion reference
+  notionPageId String?
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+}

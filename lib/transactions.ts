@@ -7,8 +7,19 @@
  * Payment Provider: Airwallex (2.8% domestic, 4.3% international)
  */
 
-// import { prisma } from '@/lib/db' // TODO: Add when migrating from Notion to Postgres
+import { prisma } from '@/lib/prisma'
 import * as airwallex from '@/lib/airwallex'
+import { TransactionStatus as PrismaTransactionStatus } from '@prisma/client'
+
+// Map lowercase status to Prisma enum
+const statusToPrisma = (status: string): PrismaTransactionStatus => {
+  return status.toUpperCase().replace(/-/g, '_') as PrismaTransactionStatus
+}
+
+// Map Prisma enum to lowercase status
+const statusFromPrisma = (status: PrismaTransactionStatus): string => {
+  return status.toLowerCase().replace(/_/g, '-')
+}
 
 export type TransactionStatus =
   | 'draft'           // RFQ created, finding matches
@@ -74,27 +85,57 @@ export async function createTransaction(params: {
   const feePercent = params.wellsFeePercent || 2.5 // Default 2.5%
   const wellsFee = Math.round(params.amount * (feePercent / 100))
 
-  // TODO: Create in database
-  const transaction: Transaction = {
-    id: `txn_${Date.now()}`,
-    rfqId: params.rfqId,
-    buyerId: params.buyerId,
-    sellerId: params.sellerId,
-    status: 'accepted',
-    amount: params.amount,
-    wellsFee,
-    wellsFeePercent: feePercent,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    events: [{
-      timestamp: new Date(),
-      action: 'transaction_created',
-      actor: 'system',
-      metadata: { amount: params.amount }
-    }]
-  }
+  // Create transaction in database
+  const dbTransaction = await prisma.transaction.create({
+    data: {
+      rfqId: params.rfqId,
+      buyerId: params.buyerId,
+      sellerId: params.sellerId,
+      status: statusToPrisma('accepted'),
+      amount: params.amount,
+      wellsFee,
+      wellsFeePercent: feePercent,
+      events: {
+        create: {
+          action: 'transaction_created',
+          actor: 'system',
+          metadata: { amount: params.amount }
+        }
+      }
+    },
+    include: {
+      events: true
+    }
+  })
 
-  return transaction
+  // Convert to Transaction interface
+  return {
+    id: dbTransaction.id,
+    rfqId: dbTransaction.rfqId,
+    buyerId: dbTransaction.buyerId,
+    sellerId: dbTransaction.sellerId,
+    status: statusFromPrisma(dbTransaction.status) as TransactionStatus,
+    amount: dbTransaction.amount,
+    wellsFee: dbTransaction.wellsFee,
+    wellsFeePercent: dbTransaction.wellsFeePercent,
+    airwallexPaymentIntentId: dbTransaction.airwallexPaymentIntentId || undefined,
+    airwallexClientSecret: dbTransaction.airwallexClientSecret || undefined,
+    escrowedAt: dbTransaction.escrowedAt || undefined,
+    releasedAt: dbTransaction.releasedAt || undefined,
+    buyerRating: dbTransaction.buyerRating || undefined,
+    sellerRating: dbTransaction.sellerRating || undefined,
+    buyerReview: dbTransaction.buyerReview || undefined,
+    sellerReview: dbTransaction.sellerReview || undefined,
+    createdAt: dbTransaction.createdAt,
+    updatedAt: dbTransaction.updatedAt,
+    completedAt: dbTransaction.completedAt || undefined,
+    events: dbTransaction.events.map(e => ({
+      timestamp: e.createdAt,
+      action: e.action,
+      actor: e.actor as 'buyer' | 'seller' | 'system',
+      metadata: e.metadata as Record<string, any> || undefined
+    }))
+  }
 }
 
 /**
@@ -132,16 +173,26 @@ export async function createEscrow(params: {
       return result
     }
 
-    // TODO: Update transaction in database with payment intent ID
-    // await prisma.transaction.update({
-    //   where: { id: params.transactionId },
-    //   data: {
-    //     status: 'escrowed',
-    //     airwallexPaymentIntentId: result.paymentIntentId,
-    //     airwallexClientSecret: result.clientSecret,
-    //     escrowedAt: new Date()
-    //   }
-    // })
+    // Update transaction in database with payment intent ID
+    await prisma.transaction.update({
+      where: { id: params.transactionId },
+      data: {
+        status: statusToPrisma('escrowed'),
+        airwallexPaymentIntentId: result.paymentIntentId,
+        airwallexClientSecret: result.clientSecret,
+        escrowedAt: new Date(),
+        events: {
+          create: {
+            action: 'payment_escrowed',
+            actor: 'system',
+            metadata: {
+              paymentIntentId: result.paymentIntentId,
+              amount: params.amount
+            }
+          }
+        }
+      }
+    })
 
     return result
   } catch (error: any) {
@@ -174,14 +225,24 @@ export async function releaseEscrow(params: {
       return result
     }
 
-    // TODO: Update transaction status in database
-    // await prisma.transaction.update({
-    //   where: { id: params.transactionId },
-    //   data: {
-    //     status: 'released',
-    //     releasedAt: new Date()
-    //   }
-    // })
+    // Update transaction status in database
+    await prisma.transaction.update({
+      where: { id: params.transactionId },
+      data: {
+        status: statusToPrisma('released'),
+        releasedAt: new Date(),
+        completedAt: new Date(),
+        events: {
+          create: {
+            action: 'funds_released',
+            actor: 'system',
+            metadata: {
+              paymentIntentId: params.paymentIntentId
+            }
+          }
+        }
+      }
+    })
 
     return { success: true }
   } catch (error: any) {
@@ -203,12 +264,151 @@ export async function completeTransaction(params: {
   buyerReview?: string
   sellerReview?: string
 }): Promise<Transaction> {
-  // TODO:
-  // 1. Mark transaction complete
-  // 2. Update buyer/seller reputation scores
-  // 3. Trigger any post-transaction automations
+  // 1. Update transaction with ratings
+  const dbTransaction = await prisma.transaction.update({
+    where: { id: params.transactionId },
+    data: {
+      status: statusToPrisma('completed'),
+      completedAt: new Date(),
+      buyerRating: params.buyerRating,
+      sellerRating: params.sellerRating,
+      buyerReview: params.buyerReview,
+      sellerReview: params.sellerReview,
+      events: {
+        create: {
+          action: 'transaction_completed',
+          actor: 'system',
+          metadata: {
+            buyerRating: params.buyerRating,
+            sellerRating: params.sellerRating
+          }
+        }
+      }
+    },
+    include: {
+      events: true
+    }
+  })
 
-  throw new Error('Not implemented')
+  // 2. Update trust scores for both parties
+  const transaction = await prisma.transaction.findUnique({
+    where: { id: params.transactionId }
+  })
+
+  if (transaction) {
+    // Update buyer trust score
+    await updateUserTrustScore(transaction.buyerId, params.sellerRating)
+
+    // Update seller trust score
+    await updateUserTrustScore(transaction.sellerId, params.buyerRating)
+  }
+
+  // 3. Convert and return
+  return {
+    id: dbTransaction.id,
+    rfqId: dbTransaction.rfqId,
+    buyerId: dbTransaction.buyerId,
+    sellerId: dbTransaction.sellerId,
+    status: statusFromPrisma(dbTransaction.status) as TransactionStatus,
+    amount: dbTransaction.amount,
+    wellsFee: dbTransaction.wellsFee,
+    wellsFeePercent: dbTransaction.wellsFeePercent,
+    airwallexPaymentIntentId: dbTransaction.airwallexPaymentIntentId || undefined,
+    airwallexClientSecret: dbTransaction.airwallexClientSecret || undefined,
+    escrowedAt: dbTransaction.escrowedAt || undefined,
+    releasedAt: dbTransaction.releasedAt || undefined,
+    buyerRating: dbTransaction.buyerRating || undefined,
+    sellerRating: dbTransaction.sellerRating || undefined,
+    buyerReview: dbTransaction.buyerReview || undefined,
+    sellerReview: dbTransaction.sellerReview || undefined,
+    createdAt: dbTransaction.createdAt,
+    updatedAt: dbTransaction.updatedAt,
+    completedAt: dbTransaction.completedAt || undefined,
+    events: dbTransaction.events.map(e => ({
+      timestamp: e.createdAt,
+      action: e.action,
+      actor: e.actor as 'buyer' | 'seller' | 'system',
+      metadata: e.metadata as Record<string, any> || undefined
+    }))
+  }
+}
+
+/**
+ * Update user trust score based on new rating
+ */
+async function updateUserTrustScore(userId: string, newRating: number): Promise<void> {
+  const trustScore = await prisma.userTrustScore.upsert({
+    where: { userId },
+    create: {
+      userId,
+      score: 50, // Default score
+      totalRatings: 1,
+      averageRating: newRating
+    },
+    update: {
+      totalRatings: { increment: 1 }
+    }
+  })
+
+  // Recalculate average rating
+  const allTransactions = await prisma.transaction.findMany({
+    where: {
+      OR: [
+        { buyerId: userId, sellerRating: { not: null } },
+        { sellerId: userId, buyerRating: { not: null } }
+      ]
+    }
+  })
+
+  const ratings = allTransactions.map(t =>
+    t.buyerId === userId ? t.sellerRating! : t.buyerRating!
+  ).filter(r => r !== null)
+
+  const avgRating = ratings.length > 0
+    ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+    : 0
+
+  const completedDeals = allTransactions.filter(t =>
+    t.status === statusToPrisma('completed') ||
+    t.status === statusToPrisma('released')
+  ).length
+
+  const cancelledDeals = allTransactions.filter(t =>
+    t.status === statusToPrisma('cancelled')
+  ).length
+
+  const disputedDeals = allTransactions.filter(t =>
+    t.status === statusToPrisma('disputed')
+  ).length
+
+  const totalTransactions = allTransactions.length
+  const completionRate = totalTransactions > 0
+    ? (completedDeals / totalTransactions) * 100
+    : 0
+
+  // Calculate trust score (0-100)
+  // Factors: avg rating (40%), completion rate (30%), volume (20%), dispute rate (10%)
+  const ratingScore = (avgRating / 5) * 40
+  const completionScore = (completionRate / 100) * 30
+  const volumeScore = Math.min(completedDeals / 50, 1) * 20 // 50 deals = max volume score
+  const disputeScore = Math.max(0, (1 - (disputedDeals / Math.max(totalTransactions, 1))) * 10)
+
+  const calculatedScore = Math.round(ratingScore + completionScore + volumeScore + disputeScore)
+
+  // Update trust score
+  await prisma.userTrustScore.update({
+    where: { userId },
+    data: {
+      score: calculatedScore,
+      averageRating: avgRating,
+      totalRatings: ratings.length,
+      totalTransactions,
+      completedDeals,
+      cancelledDeals,
+      disputedDeals,
+      completionRate
+    }
+  })
 }
 
 /**
@@ -221,20 +421,43 @@ export async function calculateTrustScore(sellerId: string): Promise<{
   completionRate: number     // % of deals completed
   averageDealSize: number
 }> {
-  // TODO: Implement trust algorithm
-  // Consider:
-  // - Number of completed transactions
-  // - Average rating from buyers
-  // - Completion rate (accepted → completed)
-  // - Dispute rate
-  // - Deal size history
+  // Get or create trust score record
+  const trustScore = await prisma.userTrustScore.findUnique({
+    where: { userId: sellerId }
+  })
+
+  if (!trustScore) {
+    // No trust score yet, return defaults
+    return {
+      score: 50,
+      totalTransactions: 0,
+      averageRating: 0,
+      completionRate: 0,
+      averageDealSize: 0
+    }
+  }
+
+  // Calculate average deal size
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      OR: [
+        { sellerId },
+        { buyerId: sellerId }
+      ]
+    }
+  })
+
+  const totalGMV = transactions.reduce((sum, t) => sum + t.amount, 0)
+  const averageDealSize = transactions.length > 0
+    ? Math.round(totalGMV / transactions.length)
+    : 0
 
   return {
-    score: 0,
-    totalTransactions: 0,
-    averageRating: 0,
-    completionRate: 0,
-    averageDealSize: 0
+    score: trustScore.score,
+    totalTransactions: trustScore.totalTransactions,
+    averageRating: trustScore.averageRating,
+    completionRate: trustScore.completionRate,
+    averageDealSize
   }
 }
 
