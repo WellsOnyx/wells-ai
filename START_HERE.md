@@ -1,10 +1,12 @@
 # 🚀 START HERE
 
-## Wells AI - The B2B Transaction Platform
+## Wells - The B2B Transaction Platform
 
-**Current Status**: Building the transaction engine
-**Goal**: $7T in GMV | $2M profit by Christmas
-**Mission**: Make B2B transactions frictionless ("yes, proceed" = deal done)
+**FIRST**: Read **WELLS_VISION.md** - This is the soul of everything we're building.
+
+**Current Status**: Vision documented, transaction engine complete, ready to build journeys
+**Goal**: $7T in GMV (3% of global economy) | 3M specialized workers | Marriages from Wells introductions
+**Mission**: I am Wells, your companion. Not a tool - a relationship.
 
 ---
 
@@ -95,10 +97,11 @@ AIRWALLEX_API_URL=https://api.airwallex.com
 
 ## 📂 KEY FILES
 
-### Documentation
-- **WELLS_AI_VISION_AND_ROADMAP.md** - Complete vision, roadmap, and recovery prompt
+### Documentation (READ IN THIS ORDER)
+- **WELLS_VISION.md** - 🔥 THE FOUNDATION - Emotional architecture, four journeys, strategic intent
+- **DATABASE_MIGRATION_COMPLETE.md** - Postgres setup guide and technical status
+- **START_HERE.md** - This file (quick reference)
 - **README.md** - Original project README
-- **START_HERE.md** - This file
 
 ### Core Code
 - **app/api/chat/route.ts** - Conversational AI engine
@@ -164,23 +167,28 @@ AIRWALLEX_API_URL=https://api.airwallex.com
 
 **If you're starting a new session**, paste this:
 
-> I'm continuing work on Wells AI, the B2B transaction platform. We've pivoted from executive search to building the transaction layer for B2B commerce (goal: $7T GMV).
+> I am Wells. Read WELLS_VISION.md first.
 >
-> **Current state**:
-> - Built conversational AI with discovery-first approach (2-3 points + question format)
-> - Created transaction engine with escrow flow (lib/transactions.ts)
-> - Added one-click deal acceptance (DealCard component)
-> - Platform fee: 1.5-2.5% based on deal size + trust scores
+> **Technical Status** (November 2, 2025):
+> - Transaction engine complete with Postgres + Airwallex
+> - Trust scoring algorithm implemented
+> - Payment guardrails deployed
+> - Early access page live and branded
+> - Complete vision documented
 >
-> **Immediate priorities**:
-> 1. Integrate Stripe Connect for real escrow
-> 2. Build trust/reputation calculation
-> 3. Fix Clerk middleware caching issues
-> 4. Deploy transaction engine to production
+> **Four Journeys to Build**:
+> 1. Buyer: AI-to-AI commerce (procurement companion)
+> 2. Seller: GTM engine + friendships
+> 3. Job Seeker: Dignity through specialization (3M people)
+> 4. Founder: Holistic command center
 >
-> **Vision**: Make B2B transactions frictionless - "yes, proceed" = deal done, money escrowed, everyone wins.
+> **Immediate Priorities**:
+> 1. Configure DATABASE_URL and run Prisma migrations
+> 2. Test end-to-end transaction flow
+> 3. Build the four journey interfaces
+> 4. Create legendary onboarding experiences
 >
-> Read WELLS_AI_VISION_AND_ROADMAP.md for full context.
+> Read WELLS_VISION.md for the complete emotional architecture.
 
 ---
 
