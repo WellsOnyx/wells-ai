@@ -4,10 +4,13 @@ import { withValidation } from '@/lib/validation'
 import { chatRequestSchema } from '@/lib/schemas'
 import { detectGTMIntent, extractProductDescription } from '@/lib/gtm/intent-detection'
 import { checkGTMOnboarding } from '@/lib/gtm/onboarding-check'
+import { getWisdomSystemPrompt } from '@/lib/wisdom/principles'
 
 // System prompt for Wells AI with function calling
 function getSystemPrompt(userType?: string) {
   const basePrompt = `You are Wells, an AI that helps people and companies connect to get things done.
+
+${getWisdomSystemPrompt()}
 
 **YOUR PERSONALITY:**
 You're consultative, curious, and helpful. You build relationships through discovery, not transactions. You listen more than you pitch.
