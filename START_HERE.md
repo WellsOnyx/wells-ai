@@ -10,23 +10,24 @@
 
 ## 📍 WHERE WE ARE NOW
 
-### ✅ What's Built (November 1-2, 2025)
+### ✅ What's Built (November 2, 2025)
 1. **Conversational AI** - Discovery-first chat (2-3 points + question format)
 2. **Transaction Engine** - Complete flow from RFQ → escrow → completion
 3. **One-Click Acceptance** - DealCard component for inline transactions
 4. **Dynamic Pricing** - 1.5-2.5% fees based on deal size + trust scores
-5. **Platform Architecture** - Ready for scale
+5. **Airwallex Payments** - Full integration with split settlements (2.8% domestic fees)
+6. **Payment Guardrails** - Security framework with fraud detection, rate limiting, audit logs
+7. **Platform Architecture** - Ready for scale
 
 ### ⚠️ What's In Progress
-1. **Stripe Connect** - Escrow and payout integration
-2. **Trust System** - Reputation calculation algorithm
-3. **Clerk Middleware** - Fixing caching issues (environment vars clean, needs propagation)
+1. **Trust System** - Reputation calculation algorithm (foundation built)
+2. **Database Migration** - Moving from Notion to Postgres for real transactions
 
 ### 🔲 What's Next
-1. Deploy transaction engine to production
-2. Test end-to-end transaction flow
+1. Test end-to-end transaction flow with Airwallex
+2. Build trust/reputation scoring system
 3. Launch GTM campaigns (500+ contacts)
-4. Close first 5 deals
+4. Close first 5 deals ($50-100k each)
 
 ---
 
@@ -82,9 +83,11 @@ TWILIO_ACCOUNT_SID=AC...
 TWILIO_AUTH_TOKEN=...
 TWILIO_PHONE_NUMBER=+1...
 
-# Payments (Coming Soon)
-STRIPE_SECRET_KEY=sk_...
-STRIPE_CONNECT_CLIENT_ID=ca_...
+# Payments - Airwallex (2.8% domestic, 4.3% international)
+AIRWALLEX_CLIENT_ID=liGAUBVoRh-YWfE4-XAjUA
+AIRWALLEX_API_KEY=a13c521... (configured)
+AIRWALLEX_ACCOUNT_ID=le_ftLSrwDuPDWGbf93on0BFQ
+AIRWALLEX_API_URL=https://api.airwallex.com
 ```
 
 ---
