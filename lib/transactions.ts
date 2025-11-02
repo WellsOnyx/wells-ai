@@ -7,7 +7,7 @@
  * Payment Provider: Airwallex (2.8% domestic, 4.3% international)
  */
 
-import { prisma } from '@/lib/db'
+// import { prisma } from '@/lib/db' // TODO: Add when migrating from Notion to Postgres
 import * as airwallex from '@/lib/airwallex'
 
 export type TransactionStatus =
