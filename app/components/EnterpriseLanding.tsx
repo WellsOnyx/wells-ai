@@ -6,7 +6,7 @@ import Link from 'next/link'
 export default function EnterpriseLanding() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  // Constellation animation
+  // Blueprint sketch animation - Wells AI Ghost
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -21,57 +21,177 @@ export default function EnterpriseLanding() {
     resizeCanvas()
     window.addEventListener('resize', resizeCanvas)
 
-    interface Particle {
-      x: number
-      y: number
-      vx: number
-      vy: number
+    // Blueprint grid
+    const drawGrid = () => {
+      const gridSize = 40
+      ctx.strokeStyle = 'rgba(24, 59, 109, 0.08)'
+      ctx.lineWidth = 0.5
+
+      // Vertical lines
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, canvas.height)
+        ctx.stroke()
+      }
+
+      // Horizontal lines
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(canvas.width, y)
+        ctx.stroke()
+      }
     }
 
-    const particles: Particle[] = []
-    const particleCount = 80
-    const connectionDistance = 150
+    // Wells AI Ghost - floating geometric companion
+    interface GhostVertex {
+      x: number
+      y: number
+      baseY: number
+      angle: number
+    }
 
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.2,
-        vy: (Math.random() - 0.5) * 0.2,
+    const ghostSize = 120
+    const ghostX = canvas.width * 0.85
+    const ghostY = canvas.height * 0.3
+    let rotation = 0
+    let pulsePhase = 0
+
+    // Create geometric ghost structure
+    const createGhostVertices = (): GhostVertex[] => {
+      const vertices: GhostVertex[] = []
+      const segments = 6
+
+      for (let i = 0; i < segments; i++) {
+        const angle = (i / segments) * Math.PI * 2
+        vertices.push({
+          x: ghostX + Math.cos(angle) * ghostSize,
+          y: ghostY + Math.sin(angle) * ghostSize,
+          baseY: ghostY + Math.sin(angle) * ghostSize,
+          angle: angle
+        })
+      }
+
+      return vertices
+    }
+
+    const ghostVertices = createGhostVertices()
+
+    // Floating sketch lines
+    interface SketchLine {
+      x1: number
+      y1: number
+      x2: number
+      y2: number
+      opacity: number
+      speed: number
+    }
+
+    const sketchLines: SketchLine[] = []
+    for (let i = 0; i < 12; i++) {
+      sketchLines.push({
+        x1: Math.random() * canvas.width,
+        y1: Math.random() * canvas.height,
+        x2: Math.random() * canvas.width,
+        y2: Math.random() * canvas.height,
+        opacity: Math.random() * 0.3 + 0.1,
+        speed: Math.random() * 0.3 + 0.1
       })
     }
 
     const animate = () => {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)'
+      // Clear with blueprint paper color
+      ctx.fillStyle = '#fafbfc'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      particles.forEach((particle, i) => {
-        particle.x += particle.vx
-        particle.y += particle.vy
+      // Draw blueprint grid
+      drawGrid()
 
-        if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -1
-        if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -1
+      // Draw floating sketch lines
+      sketchLines.forEach((line, i) => {
+        line.y1 += line.speed
+        line.y2 += line.speed
 
-        ctx.fillStyle = 'rgba(24, 59, 109, 0.5)'
+        if (line.y1 > canvas.height) line.y1 = -50
+        if (line.y2 > canvas.height) line.y2 = -50
+
+        ctx.strokeStyle = `rgba(24, 59, 109, ${line.opacity})`
+        ctx.lineWidth = 1
+        ctx.setLineDash([5, 5])
         ctx.beginPath()
-        ctx.arc(particle.x, particle.y, 2.5, 0, Math.PI * 2)
+        ctx.moveTo(line.x1, line.y1)
+        ctx.lineTo(line.x2, line.y2)
+        ctx.stroke()
+        ctx.setLineDash([])
+      })
+
+      // Draw Wells AI Ghost
+      rotation += 0.003
+      pulsePhase += 0.02
+      const pulse = Math.sin(pulsePhase) * 8
+
+      // Ghost outer shell - geometric panels
+      ctx.strokeStyle = '#183b6d'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ghostVertices.forEach((vertex, i) => {
+        const nextVertex = ghostVertices[(i + 1) % ghostVertices.length]
+        const x1 = vertex.x + Math.cos(rotation) * pulse
+        const y1 = vertex.y + Math.sin(rotation) * pulse + Math.sin(vertex.angle + pulsePhase) * 5
+        const x2 = nextVertex.x + Math.cos(rotation) * pulse
+        const y2 = nextVertex.y + Math.sin(rotation) * pulse + Math.sin(nextVertex.angle + pulsePhase) * 5
+
+        if (i === 0) {
+          ctx.moveTo(x1, y1)
+        }
+        ctx.lineTo(x2, y2)
+      })
+      ctx.closePath()
+      ctx.stroke()
+
+      // Ghost inner core - glowing center
+      const coreRadius = 15 + pulse * 0.5
+      const gradient = ctx.createRadialGradient(ghostX, ghostY, 0, ghostX, ghostY, coreRadius)
+      gradient.addColorStop(0, 'rgba(219, 166, 63, 0.9)')
+      gradient.addColorStop(0.5, 'rgba(219, 166, 63, 0.4)')
+      gradient.addColorStop(1, 'rgba(219, 166, 63, 0)')
+
+      ctx.fillStyle = gradient
+      ctx.beginPath()
+      ctx.arc(ghostX, ghostY, coreRadius, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Ghost core dot
+      ctx.fillStyle = '#dba63f'
+      ctx.beginPath()
+      ctx.arc(ghostX, ghostY, 4, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Ghost vertices (connection points)
+      ghostVertices.forEach((vertex) => {
+        const x = vertex.x + Math.cos(rotation) * pulse
+        const y = vertex.y + Math.sin(rotation) * pulse + Math.sin(vertex.angle + pulsePhase) * 5
+
+        ctx.fillStyle = '#183b6d'
+        ctx.beginPath()
+        ctx.arc(x, y, 3, 0, Math.PI * 2)
         ctx.fill()
 
-        particles.slice(i + 1).forEach(otherParticle => {
-          const dx = particle.x - otherParticle.x
-          const dy = particle.y - otherParticle.y
-          const distance = Math.sqrt(dx * dx + dy * dy)
-
-          if (distance < connectionDistance) {
-            ctx.strokeStyle = `rgba(24, 59, 109, ${0.25 * (1 - distance / connectionDistance)})`
-            ctx.lineWidth = 1
-            ctx.beginPath()
-            ctx.moveTo(particle.x, particle.y)
-            ctx.lineTo(otherParticle.x, otherParticle.y)
-            ctx.stroke()
-          }
-        })
+        // Draw line from vertex to core
+        ctx.strokeStyle = 'rgba(24, 59, 109, 0.2)'
+        ctx.lineWidth = 0.5
+        ctx.beginPath()
+        ctx.moveTo(x, y)
+        ctx.lineTo(ghostX, ghostY)
+        ctx.stroke()
       })
+
+      // Technical annotations (sketch marks)
+      ctx.fillStyle = 'rgba(24, 59, 109, 0.3)'
+      ctx.font = '9px monospace'
+      ctx.fillText('WELLS.v1', ghostX - 70, ghostY - ghostSize - 15)
+      ctx.fillText('AI-CORE', ghostX + 50, ghostY + 10)
 
       requestAnimationFrame(animate)
     }
@@ -84,16 +204,16 @@ export default function EnterpriseLanding() {
   }, [])
 
   return (
-    <div className="relative min-h-screen bg-white text-[#000000] overflow-hidden">
-      {/* Constellation Background */}
+    <div className="relative min-h-screen bg-[#fafbfc] text-[#000000] overflow-hidden">
+      {/* Blueprint Sketch Background with Wells Ghost */}
       <canvas
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none"
-        style={{ opacity: 0.4 }}
+        style={{ opacity: 1 }}
       />
 
       {/* Navigation */}
-      <nav className="relative z-10 border-b border-[#9ea1a7]/10">
+      <nav className="relative z-10 border-b-2 border-[#183b6d]/20" style={{ borderStyle: 'dashed' }}>
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
@@ -139,7 +259,7 @@ export default function EnterpriseLanding() {
               <span className="text-[#dba63f]">conversational commerce</span><br />
               for the enterprise
             </h1>
-            <p className="text-xl md:text-2xl text-[#000000] max-w-3xl mb-12 font-normal leading-relaxed bg-white/80 backdrop-blur-sm p-6 rounded-sm">
+            <p className="text-xl md:text-2xl text-[#000000] max-w-3xl mb-12 font-normal leading-relaxed bg-[#fafbfc]/95 backdrop-blur-sm p-6 border-2 border-[#183b6d]/30" style={{ borderStyle: 'dashed' }}>
               Built to power enterprise transactions across industries. From semiconductors to executive talent.
               From commodities to compliance. One conversation for every deal.
             </p>
@@ -162,7 +282,7 @@ export default function EnterpriseLanding() {
       </section>
 
       {/* Value Props Section */}
-      <section className="relative z-10 py-20 px-6 bg-[#183b6d]/5">
+      <section className="relative z-10 py-20 px-6 bg-transparent">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-12">
             <div className="text-center">
@@ -227,8 +347,14 @@ export default function EnterpriseLanding() {
                 )
               },
             ].map((item, i) => (
-              <div key={i} className="bg-white border border-[#9ea1a7]/20 rounded-sm p-8 hover:border-[#dba63f] transition-all group">
-                <div className="w-14 h-14 bg-[#183b6d]/5 rounded-sm flex items-center justify-center text-[#183b6d] group-hover:bg-[#dba63f] group-hover:text-white transition-all mb-6">
+              <div key={i} className="bg-[#fafbfc]/80 border-2 border-[#183b6d]/30 p-8 hover:border-[#dba63f] transition-all group relative" style={{ borderStyle: 'dashed' }}>
+                {/* Sketch corner marks */}
+                <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-[#183b6d]"></div>
+                <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-[#183b6d]"></div>
+                <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-[#183b6d]"></div>
+                <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-[#183b6d]"></div>
+
+                <div className="w-14 h-14 border-2 border-[#183b6d] flex items-center justify-center text-[#183b6d] group-hover:bg-[#dba63f] group-hover:text-white group-hover:border-[#dba63f] transition-all mb-6">
                   {item.icon}
                 </div>
                 <h3 className="text-2xl font-semibold text-[#183b6d] mb-4">{item.title}</h3>
@@ -292,7 +418,13 @@ export default function EnterpriseLanding() {
               From 0.5% for commodities to 10% for full GTM automation. Our dynamic pricing engine ensures
               you never pay more than fair market value for our services.
             </p>
-            <div className="bg-[#183b6d]/5 border border-[#9ea1a7]/20 rounded-sm p-12">
+            <div className="bg-[#fafbfc]/80 border-2 border-[#183b6d]/30 p-12 relative" style={{ borderStyle: 'dashed' }}>
+              {/* Blueprint-style corner marks */}
+              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#dba63f]"></div>
+              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#dba63f]"></div>
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#dba63f]"></div>
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#dba63f]"></div>
+
               <div className="grid md:grid-cols-2 gap-8 text-left">
                 <div>
                   <div className="text-[#dba63f] font-bold text-sm mb-2 tracking-wide">COMMODITIES</div>
