@@ -10,7 +10,6 @@ import PartnershipBooking from './PartnershipBooking'
 import { CategoryPioneerOpportunity } from '@/lib/categories'
 import ChatMessageRenderer from './chat/ChatMessageRenderer'
 import { ChatMessage } from '@/types/chat'
-import OrganizationSelector from './OrganizationSelector'
 import Link from 'next/link'
 
 interface Message {
@@ -393,7 +392,8 @@ export default function WellsAIContent() {
                         Dashboard
                       </Link>
                     )}
-                    <OrganizationSelector />
+                    {/* OrganizationSelector removed - chat works immediately without setup
+                        Organizations are for team features (coming later) */}
                   </div>
                 </div>
               </div>
