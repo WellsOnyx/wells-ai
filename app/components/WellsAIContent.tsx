@@ -177,6 +177,73 @@ export default function WellsAIContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Helper function to send programmatic messages (not from input field)
+  const sendProgrammaticMessage = async (messageContent: string) => {
+    const userMessage: Message = { role: 'user', content: messageContent }
+    setMessages(prev => [...prev, userMessage])
+    setIsLoading(true)
+
+    if (!showChat) setShowChat(true)
+
+    try {
+      // Clean messages to only send role and content (strip UI-only fields)
+      const cleanMessages = [...messages, userMessage]
+        .filter(msg => msg.content) // Only include messages with content
+        .map(({ role, content }) => ({
+          role,
+          content
+        }))
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: cleanMessages,
+          userData: userData,
+          organizationId: null
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || data.error) {
+        console.error('API error:', data.error || data.details)
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `I apologize, but I encountered an error: ${data.error || 'Failed to process your request'}. Please try again.`
+        }])
+        return
+      }
+
+      if (!data.message) {
+        console.error('No message in response:', data)
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'I apologize, but I received an invalid response. Please try again.'
+        }])
+        return
+      }
+
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.message,
+        procurementData: data.procurementData,
+        pioneerOpportunity: data.pioneerOpportunity,
+        gtmData: data.gtmData
+      }
+
+      setMessages(prev => [...prev, assistantMessage])
+    } catch (error) {
+      console.error('Error:', error)
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'I apologize, but I encountered an error. Please try again.'
+      }])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const sendMessage = async () => {
     if (!input.trim()) return
 
@@ -507,9 +574,9 @@ export default function WellsAIContent() {
                             confidence: message.gtmData.intent.confidence
                           }}
                           onStart={() => {
-                            // User clicked "Start GTM Journey"
-                            // TODO: Trigger qualification conversation
+                            // User clicked "Start GTM Journey" - trigger qualification conversation
                             console.log('[GTM] User started GTM Journey')
+                            sendProgrammaticMessage('[START_GTM_JOURNEY]')
                           }}
                           onDismiss={() => {
                             console.log('[GTM] User dismissed GTM card')
