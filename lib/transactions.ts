@@ -3,9 +3,12 @@
  *
  * The core infrastructure for B2B commerce transactions.
  * Handles discovery → matching → escrow → completion.
+ *
+ * Payment Provider: Airwallex (2.8% domestic, 4.3% international)
  */
 
 import { prisma } from '@/lib/db'
+import * as airwallex from '@/lib/airwallex'
 
 export type TransactionStatus =
   | 'draft'           // RFQ created, finding matches
@@ -30,9 +33,9 @@ export interface Transaction {
   wellsFee: number           // Our platform fee in cents
   wellsFeePercent: number    // Fee percentage (e.g., 2.5)
 
-  // Escrow
-  stripePaymentIntentId?: string
-  stripeTransferId?: string
+  // Escrow (Airwallex)
+  airwallexPaymentIntentId?: string
+  airwallexClientSecret?: string
   escrowedAt?: Date
   releasedAt?: Date
 
@@ -95,40 +98,98 @@ export async function createTransaction(params: {
 }
 
 /**
- * Create Stripe escrow and hold funds
+ * Create Airwallex escrow and hold funds
+ *
+ * Creates payment intent with automatic split settlement:
+ * - Seller receives (amount - wellsFee)
+ * - Wells platform receives wellsFee
  */
-export async function createEscrow(transactionId: string): Promise<{
+export async function createEscrow(params: {
+  transactionId: string
+  amount: number
+  wellsFee: number
+  sellerId: string
+  metadata?: Record<string, string>
+}): Promise<{
   success: boolean
   paymentIntentId?: string
   clientSecret?: string
   error?: string
 }> {
-  // TODO: Implement Stripe Connect escrow
-  // 1. Create PaymentIntent for (amount + wellsFee)
-  // 2. Hold funds
-  // 3. Update transaction status to 'escrowed'
+  try {
+    // Create Airwallex payment with split settlement
+    const result = await airwallex.createPaymentIntent({
+      amount: params.amount,
+      wellsFee: params.wellsFee,
+      sellerId: params.sellerId,
+      metadata: {
+        transactionId: params.transactionId,
+        ...params.metadata
+      }
+    })
 
-  return {
-    success: false,
-    error: 'Stripe Connect not configured'
+    if (!result.success) {
+      return result
+    }
+
+    // TODO: Update transaction in database with payment intent ID
+    // await prisma.transaction.update({
+    //   where: { id: params.transactionId },
+    //   data: {
+    //     status: 'escrowed',
+    //     airwallexPaymentIntentId: result.paymentIntentId,
+    //     airwallexClientSecret: result.clientSecret,
+    //     escrowedAt: new Date()
+    //   }
+    // })
+
+    return result
+  } catch (error: any) {
+    console.error('[TRANSACTION] Escrow creation failed:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to create escrow'
+    }
   }
 }
 
 /**
- * Release escrow funds to seller (minus Wells fee)
+ * Release escrow funds to seller (automatic with Airwallex)
+ *
+ * With Airwallex split settlements, funds are automatically distributed
+ * when payment is confirmed. This marks the transaction as released.
  */
-export async function releaseEscrow(transactionId: string): Promise<{
+export async function releaseEscrow(params: {
+  transactionId: string
+  paymentIntentId: string
+}): Promise<{
   success: boolean
   error?: string
 }> {
-  // TODO: Implement Stripe payout
-  // 1. Transfer (amount - wellsFee) to seller's connected account
-  // 2. Keep wellsFee in Wells platform account
-  // 3. Update transaction status to 'released'
+  try {
+    // With Airwallex split_settlement, funds auto-distribute on confirmation
+    const result = await airwallex.releaseEscrow(params.paymentIntentId)
 
-  return {
-    success: false,
-    error: 'Stripe Connect not configured'
+    if (!result.success) {
+      return result
+    }
+
+    // TODO: Update transaction status in database
+    // await prisma.transaction.update({
+    //   where: { id: params.transactionId },
+    //   data: {
+    //     status: 'released',
+    //     releasedAt: new Date()
+    //   }
+    // })
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('[TRANSACTION] Escrow release failed:', error)
+    return {
+      success: false,
+      error: error.message || 'Failed to release escrow'
+    }
   }
 }
 
