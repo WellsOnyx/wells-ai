@@ -17,15 +17,16 @@
 4. **Dynamic Pricing** - 1.5-2.5% fees based on deal size + trust scores
 5. **Airwallex Payments** - Full integration with split settlements (2.8% domestic fees)
 6. **Payment Guardrails** - Security framework with fraud detection, rate limiting, audit logs
-7. **Platform Architecture** - Ready for scale
+7. **Postgres Database** - Prisma ORM with Transaction, UserTrustScore, and RFQ models
+8. **Trust System** - Automatic reputation scoring (rating 40%, completion 30%, volume 20%, disputes 10%)
+9. **Platform Architecture** - Ready for scale
 
 ### ⚠️ What's In Progress
-1. **Trust System** - Reputation calculation algorithm (foundation built)
-2. **Database Migration** - Moving from Notion to Postgres for real transactions
+1. **Database Configuration** - Need to set up DATABASE_URL on Vercel and run migrations
 
 ### 🔲 What's Next
-1. Test end-to-end transaction flow with Airwallex
-2. Build trust/reputation scoring system
+1. Configure Vercel Postgres database and run migrations
+2. Test end-to-end transaction flow with Airwallex + database persistence
 3. Launch GTM campaigns (500+ contacts)
 4. Close first 5 deals ($50-100k each)
 
