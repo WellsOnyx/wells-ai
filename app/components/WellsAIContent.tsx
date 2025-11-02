@@ -93,7 +93,7 @@ export default function WellsAIContent() {
     }
   }
 
-  // Constellation animation - Wells Onyx brand element
+  // Wells Ghost animation - floating AI companion
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -108,59 +108,131 @@ export default function WellsAIContent() {
     resizeCanvas()
     window.addEventListener('resize', resizeCanvas)
 
-    interface Particle {
+    // Blueprint grid
+    const drawGrid = () => {
+      const gridSize = 40
+      ctx.strokeStyle = 'rgba(24, 59, 109, 0.05)'
+      ctx.lineWidth = 0.5
+
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, canvas.height)
+        ctx.stroke()
+      }
+
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(canvas.width, y)
+        ctx.stroke()
+      }
+    }
+
+    // Wells Ghost - smaller for chat interface
+    interface GhostVertex {
       x: number
       y: number
-      vx: number
-      vy: number
+      baseY: number
+      angle: number
     }
 
-    const particles: Particle[] = []
-    const particleCount = 50 // Subtle constellation
-    const connectionDistance = 120
+    const ghostSize = 60  // Smaller for chat
+    const ghostX = canvas.width - 100  // Top right corner
+    const ghostY = 100
+    let rotation = 0
+    let pulsePhase = 0
 
-    // Create particles
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-      })
+    const createGhostVertices = (): GhostVertex[] => {
+      const vertices: GhostVertex[] = []
+      const segments = 6
+
+      for (let i = 0; i < segments; i++) {
+        const angle = (i / segments) * Math.PI * 2
+        vertices.push({
+          x: ghostX + Math.cos(angle) * ghostSize,
+          y: ghostY + Math.sin(angle) * ghostSize,
+          baseY: ghostY + Math.sin(angle) * ghostSize,
+          angle: angle
+        })
+      }
+
+      return vertices
     }
+
+    const ghostVertices = createGhostVertices()
 
     const animate = () => {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)'
+      // Clear with blueprint paper color
+      ctx.fillStyle = '#fafbfc'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      particles.forEach((particle, i) => {
-        particle.x += particle.vx
-        particle.y += particle.vy
+      // Draw subtle grid
+      drawGrid()
 
-        if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -1
-        if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -1
+      // Animate Wells Ghost
+      rotation += 0.003
+      pulsePhase += 0.02
+      const pulse = Math.sin(pulsePhase) * 4
 
-        // Draw particle - Deep Blue with more presence
-        ctx.fillStyle = 'rgba(24, 59, 109, 0.6)'
+      // Ghost outer shell
+      ctx.strokeStyle = '#183b6d'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ghostVertices.forEach((vertex, i) => {
+        const nextVertex = ghostVertices[(i + 1) % ghostVertices.length]
+        const x1 = vertex.x + Math.cos(rotation) * pulse
+        const y1 = vertex.y + Math.sin(rotation) * pulse + Math.sin(vertex.angle + pulsePhase) * 3
+        const x2 = nextVertex.x + Math.cos(rotation) * pulse
+        const y2 = nextVertex.y + Math.sin(rotation) * pulse + Math.sin(nextVertex.angle + pulsePhase) * 3
+
+        if (i === 0) {
+          ctx.moveTo(x1, y1)
+        }
+        ctx.lineTo(x2, y2)
+      })
+      ctx.closePath()
+      ctx.stroke()
+
+      // Ghost core - glowing center
+      const coreRadius = 12 + pulse * 0.5
+      const gradient = ctx.createRadialGradient(ghostX, ghostY, 0, ghostX, ghostY, coreRadius)
+      gradient.addColorStop(0, 'rgba(219, 166, 63, 1)')
+      gradient.addColorStop(0.3, 'rgba(219, 166, 63, 0.8)')
+      gradient.addColorStop(0.6, 'rgba(219, 166, 63, 0.4)')
+      gradient.addColorStop(1, 'rgba(219, 166, 63, 0)')
+
+      ctx.fillStyle = gradient
+      ctx.beginPath()
+      ctx.arc(ghostX, ghostY, coreRadius, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Core dot
+      ctx.fillStyle = '#dba63f'
+      ctx.shadowColor = 'rgba(219, 166, 63, 0.6)'
+      ctx.shadowBlur = 8
+      ctx.beginPath()
+      ctx.arc(ghostX, ghostY, 4, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.shadowBlur = 0
+
+      // Ghost vertices
+      ghostVertices.forEach((vertex) => {
+        const x = vertex.x + Math.cos(rotation) * pulse
+        const y = vertex.y + Math.sin(rotation) * pulse + Math.sin(vertex.angle + pulsePhase) * 3
+
+        ctx.fillStyle = '#183b6d'
         ctx.beginPath()
-        ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2)
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2)
         ctx.fill()
 
-        // Draw connections with more visibility
-        particles.slice(i + 1).forEach(otherParticle => {
-          const dx = particle.x - otherParticle.x
-          const dy = particle.y - otherParticle.y
-          const distance = Math.sqrt(dx * dx + dy * dy)
-
-          if (distance < connectionDistance) {
-            ctx.strokeStyle = `rgba(24, 59, 109, ${0.3 * (1 - distance / connectionDistance)})`
-            ctx.lineWidth = 1
-            ctx.beginPath()
-            ctx.moveTo(particle.x, particle.y)
-            ctx.lineTo(otherParticle.x, otherParticle.y)
-            ctx.stroke()
-          }
-        })
+        // Vertex to core lines
+        ctx.strokeStyle = 'rgba(24, 59, 109, 0.25)'
+        ctx.lineWidth = 0.8
+        ctx.beginPath()
+        ctx.moveTo(x, y)
+        ctx.lineTo(ghostX, ghostY)
+        ctx.stroke()
       })
 
       requestAnimationFrame(animate)
