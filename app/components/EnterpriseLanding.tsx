@@ -54,7 +54,7 @@ export default function EnterpriseLanding() {
 
     const ghostSize = 120
     const ghostX = canvas.width * 0.85
-    const ghostY = canvas.height * 0.3
+    const ghostY = canvas.height * 0.45  // Aligned with hero text
     let rotation = 0
     let pulsePhase = 0
 
