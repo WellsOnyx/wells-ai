@@ -123,6 +123,13 @@ export const TARGETING_SIGNALS = {
       'team_size_mismatch',
       'industry_too_different'
     ]
+  },
+
+  other: {
+    // Generic signals for non-standard roles
+    avoid: [],
+    target: [],
+    underqualified: []
   }
 }
 
