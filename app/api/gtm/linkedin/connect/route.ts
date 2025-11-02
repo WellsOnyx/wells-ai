@@ -25,7 +25,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch integration from Clerk metadata
-    const user = await clerkClient().users.getUser(userId)
+    const clerk = await clerkClient()
+    const user = await clerk.users.getUser(userId)
     const integration = user.publicMetadata?.linkedInIntegration as LinkedInIntegration | undefined
 
     return NextResponse.json({
@@ -79,9 +80,11 @@ export async function POST(req: NextRequest) {
     )
 
     // Store in Clerk metadata (encrypted credentials should be handled separately)
-    await clerkClient().users.updateUser(userId, {
+    const clerk = await clerkClient()
+    const currentUser = await clerk.users.getUser(userId)
+    await clerk.users.updateUser(userId, {
       publicMetadata: {
-        ...((await clerkClient().users.getUser(userId)).publicMetadata || {}),
+        ...(currentUser.publicMetadata || {}),
         linkedInIntegration: {
           userId: integration.userId,
           provider: integration.provider,
@@ -129,11 +132,12 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Remove from Clerk metadata
-    const user = await clerkClient().users.getUser(userId)
+    const clerk = await clerkClient()
+    const user = await clerk.users.getUser(userId)
     const metadata = user.publicMetadata || {}
     delete (metadata as any).linkedInIntegration
 
-    await clerkClient().users.updateUser(userId, {
+    await clerk.users.updateUser(userId, {
       publicMetadata: metadata
     })
 
