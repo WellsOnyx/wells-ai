@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useUser, useOrganization } from '@clerk/nextjs'
+import { useUser } from '@clerk/nextjs'
 import Onboarding, { UserData } from './Onboarding'
 import PartnershipPitch from './PartnershipPitch'
 import PartnershipTiers from './PartnershipTiers'
@@ -36,7 +36,6 @@ export default function WellsAIContent() {
   const searchParams = useSearchParams()
   const isEmbedded = searchParams.get('embed') === 'true'
   const { user, isLoaded } = useUser()
-  const { organization } = useOrganization()
 
   const [userData, setUserData] = useState<UserData | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
