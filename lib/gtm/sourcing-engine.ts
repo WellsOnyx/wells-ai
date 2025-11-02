@@ -209,6 +209,9 @@ function getTeamString(qualification: RoleQualification): string {
  * Helper: Get location string
  */
 function getLocationString(location: RoleQualification['location']): string {
+  if (!location || !location.type) {
+    return 'in [location]'
+  }
   if (location.type === 'remote') {
     return 'remotely'
   }
