@@ -103,7 +103,7 @@
 
 ## 🌟 MOONSHOTS
 
-*Big, ambitious ideas that might take years*
+*Big, ambitious ideas we're shipping fast*
 
 ### AI-to-AI Commerce Infrastructure
 - Multi-agent negotiation protocols
@@ -126,6 +126,8 @@
 - Category expansion plan
 
 ### Wells DeFi Bank
+**Target: January 1st, 2026** 🚀
+
 - Grain/Vault as collateral for ANY financing need
 - B2B equipment financing
 - Inventory and working capital loans
