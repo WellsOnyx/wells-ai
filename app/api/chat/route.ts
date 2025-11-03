@@ -7,7 +7,7 @@ import { checkGTMOnboarding } from '@/lib/gtm/onboarding-check'
 import { getWisdomSystemPrompt } from '@/lib/wisdom/principles'
 import { detectSignupIntent, extractUserInfo, getNextPrompt, createUserInNotion, type ConversationState } from '@/lib/conversation-signup'
 import {
-  initializeOnboardingState,
+  createOnboardingState,
   updateOnboardingState,
   isOnboardingComplete,
   type OnboardingState
@@ -200,7 +200,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
 
     // Initialize onboarding for new users
     if (!onboardingState) {
-      onboardingState = initializeOnboardingState({
+      onboardingState = createOnboardingState({
         name: userData?.name,
         email: userData?.email,
         userType: userData?.userType

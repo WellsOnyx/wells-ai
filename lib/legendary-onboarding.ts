@@ -63,6 +63,10 @@ export interface OnboardingState {
 /**
  * Initial state for new user
  */
+export function isOnboardingComplete(state: OnboardingState): boolean {
+  return state.phase === 'complete'
+}
+
 export function createOnboardingState(sessionId: string): OnboardingState {
   return {
     phase: 'greeting',
