@@ -50,15 +50,19 @@ export async function POST(request: Request) {
                   'Both'
           }
         },
-        Company: company ? {
-          rich_text: [{ text: { content: company } }]
-        } : undefined,
+        ...(company ? {
+          Company: {
+            rich_text: [{ text: { content: company } }]
+          }
+        } : {}),
         Source: {
           select: { name: source || 'chat_signup' }
         },
-        'Session ID': sessionId ? {
-          rich_text: [{ text: { content: sessionId } }]
-        } : undefined,
+        ...(sessionId ? {
+          'Session ID': {
+            rich_text: [{ text: { content: sessionId } }]
+          }
+        } : {}),
         Status: {
           select: { name: 'Active' }
         }
