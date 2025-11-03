@@ -418,6 +418,7 @@ export default function WellsAIContent() {
           messages: cleanMessages,
           userData: {
             ...userData,
+            userId: user?.id || anonymousUserId, // CRITICAL: Include userId for memory system
             onboardingState: onboardingState
           },
           organizationId: null // Organizations not required for basic chat
