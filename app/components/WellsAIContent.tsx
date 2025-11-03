@@ -63,6 +63,26 @@ export default function WellsAIContent() {
   // Generate or load anonymous userId for memory system
   const [anonymousUserId, setAnonymousUserId] = useState<string | null>(null)
 
+  // Load messages from localStorage on mount
+  useEffect(() => {
+    const savedMessages = localStorage.getItem('wells_chat_messages')
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages)
+        setMessages(parsed)
+      } catch (error) {
+        console.error('Failed to parse saved messages:', error)
+      }
+    }
+  }, [])
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('wells_chat_messages', JSON.stringify(messages))
+    }
+  }, [messages])
+
   useEffect(() => {
     // Check URL for userId parameter first (for cross-device continuity)
     const urlUserId = searchParams.get('userId')
