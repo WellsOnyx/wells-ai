@@ -220,7 +220,8 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     if (userData?.userId) {
       try {
         // Generate session ID if not provided
-        const sessionId = userData.sessionId || `session-${userData.userId}-${Date.now()}`
+        // Use daily session to enable cross-device conversation continuity
+        const sessionId = userData.sessionId || `session-${userData.userId}-${new Date().toISOString().split('T')[0]}`
 
         // Get or create conversation
         const conversation = await getOrCreateConversation({
