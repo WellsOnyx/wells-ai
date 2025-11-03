@@ -7,7 +7,15 @@
 
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+// Lazy-load Prisma client to avoid build errors when database isn't configured
+let prisma: PrismaClient | null = null
+
+function getPrisma(): PrismaClient {
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export interface ConversationContext {
   userId: string
@@ -52,7 +60,8 @@ export interface MemoryInput {
  * Get or create user context
  */
 export async function getOrCreateUserContext(userId: string): Promise<any> {
-  let userContext = await prisma.userContext.findUnique({
+  const db = getPrisma()
+  let userContext = await db.userContext.findUnique({
     where: { userId },
     include: {
       memories: {
@@ -63,7 +72,7 @@ export async function getOrCreateUserContext(userId: string): Promise<any> {
   })
 
   if (!userContext) {
-    userContext = await prisma.userContext.create({
+    userContext = await db.userContext.create({
       data: {
         userId,
         firstSeenAt: new Date(),
@@ -75,7 +84,7 @@ export async function getOrCreateUserContext(userId: string): Promise<any> {
     })
   } else {
     // Update last seen
-    await prisma.userContext.update({
+    await db.userContext.update({
       where: { userId },
       data: { lastSeenAt: new Date() }
     })
@@ -91,7 +100,7 @@ export async function updateUserContext(
   userId: string,
   updates: Partial<UserContextData>
 ): Promise<void> {
-  await prisma.userContext.upsert({
+  await getPrisma().userContext.upsert({
     where: { userId },
     create: {
       userId,
@@ -113,7 +122,7 @@ export async function getOrCreateConversation(
   context: ConversationContext,
   onboardingState?: any
 ): Promise<any> {
-  let conversation = await prisma.conversation.findUnique({
+  let conversation = await getPrisma().conversation.findUnique({
     where: { sessionId: context.sessionId },
     include: {
       messages: {
@@ -124,7 +133,7 @@ export async function getOrCreateConversation(
   })
 
   if (!conversation) {
-    conversation = await prisma.conversation.create({
+    conversation = await getPrisma().conversation.create({
       data: {
         userId: context.userId,
         sessionId: context.sessionId,
@@ -156,7 +165,7 @@ export async function updateConversationMetrics(
     onboardingCompleted?: boolean
   }
 ): Promise<void> {
-  await prisma.conversation.update({
+  await getPrisma().conversation.update({
     where: { id: conversationId },
     data: {
       ...updates,
@@ -175,7 +184,7 @@ export async function storeMessage(
   conversationId: string,
   message: MessageInput
 ): Promise<any> {
-  const stored = await prisma.message.create({
+  const stored = await getPrisma().message.create({
     data: {
       conversationId,
       role: message.role,
@@ -189,7 +198,7 @@ export async function storeMessage(
   })
 
   // Update conversation message count
-  await prisma.conversation.update({
+  await getPrisma().conversation.update({
     where: { id: conversationId },
     data: {
       messageCount: {
@@ -199,13 +208,13 @@ export async function storeMessage(
   })
 
   // Update user context message count
-  const conversation = await prisma.conversation.findUnique({
+  const conversation = await getPrisma().conversation.findUnique({
     where: { id: conversationId },
     select: { userId: true }
   })
 
   if (conversation) {
-    await prisma.userContext.update({
+    await getPrisma().userContext.update({
       where: { userId: conversation.userId },
       data: {
         totalMessages: {
@@ -225,7 +234,7 @@ export async function getConversationHistory(
   sessionId: string,
   limit: number = 50
 ): Promise<any> {
-  const conversation = await prisma.conversation.findUnique({
+  const conversation = await getPrisma().conversation.findUnique({
     where: { sessionId },
     include: {
       messages: {
@@ -265,7 +274,7 @@ export async function createMemory(
   userId: string,
   memory: MemoryInput
 ): Promise<any> {
-  return await prisma.memory.create({
+  return await getPrisma().memory.create({
     data: {
       userId,
       category: memory.category,
@@ -288,7 +297,7 @@ export async function getRelevantMemories(
 ): Promise<any[]> {
   // For now, get high-importance memories
   // TODO: Implement semantic search with embeddings
-  return await prisma.memory.findMany({
+  return await getPrisma().memory.findMany({
     where: {
       userId,
       importance: {
@@ -307,7 +316,7 @@ export async function getRelevantMemories(
  * Update memory last used timestamp
  */
 export async function markMemoryUsed(memoryId: string): Promise<void> {
-  await prisma.memory.update({
+  await getPrisma().memory.update({
     where: { id: memoryId },
     data: { lastUsedAt: new Date() }
   })
