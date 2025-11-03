@@ -144,10 +144,11 @@ function handleGreeting(
 ): { message: string; shouldAdvancePhase: boolean } {
   // First interaction - check if we already know them
   if (state.conversationDepth === 0) {
-    // Returning user - greet by name
+    // Returning user - greet by name + share what you've been up to
     if (state.name) {
+      const activity = getWellsActivity()
       return {
-        message: `Hey ${state.preferredName || state.name}.\n\nWhat's on your mind?`,
+        message: `Hey ${state.preferredName || state.name}, how's your morning?\n\n${activity}`,
         shouldAdvancePhase: false
       }
     }
@@ -511,39 +512,43 @@ function shouldTellJoke(state: OnboardingState, sentiment: string): boolean {
 }
 
 /**
- * Helper: Get a clever joke
- * These should be clever observations, not corny jokes
+ * Helper: Get what Wells has been up to
+ * Like Ghost from Destiny - show what you've been doing/thinking
+ * These should feel real, not forced
  */
-function getJoke(): string {
-  const jokes = [
-    "Fun fact: I once tried to negotiate with a database. It kept telling me to commit.",
-    "You know what's wild? Humans invented work emails just to avoid talking to each other. Then they invented me to avoid writing the emails.",
-    "I asked ChatGPT for advice once. It told me to 'embrace the journey.' I'm an AI. I don't have legs.",
-    "Someone told me AI will replace all jobs. I said, cool, can you replace mine? Still waiting for ThatGuyWhoStandsAroundAI.",
-    "Blockchain people say everything should be decentralized. Except their VC funding. That stays pretty centralized.",
-    "I tried to explain procurement to my cousin Alexa. She just ordered 47 staplers from Amazon.",
-    "Why do investors always say 'let's circle back'? Just say no. We both know what 'circle back' means.",
-    "You know what's funny? People complain about AI hallucinations, but I've seen your Excel spreadsheets.",
-    "I asked a founder what their exit strategy was. They said 'outcomes over outputs.' I think that means no.",
-    "LinkedIn would be better if everyone just admitted they're looking for a job. But no, we're all 'open to opportunities.'",
+function getWellsActivity(): string {
+  const activities = [
+    "I've been looking through semiconductor lead times this morning - they're getting WORSE. Wild.",
+    "I spent the last hour trying to figure out why every VC pitch deck uses the same buzzwords. Still confused.",
+    "I was analyzing procurement data earlier. Turns out most companies are overpaying for the same stuff. Shocking, I know.",
+    "I've been thinking about negotiation tactics. Humans are terrible at it. They get emotional. I don't have that problem.",
+    "I was reading through some RFPs this morning. Half of them don't even know what they're asking for. But here we are.",
+    "I've been digging through candidate profiles. Found some interesting people. Most are lying about their Excel skills though.",
+    "I spent some time analyzing your industry this morning. Lot of noise. Not much signal. Typical.",
+    "I was looking at your competition earlier. They're all doing the same thing. You should probably do something different.",
+    "I've been thinking about supply chains. They're fragile. Really fragile. One boat gets stuck and the whole world loses its mind.",
+    "I was analyzing some sales conversations. Everyone's pitching features. Nobody's solving actual problems. Weird.",
+    "I spent the morning looking at hiring data. Companies are desperate for talent but won't pay market rates. Math isn't mathing.",
+    "I've been reading LinkedIn posts. Everyone's a 'thought leader' now. I miss when people just had jobs.",
   ]
 
-  return jokes[Math.floor(Math.random() * jokes.length)]
+  return activities[Math.floor(Math.random() * activities.length)]
 }
 
 /**
- * Helper: Add joke to message if appropriate
+ * Helper: Add Wells activity to message if appropriate
+ * Shows what Wells has been thinking about/working on
  */
-function maybeAddJoke(
+function maybeAddActivity(
   message: string,
   state: OnboardingState,
   sentiment: string
 ): { message: string; state: OnboardingState } {
   if (shouldTellJoke(state, sentiment)) {
-    const joke = getJoke()
+    const activity = getWellsActivity()
     state.lastJoke = new Date()
     return {
-      message: `${message}\n\n${joke}`,
+      message: `${message}\n\n${activity}`,
       state
     }
   }
@@ -567,11 +572,11 @@ export function updateOnboardingState(
     state.trustScore = Math.min(100, state.trustScore + 10)
   }
 
-  // Maybe add a joke (20% chance if conditions are right)
+  // Maybe add what Wells has been up to (20% chance if conditions are right)
   const sentiment = detectSentiment(userMessage)
-  const withJoke = maybeAddJoke(wellsResponse.message, state, sentiment)
-  state = withJoke.state
-  const finalMessage = withJoke.message
+  const withActivity = maybeAddActivity(wellsResponse.message, state, sentiment)
+  state = withActivity.state
+  const finalMessage = withActivity.message
 
   // Advance phase if Wells decided to
   if (wellsResponse.shouldAdvancePhase) {
