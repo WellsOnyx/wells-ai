@@ -213,6 +213,31 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     }
     */
 
+    // AUTHENTICATION CHECK: Prompt anonymous users to sign in for cross-device sync
+    const isAnonymous = userData?.userId?.startsWith('anon-') || !userData?.userId
+    const messageCount = messages.length / 2 // Approximate conversation turns
+
+    // Trigger auth prompt after 3+ messages for anonymous users
+    if (isAnonymous && messageCount >= 3) {
+      console.log('[AUTH] Anonymous user detected after', messageCount, 'turns - prompting for authentication')
+
+      return NextResponse.json({
+        message: "I'd love to help you with that! To ensure I can remember our conversation and sync it across all your devices, I'll need your email address.",
+        authPrompt: {
+          type: 'email_auth',
+          data: {
+            reason: 'Sign in to sync your conversations across all devices and unlock secure transactions',
+            benefits: [
+              'Access your chats on any device (desktop, mobile, tablet)',
+              'Secure your conversation history permanently',
+              'Enable transaction capabilities (payments, contracts, deals)',
+              'Get personalized recommendations based on your history'
+            ]
+          }
+        }
+      })
+    }
+
     // MEMORY SYSTEM: Build conversation context
     let memoryContext = ''
     let conversationId: string | undefined

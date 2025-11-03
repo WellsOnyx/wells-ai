@@ -412,6 +412,25 @@ export default function WellsAIContent() {
         }
       }
 
+      // Check for auth prompt (inline email collection)
+      if (data.authPrompt) {
+        console.log('[AUTH] Auth prompt received from API')
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: data.message
+          },
+          {
+            role: 'assistant',
+            type: data.authPrompt.type,
+            data: data.authPrompt.data,
+            content: '' // Required but not used for component messages
+          }
+        ])
+        return
+      }
+
       const assistantMessage: Message = {
         role: 'assistant',
         content: data.message,
@@ -503,6 +522,25 @@ export default function WellsAIContent() {
           setUserData(newUserData)
           console.log('[ONBOARDING] Complete! User data:', newUserData)
         }
+      }
+
+      // Check for auth prompt (inline email collection)
+      if (data.authPrompt) {
+        console.log('[AUTH] Auth prompt received from API')
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: data.message
+          },
+          {
+            role: 'assistant',
+            type: data.authPrompt.type,
+            data: data.authPrompt.data,
+            content: '' // Required but not used for component messages
+          }
+        ])
+        return
       }
 
       const assistantMessage: Message = {
