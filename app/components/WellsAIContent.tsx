@@ -64,12 +64,32 @@ export default function WellsAIContent() {
   const [anonymousUserId, setAnonymousUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    // Get or create anonymous userId from localStorage
-    let userId = localStorage.getItem('wells_anonymous_user_id')
-    if (!userId) {
-      userId = `anon-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    // Check URL for userId parameter first (for cross-device continuity)
+    const urlUserId = searchParams.get('userId')
+
+    let userId: string
+    if (urlUserId) {
+      // Use userId from URL and save to localStorage
+      userId = urlUserId
       localStorage.setItem('wells_anonymous_user_id', userId)
+    } else {
+      // Get or create anonymous userId from localStorage
+      const storedUserId = localStorage.getItem('wells_anonymous_user_id')
+      if (storedUserId) {
+        userId = storedUserId
+      } else {
+        userId = `anon-${Date.now()}-${Math.random().toString(36).substring(7)}`
+        localStorage.setItem('wells_anonymous_user_id', userId)
+      }
     }
+
+    // Update URL with userId (without page reload)
+    if (!urlUserId && typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.set('userId', userId)
+      window.history.replaceState({}, '', url.toString())
+    }
+
     setAnonymousUserId(userId)
   }, [])
 
