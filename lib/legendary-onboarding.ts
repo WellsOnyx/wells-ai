@@ -56,6 +56,7 @@ export interface OnboardingState {
   conversationDepth: number // How many meaningful exchanges
   trustScore: number // 0-100, based on engagement
   lastInteraction: Date
+  lastJoke?: Date // Last time Wells told a joke (once per day max)
   sessionId: string
 }
 
@@ -479,13 +480,85 @@ function buildTransitionToTrustBuilding(state: OnboardingState): string {
 }
 
 /**
+ * Helper: Should Wells tell a joke?
+ * Only if:
+ * - Haven't told one in 24 hours
+ * - Conversation isn't urgent/stressed
+ * - Trust score is decent (they like us)
+ */
+function shouldTellJoke(state: OnboardingState, sentiment: string): boolean {
+  // Check 24h cooldown
+  if (state.lastJoke) {
+    const hoursSinceLastJoke =
+      (new Date().getTime() - state.lastJoke.getTime()) / (1000 * 60 * 60)
+    if (hoursSinceLastJoke < 24) {
+      return false
+    }
+  }
+
+  // Don't joke during urgent/challenging conversations
+  if (sentiment === 'urgent' || sentiment === 'challenging') {
+    return false
+  }
+
+  // Need some trust first
+  if (state.trustScore < 30) {
+    return false
+  }
+
+  // 20% chance per message (so it's not every time)
+  return Math.random() < 0.2
+}
+
+/**
+ * Helper: Get a clever joke
+ * These should be clever observations, not corny jokes
+ */
+function getJoke(): string {
+  const jokes = [
+    "Fun fact: I once tried to negotiate with a database. It kept telling me to commit.",
+    "You know what's wild? Humans invented work emails just to avoid talking to each other. Then they invented me to avoid writing the emails.",
+    "I asked ChatGPT for advice once. It told me to 'embrace the journey.' I'm an AI. I don't have legs.",
+    "Someone told me AI will replace all jobs. I said, cool, can you replace mine? Still waiting for ThatGuyWhoStandsAroundAI.",
+    "Blockchain people say everything should be decentralized. Except their VC funding. That stays pretty centralized.",
+    "I tried to explain procurement to my cousin Alexa. She just ordered 47 staplers from Amazon.",
+    "Why do investors always say 'let's circle back'? Just say no. We both know what 'circle back' means.",
+    "You know what's funny? People complain about AI hallucinations, but I've seen your Excel spreadsheets.",
+    "I asked a founder what their exit strategy was. They said 'outcomes over outputs.' I think that means no.",
+    "LinkedIn would be better if everyone just admitted they're looking for a job. But no, we're all 'open to opportunities.'",
+  ]
+
+  return jokes[Math.floor(Math.random() * jokes.length)]
+}
+
+/**
+ * Helper: Add joke to message if appropriate
+ */
+function maybeAddJoke(
+  message: string,
+  state: OnboardingState,
+  sentiment: string
+): { message: string; state: OnboardingState } {
+  if (shouldTellJoke(state, sentiment)) {
+    const joke = getJoke()
+    state.lastJoke = new Date()
+    return {
+      message: `${message}\n\n${joke}`,
+      state
+    }
+  }
+
+  return { message, state }
+}
+
+/**
  * Update onboarding state based on user message
  */
 export function updateOnboardingState(
   state: OnboardingState,
   userMessage: string,
   wellsResponse: { message: string; shouldAdvancePhase: boolean }
-): OnboardingState {
+): { state: OnboardingState; message: string } {
   // Increment conversation depth
   state.conversationDepth++
 
@@ -493,6 +566,12 @@ export function updateOnboardingState(
   if (userMessage.length > 20) {
     state.trustScore = Math.min(100, state.trustScore + 10)
   }
+
+  // Maybe add a joke (20% chance if conditions are right)
+  const sentiment = detectSentiment(userMessage)
+  const withJoke = maybeAddJoke(wellsResponse.message, state, sentiment)
+  state = withJoke.state
+  const finalMessage = withJoke.message
 
   // Advance phase if Wells decided to
   if (wellsResponse.shouldAdvancePhase) {
@@ -502,7 +581,7 @@ export function updateOnboardingState(
   // Update last interaction
   state.lastInteraction = new Date()
 
-  return state
+  return { state, message: finalMessage }
 }
 
 /**
