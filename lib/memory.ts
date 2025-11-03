@@ -435,6 +435,15 @@ export function formatContextForPrompt(context: Awaited<ReturnType<typeof buildC
     })
   }
 
+  // CRITICAL: Include recent conversation history
+  if (context.recentMessages.length > 0) {
+    parts.push('\nRecent conversation history:')
+    context.recentMessages.forEach(msg => {
+      const role = msg.role === 'user' ? 'User' : 'Wells'
+      parts.push(`${role}: ${msg.content}`)
+    })
+  }
+
   // Relationship metrics
   parts.push(`\nRelationship:`)
   parts.push(`- Messages exchanged: ${context.conversationMetrics.messageCount}`)
