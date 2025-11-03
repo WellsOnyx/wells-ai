@@ -248,7 +248,7 @@ export default function EnterpriseLanding() {
           className="absolute inset-0 w-full h-full object-cover opacity-60"
           poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Crect fill='%230f172a' width='1920' height='1080'/%3E%3C/svg%3E"
         >
-          <source src="https://cdn.coverr.co/videos/coverr-aerial-view-of-beautiful-resort-2737/1080p.mp4" type="video/mp4" />
+          <source src="/hero-video.mp4" type="video/mp4" />
         </video>
 
         {/* Dark overlay for readability */}
