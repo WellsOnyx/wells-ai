@@ -6,12 +6,13 @@ import { detectGTMIntent, extractProductDescription } from '@/lib/gtm/intent-det
 import { checkGTMOnboarding } from '@/lib/gtm/onboarding-check'
 import { getWisdomSystemPrompt } from '@/lib/wisdom/principles'
 import { detectSignupIntent, extractUserInfo, getNextPrompt, createUserInNotion, type ConversationState } from '@/lib/conversation-signup'
-import {
-  createOnboardingState,
-  updateOnboardingState,
-  isOnboardingComplete,
-  type OnboardingState
-} from '@/lib/legendary-onboarding'
+// Onboarding imports temporarily disabled
+// import {
+//   createOnboardingState,
+//   updateOnboardingState,
+//   isOnboardingComplete,
+//   type OnboardingState
+// } from '@/lib/legendary-onboarding'
 import {
   buildConversationContext,
   formatContextForPrompt,
@@ -194,37 +195,22 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       }, { status: 400 })
     }
 
-    // LEGENDARY ONBOARDING: Check if user is in onboarding flow
-    // Onboarding state is stored in userData.onboardingState (from frontend session storage)
+    // LEGENDARY ONBOARDING: Temporarily disabled until full integration is complete
+    // TODO: Properly integrate legendary onboarding system
+    // The onboarding system requires:
+    // 1. Getting Claude's response first
+    // 2. Parsing the response to determine if phase should advance
+    // 3. Updating state with both user message and Wells' response
+    /*
     let onboardingState: OnboardingState | undefined = userData?.onboardingState
-
-    // Initialize onboarding for new users
     if (!onboardingState) {
-      onboardingState = createOnboardingState({
-        name: userData?.name,
-        email: userData?.email,
-        userType: userData?.userType
-      })
-      console.log('[ONBOARDING] Initialized new onboarding state')
+      const sessionId = userData?.userId || `session-${Date.now()}-${Math.random().toString(36).substring(7)}`
+      onboardingState = createOnboardingState(sessionId)
     }
-
-    // If onboarding is not complete, route through legendary onboarding
     if (!isOnboardingComplete(onboardingState)) {
-      console.log('[ONBOARDING] User in onboarding phase:', onboardingState.phase)
-
-      const lastUserMessage = messages[messages.length - 1]?.content || ''
-      const result = updateOnboardingState(onboardingState, lastUserMessage)
-
-      // Return onboarding response with updated state
-      return NextResponse.json({
-        message: result.message,
-        onboardingState: result.state,
-        isOnboarding: true,
-        onboardingComplete: isOnboardingComplete(result.state)
-      })
+      // Need to implement full onboarding flow with Claude integration
     }
-
-    console.log('[ONBOARDING] Onboarding complete, continuing to main chat')
+    */
 
     // MEMORY SYSTEM: Build conversation context
     let memoryContext = ''
@@ -241,7 +227,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
           sessionId,
           device: userData.device,
           source: userData.source
-        }, onboardingState)
+        }, undefined) // onboardingState temporarily disabled
 
         conversationId = conversation.id
 
@@ -596,7 +582,8 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
         )
 
         // Update user context if onboarding just completed
-        if (onboardingState?.phase === 'complete' && onboardingState.name) {
+        // TODO: Re-enable when onboarding is fully integrated
+        /* if (onboardingState?.phase === 'complete' && onboardingState.name) {
           await updateUserContext(userData.userId, {
             name: onboardingState.name,
             preferredName: onboardingState.preferredName,
@@ -606,7 +593,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
             painPoints: onboardingState.painPoint ? [onboardingState.painPoint] : undefined,
             goals: onboardingState.goal ? [onboardingState.goal] : undefined
           })
-        }
+        } */
 
         console.log('[MEMORY] Messages stored successfully')
       } catch (error) {
