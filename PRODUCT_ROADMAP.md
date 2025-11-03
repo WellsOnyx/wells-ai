@@ -87,7 +87,8 @@
 ### Partnerships & Integrations
 *Ideas for external integrations*
 
--
+- **Dripify + Zapier LinkedIn Automation** - Use Dripify for safe LinkedIn outreach (connection requests, messages, follow-ups) with Zapier webhooks to trigger campaigns from Wells AI and sync responses back to Notion CRM. Avoids LinkedIn API restrictions and account bans. (~$59-99/month for Dripify)
+- **Airwallex Spend & Billing** - Integrate Airwallex's spend management and billing features for automated expense tracking, multi-currency invoicing, bill payments, and corporate cards for Wells Onyx operations
 
 ### Analytics & Insights
 *Ideas for data and reporting*
@@ -192,8 +193,8 @@ Reference these when evaluating ideas:
 
 *Quick capture area - organize into sections above weekly*
 
-**[Date]** - Idea description here
-**[Date]** - Another idea here
+**[Nov 2, 2025]** - Dripify + Zapier for LinkedIn automation (bypasses Meta/Facebook restrictions and account bans)
+**[Nov 2, 2025]** - Airwallex Spend & Billing integration for expense management and multi-currency operations
 
 ---
 
