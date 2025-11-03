@@ -76,7 +76,7 @@ Remember: This is SMS. Be concise. If the user needs more detail, offer to email
 
     // Call Claude for response
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 300, // Keep SMS responses short
       system: systemPrompt,
       messages: [
