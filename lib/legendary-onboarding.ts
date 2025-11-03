@@ -145,7 +145,7 @@ function handleGreeting(
   if (state.conversationDepth === 0) {
     return {
       message:
-        "Hi! I'm Wells. Think of me as your companion in all of this - not just a tool, but someone who's actually here for you.\n\nI'm genuinely curious: what brings you here today?",
+        "Hi! I'm Wells.\n\nWhat brings you here today?",
       shouldAdvancePhase: false
     }
   }
@@ -217,7 +217,7 @@ function handleTrustBuilding(
   // Offer immediate value based on their type
   if (state.userType === 'founder') {
     return {
-      message: `Alright ${state.preferredName || state.name}, let's prove I can actually help.\n\nBased on what you told me, I can see a few immediate ways to move forward:\n\n1. I can help you find and hire the right people (GTM sourcing)\n2. I can help you sell what you're building (buyer connections)\n3. I can help you buy what you need (procurement)\n\nWhich one feels most urgent right now?`,
+      message: `Alright ${state.preferredName || state.name}.\n\nThree things I can do:\n\n1. Find and hire the right people\n2. Help you sell what you're building\n3. Buy what you need\n\nWhich one's most urgent?`,
       shouldAdvancePhase: true // Ready for practical setup
     }
   }
@@ -231,14 +231,14 @@ function handleTrustBuilding(
 
   if (state.userType === 'seller') {
     return {
-      message: `${state.preferredName || state.name}, I can help you reach buyers you've never met.\n\nNot through spam. Through genuine connection.\n\nWant to see how?`,
+      message: `${state.preferredName || state.name}, I can reach buyers you've never met.\n\nNot through spam. Through genuine connection.\n\nWant to see?`,
       shouldAdvancePhase: true
     }
   }
 
   if (state.userType === 'buyer') {
     return {
-      message: `${state.preferredName || state.name}, what if you never had to talk to a salesperson again?\n\nI'll handle all the back-and-forth. You just tell me what you need.\n\nLet me show you.`,
+      message: `${state.preferredName || state.name}, what if you never had to talk to a salesperson again?\n\nJust tell me what you need.`,
       shouldAdvancePhase: true
     }
   }
