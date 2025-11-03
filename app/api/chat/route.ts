@@ -13,6 +13,7 @@ import { detectSignupIntent, extractUserInfo, getNextPrompt, createUserInNotion,
 //   isOnboardingComplete,
 //   type OnboardingState
 // } from '@/lib/legendary-onboarding'
+// Memory system enabled with Prisma database
 import {
   buildConversationContext,
   formatContextForPrompt,
