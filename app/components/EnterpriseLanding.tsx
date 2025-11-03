@@ -238,21 +238,21 @@ export default function EnterpriseLanding() {
       </nav>
 
       {/* Hero Section with Video Background */}
-      <section className="relative pt-24 pb-32 px-6 overflow-hidden">
+      <section className="relative pt-24 pb-32 px-6 overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#334155]">
         {/* Video Background */}
         <video
           autoPlay
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ filter: 'brightness(0.4)' }}
+          className="absolute inset-0 w-full h-full object-cover opacity-60"
+          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Crect fill='%230f172a' width='1920' height='1080'/%3E%3C/svg%3E"
         >
-          <source src="https://assets.mixkit.co/videos/preview/mixkit-set-of-plateaus-seen-from-the-heights-in-a-sunset-26070-large.mp4" type="video/mp4" />
+          <source src="https://cdn.coverr.co/videos/coverr-aerial-view-of-beautiful-resort-2737/1080p.mp4" type="video/mp4" />
         </video>
 
-        {/* Gradient overlay for readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#183b6d]/50 to-transparent"></div>
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50"></div>
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-7xl mx-auto">
