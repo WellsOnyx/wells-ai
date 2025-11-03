@@ -141,11 +141,19 @@ function handleGreeting(
   state: OnboardingState,
   userMessage: string
 ): { message: string; shouldAdvancePhase: boolean } {
-  // First interaction
+  // First interaction - check if we already know them
   if (state.conversationDepth === 0) {
+    // Returning user - greet by name
+    if (state.name) {
+      return {
+        message: `Hey ${state.preferredName || state.name}.\n\nWhat's on your mind?`,
+        shouldAdvancePhase: false
+      }
+    }
+
+    // First time - introduce
     return {
-      message:
-        "Hi! I'm Wells.\n\nWhat brings you here today?",
+      message: "Hi! I'm Wells.\n\nWhat brings you here today?",
       shouldAdvancePhase: false
     }
   }
