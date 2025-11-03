@@ -5,6 +5,7 @@ import { chatRequestSchema } from '@/lib/schemas'
 import { detectGTMIntent, extractProductDescription } from '@/lib/gtm/intent-detection'
 import { checkGTMOnboarding } from '@/lib/gtm/onboarding-check'
 import { getWisdomSystemPrompt } from '@/lib/wisdom/principles'
+import { detectSignupIntent, extractUserInfo, getNextPrompt, createUserInNotion, type ConversationState } from '@/lib/conversation-signup'
 
 // System prompt for Wells AI with function calling
 function getSystemPrompt(userType?: string) {
@@ -426,11 +427,76 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       }
     }
 
+    // CHECK FOR IN-CONVERSATION SIGNUP (stateless - analyzes conversation history)
+    let signupData = null
+    try {
+      const allMessages = messages.map((m: any) => m.content).join('\n')
+
+      // Detect signup intent in conversation
+      if (detectSignupIntent(lastUserMessage) || allMessages.includes("What's your name")) {
+        // Analyze conversation to extract collected info
+        const conversationState: ConversationState = {
+          step: 'idle',
+          sessionId: crypto.randomUUID()
+        }
+
+        // Look for name in conversation (after "What's your name?")
+        const nameMatch = allMessages.match(/What's your name\?[\s\S]*?User:?\s*([^\n]+)/i)
+        if (nameMatch && nameMatch[1] && !nameMatch[1].includes('@')) {
+          conversationState.name = nameMatch[1].trim()
+          conversationState.step = 'collecting_email'
+        }
+
+        // Look for email
+        const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/
+        const emailMatch = allMessages.match(emailRegex)
+        if (emailMatch && conversationState.name) {
+          conversationState.email = emailMatch[0]
+          conversationState.step = 'collecting_type'
+        }
+
+        // Look for user type
+        if (conversationState.email) {
+          const lower = allMessages.toLowerCase()
+          if (lower.includes('buy') && !lower.includes('seller')) {
+            conversationState.userType = 'buyer'
+            conversationState.step = 'complete'
+          } else if (lower.includes('sell') && !lower.includes('buyer')) {
+            conversationState.userType = 'seller'
+            conversationState.step = 'complete'
+          } else if (lower.includes('both')) {
+            conversationState.userType = 'both'
+            conversationState.step = 'complete'
+          }
+        }
+
+        // If complete, create user
+        if (conversationState.step === 'complete' && conversationState.name && conversationState.email && conversationState.userType) {
+          const created = await createUserInNotion(conversationState)
+          if (created) {
+            console.log('[CONVERSATION_SIGNUP] User created:', conversationState.email)
+            signupData = {
+              success: true,
+              user: {
+                name: conversationState.name,
+                email: conversationState.email,
+                userType: conversationState.userType
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[CONVERSATION_SIGNUP] Error:', error)
+      // Continue without signup data if it fails
+    }
+
     return NextResponse.json({
       message: assistantMessage,
       procurementData,
       gtmData,
-      jobSeekerData
+      jobSeekerData,
+      signupData
     })
   } catch (error: any) {
     console.error('[CHAT] Unexpected error:', error)
