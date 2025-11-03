@@ -6,6 +6,12 @@ import { detectGTMIntent, extractProductDescription } from '@/lib/gtm/intent-det
 import { checkGTMOnboarding } from '@/lib/gtm/onboarding-check'
 import { getWisdomSystemPrompt } from '@/lib/wisdom/principles'
 import { detectSignupIntent, extractUserInfo, getNextPrompt, createUserInNotion, type ConversationState } from '@/lib/conversation-signup'
+import {
+  initializeOnboardingState,
+  updateOnboardingState,
+  isOnboardingComplete,
+  type OnboardingState
+} from '@/lib/legendary-onboarding'
 
 // System prompt for Wells AI with function calling
 function getSystemPrompt(userType?: string) {
@@ -178,6 +184,38 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
         error: 'Messages array is required and must contain at least one message'
       }, { status: 400 })
     }
+
+    // LEGENDARY ONBOARDING: Check if user is in onboarding flow
+    // Onboarding state is stored in userData.onboardingState (from frontend session storage)
+    let onboardingState: OnboardingState | undefined = userData?.onboardingState
+
+    // Initialize onboarding for new users
+    if (!onboardingState) {
+      onboardingState = initializeOnboardingState({
+        name: userData?.name,
+        email: userData?.email,
+        userType: userData?.userType
+      })
+      console.log('[ONBOARDING] Initialized new onboarding state')
+    }
+
+    // If onboarding is not complete, route through legendary onboarding
+    if (!isOnboardingComplete(onboardingState)) {
+      console.log('[ONBOARDING] User in onboarding phase:', onboardingState.phase)
+
+      const lastUserMessage = messages[messages.length - 1]?.content || ''
+      const result = updateOnboardingState(onboardingState, lastUserMessage)
+
+      // Return onboarding response with updated state
+      return NextResponse.json({
+        message: result.message,
+        onboardingState: result.state,
+        isOnboarding: true,
+        onboardingComplete: isOnboardingComplete(result.state)
+      })
+    }
+
+    console.log('[ONBOARDING] Onboarding complete, continuing to main chat')
 
     // Get Claude's response with user-type-aware system prompt
     const systemPrompt = getSystemPrompt(userData?.userType)

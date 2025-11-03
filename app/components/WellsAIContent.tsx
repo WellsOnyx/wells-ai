@@ -52,6 +52,7 @@ export default function WellsAIContent() {
   const { user, isLoaded } = useUser()
 
   const [userData, setUserData] = useState<UserData | null>(null)
+  const [onboardingState, setOnboardingState] = useState<any | null>(null) // Onboarding state for legendary flow
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -271,7 +272,10 @@ export default function WellsAIContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: cleanMessages,
-          userData: userData,
+          userData: {
+            ...userData,
+            onboardingState: onboardingState
+          },
           organizationId: null
         }),
       })
@@ -294,6 +298,23 @@ export default function WellsAIContent() {
           content: 'I apologize, but I received an invalid response. Please try again.'
         }])
         return
+      }
+
+      // Update onboarding state if we're in onboarding
+      if (data.isOnboarding && data.onboardingState) {
+        console.log('[ONBOARDING] Updating state:', data.onboardingState.phase)
+        setOnboardingState(data.onboardingState)
+
+        // If onboarding completed, update userData
+        if (data.onboardingComplete && data.onboardingState.name) {
+          const newUserData: UserData = {
+            name: data.onboardingState.name,
+            email: data.onboardingState.email || '',
+            userType: data.onboardingState.userType || 'buyer'
+          }
+          setUserData(newUserData)
+          console.log('[ONBOARDING] Complete! User data:', newUserData)
+        }
       }
 
       const assistantMessage: Message = {
@@ -341,7 +362,10 @@ export default function WellsAIContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: cleanMessages,
-          userData: userData,
+          userData: {
+            ...userData,
+            onboardingState: onboardingState
+          },
           organizationId: null // Organizations not required for basic chat
         }),
       })
@@ -366,6 +390,23 @@ export default function WellsAIContent() {
           content: 'I apologize, but I received an invalid response. Please try again.'
         }])
         return
+      }
+
+      // Update onboarding state if we're in onboarding
+      if (data.isOnboarding && data.onboardingState) {
+        console.log('[ONBOARDING] Updating state:', data.onboardingState.phase)
+        setOnboardingState(data.onboardingState)
+
+        // If onboarding completed, update userData
+        if (data.onboardingComplete && data.onboardingState.name) {
+          const newUserData: UserData = {
+            name: data.onboardingState.name,
+            email: data.onboardingState.email || '',
+            userType: data.onboardingState.userType || 'buyer'
+          }
+          setUserData(newUserData)
+          console.log('[ONBOARDING] Complete! User data:', newUserData)
+        }
       }
 
       const assistantMessage: Message = {
