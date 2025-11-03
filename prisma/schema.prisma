@@ -151,3 +151,163 @@ model RFQ {
   @@index([category])
   @@index([createdAt])
 }
+
+// ============================================
+// MEMORY & RELATIONSHIP SYSTEM
+// Wells remembers EVERYTHING and builds deep companion relationships
+// ============================================
+
+// Conversation session - groups messages together
+model Conversation {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User reference
+  userId String
+
+  // Session metadata
+  sessionId String @unique // Frontend session ID
+  device    String? // "web", "mobile", "widget"
+  source    String? // "app", "widget", "api"
+
+  // Onboarding state (JSON serialized OnboardingState)
+  onboardingState Json?
+  onboardingCompleted Boolean @default(false)
+  onboardingCompletedAt DateTime?
+
+  // Relationship metrics
+  messageCount     Int @default(0)
+  trustScore       Int @default(0) // 0-100
+  conversationDepth Int @default(0)
+
+  // Last activity
+  lastActivityAt DateTime @default(now())
+  lastActivity   String? // What Wells was doing/thinking about
+
+  // Messages in this conversation
+  messages Message[]
+
+  // Link to user context
+  userContext UserContext? @relation(fields: [userId], references: [userId])
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([lastActivityAt])
+}
+
+// Individual message with embeddings for semantic search
+model Message {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // Link to conversation
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // Message content
+  role    String // "user" or "assistant"
+  content String @db.Text
+
+  // Vector embedding for semantic search (stored as JSON array)
+  embedding Json? // [0.123, 0.456, ...] - 1536 dimensions for OpenAI embeddings
+
+  // Message metadata
+  sentiment String? // "positive", "neutral", "negative", "urgent", "stressed"
+  intent    String? // "question", "request", "greeting", "feedback", etc.
+
+  // Extracted entities (names, companies, dates, etc.)
+  entities Json? // {"people": ["John"], "companies": ["Acme Corp"], ...}
+
+  // Important message flag (Wells should remember this)
+  isImportant Boolean @default(false)
+  importance  Int @default(0) // 0-10 importance score
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@index([isImportant])
+}
+
+// User context - what Wells has learned about the user
+model UserContext {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User reference
+  userId String @unique
+
+  // Basic info (from onboarding)
+  name          String?
+  preferredName String?
+  email         String?
+  phone         String?
+  userType      String? // "buyer", "seller", "both", "job_seeker", "founder"
+
+  // Deep context (learned over time)
+  company       String?
+  role          String?
+  industry      String?
+  goals         Json? // ["Find better suppliers", "Grow revenue", ...]
+  painPoints    Json? // ["High costs", "Slow delivery", ...]
+  preferences   Json? // {"communication": "email", "frequency": "daily", ...}
+
+  // Relationship tracking
+  totalConversations Int @default(0)
+  totalMessages      Int @default(0)
+  firstSeenAt        DateTime @default(now())
+  lastSeenAt         DateTime @default(now())
+
+  // Trust & relationship
+  trustScore         Int @default(0) // 0-100
+  relationshipDepth  Int @default(0) // How well Wells knows them
+
+  // Behavioral patterns
+  preferredTimes     Json? // When they usually chat
+  responseStyle      String? // "brief", "detailed", "technical"
+  conversationPace   String? // "fast", "normal", "contemplative"
+
+  // Important memories (quick access)
+  memories Memory[]
+
+  // Conversations
+  conversations Conversation[]
+
+  @@index([userId])
+  @@index([userType])
+  @@index([lastSeenAt])
+}
+
+// Important memories Wells should always remember
+model Memory {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Link to user
+  userId      String
+  userContext UserContext @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  // Memory content
+  category    String // "fact", "preference", "goal", "pain_point", "relationship", "event"
+  content     String @db.Text
+  context     String? @db.Text // Additional context about when/how this was learned
+
+  // Importance (1-10)
+  importance  Int @default(5)
+
+  // Embedding for semantic retrieval
+  embedding Json?
+
+  // Verification
+  isVerified Boolean @default(false) // User confirmed this is accurate
+  lastUsedAt DateTime @default(now()) // When Wells last recalled this memory
+
+  // Related message
+  sourceMessageId String?
+
+  @@index([userId])
+  @@index([category])
+  @@index([importance])
+  @@index([lastUsedAt])
+}

@@ -12,6 +12,15 @@ import {
   isOnboardingComplete,
   type OnboardingState
 } from '@/lib/legendary-onboarding'
+import {
+  buildConversationContext,
+  formatContextForPrompt,
+  getOrCreateConversation,
+  storeMessage,
+  updateConversationMetrics,
+  updateUserContext,
+  extractAndStoreContext
+} from '@/lib/memory'
 
 // System prompt for Wells AI with function calling
 function getSystemPrompt(userType?: string) {
@@ -217,8 +226,42 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
 
     console.log('[ONBOARDING] Onboarding complete, continuing to main chat')
 
-    // Get Claude's response with user-type-aware system prompt
-    const systemPrompt = getSystemPrompt(userData?.userType)
+    // MEMORY SYSTEM: Build conversation context
+    let memoryContext = ''
+    let conversationId: string | undefined
+
+    if (userData?.userId) {
+      try {
+        // Generate session ID if not provided
+        const sessionId = userData.sessionId || `session-${userData.userId}-${Date.now()}`
+
+        // Get or create conversation
+        const conversation = await getOrCreateConversation({
+          userId: userData.userId,
+          sessionId,
+          device: userData.device,
+          source: userData.source
+        }, onboardingState)
+
+        conversationId = conversation.id
+
+        // Build context from memory
+        const context = await buildConversationContext(userData.userId, sessionId)
+        memoryContext = formatContextForPrompt(context)
+
+        console.log('[MEMORY] Loaded conversation context for user:', userData.userId)
+      } catch (error) {
+        console.error('[MEMORY] Failed to load context (non-critical):', error)
+        // Continue without memory if it fails
+      }
+    }
+
+    // Get Claude's response with user-type-aware system prompt + memory context
+    let systemPrompt = getSystemPrompt(userData?.userType)
+
+    if (memoryContext) {
+      systemPrompt = `${systemPrompt}\n\n---\n\n## YOUR MEMORY\n\n${memoryContext}\n\nUse this context naturally in conversation. Don't announce that you're remembering - just show it through your responses.`
+    }
 
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error('[CHAT] ANTHROPIC_API_KEY not configured')
@@ -527,6 +570,49 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     } catch (error) {
       console.error('[CONVERSATION_SIGNUP] Error:', error)
       // Continue without signup data if it fails
+    }
+
+    // MEMORY SYSTEM: Store messages after successful response
+    if (conversationId && userData?.userId) {
+      try {
+        // Store user message
+        await storeMessage(conversationId, {
+          role: 'user',
+          content: lastUserMessage
+        })
+
+        // Store assistant message
+        await storeMessage(conversationId, {
+          role: 'assistant',
+          content: assistantMessage
+        })
+
+        // Extract and store context for learning
+        await extractAndStoreContext(
+          userData.userId,
+          conversationId,
+          lastUserMessage,
+          assistantMessage
+        )
+
+        // Update user context if onboarding just completed
+        if (onboardingState?.phase === 'complete' && onboardingState.name) {
+          await updateUserContext(userData.userId, {
+            name: onboardingState.name,
+            preferredName: onboardingState.preferredName,
+            email: onboardingState.email,
+            userType: onboardingState.userType,
+            company: onboardingState.company,
+            painPoints: onboardingState.painPoint ? [onboardingState.painPoint] : undefined,
+            goals: onboardingState.goal ? [onboardingState.goal] : undefined
+          })
+        }
+
+        console.log('[MEMORY] Messages stored successfully')
+      } catch (error) {
+        console.error('[MEMORY] Failed to store messages (non-critical):', error)
+        // Continue - don't fail the request if memory storage fails
+      }
     }
 
     return NextResponse.json({
