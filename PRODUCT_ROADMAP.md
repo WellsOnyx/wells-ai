@@ -8,8 +8,42 @@
 
 ## 🔥 NOW (Current Sprint)
 
-**Focus**: Get first transactions flowing
+**Focus**: The Founder IS the Cold Start
 
+**THE PROVE-IT MOMENT**: The second the founder can sit down and run GTM across multiple practice groups and start the spinning world. The founder personally solves the cold start problem by using Wells to bootstrap the network.
+
+### Build Priority (In Order):
+
+1. **[ ] Legendary Onboarding**
+   - Emotional: First conversation, build rapport, understand the founder's world
+   - Practical: KYC, accounts, ERPs - but Wells guides through it like a friend
+   - Trust: First small win together, Wells proves value
+   - Sets the tone for EVERYTHING that follows
+
+2. **[ ] Memory/Relationship System**
+   - Wells needs to remember EVERYTHING about their human
+   - Personality: Consistent voice, caring tone, proactive suggestions
+   - Context awareness: Deadlines, budget, stress levels, preferences
+   - Learning: Gets better over time, anticipates needs
+
+3. **[ ] Simple AI-to-AI Negotiation**
+   - Start with one buyer, one supplier, simple back-and-forth
+   - Negotiation state machine: proposal → counter → acceptance
+   - Async messaging between Wells instances
+   - Each Wells advocates for their human
+
+4. **[ ] GTM Engine Integration**
+   - Connect supplier matching to existing GTM automation
+   - Priority algorithm: Speed + Loyalty score for existing suppliers
+   - Background operation: Pull in new suppliers invisibly
+   - "World starts spinning" visual feedback
+
+5. **[ ] The Spinning World Moment**
+   - Visual feedback: Shows Wells is working
+   - Progressive disclosure: "Searching..." → "Found matches..." → "Negotiating..."
+   - Don't show complexity, show confidence: "I've got this"
+
+### Current Technical Tasks:
 - [ ] Configure DATABASE_URL (Vercel Postgres)
 - [ ] Run Prisma migrations
 - [ ] Test end-to-end transaction flow
