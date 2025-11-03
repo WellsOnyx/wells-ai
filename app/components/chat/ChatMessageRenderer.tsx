@@ -20,6 +20,35 @@ interface ChatMessageRendererProps {
 export default function ChatMessageRenderer({ message }: ChatMessageRendererProps) {
   // Text message
   if (message.type === 'text') {
+    // Parse URLs and make them clickable (mobile-friendly)
+    const renderContentWithLinks = (text: string) => {
+      // Match URLs (wellsai.vercel.app, https://, http://, etc.)
+      const urlRegex = /(https?:\/\/[^\s]+|wellsai\.vercel\.app[^\s]*|[a-zA-Z0-9-]+\.vercel\.app[^\s]*)/g
+      const parts = text.split(urlRegex)
+      const matches = text.match(urlRegex)
+
+      return parts.map((part, i) => {
+        if (matches && matches.includes(part)) {
+          // This is a URL - make it a big tappable link
+          const fullUrl = part.startsWith('http') ? part : `https://${part}`
+          return (
+            <a
+              key={i}
+              href={fullUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block my-2 px-4 py-3 bg-blue-600 text-white text-center rounded-lg font-medium hover:bg-blue-700 active:bg-blue-800 transition-colors"
+              style={{ minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              {part}
+            </a>
+          )
+        }
+        // Regular text with preserved whitespace
+        return <span key={i} className="whitespace-pre-wrap">{part}</span>
+      })
+    }
+
     return (
       <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
         <div
@@ -29,7 +58,7 @@ export default function ChatMessageRenderer({ message }: ChatMessageRendererProp
               : 'bg-gray-100 text-gray-900 border border-gray-200'
           }`}
         >
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          <div>{renderContentWithLinks(message.content)}</div>
           <p className="text-xs opacity-60 mt-1">
             {new Date(message.timestamp).toLocaleTimeString()}
           </p>
