@@ -209,15 +209,8 @@ export default function EnterpriseLanding() {
 
   return (
     <div className="relative min-h-screen bg-[#fafbfc] text-[#000000] overflow-hidden">
-      {/* Blueprint Sketch Background with Wells Ghost */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 pointer-events-none"
-        style={{ opacity: 1 }}
-      />
-
       {/* Navigation */}
-      <nav className="relative z-10 border-b-2 border-[#183b6d]/20" style={{ borderStyle: 'dashed' }}>
+      <nav className="relative z-10 border-b-2 border-[#183b6d]/20 bg-[#fafbfc]" style={{ borderStyle: 'dashed' }}>
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
@@ -244,39 +237,55 @@ export default function EnterpriseLanding() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative z-10 pt-24 pb-32 px-6">
-        <div className="max-w-7xl mx-auto">
+      {/* Hero Section with Video Background */}
+      <section className="relative pt-24 pb-32 px-6 overflow-hidden">
+        {/* Video Background */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: 'brightness(0.4)' }}
+        >
+          <source src="https://assets.mixkit.co/videos/preview/mixkit-set-of-plateaus-seen-from-the-heights-in-a-sunset-26070-large.mp4" type="video/mp4" />
+        </video>
+
+        {/* Gradient overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#183b6d]/50 to-transparent"></div>
+
+        {/* Hero Content */}
+        <div className="relative z-10 max-w-7xl mx-auto">
           <div className="max-w-4xl">
             {/* Version Badge */}
             <div className="flex items-center gap-3 mb-8">
-              <span className="px-4 py-2 bg-[#183b6d] text-white text-sm font-semibold rounded-sm">
+              <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm font-semibold rounded-sm">
                 v1.0.0
               </span>
-              <span className="px-4 py-2 bg-[#dba63f]/20 text-[#dba63f] border-2 border-[#dba63f] text-sm font-semibold rounded-sm">
+              <span className="px-4 py-2 bg-[#dba63f]/80 backdrop-blur-sm text-white border-2 border-white/30 text-sm font-semibold rounded-sm">
                 ALPHA
               </span>
             </div>
 
-            <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif text-[#183b6d] leading-[0.95] mb-8 tracking-tight drop-shadow-sm">
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif text-white leading-[0.95] mb-8 tracking-tight drop-shadow-2xl">
               Finally, true end-to-end<br />
               <span className="text-[#dba63f]">conversational commerce</span><br />
               for the enterprise
             </h1>
-            <p className="text-xl md:text-2xl text-[#000000] max-w-3xl mb-12 font-normal leading-relaxed bg-[#fafbfc]/95 backdrop-blur-sm p-6 border-2 border-[#183b6d]/30" style={{ borderStyle: 'dashed' }}>
+            <p className="text-xl md:text-2xl text-white/90 max-w-3xl mb-12 font-normal leading-relaxed backdrop-blur-sm p-6 border-2 border-white/30 bg-white/10 rounded-sm">
               Built to power enterprise transactions across industries. From semiconductors to executive talent.
               From commodities to compliance. One conversation for every deal.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
                 href="/app"
-                className="px-10 py-4 bg-[#dba63f] text-white text-base font-medium rounded-sm hover:bg-[#c89430] transition-all shadow-lg"
+                className="px-10 py-4 bg-[#dba63f] text-white text-base font-medium rounded-sm hover:bg-[#c89430] transition-all shadow-2xl"
               >
                 Start Trading
               </Link>
               <a
                 href="#platform"
-                className="px-10 py-4 bg-white border-2 border-[#183b6d] text-[#183b6d] text-base font-medium rounded-sm hover:bg-[#183b6d] hover:text-white transition-all"
+                className="px-10 py-4 bg-white/20 backdrop-blur-sm border-2 border-white text-white text-base font-medium rounded-sm hover:bg-white hover:text-[#183b6d] transition-all"
               >
                 Learn More
               </a>
@@ -285,8 +294,17 @@ export default function EnterpriseLanding() {
         </div>
       </section>
 
-      {/* Value Props Section */}
-      <section className="relative z-10 py-20 px-6 bg-transparent">
+      {/* Rest of page with Blueprint/Ghost background */}
+      <div className="relative bg-[#fafbfc]">
+        {/* Blueprint Sketch Background with Wells Ghost */}
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 pointer-events-none"
+          style={{ opacity: 1 }}
+        />
+
+        {/* Value Props Section */}
+        <section className="relative z-10 py-20 px-6 bg-transparent">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-12">
             <div className="text-center">
@@ -518,6 +536,8 @@ export default function EnterpriseLanding() {
           </div>
         </div>
       </footer>
+      </div>
+      {/* End Blueprint/Ghost section */}
     </div>
   )
 }
