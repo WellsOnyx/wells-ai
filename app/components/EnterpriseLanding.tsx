@@ -6,6 +6,19 @@ import Link from 'next/link'
 export default function EnterpriseLanding() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  // Video options - easily swap between different videos
+  const videoOptions = {
+    current: '/hero-video.mp4',  // Current bunny video
+    // Uncomment one of these to try different vibes:
+    // architecture1: 'https://cdn.coverr.co/videos/coverr-aerial-view-of-a-modern-building-8134/1080p.mp4',
+    // architecture2: 'https://cdn.coverr.co/videos/coverr-modern-building-architecture-3599/1080p.mp4',
+    // construction: 'https://cdn.coverr.co/videos/coverr-construction-site-time-lapse-4981/1080p.mp4',
+    // city: 'https://cdn.coverr.co/videos/coverr-urban-architecture-at-night-1668/1080p.mp4',
+    // abstract: 'https://cdn.coverr.co/videos/coverr-abstract-geometric-shapes-9614/1080p.mp4'
+  }
+
+  const videoSrc = videoOptions.current
+
   // Blueprint sketch animation - Wells AI Ghost
   useEffect(() => {
     const canvas = canvasRef.current
@@ -248,7 +261,7 @@ export default function EnterpriseLanding() {
           className="absolute inset-0 w-full h-full object-cover opacity-60"
           poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Crect fill='%230f172a' width='1920' height='1080'/%3E%3C/svg%3E"
         >
-          <source src="/hero-video.mp4" type="video/mp4" />
+          <source src={videoSrc} type="video/mp4" />
         </video>
 
         {/* Dark overlay for readability */}
