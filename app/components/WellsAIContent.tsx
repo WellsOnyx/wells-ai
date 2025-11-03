@@ -134,6 +134,47 @@ export default function WellsAIContent() {
     }
   }, [isLoaded, userData, messages.length])
 
+  // Auto-migrate anonymous conversations when user signs in
+  useEffect(() => {
+    const migrateConversations = async () => {
+      if (isLoaded && user && anonymousUserId && user.id !== anonymousUserId) {
+        // User just signed in - migrate their anonymous conversations
+        try {
+          console.log(`[AUTH] User signed in: ${user.id}, migrating from ${anonymousUserId}`)
+
+          const response = await fetch('/api/auth/migrate-conversations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              anonymousUserId,
+              authenticatedUserId: user.id
+            })
+          })
+
+          const data = await response.json()
+
+          if (response.ok && data.migratedCount > 0) {
+            console.log(`[AUTH] Successfully migrated ${data.migratedCount} conversations`)
+
+            // Update local storage to use authenticated user ID
+            localStorage.setItem('wells_anonymous_user_id', user.id)
+            setAnonymousUserId(user.id)
+
+            // Show success message to user
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `Welcome back! I've synced your conversation history across all your devices. 🔐`
+            }])
+          }
+        } catch (error) {
+          console.error('[AUTH] Migration failed:', error)
+        }
+      }
+    }
+
+    migrateConversations()
+  }, [isLoaded, user, anonymousUserId])
+
   const handleOnboardingComplete = async (data: UserData) => {
     // Save to Clerk user metadata
     try {

@@ -12,6 +12,7 @@ import PartnerDashboardCard from './cards/PartnerDashboardCard'
 import RFQFormCard from './cards/RFQFormCard'
 import SupplierMatchCard from './cards/SupplierMatchCard'
 import OnePagerGeneratorCard from './cards/OnePagerGeneratorCard'
+import EmailAuthCard from './cards/EmailAuthCard'
 
 interface ChatMessageRendererProps {
   message: ChatMessage
@@ -68,6 +69,10 @@ export default function ChatMessageRenderer({ message }: ChatMessageRendererProp
 
         {message.type === 'onepager_generator' && (
           <OnePagerGeneratorCard data={message.data} />
+        )}
+
+        {message.type === 'email_auth' && (
+          <EmailAuthCard data={message.data} />
         )}
 
         {/* Timestamp */}

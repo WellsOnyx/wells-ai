@@ -104,6 +104,14 @@ export interface GTMCampaignMessage extends BaseMessage {
   }
 }
 
+export interface EmailAuthMessage extends BaseMessage {
+  type: 'email_auth'
+  data: {
+    reason?: string
+    benefits?: string[]
+  }
+}
+
 // ============================================================================
 // UNION TYPE
 // ============================================================================
@@ -118,6 +126,7 @@ export type ChatMessage =
   | OnePagerGeneratorMessage
   | PaymentRequestMessage
   | GTMCampaignMessage
+  | EmailAuthMessage
 
 // ============================================================================
 // INTENT DETECTION

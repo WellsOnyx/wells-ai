@@ -453,6 +453,63 @@ export function formatContextForPrompt(context: Awaited<ReturnType<typeof buildC
   return parts.join('\n')
 }
 
+/**
+ * Migrate anonymous conversations to authenticated user
+ * Called when user signs in via magic link
+ */
+export async function migrateAnonymousConversations(
+  anonymousUserId: string,
+  authenticatedUserId: string
+): Promise<{ migratedCount: number }> {
+  const db = getPrisma()
+
+  try {
+    console.log(`[MIGRATION] Starting migration from ${anonymousUserId} to ${authenticatedUserId}`)
+
+    // Ensure authenticated user context exists
+    await getOrCreateUserContext(authenticatedUserId)
+
+    // Find all conversations for anonymous user
+    const anonymousConversations = await db.conversation.findMany({
+      where: { userId: anonymousUserId },
+      include: {
+        messages: true
+      }
+    })
+
+    if (anonymousConversations.length === 0) {
+      console.log('[MIGRATION] No anonymous conversations to migrate')
+      return { migratedCount: 0 }
+    }
+
+    // Update all conversations to new userId
+    await db.conversation.updateMany({
+      where: { userId: anonymousUserId },
+      data: { userId: authenticatedUserId }
+    })
+
+    // Update user context to new userId
+    await db.userContext.updateMany({
+      where: { userId: anonymousUserId },
+      data: { userId: authenticatedUserId }
+    })
+
+    // Update memories to new userId
+    await db.memory.updateMany({
+      where: { userId: anonymousUserId },
+      data: { userId: authenticatedUserId }
+    })
+
+    console.log(`[MIGRATION] Successfully migrated ${anonymousConversations.length} conversations`)
+    console.log(`[MIGRATION] Migrated ${anonymousConversations.reduce((acc, conv) => acc + conv.messages.length, 0)} messages`)
+
+    return { migratedCount: anonymousConversations.length }
+  } catch (error) {
+    console.error('[MIGRATION] Failed to migrate conversations:', error)
+    throw error
+  }
+}
+
 export default {
   getOrCreateUserContext,
   updateUserContext,
@@ -465,5 +522,6 @@ export default {
   markMemoryUsed,
   buildConversationContext,
   extractAndStoreContext,
-  formatContextForPrompt
+  formatContextForPrompt,
+  migrateAnonymousConversations
 }
