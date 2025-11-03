@@ -122,6 +122,9 @@ export async function getOrCreateConversation(
   context: ConversationContext,
   onboardingState?: any
 ): Promise<any> {
+  // CRITICAL: Ensure UserContext exists first (required for Conversation relation)
+  await getOrCreateUserContext(context.userId)
+
   let conversation = await getPrisma().conversation.findUnique({
     where: { sessionId: context.sessionId },
     include: {
