@@ -60,6 +60,19 @@ export default function WellsAIContent() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Generate or load anonymous userId for memory system
+  const [anonymousUserId, setAnonymousUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Get or create anonymous userId from localStorage
+    let userId = localStorage.getItem('wells_anonymous_user_id')
+    if (!userId) {
+      userId = `anon-${Date.now()}-${Math.random().toString(36).substring(7)}`
+      localStorage.setItem('wells_anonymous_user_id', userId)
+    }
+    setAnonymousUserId(userId)
+  }, [])
+
   // Load user data from Clerk metadata
   useEffect(() => {
     if (isLoaded && user?.unsafeMetadata) {
@@ -274,6 +287,7 @@ export default function WellsAIContent() {
           messages: cleanMessages,
           userData: {
             ...userData,
+            userId: user?.id || anonymousUserId, // Use Clerk ID or anonymous ID
             onboardingState: onboardingState
           },
           organizationId: null
