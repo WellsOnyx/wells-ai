@@ -11,7 +11,7 @@ import { CategoryPioneerOpportunity } from '@/lib/categories'
 import ChatMessageRenderer from './chat/ChatMessageRenderer'
 import { ChatMessage } from '@/types/chat'
 import GTMConversionCard from './chat/cards/GTMConversionCard'
-import RFQFormCard from './chat/cards/RFQFormCard'
+import ProcurementStatusCard from './chat/cards/ProcurementStatusCard'
 import SupplierMatchCard from './chat/cards/SupplierMatchCard'
 import Link from 'next/link'
 
@@ -23,16 +23,13 @@ interface Message {
   procurementData?: {
     detected: boolean
     requestId?: string
-    suppliersNotified?: number
+    sourcing?: boolean
     category?: string
-    showRFQForm?: boolean
+    description?: string
+    suppliersContacted?: number
+    status?: string
     showSupplierMatches?: boolean
     suppliers?: any[]
-    description?: string
-    prefillData?: {
-      description?: string
-      category?: string
-    }
   }
   pioneerOpportunity?: {
     detected: boolean
@@ -795,65 +792,26 @@ export default function WellsAIContent() {
                       </div>
                     )}
 
-                    {/* Procurement Flow - RFQ Form or Notification */}
+                    {/* Procurement Flow - Real-time Status or Supplier Matches */}
                     {message.procurementData?.detected && (
                       <div className="mt-4">
-                        {message.procurementData.showRFQForm ? (
-                          /* Show RFQ Form Card with prefilled data */
-                          <RFQFormCard
+                        {message.procurementData.sourcing && message.procurementData.requestId ? (
+                          /* Show real-time procurement status card */
+                          <ProcurementStatusCard
                             data={{
-                              prefillDescription: message.procurementData.prefillData?.description,
-                              prefillCategory: message.procurementData.prefillData?.category,
-                              onSubmit: async (rfq: any) => {
-                                console.log('[PROCUREMENT] RFQ submitted:', rfq)
+                              requestId: message.procurementData.requestId,
+                              category: message.procurementData.category || '',
+                              description: message.procurementData.description || '',
+                              onQuotesUpdate: (quotes: any[]) => {
+                                // When quotes come in, Wells can provide conversational updates
+                                console.log('[PROCUREMENT] Quotes updated:', quotes)
 
-                                // Show loading message
-                                setMessages(prev => [...prev, {
-                                  role: 'assistant',
-                                  content: 'Perfect! I\'m finding suppliers who can fulfill your request...'
-                                }])
-
-                                try {
-                                  // Call supplier matching API
-                                  const response = await fetch('/api/suppliers/match', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                      category: rfq.category,
-                                      requirements: rfq.requirements || [],
-                                      organizationId: null
-                                    })
-                                  })
-
-                                  const matchData = await response.json()
-                                  console.log('[PROCUREMENT] Supplier match response:', matchData)
-
-                                  if (matchData.success && matchData.suppliers && matchData.suppliers.length > 0) {
-                                    // Show supplier match card with results
-                                    setMessages(prev => [...prev, {
-                                      role: 'assistant',
-                                      content: `Found ${matchData.suppliers.length} qualified supplier${matchData.suppliers.length !== 1 ? 's' : ''} for you!`,
-                                      procurementData: {
-                                        detected: true,
-                                        showRFQForm: false,
-                                        showSupplierMatches: true,
-                                        suppliers: matchData.suppliers,
-                                        category: rfq.category,
-                                        description: rfq.description
-                                      }
-                                    }])
-                                  } else {
-                                    // No suppliers found
-                                    setMessages(prev => [...prev, {
-                                      role: 'assistant',
-                                      content: 'I couldn\'t find any suppliers matching your requirements right now. Let me expand the search or try adjusting your criteria.'
-                                    }])
-                                  }
-                                } catch (error) {
-                                  console.error('[PROCUREMENT] Supplier matching failed:', error)
+                                // Add conversational message about new quotes
+                                if (quotes.length > 0) {
+                                  const latestQuote = quotes[0]
                                   setMessages(prev => [...prev, {
                                     role: 'assistant',
-                                    content: 'I encountered an error finding suppliers. Please try again in a moment.'
+                                    content: `Just heard from ${latestQuote.supplier}! They quoted $${latestQuote.price}/unit${latestQuote.leadTime ? ` with a ${latestQuote.leadTime} lead time` : ''}. ${quotes.length > 1 ? `We now have ${quotes.length} quotes total.` : 'Still waiting on the others...'}`
                                   }])
                                 }
                               }
@@ -863,7 +821,7 @@ export default function WellsAIContent() {
                           /* Show supplier match card with results */
                           <SupplierMatchCard
                             data={{
-                              suppliers: message.procurementData.suppliers,
+                              suppliers: message.procurementData.suppliers || [],
                               category: message.procurementData.category,
                               description: message.procurementData.description,
                               onSelect: (supplier: any) => {
@@ -876,7 +834,7 @@ export default function WellsAIContent() {
                             }}
                           />
                         ) : (
-                          /* Show success notification for legacy SMS-based flow */
+                          /* Show success notification for completed procurement */
                           <div className="max-w-[75%]">
                             <div className="border-l-4 border-[#dba63f] bg-[#dba63f]/5 rounded-sm px-5 py-4">
                               <div className="flex items-center gap-3 mb-2">

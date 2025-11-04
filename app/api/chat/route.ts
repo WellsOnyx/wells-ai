@@ -493,18 +493,30 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       })
     }
 
-    // PROCUREMENT FLOW: Show RFQ form for all procurement requests
+    // PROCUREMENT FLOW: Start supplier outreach immediately, continue conversation
     if (intent?.shouldMatch && intent?.category && intent?.requirements) {
       console.log('[PROCUREMENT] Intent detected:', intent)
 
-      // Return RFQ form card with prefilled data extracted from conversation
+      // Immediately kick off supplier pings in background (async, non-blocking)
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/procurement/ping-suppliers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: `req_${Date.now()}`,
+          category: intent.category,
+          description: intent.requirements,
+          buyerContext: lastUserMessage
+        })
+      }).catch(err => console.error('[PROCUREMENT] Supplier ping failed:', err))
+
+      // Return conversational response indicating we're working on it
       procurementData = {
         detected: true,
-        showRFQForm: true,
-        prefillData: {
-          description: intent.requirements,
-          category: intent.category
-        }
+        sourcing: true,
+        requestId: `req_${Date.now()}`,
+        category: intent.category,
+        suppliersContacted: 0, // Will be updated via webhook/polling
+        status: 'reaching_out'
       }
     }
 
