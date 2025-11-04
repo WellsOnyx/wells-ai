@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     console.log(`[PROCUREMENT PING] Found ${suppliers.length} suppliers`)
 
     // Ping each supplier via SMS (fire and forget - they respond async)
-    const pingPromises = suppliers.map(supplier =>
+    const pingPromises = suppliers.map((supplier: any) =>
       pingSupplier(supplier, {
         requestId,
         category,
