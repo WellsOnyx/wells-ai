@@ -338,16 +338,68 @@
 
 **Goal:** "Switchless resell" to procurement teams. $1T in spend.
 
-### Build Requirements:
-- [ ] Deep ERP integrations (SAP, Oracle, Workday)
-- [ ] Procurement workflow automation
-- [ ] Supplier network at scale
-- [ ] Payment rails integration
-- [ ] Global expansion (multi-currency, compliance)
+**Revenue Model:** Two-path strategy - let customers choose their journey
+
+### Two-Path Strategy:
+
+#### Path 1: BYO Pipes (Bring Your Own)
+**Target:** Companies already on SAP/Coupa/Oracle
+**Approach:** Invisible middleware integration
+**Pricing:** 33bps flat on every transaction
+**Value Prop:** Zero switching costs, instant setup
+
+**How It Works:**
+- Embed Wells as middleware in existing ERP systems
+- Customers keep their SAP/Coupa workflows
+- Wells monitors transaction flow via read-only API
+- Automatically deducts 33bps on each transaction
+- No disruption, no training, no migration
+
+**Technical Requirements:**
+- [ ] SAP Ariba read-only API integration
+- [ ] Coupa API connector
+- [ ] Oracle Procurement Cloud integration
+- [ ] Transaction monitoring layer
+- [ ] 33bps fee deduction system
+- [ ] Transparent line items (Wells fee + tithe + rail costs)
+
+#### Path 2: All-in-Wells
+**Target:** Companies without existing ERP
+**Approach:** Full-stack procurement platform
+**Pricing:** Match SAP Ariba (15.5-35bps depending on transaction type)
+**Value Prop:** Better UX, AI-native, instant settlement (via Grain)
+
+**How It Works:**
+- Complete procurement workflow inside Wells
+- Conversational interface (no forms)
+- AI-powered supplier matching
+- Built-in negotiation and contract management
+- Native Grain settlement (instant vs 3-day ACH)
+
+**Technical Requirements:**
+- [ ] Full procurement workflow UI
+- [ ] Supplier catalog and discovery
+- [ ] RFQ automation
+- [ ] Contract generation and management
+- [ ] Payment processing integration
+- [ ] Match Ariba feature parity
+
+### Build Priority (Weeks 5-8):
+**Week 5-6: BYO Pipes Prototype**
+- [ ] SAP Ariba read-only connector
+- [ ] Monitor transaction flow
+- [ ] Build 33bps deduction layer
+- [ ] Test with pilot customer
+
+**Week 7-8: All-in-Wells ERP**
+- [ ] Full procurement workflow
+- [ ] Payment processing integration
+- [ ] Launch with 5 beta customers
 
 **Success Criteria:**
 - 100 enterprise customers
 - $100B+ in GMV
+- 50/50 split between BYO and All-in-Wells
 - Market leadership position
 
 ---
@@ -356,18 +408,190 @@
 
 **Goal:** 2:1 liquidity leverage, $1T AUM, 0 friction treasury.
 
-### Build Requirements:
-- [ ] Blockchain infrastructure
-- [ ] Grain tokenomics
-- [ ] Vault 7-day audit system
-- [ ] Liquidity provision
-- [ ] DeFi integrations
-- [ ] Regulatory compliance (securities law)
+**The Mic Drop:** Turn Wells from "payment processor with fees" into "instant settlement infrastructure with pure profit."
 
-**Success Criteria:**
+### What Is Grain & Vault?
+
+**Grain Token:**
+- USDC-backed stablecoin (1 GRAIN = $1 USD)
+- Overcollateralized at 110% for safety
+- Deployed on Ethereum L2 (Arbitrum or Base)
+- Instant settlement (< 1 second vs 3-day ACH)
+- Near-zero transaction costs (~$0.00001 per tx)
+
+**Vault System:**
+- Multi-sig USDC treasury wallet
+- $10M minimum reserve (auto-rebalancing)
+- 10% tithe allocation to Adullam Fund
+- Proof of reserves via smart contract
+- No fractional reserve banking
+
+### Why This Wins:
+
+**Current State (Traditional Rails):**
+- Ariba: 15.5bps + 3-day ACH settlement
+- Stripe/Airwallex: 1.5-3% + 2-3 day settlement
+- Wells today: 33bps + payment rail costs (~1.5%) = NET NEGATIVE on small deals
+
+**After Grain Launch:**
+- Wells: 33bps + instant settlement + zero rail costs
+- **33bps becomes PURE PROFIT** (no Stripe/ACH/Airwallex fees)
+- CFOs demand: "Why wait 3 days when Wells settles instantly?"
+- **Game over for Ariba**
+
+### Settlement Flow:
+
+```
+1. Buyer approves payment in Wells
+2. Wells mints Grain tokens (1:1 from USDC reserves)
+3. Grain transferred to Seller's vault (instant)
+4. Wells deducts 33bps in Grain
+5. Seller can:
+   - Keep in Grain (instant liquidity for next purchase)
+   - Convert to USDC (instant, near-zero fee)
+   - Convert to fiat ($25 fee, 1-day ACH)
+```
+
+### Revenue Projections:
+
+**Year 1 (Traditional Rails):**
+- $10M transaction volume
+- 33bps gross = $33,000
+- Rail costs (1.5%) = $150,000 loss
+- **Net: -$117,000** (funding Grain development)
+
+**Year 1 (Post-Grain Launch @ Month 6):**
+- $10M transaction volume
+- 33bps gross = $33,000
+- Rail costs = $100 (near-zero)
+- **Net: $32,900 profit per $10M**
+
+**Year 2 (Full Grain):**
+- $1B transaction volume
+- 33bps gross = $3.3M
+- Rail costs = $10K
+- **Net: $3.29M profit**
+
+**Year 3 (Scale):**
+- $100B transaction volume
+- 33bps gross = $330M
+- Rail costs = $1M
+- **Net: $329M profit**
+
+### Build Requirements:
+
+**Phase 1: Grain Prototype (Weeks 1-2)**
+- [ ] Set up USDC treasury wallet (multi-sig)
+- [ ] Deploy Grain smart contract (testnet)
+- [ ] Build deposit/withdrawal flow
+- [ ] Create settlement API
+- [ ] Test with $100K volume
+
+**Phase 2: SAP/Ariba Connector (Weeks 3-4)**
+- [ ] Read-only API integration
+- [ ] Monitor transaction flow
+- [ ] Build 33bps deduction layer
+- [ ] Test with pilot customer
+
+**Phase 3: All-in-Wells ERP (Weeks 5-8)**
+- [ ] Full procurement workflow
+- [ ] Payment processing integration
+- [ ] Match Ariba feature parity
+- [ ] Launch with 5 beta customers
+
+**Phase 4: Grain Migration (Weeks 9-12)**
+- [ ] Migrate BYO customers to Grain settlement
+- [ ] Migrate All-in-Wells to Grain
+- [ ] Sunset Stripe/Airwallex for new transactions
+- [ ] **Pure 33bps profit model achieved**
+
+### Competitive Moat:
+
+**Why Ariba Can't Copy This:**
+1. Legacy rails (Stripe, ACH) baked into enterprise contracts
+2. SAP's corporate structure prevents stablecoin adoption (legal/compliance)
+3. Regulatory fear of crypto
+4. Too slow to pivot (18-24 month product cycles)
+
+**Why Wells Wins:**
+1. Born crypto-native (no legacy to sunset)
+2. No existing contracts to renegotiate
+3. Instant settlement = killer feature for CFOs
+4. 33bps pure profit (no rail costs) = better unit economics
+
+### Regulatory Strategy:
+
+**Key Compliance Requirements:**
+- [ ] Money Transmitter License (state-by-state)
+- [ ] FinCEN registration (MSB)
+- [ ] USDC reserve audit (monthly)
+- [ ] AML/KYC for all users
+- [ ] Transaction monitoring (>$10K reporting to FinCEN)
+
+**Risk Mitigation:**
+- Overcollateralized USDC reserves (110%)
+- No fractional reserve banking
+- Instant proof of reserves via smart contract
+- Clear separation: Wells (platform) vs Grain (currency)
+- No lending or leverage on customer deposits
+
+### Launch Plan:
+
+**Month 1-3: Silent Build**
+- Develop Grain smart contracts (testnet)
+- Set up treasury infrastructure
+- Get first 10 beta users on testnet
+- Prove instant settlement works
+
+**Month 4-6: Private Beta**
+- Invite 100 companies to Grain beta (mainnet)
+- Process $10M volume
+- Collect feedback and iterate
+- Build regulatory compliance
+
+**Month 7-9: Public Launch**
+- Announce Grain publicly
+- Marketing: "Say goodbye to 3-day ACH"
+- Migrate all Wells users to Grain settlement
+- Press and media coverage
+
+**Month 10-12: Scale**
+- $1B transaction volume
+- 10,000 companies using Grain
+- Pitch Series A: "We're the payment rail"
+- Regulatory approval in all 50 states
+
+### Success Metrics:
+
+**Phase 1 (Prototype):**
+- [ ] $100K volume settled via Grain
+- [ ] <1 second settlement time
+- [ ] Zero failed transactions
+
+**Phase 2 (Beta):**
+- [ ] 100 companies using Grain
+- [ ] $10M volume processed
+- [ ] 99.99% uptime
+
+**Phase 3 (Production):**
+- [ ] 10,000 companies using Grain
+- [ ] $1B volume processed
+- [ ] 33bps pure profit margin
+
+**Phase 4 (Dominance):**
+- [ ] $100B volume processed
+- [ ] Wells becomes default B2B payment rail
+- [ ] Ariba forced to match or die
+
+**Success Criteria (Original):**
 - $10B+ AUM
 - 2:1 leverage working
 - 0 friction proven
+
+**The Mic Drop Moment:**
+When Grain launches, every CFO will ask their procurement team: "Why are we waiting 3 days for ACH when Wells settles instantly?"
+
+That's game over for Ariba.
 
 ---
 
