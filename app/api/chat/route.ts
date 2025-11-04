@@ -138,10 +138,28 @@ async function analyzeProcurementIntent(messages: any[]): Promise<ProcurementInt
   const lastMessage = messages[messages.length - 1]
   const text = lastMessage.content.toLowerCase()
 
-  const buyKeywords = ['need', 'looking for', 'buy', 'purchase', 'source', 'find', 'require']
-  const hasBuyIntent = buyKeywords.some(keyword => text.includes(keyword))
+  // Enhanced procurement keywords - broader detection
+  const procurementKeywords = [
+    'need to source',
+    'get quotes',
+    'find suppliers',
+    'rfq for',
+    'request for quote',
+    'looking for',
+    'need',
+    'buy',
+    'purchase',
+    'source',
+    'find',
+    'require',
+    'procure',
+    'vendor',
+    'supplier'
+  ]
 
-  if (!hasBuyIntent) {
+  const hasProcurementIntent = procurementKeywords.some(keyword => text.includes(keyword))
+
+  if (!hasProcurementIntent) {
     return { shouldMatch: false }
   }
 
@@ -163,16 +181,20 @@ async function analyzeProcurementIntent(messages: any[]): Promise<ProcurementInt
     }
   }
 
-  // Standard category detection fallback
+  // Standard category detection with broader coverage
   let category = 'General'
-  if (text.includes('semiconductor') || text.includes('chip') || text.includes('electronics')) {
-    category = 'Semiconductors'
-  } else if (text.includes('cto') || text.includes('cfo') || text.includes('executive') || text.includes('talent') || text.includes('hire')) {
+  if (text.includes('semiconductor') || text.includes('chip') || text.includes('electronics') || text.includes('circuit') || text.includes('pcb')) {
+    category = 'Electronics'
+  } else if (text.includes('cto') || text.includes('cfo') || text.includes('executive') || text.includes('talent') || text.includes('hire') || text.includes('recruiting')) {
     category = 'Executive Talent'
-  } else if (text.includes('equipment') || text.includes('machinery')) {
-    category = 'Industrial Equipment'
-  } else if (text.includes('software') || text.includes('saas') || text.includes('technology')) {
-    category = 'Software & Technology'
+  } else if (text.includes('equipment') || text.includes('machinery') || text.includes('manufacturing')) {
+    category = 'Manufacturing'
+  } else if (text.includes('software') || text.includes('saas') || text.includes('technology') || text.includes('it services')) {
+    category = 'IT Services'
+  } else if (text.includes('office') || text.includes('supplies') || text.includes('furniture')) {
+    category = 'Office Supplies'
+  } else if (text.includes('marketing') || text.includes('advertising') || text.includes('design')) {
+    category = 'Marketing'
   }
 
   return {
@@ -471,53 +493,18 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       })
     }
 
-    // BUYER: If this is a procurement request, trigger matching
-    if (userData?.userType === 'buyer' && intent?.shouldMatch && intent?.category && intent?.requirements) {
-      try {
-        // Match suppliers
-        const matchResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/suppliers/match`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            category: intent.category,
-            requirements: intent.requirements,
-            organizationId: organizationId || null
-          })
-        })
+    // PROCUREMENT FLOW: Show RFQ form for all procurement requests
+    if (intent?.shouldMatch && intent?.category && intent?.requirements) {
+      console.log('[PROCUREMENT] Intent detected:', intent)
 
-        const matchData = await matchResponse.json()
-
-        if (matchData.success && matchData.suppliers.length > 0) {
-          // Get buyer name from userData or use default
-          const buyerName = userData?.name || userData?.company || 'Anonymous Buyer'
-
-          // Notify suppliers via SMS
-          const notifyResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/suppliers/notify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              supplierIds: matchData.suppliers.map((s: any) => s.id),
-              buyerName: buyerName,
-              requirements: intent.requirements,
-              category: intent.category,
-              organizationId: organizationId || null
-            })
-          })
-
-          const notifyData = await notifyResponse.json()
-
-          if (notifyData.success) {
-            procurementData = {
-              detected: true,
-              requestId: notifyData.requestId,
-              suppliersNotified: notifyData.notifications.length,
-              category: intent.category
-            }
-          }
+      // Return RFQ form card with prefilled data extracted from conversation
+      procurementData = {
+        detected: true,
+        showRFQForm: true,
+        prefillData: {
+          description: intent.requirements,
+          category: intent.category
         }
-      } catch (error) {
-        console.error('Procurement matching error:', error)
-        // Continue without procurement data if matching fails
       }
     }
 

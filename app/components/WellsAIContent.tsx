@@ -11,6 +11,8 @@ import { CategoryPioneerOpportunity } from '@/lib/categories'
 import ChatMessageRenderer from './chat/ChatMessageRenderer'
 import { ChatMessage } from '@/types/chat'
 import GTMConversionCard from './chat/cards/GTMConversionCard'
+import RFQFormCard from './chat/cards/RFQFormCard'
+import SupplierMatchCard from './chat/cards/SupplierMatchCard'
 import Link from 'next/link'
 
 interface Message {
@@ -23,6 +25,11 @@ interface Message {
     requestId?: string
     suppliersNotified?: number
     category?: string
+    showRFQForm?: boolean
+    prefillData?: {
+      description?: string
+      category?: string
+    }
   }
   pioneerOpportunity?: {
     detected: boolean
@@ -785,28 +792,50 @@ export default function WellsAIContent() {
                       </div>
                     )}
 
-                    {/* Procurement notification - gold accent */}
+                    {/* Procurement Flow - RFQ Form or Notification */}
                     {message.procurementData?.detected && (
-                      <div className="mt-4 max-w-[75%]">
-                        <div className="border-l-4 border-[#dba63f] bg-[#dba63f]/5 rounded-sm px-5 py-4">
-                          <div className="flex items-center gap-3 mb-2">
-                            <svg className="w-4 h-4 text-[#dba63f]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            <h3 className="text-sm font-medium text-[#183b6d]">
-                              Marketplace Match Complete
-                            </h3>
+                      <div className="mt-4">
+                        {message.procurementData.showRFQForm ? (
+                          /* Show RFQ Form Card with prefilled data */
+                          <RFQFormCard
+                            data={{
+                              prefillDescription: message.procurementData.prefillData?.description,
+                              prefillCategory: message.procurementData.prefillData?.category,
+                              onSubmit: async (rfq: any) => {
+                                console.log('[PROCUREMENT] RFQ submitted:', rfq)
+                                // TODO: Call supplier matching API
+                                // For now, show success message
+                                setMessages(prev => [...prev, {
+                                  role: 'assistant',
+                                  content: 'Perfect! I\'m finding suppliers who can fulfill your request...'
+                                }])
+                              }
+                            }}
+                          />
+                        ) : (
+                          /* Show success notification after suppliers are matched */
+                          <div className="max-w-[75%]">
+                            <div className="border-l-4 border-[#dba63f] bg-[#dba63f]/5 rounded-sm px-5 py-4">
+                              <div className="flex items-center gap-3 mb-2">
+                                <svg className="w-4 h-4 text-[#dba63f]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                <h3 className="text-sm font-medium text-[#183b6d]">
+                                  Marketplace Match Complete
+                                </h3>
+                              </div>
+                              <p className="text-sm text-[#575757] mb-3 leading-relaxed">
+                                AI matched your request with {message.procurementData.suppliersNotified} qualified sellers.
+                                Both sides notified—expect responses within 24 hours via SMS.
+                              </p>
+                              <div className="flex gap-3 text-xs text-[#9ea1a7]">
+                                <span>ID: {message.procurementData.requestId?.slice(-8)}</span>
+                                <span>•</span>
+                                <span>{message.procurementData.category}</span>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-sm text-[#575757] mb-3 leading-relaxed">
-                            AI matched your request with {message.procurementData.suppliersNotified} qualified sellers.
-                            Both sides notified—expect responses within 24 hours via SMS.
-                          </p>
-                          <div className="flex gap-3 text-xs text-[#9ea1a7]">
-                            <span>ID: {message.procurementData.requestId?.slice(-8)}</span>
-                            <span>•</span>
-                            <span>{message.procurementData.category}</span>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     )}
 
