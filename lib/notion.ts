@@ -98,14 +98,12 @@ export async function getRFQs(limit: number = 50, organizationId?: string): Prom
         }
       : undefined
 
-    // TODO: Fix Notion SDK query compatibility
-    const response = { results: [] as any[] }
-    // const response = await notion.databases.query({
-    //   database_id: REQUESTS_DB,
-    //   page_size: limit,
-    //   sorts: [{ property: 'Created', direction: 'descending' }],
-    //   ...(filter && { filter })
-    // })
+    const response = await notion.dataSources.query({
+      data_source_id: REQUESTS_DB,
+      page_size: limit,
+      sorts: [{ property: 'Created', direction: 'descending' }],
+      ...(filter && { filter })
+    })
 
     return response.results.map((page: any) => ({
       id: page.id,
@@ -193,14 +191,12 @@ export async function getDeals(limit: number = 50, organizationId?: string): Pro
         }
       : undefined
 
-    // TODO: Fix Notion SDK query compatibility
-    const response = { results: [] as any[] }
-    // const response = await notion.databases.query({
-    //   database_id: TRANSACTIONS_DB,
-    //   page_size: limit,
-    //   sorts: [{ property: 'Close Date', direction: 'descending' }],
-    //   ...(filter && { filter })
-    // })
+    const response = await notion.dataSources.query({
+      data_source_id: TRANSACTIONS_DB,
+      page_size: limit,
+      sorts: [{ property: 'Close Date', direction: 'descending' }],
+      ...(filter && { filter })
+    })
 
     return response.results.map((page: any) => {
       const dealValue = page.properties['Deal Value']?.number || 0
@@ -243,7 +239,7 @@ export async function createDeal(
 
   try {
     const response = await notion.pages.create({
-      parent: { database_id: TRANSACTIONS_DB },
+      parent: { data_source_id: TRANSACTIONS_DB },
       properties: {
         'Buyer Company': {
           title: [{ text: { content: deal.buyerCompany } }]
@@ -339,14 +335,12 @@ export async function getSuppliers(limit: number = 100, organizationId?: string)
         }
       : undefined
 
-    // TODO: Fix Notion SDK query compatibility
-    const response = { results: [] as any[] }
-    // const response = await notion.databases.query({
-    //   database_id: SUPPLIERS_DB,
-    //   page_size: limit,
-    //   sorts: [{ property: 'Created', direction: 'descending' }],
-    //   ...(filter && { filter })
-    // })
+    const response = await notion.dataSources.query({
+      data_source_id: SUPPLIERS_DB,
+      page_size: limit,
+      sorts: [{ property: 'Created', direction: 'descending' }],
+      ...(filter && { filter })
+    })
 
     return response.results.map((page: any) => ({
       id: page.id,

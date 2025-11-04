@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
  */
 async function findSuppliers(category: string) {
   try {
-    const response = await notionClient.databases.query({
-      database_id: process.env.NOTION_SUPPLIERS_DB!,
+    const response = await notionClient.dataSources.query({
+      data_source_id: process.env.NOTION_SUPPLIERS_DB!,
       filter: {
         and: [
           {
@@ -130,7 +130,7 @@ async function pingSupplier(supplier: any, request: any) {
 async function storeRequest(request: any) {
   try {
     await notionClient.pages.create({
-      parent: { database_id: process.env.NOTION_RFQS_DB! },
+      parent: { data_source_id: process.env.NOTION_RFQS_DB! },
       properties: {
         'Request ID': {
           title: [{ text: { content: request.requestId } }]

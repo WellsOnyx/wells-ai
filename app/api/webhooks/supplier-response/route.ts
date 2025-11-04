@@ -104,8 +104,8 @@ async function findSupplierByPhone(phone: string): Promise<any> {
     // Normalize phone number (remove +1, spaces, dashes)
     const normalizedPhone = phone.replace(/[\s\-\+]/g, '')
 
-    const response = await notionClient.databases.query({
-      database_id: process.env.NOTION_SUPPLIERS_DB!,
+    const response = await notionClient.dataSources.query({
+      data_source_id: process.env.NOTION_SUPPLIERS_DB!,
       filter: {
         property: 'Phone',
         phone_number: {
@@ -137,7 +137,7 @@ async function findSupplierByPhone(phone: string): Promise<any> {
 async function storeSupplierQuote(quote: any) {
   try {
     await notionClient.pages.create({
-      parent: { database_id: process.env.NOTION_SUPPLIER_QUOTES_DB! },
+      parent: { data_source_id: process.env.NOTION_SUPPLIER_QUOTES_DB! },
       properties: {
         'Request ID': {
           title: [{ text: { content: quote.requestId } }]
@@ -175,8 +175,8 @@ async function storeSupplierQuote(quote: any) {
 async function updateRFQStatus(requestId: string, supplierInfo: any) {
   try {
     // Find the RFQ by request ID
-    const response = await notionClient.databases.query({
-      database_id: process.env.NOTION_RFQS_DB!,
+    const response = await notionClient.dataSources.query({
+      data_source_id: process.env.NOTION_RFQS_DB!,
       filter: {
         property: 'Request ID',
         title: {

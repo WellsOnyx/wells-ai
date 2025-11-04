@@ -846,7 +846,7 @@ export default function WellsAIContent() {
                                 </h3>
                               </div>
                               <p className="text-sm text-[#575757] mb-3 leading-relaxed">
-                                AI matched your request with {message.procurementData.suppliersNotified} qualified sellers.
+                                AI matched your request with {message.procurementData.suppliersContacted} qualified sellers.
                                 Both sides notified—expect responses within 24 hours via SMS.
                               </p>
                               <div className="flex gap-3 text-xs text-[#9ea1a7]">

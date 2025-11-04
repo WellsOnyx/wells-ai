@@ -73,8 +73,8 @@ export async function GET(request: NextRequest) {
  */
 async function getRFQByRequestId(requestId: string): Promise<any> {
   try {
-    const response = await notionClient.databases.query({
-      database_id: process.env.NOTION_RFQS_DB!,
+    const response = await notionClient.dataSources.query({
+      data_source_id: process.env.NOTION_RFQS_DB!,
       filter: {
         property: 'Request ID',
         title: {
@@ -111,8 +111,8 @@ async function getRFQByRequestId(requestId: string): Promise<any> {
  */
 async function getSupplierQuotes(requestId: string): Promise<any[]> {
   try {
-    const response = await notionClient.databases.query({
-      database_id: process.env.NOTION_SUPPLIER_QUOTES_DB!,
+    const response = await notionClient.dataSources.query({
+      data_source_id: process.env.NOTION_SUPPLIER_QUOTES_DB!,
       filter: {
         property: 'Request ID',
         title: {
