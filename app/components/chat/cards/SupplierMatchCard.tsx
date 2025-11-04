@@ -35,20 +35,22 @@ interface Supplier {
 }
 
 interface SupplierMatchCardProps {
-  data: {
+  data?: {
     suppliers?: Supplier[]
     rfqId?: string
     category?: string
     description?: string
     onSelect?: (supplier: Supplier) => void
+    matches?: Supplier[] // Backward compatibility
+    [key: string]: any // Allow any additional props
   }
 }
 
-export default function SupplierMatchCard({ data }: SupplierMatchCardProps) {
+export default function SupplierMatchCard({ data = {} }: SupplierMatchCardProps) {
   const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null)
   const [expandedSupplier, setExpandedSupplier] = useState<string | null>(null)
 
-  const suppliers = data.suppliers || []
+  const suppliers = data?.suppliers || data?.matches || []
 
   if (suppliers.length === 0) {
     return (
@@ -68,7 +70,7 @@ export default function SupplierMatchCard({ data }: SupplierMatchCardProps) {
 
   const handleSelect = (supplier: Supplier) => {
     setSelectedSupplier(supplier.id)
-    if (data.onSelect) {
+    if (data?.onSelect) {
       data.onSelect(supplier)
     }
   }
@@ -83,7 +85,7 @@ export default function SupplierMatchCard({ data }: SupplierMatchCardProps) {
         <span className="text-2xl mr-2">🎯</span>
         <div>
           <h3 className="font-semibold text-lg">Supplier Matches</h3>
-          {data.category && (
+          {data?.category && (
             <p className="text-sm text-gray-600">
               Found {suppliers.length} supplier{suppliers.length !== 1 ? 's' : ''} for {data.category}
             </p>
@@ -91,7 +93,7 @@ export default function SupplierMatchCard({ data }: SupplierMatchCardProps) {
         </div>
       </div>
 
-      {data.description && (
+      {data?.description && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md text-sm text-blue-800">
           <strong>Your Request:</strong> {data.description}
         </div>

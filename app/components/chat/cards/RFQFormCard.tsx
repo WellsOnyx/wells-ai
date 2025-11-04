@@ -8,24 +8,28 @@
 import { useState } from 'react'
 
 interface RFQFormCardProps {
-  data: {
+  data?: {
     prefillDescription?: string
     prefillCategory?: string
     prefillBudget?: { min: number; max: number }
     onSubmit?: (rfq: any) => void
+    // Backward compatibility
+    category?: string
+    prefilledRequirements?: string
+    [key: string]: any // Allow any additional props
   }
 }
 
-export default function RFQFormCard({ data }: RFQFormCardProps) {
+export default function RFQFormCard({ data = {} }: RFQFormCardProps) {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
-    description: data.prefillDescription || '',
-    category: data.prefillCategory || '',
-    budgetMin: data.prefillBudget?.min?.toString() || '',
-    budgetMax: data.prefillBudget?.max?.toString() || '',
+    description: data?.prefillDescription || '',
+    category: data?.prefillCategory || data?.category || '',
+    budgetMin: data?.prefillBudget?.min?.toString() || '',
+    budgetMax: data?.prefillBudget?.max?.toString() || '',
     deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
     requirements: [''],
   })
