@@ -52,10 +52,10 @@ Wells AI supports **four distinct user journeys**, each with specialized feature
 - `/api/gtm/campaign/*` - Campaign CRUD
 - `/api/gtm/automation/*` - Automation runners
 
-### Status: **FULLY FUNCTIONAL** ✅
-- Backend complete
+### Status: **INFRASTRUCTURE COMPLETE** ⚠️
+- Backend complete with full email infrastructure
 - Frontend exists at `/gtm`
-- Email outreach works (Instantly.ai)
+- Email ready (needs Instantly.ai campaign setup - see `INSTANTLY_SETUP_GUIDE.md`)
 - LinkedIn automation ready (Dripify + Zapier when configured)
 - SMS blocked until Twilio A2P approval
 
@@ -236,8 +236,10 @@ Wells AI supports **four distinct user journeys**, each with specialized feature
 6. GTM campaign builder and launch
 7. Job seeker resume parsing and matching
 8. Procurement RFQ creation and supplier matching
-9. Email notifications (Instantly.ai)
-10. Contract generation
+9. Contract generation
+
+### ⚠️  **Infrastructure Complete (Needs Configuration):**
+10. Email sending via Instantly.ai - Code ready, needs campaign setup (see `INSTANTLY_SETUP_GUIDE.md`)
 
 ### 🔒 **Blocked by Twilio A2P Approval:**
 - SMS notifications to suppliers
