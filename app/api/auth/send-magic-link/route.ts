@@ -43,14 +43,34 @@ export async function POST(request: NextRequest) {
         userId = users.data[0].id
         console.log(`[MAGIC LINK] Found existing user: ${userId}`)
       } else {
-        // User doesn't exist - create WITHOUT password
-        // The key is to only provide emailAddress, nothing else
-        console.log(`[MAGIC LINK] Creating new user for ${email}`)
-        const newUser = await client.users.createUser({
-          emailAddress: [email]
-        })
-        userId = newUser.id
-        console.log(`[MAGIC LINK] Created new user: ${userId}`)
+        // User doesn't exist - send them an invitation
+        // This is the proper way to do passwordless onboarding in Clerk
+        console.log(`[MAGIC LINK] Sending invitation to ${email}`)
+
+        try {
+          const invitation = await client.invitations.createInvitation({
+            emailAddress: email,
+            redirectUrl: process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL || '/'
+          })
+
+          console.log(`[MAGIC LINK] Invitation sent successfully`)
+
+          return NextResponse.json({
+            success: true,
+            message: 'Magic link sent successfully',
+            invitationSent: true
+          })
+        } catch (inviteError: any) {
+          console.error('[MAGIC LINK] Invitation failed, trying direct user creation:', inviteError)
+
+          // Fallback: Try creating user with empty password
+          const newUser = await client.users.createUser({
+            emailAddress: [email],
+            password: Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2)
+          })
+          userId = newUser.id
+          console.log(`[MAGIC LINK] Created new user via fallback: ${userId}`)
+        }
       }
 
       // Create sign-in token (this is the magic link)
