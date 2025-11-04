@@ -205,11 +205,11 @@ addMessage({
 - [x] Build SupplierMatchCard UI component
 - [x] Register components in ChatMessageRenderer
 - [x] Commit changes to git
-- [ ] Integrate procurement intent detection in chat API
-- [ ] Connect RFQ submission to supplier matching
+- [x] Integrate procurement intent detection in chat API
+- [x] Deploy to production (https://wellsai.vercel.app)
+- [ ] Connect RFQ submission to supplier matching API
 - [ ] Add sample supplier data to Notion database
-- [ ] Test end-to-end flow
-- [ ] Deploy to production
+- [ ] Test end-to-end flow with real suppliers
 - [ ] Create demo video
 
 ## API Integration Notes
