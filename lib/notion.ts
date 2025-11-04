@@ -7,6 +7,9 @@ import { Client } from '@notionhq/client'
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY })
 
+// Export the notion client instance
+export const notionClient = notion
+
 // Export a helper to create Notion client instances (for waitlist, etc.)
 export function createNotionClient() {
   return new Client({ auth: process.env.NOTION_API_KEY })
