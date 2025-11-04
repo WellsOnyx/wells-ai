@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 export default function EnterpriseLanding() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [videoError, setVideoError] = useState(false)
 
   // Video options - easily swap between different videos
   const videoOptions = {
@@ -18,6 +20,40 @@ export default function EnterpriseLanding() {
   }
 
   const videoSrc = videoOptions.current
+
+  // Force video to play - handles browsers blocking autoplay
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const attemptPlay = async () => {
+      try {
+        await video.play()
+        console.log('Video playing successfully')
+      } catch (err) {
+        console.warn('Video autoplay blocked or failed:', err)
+        setVideoError(true)
+      }
+    }
+
+    // Try to play immediately
+    attemptPlay()
+
+    // Also try on user interaction
+    const handleInteraction = () => {
+      attemptPlay()
+      document.removeEventListener('click', handleInteraction)
+      document.removeEventListener('scroll', handleInteraction)
+    }
+
+    document.addEventListener('click', handleInteraction, { once: true })
+    document.addEventListener('scroll', handleInteraction, { once: true })
+
+    return () => {
+      document.removeEventListener('click', handleInteraction)
+      document.removeEventListener('scroll', handleInteraction)
+    }
+  }, [])
 
   // Blueprint sketch animation - Wells AI Ghost
   useEffect(() => {
@@ -252,17 +288,23 @@ export default function EnterpriseLanding() {
 
       {/* Hero Section with Video Background */}
       <section className="relative pt-24 pb-32 px-6 overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#334155]">
-        {/* Video Background */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-60"
-          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Crect fill='%230f172a' width='1920' height='1080'/%3E%3C/svg%3E"
-        >
-          <source src={videoSrc} type="video/mp4" />
-        </video>
+        {/* Video Background - only show if not errored */}
+        {!videoError && (
+          <video
+            ref={videoRef}
+            loop
+            muted
+            playsInline
+            onError={() => {
+              console.error('Video failed to load')
+              setVideoError(true)
+            }}
+            className="absolute inset-0 w-full h-full object-cover opacity-60"
+            poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Crect fill='%230f172a' width='1920' height='1080'/%3E%3C/svg%3E"
+          >
+            <source src={videoSrc} type="video/mp4" />
+          </video>
+        )}
 
         {/* Dark overlay for readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50"></div>
