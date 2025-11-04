@@ -55,13 +55,25 @@
 
 ### Phase 5: ERP Integration
 **$1 Trillion in procurement spend**
-- Revenue: "Switchless resell"
+- Revenue: "Switchless resell" (BYO Pipes + All-in-Wells)
 - Prove: Global economy scale
+- **Two-Path Strategy:**
+  - **BYO Pipes**: 33bps middleware for SAP/Coupa customers (invisible integration)
+  - **All-in-Wells**: Match Ariba pricing (15.5-35bps) for customers without ERP
+- See: GRAIN_VAULT_ROADMAP.md for detailed implementation
 
 ### Phase 6: Grain & Vault Launch
 **2:1 leverage, $1T AUM**
-- Revenue: 0 friction treasury
-- Prove: Financial infrastructure
+- Revenue: 0 friction treasury + pure 33bps profit (no rail costs)
+- Prove: Financial infrastructure dominance
+- **The Mic Drop:**
+  - USDC-backed stablecoin (Grain) replaces Stripe/ACH/Airwallex
+  - Instant settlement (< 1 second) vs. 3-day ACH
+  - Near-zero transaction costs (~$0.00001 per tx)
+  - **33bps becomes PURE PROFIT** (no payment rail costs)
+  - CFOs demand: "Why wait 3 days when Wells settles instantly?"
+  - **Game over for Ariba**
+- See: GRAIN_VAULT_ROADMAP.md for full strategy
 
 ### Phase 7: The Acquisition
 **Grain & Vault buys Wells Onyx**
