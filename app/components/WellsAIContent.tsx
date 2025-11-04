@@ -26,6 +26,9 @@ interface Message {
     suppliersNotified?: number
     category?: string
     showRFQForm?: boolean
+    showSupplierMatches?: boolean
+    suppliers?: any[]
+    description?: string
     prefillData?: {
       description?: string
       category?: string
@@ -803,17 +806,77 @@ export default function WellsAIContent() {
                               prefillCategory: message.procurementData.prefillData?.category,
                               onSubmit: async (rfq: any) => {
                                 console.log('[PROCUREMENT] RFQ submitted:', rfq)
-                                // TODO: Call supplier matching API
-                                // For now, show success message
+
+                                // Show loading message
                                 setMessages(prev => [...prev, {
                                   role: 'assistant',
                                   content: 'Perfect! I\'m finding suppliers who can fulfill your request...'
+                                }])
+
+                                try {
+                                  // Call supplier matching API
+                                  const response = await fetch('/api/suppliers/match', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      category: rfq.category,
+                                      requirements: rfq.requirements || [],
+                                      organizationId: null
+                                    })
+                                  })
+
+                                  const matchData = await response.json()
+                                  console.log('[PROCUREMENT] Supplier match response:', matchData)
+
+                                  if (matchData.success && matchData.suppliers && matchData.suppliers.length > 0) {
+                                    // Show supplier match card with results
+                                    setMessages(prev => [...prev, {
+                                      role: 'assistant',
+                                      content: `Found ${matchData.suppliers.length} qualified supplier${matchData.suppliers.length !== 1 ? 's' : ''} for you!`,
+                                      procurementData: {
+                                        detected: true,
+                                        showRFQForm: false,
+                                        showSupplierMatches: true,
+                                        suppliers: matchData.suppliers,
+                                        category: rfq.category,
+                                        description: rfq.description
+                                      }
+                                    }])
+                                  } else {
+                                    // No suppliers found
+                                    setMessages(prev => [...prev, {
+                                      role: 'assistant',
+                                      content: 'I couldn\'t find any suppliers matching your requirements right now. Let me expand the search or try adjusting your criteria.'
+                                    }])
+                                  }
+                                } catch (error) {
+                                  console.error('[PROCUREMENT] Supplier matching failed:', error)
+                                  setMessages(prev => [...prev, {
+                                    role: 'assistant',
+                                    content: 'I encountered an error finding suppliers. Please try again in a moment.'
+                                  }])
+                                }
+                              }
+                            }}
+                          />
+                        ) : message.procurementData.showSupplierMatches ? (
+                          /* Show supplier match card with results */
+                          <SupplierMatchCard
+                            data={{
+                              suppliers: message.procurementData.suppliers,
+                              category: message.procurementData.category,
+                              description: message.procurementData.description,
+                              onSelect: (supplier: any) => {
+                                console.log('[PROCUREMENT] Supplier selected:', supplier)
+                                setMessages(prev => [...prev, {
+                                  role: 'assistant',
+                                  content: `Perfect! I'll prepare a purchase order with ${supplier.name}.\n\nTotal: $${supplier.pricing?.totalAmount?.toLocaleString() || 'TBD'}\nDelivery: ${supplier.timeline?.deliveryDate ? new Date(supplier.timeline.deliveryDate).toLocaleDateString() : 'TBD'}\n\nWould you like me to send this to your email for review?`
                                 }])
                               }
                             }}
                           />
                         ) : (
-                          /* Show success notification after suppliers are matched */
+                          /* Show success notification for legacy SMS-based flow */
                           <div className="max-w-[75%]">
                             <div className="border-l-4 border-[#dba63f] bg-[#dba63f]/5 rounded-sm px-5 py-4">
                               <div className="flex items-center gap-3 mb-2">
