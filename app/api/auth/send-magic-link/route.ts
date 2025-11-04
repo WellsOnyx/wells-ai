@@ -28,33 +28,32 @@ export async function POST(request: NextRequest) {
 
     console.log(`[MAGIC LINK] Sending to ${email}`)
 
-    // Use Clerk's built-in magic link flow
-    // Clerk will automatically create user if they don't exist
     const client = await clerkClient()
 
     try {
-      // Check if user exists first
+      // Try to find existing user
       const users = await client.users.getUserList({
         emailAddress: [email]
       })
 
       let userId: string
+
       if (users.data.length > 0) {
         // User exists - get their ID
         userId = users.data[0].id
         console.log(`[MAGIC LINK] Found existing user: ${userId}`)
       } else {
-        // User doesn't exist - create with proper format
+        // User doesn't exist - create WITHOUT password
+        // The key is to only provide emailAddress, nothing else
+        console.log(`[MAGIC LINK] Creating new user for ${email}`)
         const newUser = await client.users.createUser({
-          emailAddress: [email],
-          skipPasswordRequirement: true,
-          skipPasswordChecks: true
+          emailAddress: [email]
         })
         userId = newUser.id
         console.log(`[MAGIC LINK] Created new user: ${userId}`)
       }
 
-      // Create sign-in token
+      // Create sign-in token (this is the magic link)
       const signInToken = await client.signInTokens.createSignInToken({
         userId,
         expiresInSeconds: 3600 // 1 hour
@@ -71,8 +70,13 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
       console.error('[MAGIC LINK] Error:', error)
       console.error('[MAGIC LINK] Error details:', JSON.stringify(error, null, 2))
+
+      // Return more detailed error for debugging
       return NextResponse.json(
-        { error: error.message || 'Failed to send magic link' },
+        {
+          error: error.message || 'Failed to send magic link',
+          details: error.errors || error.clerkError || 'No additional details'
+        },
         { status: 500 }
       )
     }
