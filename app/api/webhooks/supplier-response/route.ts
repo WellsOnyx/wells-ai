@@ -5,10 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { Client } from '@notionhq/client'
+import { notionClient } from '@/lib/notion'
 import twilio from 'twilio'
-
-const notion = new Client({ auth: process.env.NOTION_API_KEY })
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,7 +104,7 @@ async function findSupplierByPhone(phone: string): Promise<any> {
     // Normalize phone number (remove +1, spaces, dashes)
     const normalizedPhone = phone.replace(/[\s\-\+]/g, '')
 
-    const response = await notion.databases.query({
+    const response = await notionClient.databases.query({
       database_id: process.env.NOTION_SUPPLIERS_DB!,
       filter: {
         property: 'Phone',
@@ -138,7 +136,7 @@ async function findSupplierByPhone(phone: string): Promise<any> {
  */
 async function storeSupplierQuote(quote: any) {
   try {
-    await notion.pages.create({
+    await notionClient.pages.create({
       parent: { database_id: process.env.NOTION_SUPPLIER_QUOTES_DB! },
       properties: {
         'Request ID': {
@@ -177,7 +175,7 @@ async function storeSupplierQuote(quote: any) {
 async function updateRFQStatus(requestId: string, supplierInfo: any) {
   try {
     // Find the RFQ by request ID
-    const response = await notion.databases.query({
+    const response = await notionClient.databases.query({
       database_id: process.env.NOTION_RFQS_DB!,
       filter: {
         property: 'Request ID',
@@ -198,7 +196,7 @@ async function updateRFQStatus(requestId: string, supplierInfo: any) {
     const currentResponses = rfqPage.properties['Responses Received']?.number || 0
 
     // Update the RFQ
-    await notion.pages.update({
+    await notionClient.pages.update({
       page_id: rfqPage.id,
       properties: {
         'Status': {

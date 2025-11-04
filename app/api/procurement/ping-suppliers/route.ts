@@ -5,10 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { Client } from '@notionhq/client'
+import { notionClient } from '@/lib/notion'
 import twilio from 'twilio'
 
-const notion = new Client({ auth: process.env.NOTION_API_KEY })
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
 
 export async function POST(request: NextRequest) {
@@ -70,7 +69,7 @@ export async function POST(request: NextRequest) {
  */
 async function findSuppliers(category: string) {
   try {
-    const response = await notion.databases.query({
+    const response = await notionClient.databases.query({
       database_id: process.env.NOTION_SUPPLIERS_DB!,
       filter: {
         and: [
@@ -130,7 +129,7 @@ async function pingSupplier(supplier: any, request: any) {
  */
 async function storeRequest(request: any) {
   try {
-    await notion.pages.create({
+    await notionClient.pages.create({
       parent: { database_id: process.env.NOTION_RFQS_DB! },
       properties: {
         'Request ID': {

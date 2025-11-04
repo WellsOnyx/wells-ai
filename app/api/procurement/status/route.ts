@@ -5,9 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { Client } from '@notionhq/client'
-
-const notion = new Client({ auth: process.env.NOTION_API_KEY })
+import { notionClient } from '@/lib/notion'
 
 export async function GET(request: NextRequest) {
   try {
@@ -75,7 +73,7 @@ export async function GET(request: NextRequest) {
  */
 async function getRFQByRequestId(requestId: string): Promise<any> {
   try {
-    const response = await notion.databases.query({
+    const response = await notionClient.databases.query({
       database_id: process.env.NOTION_RFQS_DB!,
       filter: {
         property: 'Request ID',
@@ -113,7 +111,7 @@ async function getRFQByRequestId(requestId: string): Promise<any> {
  */
 async function getSupplierQuotes(requestId: string): Promise<any[]> {
   try {
-    const response = await notion.databases.query({
+    const response = await notionClient.databases.query({
       database_id: process.env.NOTION_SUPPLIER_QUOTES_DB!,
       filter: {
         property: 'Request ID',
