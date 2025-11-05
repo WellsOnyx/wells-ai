@@ -86,23 +86,55 @@ export default function EnterpriseLanding() {
 
     const ghostVertices = createGhostVertices()
 
-    // Floating data points
+    // Floating data points with trails
     interface DataPoint {
       x: number
       y: number
       value: number
       opacity: number
       speed: number
+      trail: { x: number, y: number, opacity: number }[]
+      hue: number
     }
 
     const dataPoints: DataPoint[] = []
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 15; i++) {
       dataPoints.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         value: Math.random() * 100,
-        opacity: Math.random() * 0.4 + 0.2,
-        speed: Math.random() * 0.2 + 0.1
+        opacity: Math.random() * 0.6 + 0.3,
+        speed: Math.random() * 0.4 + 0.15,
+        trail: [],
+        hue: Math.random() * 40 + 20 // Orange to gold range
+      })
+    }
+
+    // Particle system for more energy
+    interface Particle {
+      x: number
+      y: number
+      vx: number
+      vy: number
+      life: number
+      maxLife: number
+      size: number
+      color: string
+    }
+
+    const particles: Particle[] = []
+    const createParticle = (x: number, y: number) => {
+      const angle = Math.random() * Math.PI * 2
+      const speed = Math.random() * 2 + 1
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        maxLife: Math.random() * 60 + 40,
+        size: Math.random() * 3 + 1,
+        color: `hsl(${Math.random() * 40 + 20}, 80%, 60%)`
       })
     }
 
@@ -113,14 +145,60 @@ export default function EnterpriseLanding() {
 
       drawGrid()
 
-      // Floating data points
-      dataPoints.forEach((point) => {
-        point.y += point.speed
-        if (point.y > canvas.height) point.y = -20
+      // Update and draw particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i]
+        p.x += p.vx
+        p.y += p.vy
+        p.life--
+        p.vy += 0.05 // Gravity
 
-        ctx.fillStyle = `rgba(244, 164, 96, ${point.opacity})`
-        ctx.font = '11px monospace'
+        const alpha = p.life / p.maxLife
+        ctx.fillStyle = p.color.replace(')', `, ${alpha})`)
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2)
+        ctx.fill()
+
+        if (p.life <= 0) particles.splice(i, 1)
+      }
+
+      // Spawn particles occasionally
+      if (Math.random() < 0.03) {
+        createParticle(
+          ghostX + (Math.random() - 0.5) * 60,
+          ghostY + (Math.random() - 0.5) * 60
+        )
+      }
+
+      // Floating data points with trails and glow
+      dataPoints.forEach((point) => {
+        // Update trail
+        point.trail.push({ x: point.x, y: point.y, opacity: point.opacity })
+        if (point.trail.length > 12) point.trail.shift()
+
+        // Draw trail
+        point.trail.forEach((t, i) => {
+          const trailAlpha = (i / point.trail.length) * t.opacity * 0.3
+          ctx.fillStyle = `hsla(${point.hue}, 80%, 60%, ${trailAlpha})`
+          ctx.beginPath()
+          ctx.arc(t.x, t.y, 2, 0, Math.PI * 2)
+          ctx.fill()
+        })
+
+        // Move point
+        point.y += point.speed
+        if (point.y > canvas.height) {
+          point.y = -20
+          point.x = Math.random() * canvas.width
+        }
+
+        // Draw data point with glow
+        ctx.shadowColor = `hsl(${point.hue}, 80%, 60%)`
+        ctx.shadowBlur = 8
+        ctx.fillStyle = `hsla(${point.hue}, 80%, 60%, ${point.opacity})`
+        ctx.font = 'bold 12px monospace'
         ctx.fillText(`$${point.value.toFixed(2)}`, point.x, point.y)
+        ctx.shadowBlur = 0
       })
 
       // Wells AI Ghost
