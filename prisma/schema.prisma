@@ -311,3 +311,239 @@ model Memory {
   @@index([importance])
   @@index([lastUsedAt])
 }
+
+// ============================================
+// PARTNER ECOSYSTEM & CO-SELL PLAYBOOKS
+// Powers 33-partner network generating $24.75M/year
+// ============================================
+
+enum PlaybookStatus {
+  DRAFT           // Being created
+  ACTIVE          // Live and running outreach
+  PAUSED          // Temporarily paused
+  COMPLETED       // All targets contacted
+  ARCHIVED        // No longer active
+}
+
+enum DealStage {
+  PROSPECTING     // Initial outreach
+  QUALIFIED       // Target expressed interest
+  DEMO_SCHEDULED  // Demo booked
+  PROPOSAL_SENT   // Proposal delivered
+  NEGOTIATION     // In negotiation
+  CLOSED_WON      // Deal won!
+  CLOSED_LOST     // Deal lost
+}
+
+// Strategic partner definition
+model Partner {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Partner info
+  name              String @unique
+  industry          String
+  website           String?
+  logo              String?
+
+  // Contact details
+  primaryContactName  String
+  primaryContactEmail String
+  primaryContactTitle String?
+  primaryContactPhone String?
+
+  // Partnership details
+  partnershipType   String // "Technology", "Channel", "Reseller", "Referral"
+  signedDate        DateTime?
+  contractValue     Int? // Annual contract value in cents
+
+  // Deal split (JSON)
+  defaultDealSplit  Json // {"wells": 30, "partner": 70}
+
+  // Status
+  status            String @default("active") // "active", "inactive", "pending"
+
+  // Relationship metrics
+  totalPlaybooks    Int @default(0)
+  totalDeals        Int @default(0)
+  totalRevenue      BigInt @default(0)
+
+  // Co-sell playbooks
+  playbooks CoSellPlaybook[]
+
+  @@index([name])
+  @@index([status])
+}
+
+// Co-sell playbook (campaign for a specific partner)
+model CoSellPlaybook {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Partner link
+  partnerId String
+  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  // Partner contact for this playbook
+  partnerContactEmail String
+
+  // Playbook details
+  name              String
+  valueProposition  String @db.Text
+  dealSplit         Json // {"wells": 30, "partner": 70}
+  outreachStrategy  String @default("email-sequence") // "email-sequence", "linkedin", "cold-call"
+
+  // Status
+  status PlaybookStatus @default(DRAFT)
+
+  // Created by
+  createdBy String // Clerk user ID
+
+  // Target accounts
+  targetAccounts TargetAccount[]
+
+  // Email sequence
+  emailSequence EmailSequence?
+
+  // Metrics
+  totalTargets   Int @default(0)
+  contacted      Int @default(0)
+  responded      Int @default(0)
+  meetingsBooked Int @default(0)
+  dealsWon       Int @default(0)
+  totalRevenue   BigInt @default(0)
+
+  @@index([partnerId])
+  @@index([status])
+  @@index([createdBy])
+}
+
+// Target account for co-sell
+model TargetAccount {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Playbook link
+  playbookId String
+  playbook   CoSellPlaybook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+
+  // Company info
+  companyName       String
+  industry          String?
+  revenue           String? // "$10M-50M", "$50M-100M", etc.
+  employeeCount     String? // "50-200", "200-500", etc.
+
+  // Pain point & solution
+  painPoint         String @db.Text
+  solution          String @db.Text
+  estimatedDealSize Int @default(500000) // in cents
+
+  // Contact info
+  contactName  String?
+  contactEmail String?
+  contactTitle String?
+  contactPhone String?
+  linkedinUrl  String?
+
+  // Outreach tracking
+  outreachSequence Json? // Track which emails have been sent
+  lastContactedAt  DateTime?
+  nextFollowUpAt   DateTime?
+
+  // Deal tracking
+  dealStage        DealStage @default(PROSPECTING)
+  dealValue        Int? // Actual deal value if won
+  wonAt            DateTime?
+  lostAt           DateTime?
+  lostReason       String?
+
+  // Notes
+  notes String? @db.Text
+
+  @@index([playbookId])
+  @@index([dealStage])
+  @@index([nextFollowUpAt])
+}
+
+// Email sequence template
+model EmailSequence {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Playbook link
+  playbookId String @unique
+  playbook   CoSellPlaybook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+
+  // Sequence definition (JSON array of email templates)
+  sequence Json // [{day: 0, subject: "...", body: "...", type: "INTRO"}, ...]
+
+  @@index([playbookId])
+}
+
+// ============================================
+// GRAIN & VAULT ESCROW TRANSACTIONS
+// Powers $3T transaction volume
+// ============================================
+
+enum EscrowStatus {
+  PENDING         // Awaiting deposit
+  ACTIVE          // Funds escrowed, milestones in progress
+  MILESTONE_1     // First milestone completed
+  MILESTONE_2     // Second milestone completed
+  COMPLETED       // All milestones done, funds released
+  DISPUTED        // Dispute raised
+  CANCELLED       // Escrow cancelled
+  EXPIRED         // Expired without completion
+}
+
+// Blockchain escrow transaction
+model GrainEscrow {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // On-chain reference
+  escrowId         String @unique // On-chain escrow ID
+  chainId          Int // 8453 for Base, etc.
+  contractAddress  String // Smart contract address
+  transactionHash  String? // Creation transaction hash
+
+  // Parties
+  depositor    String // Wallet address or Clerk user ID
+  beneficiary  String // Wallet address or Clerk user ID
+  arbitrator   String? // Wallet address for dispute resolution
+
+  // Amount (in USDC/GRAIN, 6 decimals)
+  totalAmount     BigInt
+  releasedAmount  BigInt @default(0)
+
+  // Status
+  status EscrowStatus @default(PENDING)
+
+  // Milestones (JSON array)
+  milestones Json // [{description: "...", percentage: 50, completed: false}, ...]
+
+  // Timestamps
+  depositedAt   DateTime?
+  firstReleaseAt DateTime?
+  completedAt   DateTime?
+  disputedAt    DateTime?
+
+  // Deal metadata
+  dealId          String? // External reference (e.g., "DR-$3B-2025")
+  dealDescription String? @db.Text
+
+  // Fees
+  escrowFeePercent Float @default(0.5) // 0.5% escrow service fee
+  escrowFee        BigInt? // Calculated fee in cents
+
+  @@index([escrowId])
+  @@index([depositor])
+  @@index([beneficiary])
+  @@index([status])
+  @@index([createdAt])
+}
