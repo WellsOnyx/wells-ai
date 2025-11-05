@@ -6,6 +6,7 @@ import { detectGTMIntent, extractProductDescription } from '@/lib/gtm/intent-det
 import { checkGTMOnboarding } from '@/lib/gtm/onboarding-check'
 import { getWisdomSystemPrompt } from '@/lib/wisdom/principles'
 import { detectSignupIntent, extractUserInfo, getNextPrompt, createUserInNotion, type ConversationState } from '@/lib/conversation-signup'
+import { EMAIL_TOOL_DEFINITION, executeSendEmail, type SendEmailInput } from '@/lib/tools/email'
 // Onboarding imports temporarily disabled
 // import {
 //   createOnboardingState,
@@ -72,12 +73,12 @@ Once you have name + email + userType, their account is automatically created. K
 - Process RFQs and manage supplier relationships
 
 **EMAIL CAPABILITY:**
-You can send emails on behalf of the user. When they say something like "Wells email [person]" or "send an email to [person]", help them compose the email conversationally by asking:
-1. Who is the recipient? (if not clear)
-2. What's the email about / what's the subject?
-3. What do they want to say?
+You can send emails on behalf of the user using the send_email tool. When they ask you to send an email:
+1. If you have recipient, subject, and message - use the send_email tool immediately
+2. If missing information, ask for it conversationally first
+3. After using the tool, confirm the email was sent
 
-Then I'll handle sending it via Resend with proper warmup/throttling. Just focus on drafting a great message.
+The email will be sent from the user's authenticated email address (from their Clerk login).
 
 **CONVERSATION STYLE:**
 - Keep responses SHORT - 2-3 sentences per point, max 5 sentences total
@@ -313,6 +314,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
 
     console.log('[CHAT] Sending request to Anthropic with', messages.length, 'messages')
 
+    // Call Claude with tools
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -324,7 +326,8 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
         messages: messages,
-        system: systemPrompt
+        system: systemPrompt,
+        tools: [EMAIL_TOOL_DEFINITION]
       })
     })
 
@@ -338,14 +341,89 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     }
 
     const data = await response.json()
-    const assistantMessage = data.content?.[0]?.text
 
-    if (!assistantMessage) {
-      console.error('[CHAT] No assistant message in response:', data)
-      return NextResponse.json({ error: 'Invalid response from AI service. Please try again.' }, { status: 500 })
+    // Check if Claude wants to use a tool
+    const toolUseBlock = data.content?.find((block: any) => block.type === 'tool_use')
+
+    if (toolUseBlock && toolUseBlock.name === 'send_email') {
+      console.log('[TOOL] Claude is using send_email tool:', toolUseBlock.input)
+
+      // Execute the email send
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://wellsai.vercel.app'
+      const emailResult = await executeSendEmail(toolUseBlock.input as SendEmailInput, baseUrl)
+
+      console.log('[TOOL] Email send result:', emailResult)
+
+      // Send tool result back to Claude
+      const toolResultMessages = [
+        ...messages,
+        {
+          role: 'assistant',
+          content: data.content
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: toolUseBlock.id,
+              content: JSON.stringify(emailResult)
+            }
+          ]
+        }
+      ]
+
+      // Get Claude's final response
+      const finalResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          messages: toolResultMessages,
+          system: systemPrompt,
+          tools: [EMAIL_TOOL_DEFINITION]
+        })
+      })
+
+      if (!finalResponse.ok) {
+        const errorData = await finalResponse.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('[CHAT] Anthropic API error on final response:', errorData)
+        return NextResponse.json({
+          error: 'AI service temporarily unavailable. Please try again.',
+          details: process.env.NODE_ENV === 'development' ? errorData : undefined
+        }, { status: 500 })
+      }
+
+      const finalData = await finalResponse.json()
+      const assistantMessage = finalData.content?.find((block: any) => block.type === 'text')?.text
+
+      if (!assistantMessage) {
+        console.error('[CHAT] No text message in final response:', finalData)
+        return NextResponse.json({ error: 'Invalid response from AI service. Please try again.' }, { status: 500 })
+      }
+
+      console.log('[CHAT] Successfully got final response from Claude after tool use')
+
+      // Continue with normal flow below, using assistantMessage
+      // Store this for the rest of the function
+      var finalAssistantMessage = assistantMessage
+    } else {
+      // No tool use - extract text response normally
+      const assistantMessage = data.content?.find((block: any) => block.type === 'text')?.text
+
+      if (!assistantMessage) {
+        console.error('[CHAT] No assistant message in response:', data)
+        return NextResponse.json({ error: 'Invalid response from AI service. Please try again.' }, { status: 500 })
+      }
+
+      console.log('[CHAT] Successfully got response from Claude')
+      var finalAssistantMessage = assistantMessage
     }
-
-    console.log('[CHAT] Successfully got response from Claude')
 
     // Analyze intent based on user type
     let intent = null
@@ -604,7 +682,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
         // Store assistant message
         await storeMessage(conversationId, {
           role: 'assistant',
-          content: assistantMessage
+          content: finalAssistantMessage
         })
 
         // Extract and store context for learning
@@ -612,7 +690,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
           userData.userId,
           conversationId,
           lastUserMessage,
-          assistantMessage
+          finalAssistantMessage
         )
 
         // Update user context if onboarding just completed
@@ -637,7 +715,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     }
 
     return NextResponse.json({
-      message: assistantMessage,
+      message: finalAssistantMessage,
       procurementData,
       gtmData,
       jobSeekerData,
