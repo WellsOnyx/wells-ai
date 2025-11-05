@@ -6,7 +6,9 @@ import { detectGTMIntent, extractProductDescription } from '@/lib/gtm/intent-det
 import { checkGTMOnboarding } from '@/lib/gtm/onboarding-check'
 import { getWisdomSystemPrompt } from '@/lib/wisdom/principles'
 import { detectSignupIntent, extractUserInfo, getNextPrompt, createUserInNotion, type ConversationState } from '@/lib/conversation-signup'
-import { EMAIL_TOOL_DEFINITION, executeSendEmail, type SendEmailInput } from '@/lib/tools/email'
+import { EMAIL_TOOL_DEFINITION, type SendEmailInput } from '@/lib/tools/email'
+import { sendEmail } from '@/lib/resend-email'
+import { auth } from '@clerk/nextjs/server'
 // Onboarding imports temporarily disabled
 // import {
 //   createOnboardingState,
@@ -348,9 +350,25 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     if (toolUseBlock && toolUseBlock.name === 'send_email') {
       console.log('[TOOL] Claude is using send_email tool:', toolUseBlock.input)
 
-      // Execute the email send
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://wellsai.vercel.app'
-      const emailResult = await executeSendEmail(toolUseBlock.input as SendEmailInput, baseUrl)
+      // Get authenticated user's email from Clerk
+      const authData = await auth()
+      const userEmail = authData.sessionClaims?.email as string | undefined
+      const userName = authData.sessionClaims?.firstName && authData.sessionClaims?.lastName
+        ? `${authData.sessionClaims.firstName} ${authData.sessionClaims.lastName}`
+        : undefined
+
+      console.log('[TOOL] Sending email from:', userEmail || 'wells@wellsonyx.com')
+
+      // Execute the email send directly
+      const toolInput = toolUseBlock.input as SendEmailInput
+      const emailResult = await sendEmail({
+        to: toolInput.to,
+        toName: toolInput.toName,
+        subject: toolInput.subject,
+        text: toolInput.message,
+        from: userEmail, // Use authenticated user's email
+        fromName: userName
+      })
 
       console.log('[TOOL] Email send result:', emailResult)
 
