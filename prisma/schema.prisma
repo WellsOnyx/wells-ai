@@ -369,11 +369,22 @@ model Partner {
   totalDeals        Int @default(0)
   totalRevenue      BigInt @default(0)
 
+  // Referral tracking (for partner recommendations)
+  referralUrl           String? // Tracked referral link with partner ID
+  referralCategory      String? // "Payment Processing", "Infrastructure", "SaaS", etc.
+  partnerDescription    String? // What the partner offers
+  commissionRate        Float? // Percentage (e.g., 0.15 for 15%)
+  recommendationTriggers String[] // Keywords for Wells to detect recommendation opportunities
+
   // Co-sell playbooks
   playbooks CoSellPlaybook[]
 
+  // Referral tracking
+  referrals PartnerReferral[]
+
   @@index([name])
   @@index([status])
+  @@index([referralCategory])
 }
 
 // Co-sell playbook (campaign for a specific partner)
@@ -544,6 +555,40 @@ model GrainEscrow {
   @@index([escrowId])
   @@index([depositor])
   @@index([beneficiary])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Partner referral tracking - when Wells recommends a partner service to a user
+model PartnerReferral {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User who received the recommendation
+  userId String // Clerk user ID
+
+  // Partner being recommended
+  partnerId String
+  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  // Referral tracking
+  referralUrl String // The tracked URL that was shared with the user
+  context     String @db.Text // What triggered the recommendation (e.g., "User asked about payment processing")
+
+  // Interaction tracking
+  clickedAt   DateTime? // When user clicked the referral link
+  convertedAt DateTime? // When user completed sign-up/purchase
+
+  // Revenue tracking
+  conversionValue BigInt? // Value of the conversion in cents
+  commissionEarned BigInt? // Commission earned by Wells Onyx in cents
+
+  // Status
+  status String @default("pending") // "pending", "clicked", "converted", "expired"
+
+  @@index([userId])
+  @@index([partnerId])
   @@index([status])
   @@index([createdAt])
 }
