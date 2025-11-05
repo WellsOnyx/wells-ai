@@ -40,3 +40,5 @@ export type { Grain } from "./contracts/core/Grain";
 export { Grain__factory } from "./factories/contracts/core/Grain__factory";
 export type { Vault } from "./contracts/core/Vault";
 export { Vault__factory } from "./factories/contracts/core/Vault__factory";
+export type { MockERC20 } from "./contracts/test/MockERC20";
+export { MockERC20__factory } from "./factories/contracts/test/MockERC20__factory";
