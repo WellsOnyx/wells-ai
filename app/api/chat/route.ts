@@ -558,7 +558,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     // CHECK FOR CATEGORY PIONEER OPPORTUNITY FIRST
     if (intent?.isPioneerOpportunity && intent?.pioneerCategory) {
       return NextResponse.json({
-        message: assistantMessage,
+        message: finalAssistantMessage,
         procurementData: null,
         gtmData,
         pioneerOpportunity: {
@@ -574,7 +574,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       // TODO: Build seller onboarding flow
       // For now, just acknowledge
       return NextResponse.json({
-        message: assistantMessage,
+        message: finalAssistantMessage,
         procurementData: null
       })
     }
