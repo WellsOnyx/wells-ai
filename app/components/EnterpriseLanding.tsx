@@ -220,9 +220,26 @@ export default function EnterpriseLanding() {
                 <div className="text-[9px] text-[#575757] tracking-[0.15em] uppercase">Financial Infrastructure</div>
               </div>
             </div>
-            <div className="ml-4 px-3 py-1 bg-[#F4A460]/10 border border-[#F4A460]/20 rounded-sm">
-              <div className="text-xs font-mono text-[#F4A460]">
-                GRAIN: ${navPrice.toFixed(4)}
+            {/* Early Investor Opportunity Badge */}
+            <div className="ml-4 px-4 py-2 bg-gradient-to-r from-[#F4A460]/10 to-[#F4A460]/5 border-l-2 border-[#F4A460] rounded-sm hover:from-[#F4A460]/15 hover:to-[#F4A460]/8 transition-all cursor-pointer group">
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col">
+                  <div className="text-[10px] font-semibold text-[#F4A460] uppercase tracking-wide">
+                    Founding Investor
+                  </div>
+                  <div className="text-xs font-mono text-[#1a2332]/60">
+                    $1.00 → ${navPrice.toFixed(4)} {navPrice > 1.04 && <span className="text-[#16a34a]">↗</span>}
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-[#F4A460]/20"></div>
+                <div className="flex flex-col items-end">
+                  <div className="text-[10px] text-[#1a2332]/40 uppercase tracking-wide">
+                    Pre-Launch
+                  </div>
+                  <div className="text-xs font-bold text-[#F4A460]">
+                    Limited Spots
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -232,9 +249,10 @@ export default function EnterpriseLanding() {
             </Link>
             <Link
               href="/app"
-              className="px-5 py-2 bg-[#1a2332] text-white text-sm font-medium rounded-sm hover:bg-[#0d1723] transition-all"
+              className="px-5 py-2 bg-[#1a2332] text-white text-sm font-medium rounded-sm hover:bg-[#0d1723] transition-all relative overflow-hidden group"
             >
-              Get Early Access
+              <span className="relative z-10">Reserve Your Spot</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-[#F4A460]/0 via-[#F4A460]/10 to-[#F4A460]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </Link>
           </div>
         </div>
