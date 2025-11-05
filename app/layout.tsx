@@ -7,10 +7,8 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata = {
   title: 'Wells AI | Conversational Commerce',
   description: 'Intelligent procurement matching for enterprise buyers and suppliers',
-  verification: {
-    other: {
-      'impact-site-verification': '923256ae-9a83-4361-8115-b4934d461ef6',
-    },
+  other: {
+    'impact-site-verification': '923256ae-9a83-4361-8115-b4934d461ef6',
   },
 }
 
