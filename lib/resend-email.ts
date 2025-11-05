@@ -182,8 +182,8 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   }
 
   // Prepare email
-  const from = params.from || process.env.RESEND_FROM_EMAIL || 'wells@wellsonyx.com'
-  const fromName = params.fromName || 'Wells'
+  const from = params.from || process.env.RESEND_FROM_EMAIL || 'jonah@wellsonyx.com'
+  const fromName = params.fromName || 'Jonah Manning'
   const fromAddress = `${fromName} <${from}>`
 
   // Generate HTML from text if not provided
