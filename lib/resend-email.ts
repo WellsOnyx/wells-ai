@@ -197,8 +197,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
       subject: params.subject,
       text: params.text,
       html: html,
-      reply_to: params.replyTo,
-      tags: params.tags
+      replyTo: params.replyTo
     })
 
     // Track success
