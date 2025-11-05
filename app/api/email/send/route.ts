@@ -1,100 +1,143 @@
 /**
- * Email Sending API
- * POST /api/email/send - Queue or send email with consent
+ * Email Send API
+ *
+ * Handles email sending with automatic provider selection and deliverability guardrails.
+ * Integrated with Wells chat for conversational email sending.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { queueEmail, sendEmail, getEmailStatus } from '@/lib/email'
-import { decide } from '@/lib/consent'
+import { sendEmail, getWarmupStatus, isValidEmail } from '@/lib/resend-email'
+
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
+
+interface EmailRequest {
+  to: string
+  toName?: string
+  subject: string
+  message: string // Plain text message (will be converted to HTML)
+  from?: string
+  fromName?: string
+  replyTo?: string
+  userId?: string
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const body: EmailRequest = await req.json()
 
-    // Check if this is an approval (has actionId)
-    if (body.actionId && body.action === 'send') {
-      // This is a send request after approval
-      const { actionId, ...emailParams } = body
-
-      // Auto-approve (in real flow, this would come from consent UI)
-      await decide(actionId, 'approve', body.approvedBy || 'user')
-
-      // Send the email
-      await sendEmail(actionId, emailParams)
-
-      return NextResponse.json({
-        success: true,
-        message: 'Email sent successfully',
-        actionId
-      })
-    }
-
-    // This is a new email queue request
-    const { to, toName, subject, html, text, attachments, metadata } = body
-
-    // Validate required fields
-    if (!to || !subject || !html) {
+    // Validation
+    if (!body.to || !body.subject || !body.message) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: to, subject, html' },
+        {
+          success: false,
+          error: 'Missing required fields: to, subject, message'
+        },
         { status: 400 }
       )
     }
 
-    // Queue email for consent
-    const actionId = await queueEmail({
-      to,
-      toName,
-      subject,
-      html,
-      text,
-      attachments,
-      metadata
+    // Validate email format
+    if (!isValidEmail(body.to)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Invalid email address: ${body.to}`
+        },
+        { status: 400 }
+      )
+    }
+
+    // Send email via Resend
+    const result = await sendEmail({
+      to: body.to,
+      toName: body.toName,
+      subject: body.subject,
+      text: body.message,
+      from: body.from,
+      fromName: body.fromName,
+      replyTo: body.replyTo,
+      tags: {
+        userId: body.userId || 'anonymous',
+        source: 'wells-chat'
+      }
     })
 
+    // If throttled, return helpful message
+    if (result.throttled) {
+      const warmupStatus = getWarmupStatus()
+      return NextResponse.json(
+        {
+          success: false,
+          throttled: true,
+          error: result.error,
+          warmupStatus: {
+            phase: warmupStatus.phase,
+            dailyLimit: warmupStatus.dailyLimit,
+            sentToday: warmupStatus.sentToday,
+            remaining: warmupStatus.remaining,
+            accountAgeDays: warmupStatus.accountAgeDays
+          }
+        },
+        { status: 429 }
+      )
+    }
+
+    // If error, return error
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error
+        },
+        { status: 500 }
+      )
+    }
+
+    // Success!
+    const warmupStatus = getWarmupStatus()
     return NextResponse.json({
       success: true,
-      message: 'Email queued for approval',
-      actionId,
-      status: 'pending'
+      messageId: result.messageId,
+      sentToday: result.sentToday,
+      dailyLimit: result.dailyLimit,
+      remaining: warmupStatus.remaining,
+      warmupPhase: warmupStatus.phase
     })
+
   } catch (error: any) {
-    console.error('Email API error:', error)
+    console.error('[EMAIL API] Error:', error)
     return NextResponse.json(
-      { success: false, error: error.message },
+      {
+        success: false,
+        error: error.message || 'Failed to send email'
+      },
       { status: 500 }
     )
   }
 }
 
+/**
+ * GET /api/email/send - Get warmup status
+ * Useful for checking rate limits before sending
+ */
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const actionId = searchParams.get('actionId')
-
-    if (!actionId) {
-      return NextResponse.json(
-        { success: false, error: 'actionId required' },
-        { status: 400 }
-      )
-    }
-
-    const status = getEmailStatus(actionId)
-
-    if (!status) {
-      return NextResponse.json(
-        { success: false, error: 'Email not found' },
-        { status: 404 }
-      )
-    }
-
+    const status = getWarmupStatus()
     return NextResponse.json({
-      success: true,
-      email: status
+      warmup: status,
+      canSendMore: status.remaining > 0,
+      recommendation: status.remaining > 0
+        ? `You can send ${status.remaining} more emails today`
+        : `Daily limit reached (${status.dailyLimit}/day). Try again tomorrow or during ${status.phase} warmup phase.`
     })
   } catch (error: any) {
-    console.error('Email status error:', error)
+    console.error('[EMAIL API] Error getting status:', error)
     return NextResponse.json(
-      { success: false, error: error.message },
+      {
+        success: false,
+        error: error.message || 'Failed to get warmup status'
+      },
       { status: 500 }
     )
   }
