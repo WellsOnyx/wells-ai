@@ -709,8 +709,8 @@ export default function WellsAIContent() {
                       </svg>
                     </div>
                     <div>
-                      <div className="font-medium text-[#183b6d] text-sm tracking-wide">Wells AI</div>
-                      <div className="text-xs text-[#575757]">Conversational Commerce Platform</div>
+                      <div className="font-medium text-[#183b6d] text-sm tracking-wide">Wells</div>
+                      <div className="text-xs text-[#575757]">Your AI Companion</div>
                     </div>
                   </div>
 
@@ -967,7 +967,7 @@ export default function WellsAIContent() {
                     disabled={isLoading || !input.trim()}
                     className="px-8 py-3 bg-[#183b6d] text-white font-normal text-xs tracking-wider uppercase rounded-sm hover:bg-[#0d2545] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Send to Wells
+                    Send
                   </button>
                 </div>
               </div>

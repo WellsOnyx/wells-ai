@@ -298,8 +298,8 @@ export default function EnterpriseLanding() {
                 <div className="text-[9px] text-[#575757] tracking-[0.15em] uppercase">Financial Infrastructure</div>
               </div>
             </div>
-            {/* Early Investor Opportunity Badge */}
-            <div className="ml-4 px-4 py-2 bg-gradient-to-r from-[#F4A460]/10 to-[#F4A460]/5 border-l-2 border-[#F4A460] rounded-sm hover:from-[#F4A460]/15 hover:to-[#F4A460]/8 transition-all cursor-pointer group">
+            {/* Early Investor Opportunity Badge - CLICKABLE */}
+            <Link href="/early-investor" className="ml-4 px-4 py-2 bg-gradient-to-r from-[#F4A460]/10 to-[#F4A460]/5 border-l-2 border-[#F4A460] rounded-sm hover:from-[#F4A460]/15 hover:to-[#F4A460]/8 transition-all cursor-pointer group">
               <div className="flex items-center gap-3">
                 <div className="flex flex-col">
                   <div className="text-[10px] font-semibold text-[#F4A460] uppercase tracking-wide">
@@ -315,11 +315,11 @@ export default function EnterpriseLanding() {
                     Pre-Launch
                   </div>
                   <div className="text-xs font-bold text-[#F4A460]">
-                    Limited Spots
+                    Limited Spots →
                   </div>
                 </div>
               </div>
-            </div>
+            </Link>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/app" className="text-sm text-[#575757] hover:text-[#1a2332] transition-colors">
@@ -467,19 +467,23 @@ export default function EnterpriseLanding() {
                 features: ['Segregated custody', 'Dispute resolution', 'Instant settlements']
               }
             ].map((item, i) => (
-              <div key={i} className="p-8 bg-white border-2 border-[#1a2332]/10 rounded-sm hover:border-[#F4A460] transition-all group">
-                <h3 className="text-2xl font-bold text-[#1a2332] mb-4">{item.title}</h3>
-                <p className="text-[#575757] mb-6 leading-relaxed">{item.desc}</p>
-                <ul className="space-y-2">
-                  {item.features.map((feature, j) => (
-                    <li key={j} className="flex items-center gap-2 text-sm text-[#575757]">
-                      <svg className="w-4 h-4 text-[#F4A460]" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-                      </svg>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
+              <div key={i} className="p-8 bg-white border-2 border-[#1a2332]/10 rounded-sm hover:border-[#F4A460] hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+                {/* Animated gradient on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#F4A460]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="relative z-10">
+                  <h3 className="text-2xl font-bold text-[#1a2332] mb-4 group-hover:text-[#F4A460] transition-colors">{item.title}</h3>
+                  <p className="text-[#575757] mb-6 leading-relaxed">{item.desc}</p>
+                  <ul className="space-y-2">
+                    {item.features.map((feature, j) => (
+                      <li key={j} className="flex items-center gap-2 text-sm text-[#575757] group-hover:text-[#1a2332] transition-colors">
+                        <svg className="w-4 h-4 text-[#F4A460] group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                        </svg>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             ))}
           </div>
@@ -505,10 +509,10 @@ export default function EnterpriseLanding() {
               { title: 'GTM Automation', desc: 'Lead generation, outreach, pipeline management', icon: '🎯' },
               { title: 'Professional Services', desc: 'Legal, accounting, consulting workflow automation', icon: '⚖️' }
             ].map((item, i) => (
-              <div key={i} className="p-6 bg-white/5 border border-white/10 rounded-sm hover:bg-white/10 transition-all">
-                <div className="text-4xl mb-4">{item.icon}</div>
-                <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-                <p className="text-white/70 text-sm leading-relaxed">{item.desc}</p>
+              <div key={i} className="p-6 bg-white/5 border border-white/10 rounded-sm hover:bg-white/15 hover:border-[#F4A460]/30 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer">
+                <div className="text-4xl mb-4 transform group-hover:scale-110 transition-transform duration-300">{item.icon}</div>
+                <h3 className="text-xl font-bold mb-3 group-hover:text-[#F4A460] transition-colors">{item.title}</h3>
+                <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -574,22 +578,41 @@ export default function EnterpriseLanding() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="relative z-10 py-24 px-6 bg-gradient-to-br from-[#F4A460] to-[#dba63f]">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-5xl md:text-6xl font-bold text-white mb-8">
-            Request Early Access
+      {/* CTA - Enhanced with animations */}
+      <section className="relative z-10 py-24 px-6 bg-gradient-to-br from-[#F4A460] to-[#dba63f] overflow-hidden">
+        {/* Animated background shapes */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-white rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        </div>
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <div className="inline-block px-6 py-2 bg-white/20 backdrop-blur-sm rounded-full mb-6 animate-pulse">
+            <span className="text-sm font-semibold text-white uppercase tracking-wide">Limited Spots Available</span>
+          </div>
+          <h2 className="text-5xl md:text-6xl font-bold text-white mb-8 drop-shadow-lg">
+            Be a Founding Investor
           </h2>
-          <p className="text-xl text-white/90 mb-12 leading-relaxed">
-            Grain & Vault is currently in private beta. Join the waitlist to be among the first
-            to experience transparent financial infrastructure.
+          <p className="text-xl text-white/95 mb-12 leading-relaxed drop-shadow-md">
+            Early investors get GRAIN at $1.00 before public launch. Current NAV: ${navPrice.toFixed(4)}.
+            Lock in your allocation before spots fill.
           </p>
-          <Link
-            href="/app"
-            className="inline-block px-12 py-5 bg-white text-[#1a2332] text-lg font-bold rounded-sm hover:bg-[#1a2332] hover:text-white transition-all shadow-2xl"
-          >
-            Join the Waitlist
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link
+              href="/early-investor"
+              className="group relative inline-block px-12 py-5 bg-white text-[#1a2332] text-lg font-bold rounded-sm hover:scale-105 transition-all shadow-2xl overflow-hidden"
+            >
+              <span className="relative z-10">Secure My Spot →</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-[#1a2332] to-[#0d1723] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <span className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 text-white font-bold transition-opacity">Secure My Spot →</span>
+            </Link>
+            <Link
+              href="/app"
+              className="px-10 py-4 border-2 border-white text-white text-base font-semibold rounded-sm hover:bg-white hover:text-[#1a2332] transition-all"
+            >
+              Learn More
+            </Link>
+          </div>
+          <p className="mt-8 text-sm text-white/70">Only 100 founding investor slots | First-come, first-served</p>
         </div>
       </section>
 
