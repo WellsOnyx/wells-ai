@@ -5,57 +5,19 @@ import Link from 'next/link'
 
 export default function EnterpriseLanding() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [videoError, setVideoError] = useState(false)
+  const [navPrice, setNavPrice] = useState(1.0417) // Mock GRAIN price
+  const [totalNAV, setTotalNAV] = useState(127500000) // Mock total NAV
 
-  // Video options - easily swap between different videos
-  const videoOptions = {
-    current: '/hero-video.mp4',  // Current bunny video
-    // Uncomment one of these to try different vibes:
-    // architecture1: 'https://cdn.coverr.co/videos/coverr-aerial-view-of-a-modern-building-8134/1080p.mp4',
-    // architecture2: 'https://cdn.coverr.co/videos/coverr-modern-building-architecture-3599/1080p.mp4',
-    // construction: 'https://cdn.coverr.co/videos/coverr-construction-site-time-lapse-4981/1080p.mp4',
-    // city: 'https://cdn.coverr.co/videos/coverr-urban-architecture-at-night-1668/1080p.mp4',
-    // abstract: 'https://cdn.coverr.co/videos/coverr-abstract-geometric-shapes-9614/1080p.mp4'
-  }
-
-  const videoSrc = videoOptions.current
-
-  // Force video to play - handles browsers blocking autoplay
+  // Real-time NAV update simulation
   useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-
-    const attemptPlay = async () => {
-      try {
-        await video.play()
-        console.log('Video playing successfully')
-      } catch (err) {
-        console.warn('Video autoplay blocked or failed:', err)
-        setVideoError(true)
-      }
-    }
-
-    // Try to play immediately
-    attemptPlay()
-
-    // Also try on user interaction
-    const handleInteraction = () => {
-      attemptPlay()
-      document.removeEventListener('click', handleInteraction)
-      document.removeEventListener('scroll', handleInteraction)
-    }
-
-    document.addEventListener('click', handleInteraction, { once: true })
-    document.addEventListener('scroll', handleInteraction, { once: true })
-
-    return () => {
-      document.removeEventListener('click', handleInteraction)
-      document.removeEventListener('scroll', handleInteraction)
-    }
+    const interval = setInterval(() => {
+      setNavPrice(prev => prev + (Math.random() - 0.48) * 0.0001)
+      setTotalNAV(prev => prev + Math.floor(Math.random() * 10000 - 4800))
+    }, 3000)
+    return () => clearInterval(interval)
   }, [])
 
-  // Blueprint sketch animation - Wells AI Ghost
+  // Financial data visualization background
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -70,13 +32,12 @@ export default function EnterpriseLanding() {
     resizeCanvas()
     window.addEventListener('resize', resizeCanvas)
 
-    // Blueprint grid
+    // Data grid
     const drawGrid = () => {
-      const gridSize = 40
-      ctx.strokeStyle = 'rgba(24, 59, 109, 0.08)'
-      ctx.lineWidth = 0.5
+      const gridSize = 60
+      ctx.strokeStyle = 'rgba(26, 35, 50, 0.04)'
+      ctx.lineWidth = 1
 
-      // Vertical lines
       for (let x = 0; x < canvas.width; x += gridSize) {
         ctx.beginPath()
         ctx.moveTo(x, 0)
@@ -84,7 +45,6 @@ export default function EnterpriseLanding() {
         ctx.stroke()
       }
 
-      // Horizontal lines
       for (let y = 0; y < canvas.height; y += gridSize) {
         ctx.beginPath()
         ctx.moveTo(0, y)
@@ -93,7 +53,7 @@ export default function EnterpriseLanding() {
       }
     }
 
-    // Wells AI Ghost - floating geometric companion
+    // Wells AI Ghost - refined for institutional aesthetic
     interface GhostVertex {
       x: number
       y: number
@@ -101,13 +61,12 @@ export default function EnterpriseLanding() {
       angle: number
     }
 
-    const ghostSize = 140  // Slightly larger for more presence
-    const ghostX = canvas.width * 0.85
-    const ghostY = canvas.height * 0.52  // Moved down more
+    const ghostSize = 100
+    const ghostX = canvas.width * 0.88
+    const ghostY = canvas.height * 0.65
     let rotation = 0
     let pulsePhase = 0
 
-    // Create geometric ghost structure
     const createGhostVertices = (): GhostVertex[] => {
       const vertices: GhostVertex[] = []
       const segments = 6
@@ -127,69 +86,58 @@ export default function EnterpriseLanding() {
 
     const ghostVertices = createGhostVertices()
 
-    // Floating sketch lines
-    interface SketchLine {
-      x1: number
-      y1: number
-      x2: number
-      y2: number
+    // Floating data points
+    interface DataPoint {
+      x: number
+      y: number
+      value: number
       opacity: number
       speed: number
     }
 
-    const sketchLines: SketchLine[] = []
-    for (let i = 0; i < 12; i++) {
-      sketchLines.push({
-        x1: Math.random() * canvas.width,
-        y1: Math.random() * canvas.height,
-        x2: Math.random() * canvas.width,
-        y2: Math.random() * canvas.height,
-        opacity: Math.random() * 0.3 + 0.1,
-        speed: Math.random() * 0.3 + 0.1
+    const dataPoints: DataPoint[] = []
+    for (let i = 0; i < 8; i++) {
+      dataPoints.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        value: Math.random() * 100,
+        opacity: Math.random() * 0.4 + 0.2,
+        speed: Math.random() * 0.2 + 0.1
       })
     }
 
     const animate = () => {
-      // Clear with blueprint paper color
+      // Clean institutional white background
       ctx.fillStyle = '#fafbfc'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // Draw blueprint grid
       drawGrid()
 
-      // Draw floating sketch lines
-      sketchLines.forEach((line, i) => {
-        line.y1 += line.speed
-        line.y2 += line.speed
+      // Floating data points
+      dataPoints.forEach((point) => {
+        point.y += point.speed
+        if (point.y > canvas.height) point.y = -20
 
-        if (line.y1 > canvas.height) line.y1 = -50
-        if (line.y2 > canvas.height) line.y2 = -50
-
-        ctx.strokeStyle = `rgba(24, 59, 109, ${line.opacity})`
-        ctx.lineWidth = 1
-        ctx.setLineDash([5, 5])
-        ctx.beginPath()
-        ctx.moveTo(line.x1, line.y1)
-        ctx.lineTo(line.x2, line.y2)
-        ctx.stroke()
-        ctx.setLineDash([])
+        ctx.fillStyle = `rgba(244, 164, 96, ${point.opacity})`
+        ctx.font = '11px monospace'
+        ctx.fillText(`$${point.value.toFixed(2)}`, point.x, point.y)
       })
 
-      // Draw Wells AI Ghost
-      rotation += 0.003
-      pulsePhase += 0.02
-      const pulse = Math.sin(pulsePhase) * 8
+      // Wells AI Ghost
+      rotation += 0.002
+      pulsePhase += 0.015
+      const pulse = Math.sin(pulsePhase) * 6
 
-      // Ghost outer shell - geometric panels
-      ctx.strokeStyle = '#183b6d'
-      ctx.lineWidth = 3  // Bolder lines for more pop
+      // Ghost shell
+      ctx.strokeStyle = 'rgba(26, 35, 50, 0.6)'
+      ctx.lineWidth = 2
       ctx.beginPath()
       ghostVertices.forEach((vertex, i) => {
         const nextVertex = ghostVertices[(i + 1) % ghostVertices.length]
         const x1 = vertex.x + Math.cos(rotation) * pulse
-        const y1 = vertex.y + Math.sin(rotation) * pulse + Math.sin(vertex.angle + pulsePhase) * 5
+        const y1 = vertex.y + Math.sin(rotation) * pulse + Math.sin(vertex.angle + pulsePhase) * 4
         const x2 = nextVertex.x + Math.cos(rotation) * pulse
-        const y2 = nextVertex.y + Math.sin(rotation) * pulse + Math.sin(nextVertex.angle + pulsePhase) * 5
+        const y2 = nextVertex.y + Math.sin(rotation) * pulse + Math.sin(nextVertex.angle + pulsePhase) * 4
 
         if (i === 0) {
           ctx.moveTo(x1, y1)
@@ -199,40 +147,38 @@ export default function EnterpriseLanding() {
       ctx.closePath()
       ctx.stroke()
 
-      // Ghost inner core - glowing center (enhanced)
-      const coreRadius = 25 + pulse * 0.8  // Larger glow
+      // Glowing core
+      const coreRadius = 20 + pulse * 0.6
       const gradient = ctx.createRadialGradient(ghostX, ghostY, 0, ghostX, ghostY, coreRadius)
-      gradient.addColorStop(0, 'rgba(219, 166, 63, 1)')  // Full opacity at center
-      gradient.addColorStop(0.3, 'rgba(219, 166, 63, 0.8)')
-      gradient.addColorStop(0.6, 'rgba(219, 166, 63, 0.4)')
-      gradient.addColorStop(1, 'rgba(219, 166, 63, 0)')
+      gradient.addColorStop(0, 'rgba(244, 164, 96, 0.9)')
+      gradient.addColorStop(0.5, 'rgba(244, 164, 96, 0.5)')
+      gradient.addColorStop(1, 'rgba(244, 164, 96, 0)')
 
       ctx.fillStyle = gradient
       ctx.beginPath()
       ctx.arc(ghostX, ghostY, coreRadius, 0, Math.PI * 2)
       ctx.fill()
 
-      // Ghost core dot (brighter and larger)
-      ctx.fillStyle = '#dba63f'
-      ctx.shadowColor = 'rgba(219, 166, 63, 0.8)'
-      ctx.shadowBlur = 10
+      // Core dot
+      ctx.fillStyle = '#F4A460'
+      ctx.shadowColor = 'rgba(244, 164, 96, 0.6)'
+      ctx.shadowBlur = 8
       ctx.beginPath()
-      ctx.arc(ghostX, ghostY, 6, 0, Math.PI * 2)
+      ctx.arc(ghostX, ghostY, 5, 0, Math.PI * 2)
       ctx.fill()
-      ctx.shadowBlur = 0  // Reset shadow
+      ctx.shadowBlur = 0
 
-      // Ghost vertices (connection points)
+      // Vertices
       ghostVertices.forEach((vertex) => {
         const x = vertex.x + Math.cos(rotation) * pulse
-        const y = vertex.y + Math.sin(rotation) * pulse + Math.sin(vertex.angle + pulsePhase) * 5
+        const y = vertex.y + Math.sin(rotation) * pulse + Math.sin(vertex.angle + pulsePhase) * 4
 
-        ctx.fillStyle = '#183b6d'
+        ctx.fillStyle = '#1a2332'
         ctx.beginPath()
-        ctx.arc(x, y, 4, 0, Math.PI * 2)  // Slightly larger vertices
+        ctx.arc(x, y, 3, 0, Math.PI * 2)
         ctx.fill()
 
-        // Draw line from vertex to core
-        ctx.strokeStyle = 'rgba(24, 59, 109, 0.3)'  // Slightly more visible
+        ctx.strokeStyle = 'rgba(26, 35, 50, 0.15)'
         ctx.lineWidth = 1
         ctx.beginPath()
         ctx.moveTo(x, y)
@@ -240,11 +186,10 @@ export default function EnterpriseLanding() {
         ctx.stroke()
       })
 
-      // Technical annotations (sketch marks)
-      ctx.fillStyle = 'rgba(24, 59, 109, 0.3)'
+      // Wells annotation
+      ctx.fillStyle = 'rgba(26, 35, 50, 0.3)'
       ctx.font = '9px monospace'
-      ctx.fillText('WELLS.v1', ghostX - 70, ghostY - ghostSize - 15)
-      ctx.fillText('AI-CORE', ghostX + 50, ghostY + 10)
+      ctx.fillText('WELLS', ghostX - 60, ghostY - ghostSize - 10)
 
       requestAnimationFrame(animate)
     }
@@ -257,271 +202,275 @@ export default function EnterpriseLanding() {
   }, [])
 
   return (
-    <div className="relative min-h-screen bg-[#fafbfc] text-[#000000] overflow-hidden">
+    <div className="relative min-h-screen bg-[#fafbfc] text-[#1a2332]">
       {/* Navigation */}
-      <nav className="relative z-10 border-b-2 border-[#183b6d]/20 bg-[#fafbfc]" style={{ borderStyle: 'dashed' }}>
-        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-              <circle cx="20" cy="12" r="3" fill="#183b6d" />
-              <line x1="20" y1="15" x2="12" y2="28" stroke="#183b6d" strokeWidth="1.5" />
-              <line x1="20" y1="15" x2="20" y2="32" stroke="#183b6d" strokeWidth="1.5" />
-              <line x1="20" y1="15" x2="28" y2="28" stroke="#183b6d" strokeWidth="1.5" />
-              <circle cx="12" cy="28" r="2.5" fill="#183b6d" />
-              <circle cx="28" cy="28" r="2.5" fill="#183b6d" />
-              <circle cx="20" cy="32" r="2.5" fill="#183b6d" />
-              <circle cx="20" cy="12" r="1.5" fill="#dba63f" opacity="0.9" />
-            </svg>
-            <div>
-              <div className="font-semibold text-[#183b6d] text-lg tracking-tight">Wells AI</div>
-              <div className="text-[10px] text-[#575757] tracking-[0.15em] uppercase">Conversational Commerce</div>
+      <nav className="relative z-10 border-b border-[#1a2332]/10 bg-white/80 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#F4A460] to-[#dba63f] rounded-sm flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <div className="font-bold text-[#1a2332] text-lg tracking-tight">Grain & Vault</div>
+                <div className="text-[9px] text-[#575757] tracking-[0.15em] uppercase">Financial Infrastructure</div>
+              </div>
+            </div>
+            <div className="ml-4 px-3 py-1 bg-[#F4A460]/10 border border-[#F4A460]/20 rounded-sm">
+              <div className="text-xs font-mono text-[#F4A460]">
+                GRAIN: ${navPrice.toFixed(4)}
+              </div>
             </div>
           </div>
-          <Link
-            href="/app"
-            className="px-6 py-2.5 bg-[#183b6d] text-white text-sm font-medium rounded-sm hover:bg-[#0d2545] transition-all"
-          >
-            Get Started
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/app" className="text-sm text-[#575757] hover:text-[#1a2332] transition-colors">
+              Sign In
+            </Link>
+            <Link
+              href="/app"
+              className="px-5 py-2 bg-[#1a2332] text-white text-sm font-medium rounded-sm hover:bg-[#0d1723] transition-all"
+            >
+              Get Early Access
+            </Link>
+          </div>
         </div>
       </nav>
 
-      {/* Hero Section with Video Background */}
-      <section className="relative pt-24 pb-32 px-6 overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#334155]">
-        {/* Video Background - only show if not errored */}
-        {!videoError && (
-          <video
-            ref={videoRef}
-            loop
-            muted
-            playsInline
-            onError={() => {
-              console.error('Video failed to load')
-              setVideoError(true)
-            }}
-            className="absolute inset-0 w-full h-full object-cover opacity-60"
-            poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Crect fill='%230f172a' width='1920' height='1080'/%3E%3C/svg%3E"
-          >
-            <source src={videoSrc} type="video/mp4" />
-          </video>
-        )}
-
-        {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50"></div>
-
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-7xl mx-auto">
-          <div className="max-w-4xl">
-            {/* Version Badge */}
-            <div className="flex items-center gap-3 mb-8">
-              <span className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm font-semibold rounded-sm">
-                v1.0.0
-              </span>
-              <span className="px-4 py-2 bg-[#dba63f]/80 backdrop-blur-sm text-white border-2 border-white/30 text-sm font-semibold rounded-sm">
-                ALPHA
-              </span>
-            </div>
-
-            <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif text-white leading-[0.95] mb-8 tracking-tight drop-shadow-2xl">
-              Finally, true end-to-end<br />
-              <span className="text-[#dba63f]">conversational commerce</span><br />
-              for the enterprise
-            </h1>
-            <p className="text-xl md:text-2xl text-white/90 max-w-3xl mb-12 font-normal leading-relaxed backdrop-blur-sm p-6 border-2 border-white/30 bg-white/10 rounded-sm">
-              Built to power enterprise transactions across industries. From semiconductors to executive talent.
-              From commodities to compliance. One conversation for every deal.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Link
-                href="/app"
-                className="px-10 py-4 bg-[#dba63f] text-white text-base font-medium rounded-sm hover:bg-[#c89430] transition-all shadow-2xl"
-              >
-                Start Trading
-              </Link>
-              <a
-                href="#platform"
-                className="px-10 py-4 bg-white/20 backdrop-blur-sm border-2 border-white text-white text-base font-medium rounded-sm hover:bg-white hover:text-[#183b6d] transition-all"
-              >
-                Learn More
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Rest of page with Blueprint/Ghost background */}
-      <div className="relative bg-[#fafbfc]">
-        {/* Blueprint Sketch Background with Wells Ghost */}
+      {/* Hero Section - No video, clean data visualization */}
+      <section className="relative pt-20 pb-24 px-6 overflow-hidden">
+        {/* Animated background canvas */}
         <canvas
           ref={canvasRef}
           className="absolute inset-0 pointer-events-none"
           style={{ opacity: 1 }}
         />
 
-        {/* Value Props Section */}
-        <section className="relative z-10 py-20 px-6 bg-transparent">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-12">
-            <div className="text-center">
-              <div className="text-5xl font-bold text-[#183b6d] mb-2">24/7</div>
-              <div className="text-sm text-[#575757] tracking-wide uppercase">AI-Powered Platform</div>
+        {/* Hero Content */}
+        <div className="relative z-10 max-w-7xl mx-auto">
+          <div className="max-w-5xl">
+            {/* Trust Indicators */}
+            <div className="flex items-center gap-6 mb-10">
+              <div className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-[#1a2332]/10 rounded-sm">
+                <span className="text-xs font-mono text-[#1a2332]">Base Blockchain</span>
+              </div>
+              <div className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-[#1a2332]/10 rounded-sm">
+                <span className="text-xs font-mono text-[#1a2332]">USDC-Backed</span>
+              </div>
+              <div className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-[#1a2332]/10 rounded-sm">
+                <span className="text-xs font-mono text-[#1a2332]">Real-Time NAV</span>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-5xl font-bold text-[#183b6d] mb-2">0.5%</div>
-              <div className="text-sm text-[#575757] tracking-wide uppercase">Starting Fee</div>
+
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-[#1a2332] leading-[1.05] mb-8 tracking-tight">
+              Infrastructure<br />
+              <span className="text-[#F4A460]">You Can See</span>
+            </h1>
+
+            <p className="text-xl md:text-2xl text-[#575757] max-w-3xl mb-8 leading-relaxed">
+              The first transparent financial infrastructure for B2B commerce. Every asset tracked.
+              Every transaction visible. Every price backed by real value.
+            </p>
+
+            {/* Real-time NAV Display */}
+            <div className="mb-12 p-6 bg-white/60 backdrop-blur-sm border-2 border-[#1a2332]/10 rounded-sm">
+              <div className="grid md:grid-cols-3 gap-6">
+                <div>
+                  <div className="text-sm font-mono text-[#575757] mb-1">GRAIN PRICE</div>
+                  <div className="text-3xl font-bold text-[#1a2332] font-mono">
+                    ${navPrice.toFixed(4)}
+                  </div>
+                  <div className="text-xs text-[#22c55e] font-mono">+4.17% since launch</div>
+                </div>
+                <div>
+                  <div className="text-sm font-mono text-[#575757] mb-1">TOTAL NAV</div>
+                  <div className="text-3xl font-bold text-[#1a2332] font-mono">
+                    ${(totalNAV / 1000000).toFixed(2)}M
+                  </div>
+                  <div className="text-xs text-[#575757] font-mono">Updated 3s ago</div>
+                </div>
+                <div>
+                  <div className="text-sm font-mono text-[#575757] mb-1">COLLATERAL RATIO</div>
+                  <div className="text-3xl font-bold text-[#1a2332] font-mono">
+                    110%
+                  </div>
+                  <div className="text-xs text-[#22c55e] font-mono">Fully collateralized</div>
+                </div>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-5xl font-bold text-[#183b6d] mb-2">∞</div>
-              <div className="text-sm text-[#575757] tracking-wide uppercase">Industries Supported</div>
-            </div>
-            <div className="text-center">
-              <div className="text-5xl font-bold text-[#183b6d] mb-2">100%</div>
-              <div className="text-sm text-[#575757] tracking-wide uppercase">Transparent Pricing</div>
+
+            <div className="flex flex-wrap gap-4">
+              <Link
+                href="/app"
+                className="px-10 py-4 bg-[#F4A460] text-white text-base font-semibold rounded-sm hover:bg-[#e09450] transition-all shadow-lg"
+              >
+                Request Early Access
+              </Link>
+              <a
+                href="#infrastructure"
+                className="px-10 py-4 bg-white/60 backdrop-blur-sm border-2 border-[#1a2332] text-[#1a2332] text-base font-semibold rounded-sm hover:bg-[#1a2332] hover:text-white transition-all"
+              >
+                See How It Works
+              </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Platform Section */}
-      <section id="platform" className="relative z-10 py-32 px-6">
+      {/* Value Props */}
+      <section className="relative z-10 py-16 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-serif text-[#183b6d] mb-6">
-              One Platform.<br />Every Industry.
+          <div className="grid md:grid-cols-4 gap-8">
+            {[
+              { metric: '$1.0417', label: 'Auto-Revaluing Price', desc: 'GRAIN price rises with NAV' },
+              { metric: '110%', label: 'Min Collateral', desc: 'Always overcollateralized' },
+              { metric: '5 min', label: 'NAV Updates', desc: 'Real-time transparency' },
+              { metric: '0.5%', label: 'Transaction Fee', desc: 'Lower than traditional finance' }
+            ].map((item, i) => (
+              <div key={i} className="text-center">
+                <div className="text-4xl font-bold text-[#1a2332] font-mono mb-2">{item.metric}</div>
+                <div className="text-sm font-semibold text-[#575757] mb-1 uppercase tracking-wide">{item.label}</div>
+                <div className="text-xs text-[#575757]">{item.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Infrastructure Section */}
+      <section id="infrastructure" className="relative z-10 py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-5xl md:text-6xl font-bold text-[#1a2332] mb-6">
+              Complete Financial Infrastructure
             </h2>
             <p className="text-xl text-[#575757] max-w-3xl mx-auto">
-              Wells AI understands your business language—whether you're sourcing chips or closing C-suite searches.
+              From stablecoin to escrow to settlements. Everything you need for B2B commerce,
+              powered by Wells AI.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                title: 'Procurement',
-                desc: 'From raw materials to semiconductors. AI-powered supplier matching with transparent pricing.',
-                icon: (
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                )
+                title: 'GRAIN Stablecoin',
+                desc: 'Auto-revaluing USDC-backed token. Price increases with total NAV. Perfect for B2B settlements.',
+                features: ['USDC-backed', 'Auto-revaluing', 'On-chain transparency']
               },
               {
-                title: 'Executive Search',
-                desc: 'C-suite to VP-level placements. AI-enhanced candidate matching with human expertise.',
-                icon: (
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                )
+                title: 'Vault Treasury',
+                desc: 'Multi-asset custody tracking liquid reserves, float, physical assets, investments, and receivables.',
+                features: ['5-tier asset tracking', 'Multi-sig security', 'Real-time NAV']
               },
               {
-                title: 'Professional Services',
-                desc: 'Legal, accounting, consulting. End-to-end workflow from discovery to payment.',
-                icon: (
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                )
-              },
-            ].map((item, i) => (
-              <div key={i} className="bg-[#fafbfc]/80 border-2 border-[#183b6d]/30 p-8 hover:border-[#dba63f] transition-all group relative" style={{ borderStyle: 'dashed' }}>
-                {/* Sketch corner marks */}
-                <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-[#183b6d]"></div>
-                <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-[#183b6d]"></div>
-                <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-[#183b6d]"></div>
-                <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-[#183b6d]"></div>
-
-                <div className="w-14 h-14 border-2 border-[#183b6d] flex items-center justify-center text-[#183b6d] group-hover:bg-[#dba63f] group-hover:text-white group-hover:border-[#dba63f] transition-all mb-6">
-                  {item.icon}
-                </div>
-                <h3 className="text-2xl font-semibold text-[#183b6d] mb-4">{item.title}</h3>
-                <p className="text-[#575757] leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="relative z-10 py-32 px-6 bg-[#183b6d] text-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-serif mb-6">
-              Simple. Powerful. Trusted.
-            </h2>
-            <p className="text-xl text-white/80 max-w-3xl mx-auto">
-              Three steps to close any enterprise deal
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-12">
-            {[
-              {
-                step: '01',
-                title: 'Describe',
-                desc: 'Tell Wells AI what you need in plain language. No forms, no friction.'
-              },
-              {
-                step: '02',
-                title: 'Match',
-                desc: 'AI instantly matches you with qualified suppliers or candidates. Both sides notified.'
-              },
-              {
-                step: '03',
-                title: 'Transact',
-                desc: 'Complete the deal through Wells AI. Secure payments, transparent fees, guaranteed outcomes.'
+                title: 'Escrow & Payments',
+                desc: 'Milestone-based escrow for high-value deals. ACH, wire, and crypto settlements with Wells AI.',
+                features: ['Segregated custody', 'Dispute resolution', 'Instant settlements']
               }
             ].map((item, i) => (
-              <div key={i} className="relative">
-                <div className="text-8xl font-bold text-white/10 absolute -top-8 -left-4">{item.step}</div>
-                <div className="relative">
-                  <h3 className="text-2xl font-semibold mb-4">{item.title}</h3>
-                  <p className="text-white/70 leading-relaxed">{item.desc}</p>
-                </div>
+              <div key={i} className="p-8 bg-white border-2 border-[#1a2332]/10 rounded-sm hover:border-[#F4A460] transition-all group">
+                <h3 className="text-2xl font-bold text-[#1a2332] mb-4">{item.title}</h3>
+                <p className="text-[#575757] mb-6 leading-relaxed">{item.desc}</p>
+                <ul className="space-y-2">
+                  {item.features.map((feature, j) => (
+                    <li key={j} className="flex items-center gap-2 text-sm text-[#575757]">
+                      <svg className="w-4 h-4 text-[#F4A460]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                      </svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Dynamic Pricing */}
-      <section className="relative z-10 py-32 px-6">
+      {/* Capabilities Section */}
+      <section className="relative z-10 py-24 px-6 bg-[#1a2332] text-white">
         <div className="max-w-7xl mx-auto">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-5xl md:text-6xl font-serif text-[#183b6d] mb-8">
-              Pricing That Scales<br />With Your Business
+          <div className="text-center mb-16">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6">
+              Built for Every Industry
             </h2>
-            <p className="text-xl text-[#575757] mb-12 leading-relaxed">
-              From 0.5% for commodities to 10% for full GTM automation. Our dynamic pricing engine ensures
-              you never pay more than fair market value for our services.
+            <p className="text-xl text-white/80 max-w-3xl mx-auto">
+              Wells AI understands your business language. From procurement to hiring to GTM.
             </p>
-            <div className="bg-[#fafbfc]/80 border-2 border-[#183b6d]/30 p-12 relative" style={{ borderStyle: 'dashed' }}>
-              {/* Blueprint-style corner marks */}
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#dba63f]"></div>
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#dba63f]"></div>
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#dba63f]"></div>
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#dba63f]"></div>
+          </div>
 
-              <div className="grid md:grid-cols-2 gap-8 text-left">
-                <div>
-                  <div className="text-[#dba63f] font-bold text-sm mb-2 tracking-wide">COMMODITIES</div>
-                  <div className="text-4xl font-bold text-[#183b6d] mb-2">0.5%</div>
-                  <p className="text-sm text-[#575757]">Low-margin bulk goods like vegetables, grain, raw materials</p>
+          <div className="grid md:grid-cols-4 gap-6">
+            {[
+              { title: 'Procurement', desc: 'Supplier matching, RFQ management, transparent sourcing', icon: '📦' },
+              { title: 'Executive Search', desc: 'C-suite placements, candidate matching, hiring automation', icon: '👔' },
+              { title: 'GTM Automation', desc: 'Lead generation, outreach, pipeline management', icon: '🎯' },
+              { title: 'Professional Services', desc: 'Legal, accounting, consulting workflow automation', icon: '⚖️' }
+            ].map((item, i) => (
+              <div key={i} className="p-6 bg-white/5 border border-white/10 rounded-sm hover:bg-white/10 transition-all">
+                <div className="text-4xl mb-4">{item.icon}</div>
+                <h3 className="text-xl font-bold mb-3">{item.title}</h3>
+                <p className="text-white/70 text-sm leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Wells AI Section */}
+      <section className="relative z-10 py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <div className="inline-block px-4 py-2 bg-[#F4A460]/10 border border-[#F4A460]/20 rounded-sm mb-6">
+                <span className="text-sm font-semibold text-[#F4A460]">POWERED BY WELLS AI</span>
+              </div>
+              <h2 className="text-5xl font-bold text-[#1a2332] mb-6">
+                Your AI Companion<br />
+                for Every Transaction
+              </h2>
+              <p className="text-xl text-[#575757] mb-8 leading-relaxed">
+                Wells is your personal AI agent that handles everything from supplier discovery to
+                candidate outreach to payment reconciliation. Just chat naturally.
+              </p>
+              <ul className="space-y-4">
+                {[
+                  'Natural language interface for all transactions',
+                  'Remembers context and preferences across sessions',
+                  'Proactive recommendations and deal matching',
+                  'Complete audit trail and transaction history'
+                ].map((feature, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <svg className="w-6 h-6 text-[#F4A460] mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="text-[#575757]">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-white border-2 border-[#1a2332]/10 rounded-sm p-8 shadow-xl">
+              <div className="space-y-4">
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 bg-[#F4A460]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-xl">👤</span>
+                  </div>
+                  <div className="flex-1 bg-[#f3f4f6] rounded-lg p-4">
+                    <p className="text-sm text-[#1a2332]">I need to source 10,000 units of PCB boards. Military grade. Can you find suppliers?</p>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-[#dba63f] font-bold text-sm mb-2 tracking-wide">STANDARD B2B</div>
-                  <div className="text-4xl font-bold text-[#183b6d] mb-2">2%</div>
-                  <p className="text-sm text-[#575757]">Manufacturing, distribution, components, standard services</p>
-                </div>
-                <div>
-                  <div className="text-[#dba63f] font-bold text-sm mb-2 tracking-wide">HIGH-VALUE</div>
-                  <div className="text-4xl font-bold text-[#183b6d] mb-2">3%</div>
-                  <p className="text-sm text-[#575757]">Executive search, consulting, software, specialized services</p>
-                </div>
-                <div>
-                  <div className="text-[#dba63f] font-bold text-sm mb-2 tracking-wide">FULL GTM</div>
-                  <div className="text-4xl font-bold text-[#183b6d] mb-2">10%</div>
-                  <p className="text-sm text-[#575757]">Complete sales automation from discovery to close</p>
+                <div className="flex gap-3 flex-row-reverse">
+                  <div className="w-10 h-10 bg-[#1a2332] rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <circle cx="10" cy="6" r="2" fill="#F4A460"/>
+                      <path d="M10 8L6 14M10 8L10 16M10 8L14 14" stroke="#F4A460" strokeWidth="1.5"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 bg-[#1a2332] rounded-lg p-4">
+                    <p className="text-sm text-white">Found 3 qualified suppliers with MIL-STD certification. Average quote: $12.50/unit. Would you like me to create RFQs?</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -530,46 +479,49 @@ export default function EnterpriseLanding() {
       </section>
 
       {/* CTA */}
-      <section className="relative z-10 py-32 px-6 bg-[#dba63f]">
+      <section className="relative z-10 py-24 px-6 bg-gradient-to-br from-[#F4A460] to-[#dba63f]">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-5xl md:text-6xl font-serif text-white mb-8">
-            Ready to Transform<br />Your Enterprise Transactions?
+          <h2 className="text-5xl md:text-6xl font-bold text-white mb-8">
+            Request Early Access
           </h2>
-          <p className="text-xl text-white/90 mb-12">
-            Be among the first to experience the future of conversational commerce
+          <p className="text-xl text-white/90 mb-12 leading-relaxed">
+            Grain & Vault is currently in private beta. Join the waitlist to be among the first
+            to experience transparent financial infrastructure.
           </p>
           <Link
             href="/app"
-            className="inline-block px-12 py-5 bg-white text-[#183b6d] text-lg font-semibold rounded-sm hover:bg-[#183b6d] hover:text-white transition-all shadow-xl"
+            className="inline-block px-12 py-5 bg-white text-[#1a2332] text-lg font-bold rounded-sm hover:bg-[#1a2332] hover:text-white transition-all shadow-2xl"
           >
-            Start Your First Transaction
+            Join the Waitlist
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 py-16 px-6 bg-[#183b6d] text-white">
+      <footer className="relative z-10 py-16 px-6 bg-[#1a2332] text-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div>
-              <div className="font-semibold text-lg mb-4">Wells AI</div>
-              <p className="text-white/70 text-sm">
-                Every enterprise transaction will one day begin with a conversation. We're building that future.
+              <div className="font-bold text-lg mb-4">Grain & Vault</div>
+              <p className="text-white/70 text-sm leading-relaxed">
+                Infrastructure You Can See. The first transparent financial infrastructure
+                for B2B commerce.
               </p>
             </div>
             <div>
-              <div className="font-semibold mb-4">Resources</div>
+              <div className="font-semibold mb-4">Product</div>
               <ul className="space-y-2 text-sm text-white/70">
-                <li><Link href="/docs" className="hover:text-white transition">Documentation</Link></li>
-                <li><Link href="/docs/sdk" className="hover:text-white transition">SDK</Link></li>
-                <li><Link href="/docs/changelog" className="hover:text-white transition">Changelog</Link></li>
+                <li><Link href="/app" className="hover:text-white transition">GRAIN Stablecoin</Link></li>
+                <li><Link href="/app" className="hover:text-white transition">Vault Treasury</Link></li>
+                <li><Link href="/app" className="hover:text-white transition">Escrow & Payments</Link></li>
+                <li><Link href="/app" className="hover:text-white transition">Wells AI</Link></li>
               </ul>
             </div>
             <div>
               <div className="font-semibold mb-4">Company</div>
               <ul className="space-y-2 text-sm text-white/70">
                 <li><Link href="/about" className="hover:text-white transition">About</Link></li>
-                <li><a href="https://www.wellsonyx.com/careers" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Careers</a></li>
+                <li><a href="https://www.wellsonyx.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Wells Onyx</a></li>
                 <li><Link href="/contact" className="hover:text-white transition">Contact</Link></li>
               </ul>
             </div>
@@ -583,7 +535,7 @@ export default function EnterpriseLanding() {
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-white/50">© 2025 Wells AI. All rights reserved.</p>
+            <p className="text-sm text-white/50">© 2025 Grain & Vault. Powered by Wells Onyx.</p>
             <div className="flex gap-6">
               <a href="#" className="text-white/50 hover:text-white transition">LinkedIn</a>
               <a href="#" className="text-white/50 hover:text-white transition">Twitter</a>
@@ -591,8 +543,6 @@ export default function EnterpriseLanding() {
           </div>
         </div>
       </footer>
-      </div>
-      {/* End Blueprint/Ghost section */}
     </div>
   )
 }
