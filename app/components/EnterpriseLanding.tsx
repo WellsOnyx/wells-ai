@@ -633,7 +633,7 @@ export default function EnterpriseLanding() {
                 <li><Link href="/app" className="hover:text-white transition">GRAIN Stablecoin</Link></li>
                 <li><Link href="/app" className="hover:text-white transition">Vault Treasury</Link></li>
                 <li><Link href="/app" className="hover:text-white transition">Escrow & Payments</Link></li>
-                <li><Link href="/app" className="hover:text-white transition">Wells AI</Link></li>
+                <li><Link href="/app" className="hover:text-white transition">Wells</Link></li>
               </ul>
             </div>
             <div>
