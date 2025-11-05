@@ -357,7 +357,54 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
         ? `${authData.sessionClaims.firstName} ${authData.sessionClaims.lastName}`
         : undefined
 
-      console.log('[TOOL] Sending email from:', userEmail || 'wells@wellsonyx.com')
+      // Require authenticated user to send emails
+      if (!userEmail) {
+        console.error('[TOOL] No user email found - user must be logged in to send emails')
+        const toolInput = toolUseBlock.input as SendEmailInput
+
+        // Return error to Claude
+        const toolResultMessages = [
+          ...messages,
+          {
+            role: 'assistant',
+            content: data.content
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: toolUseBlock.id,
+                content: JSON.stringify({
+                  success: false,
+                  error: 'User must be logged in to send emails. Please sign in to continue.'
+                })
+              }
+            ]
+          }
+        ]
+
+        // Get final response from Claude with the error
+        const finalResponse = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 4096,
+            messages: toolResultMessages,
+            tools: EMAIL_TOOL_DEFINITION
+          }),
+        })
+
+        const finalData = await finalResponse.json()
+        return NextResponse.json({ response: finalData.content[0].text })
+      }
+
+      console.log('[TOOL] Sending email from:', userEmail)
 
       // Execute the email send directly
       const toolInput = toolUseBlock.input as SendEmailInput
