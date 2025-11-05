@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title Grain
@@ -353,11 +353,15 @@ contract Grain is ERC20, AccessControl, ReentrancyGuard, Pausable {
     // OVERRIDE REQUIRED BY PAUSABLE
     // ============================================
 
-    function _beforeTokenTransfer(
+    /**
+     * @dev Hook override for ERC20 _update (replaces _beforeTokenTransfer in v5)
+     * @notice Ensures all token transfers respect the pause state
+     */
+    function _update(
         address from,
         address to,
         uint256 amount
     ) internal override whenNotPaused {
-        super._beforeTokenTransfer(from, to, amount);
+        super._update(from, to, amount);
     }
 }
