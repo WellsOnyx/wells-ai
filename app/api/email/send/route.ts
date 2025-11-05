@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail, getWarmupStatus, isValidEmail } from '@/lib/resend-email'
+import { auth } from '@clerk/nextjs/server'
 
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
@@ -24,6 +25,13 @@ interface EmailRequest {
 
 export async function POST(req: NextRequest) {
   try {
+    // Get authenticated user from Clerk
+    const authData = await auth()
+    const userEmail = authData.sessionClaims?.email as string | undefined
+    const userName = authData.sessionClaims?.firstName && authData.sessionClaims?.lastName
+      ? `${authData.sessionClaims.firstName} ${authData.sessionClaims.lastName}`
+      : undefined
+
     const body: EmailRequest = await req.json()
 
     // Validation
@@ -49,16 +57,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Send email via Resend
+    // Use authenticated user's email as sender (if available)
     const result = await sendEmail({
       to: body.to,
       toName: body.toName,
       subject: body.subject,
       text: body.message,
-      from: body.from,
-      fromName: body.fromName,
+      from: body.from || userEmail, // Use logged-in user's email
+      fromName: body.fromName || userName, // Use logged-in user's name
       replyTo: body.replyTo,
       tags: {
-        userId: body.userId || 'anonymous',
+        userId: body.userId || authData.userId || 'anonymous',
         source: 'wells-chat'
       }
     })
