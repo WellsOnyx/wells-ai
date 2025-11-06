@@ -335,12 +335,12 @@ I've created your seller profile for ${profile.companyName}. Here's what happens
 • Pricing: ${profile.pricingModel}
 
 **Fees (based on value):**
-• **33 bps** - You bring your own buyer (we just facilitate)
-• **2.5%** - You use Wells GTM engine to find buyers
-• **6%** - Wells finds buyer & makes the intro
+• **0.33%** - You bring your own buyer (we just facilitate)
+• **3.3%** - You use Wells GTM engine to find buyers
+• **7%** - Wells finds buyer & makes the intro
 
 **Want more deals?**
-Most sellers start with Wells-originated deals (we find buyers), then graduate to using our GTM engine to source their own at 2.5%.
+Most sellers start with Wells-originated deals (we find buyers), then graduate to using our GTM engine to source their own at 3.3%.
 
 Ready to start selling?`
 }

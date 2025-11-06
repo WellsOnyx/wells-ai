@@ -234,8 +234,8 @@ export default function LuxuryLanding() {
                 icon: '✦'
               },
               {
-                title: '33bps Transaction Fee',
-                description: 'Simple, transparent pricing. Pay 33 basis points per transaction. No monthly fees, no hidden costs, no surprises. Scale commerce profitably from day one.',
+                title: 'Value-Based Pricing',
+                description: 'Pay based on what we deliver: 0.33% for transaction facilitation | 3.3% when you use our GTM engine | 7% when we originate the deal. Simple, transparent, aligned.',
                 icon: '◆'
               },
               {
@@ -268,7 +268,7 @@ export default function LuxuryLanding() {
       <section className="relative py-40 px-8">
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className="font-serif text-4xl md:text-5xl leading-relaxed text-[#f5f5f0] italic mb-8">
-            "33 basis points. 0 friction.<br />
+            "Pay for what we deliver. 0 friction.<br />
             Treasury that thinks. Commerce that flows."
           </blockquote>
           <div className="flex items-center justify-center gap-3">

@@ -26,8 +26,8 @@ export function getFeeStructure(originationType: DealOriginationType): FeeStruct
     case DealOriginationType.SELLER_SOURCED:
       return {
         originationType,
-        feePercentage: 0.0033, // 33 bps
-        description: 'Basic facilitation & escrow',
+        feePercentage: 0.0033, // 33 bps (0.33%)
+        description: 'Transaction facilitation only',
         includes: [
           'Grain Vault escrow (1-2 day payout)',
           'Contract generation',
@@ -40,8 +40,8 @@ export function getFeeStructure(originationType: DealOriginationType): FeeStruct
     case DealOriginationType.WELLS_GTM:
       return {
         originationType,
-        feePercentage: 0.025, // 2.5%
-        description: 'GTM engine access + facilitation',
+        feePercentage: 0.033, // 3.3%
+        description: 'GTM engine + facilitation',
         includes: [
           'AI-powered lead generation',
           'Email/SMS outreach campaigns',
@@ -56,7 +56,7 @@ export function getFeeStructure(originationType: DealOriginationType): FeeStruct
     case DealOriginationType.WELLS_ORIGINATED:
       return {
         originationType,
-        feePercentage: 0.06, // 6%
+        feePercentage: 0.07, // 7%
         description: 'Full origination + facilitation',
         includes: [
           'Wells finds & qualifies buyer',
@@ -113,27 +113,27 @@ export function getFeeStructureMarketingCopy(): string {
 
 We charge based on the value we provide:
 
-**🔹 Bring Your Own Buyer** (33 bps)
+**🔹 Bring Your Own Buyer** (0.33%)
 You source the deal, we handle payment & contracts.
 • Grain Vault escrow (1-2 day payout)
 • Automated contracts
 • Dispute resolution
 
-**🚀 Use Wells GTM Engine** (2.5%)
+**🚀 Use Wells GTM Engine** (3.3%)
 Access our AI-powered sales automation.
 • AI lead generation & qualification
 • Multi-channel outreach (email, SMS, LinkedIn)
 • CRM integration & analytics
 • Everything in Basic tier
 
-**⭐ Wells Originates Deal** (6%)
+**⭐ Wells Originates Deal** (7%)
 We find the buyer, make the intro, close the deal.
 • Wells finds & qualifies perfect buyer
 • Warm introduction with context
 • Negotiation support
 • Everything in GTM tier
 
-**Bottom line:** Start at 33 bps, only pay more when we help you make more.`
+**Bottom line:** Start at 0.33%, only pay more when we help you make more.`
 }
 
 /**
