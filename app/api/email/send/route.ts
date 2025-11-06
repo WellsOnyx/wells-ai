@@ -57,15 +57,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Send email via Resend
-    // Use authenticated user's email as sender (if available)
+    // Always send from Wells (wells@grainandvault.com)
+    // Set replyTo as user's email so responses go to the user
     const result = await sendEmail({
       to: body.to,
       toName: body.toName,
       subject: body.subject,
       text: body.message,
-      from: body.from || userEmail, // Use logged-in user's email
-      fromName: body.fromName || userName, // Use logged-in user's name
-      replyTo: body.replyTo,
+      from: body.from || 'wells@grainandvault.com', // Wells always sends as itself
+      fromName: body.fromName || 'Wells', // From: Wells <wells@grainandvault.com>
+      replyTo: body.replyTo || userEmail, // Replies go to the user
       tags: {
         userId: body.userId || user?.id || 'anonymous',
         source: 'wells-chat'

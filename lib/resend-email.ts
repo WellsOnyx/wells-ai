@@ -182,8 +182,8 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   }
 
   // Prepare email
-  // Default to wells@wellsonyx.com (system email) if not provided
-  const from = params.from || process.env.RESEND_FROM_EMAIL || 'wells@wellsonyx.com'
+  // Always send from Wells (wells@grainandvault.com)
+  const from = params.from || process.env.RESEND_FROM_EMAIL || 'wells@grainandvault.com'
   const fromName = params.fromName || 'Wells'
   const fromAddress = `${fromName} <${from}>`
 
