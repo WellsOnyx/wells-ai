@@ -95,8 +95,8 @@ export function detectSellerIntent(message: string, conversationHistory: string[
   ]
 
   for (const pattern of productPatterns) {
-    const matches = message.matchAll(pattern)
-    for (const match of matches) {
+    let match
+    while ((match = pattern.exec(message)) !== null) {
       if (match[1]) {
         products.push(match[1].trim())
       }
