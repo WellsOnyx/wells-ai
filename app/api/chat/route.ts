@@ -498,6 +498,10 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       var finalAssistantMessage = assistantMessage
     }
 
+    // Extract user message and conversation history FIRST
+    const lastUserMessage = messages[messages.length - 1]?.content || ''
+    const conversationHistory = messages.map((m: any) => m.content)
+
     // CONTENT MODERATION: Block illegal activities FIRST (before any intent detection)
     const moderationResult = moderateContent(lastUserMessage)
     if (!moderationResult.allowed) {
@@ -530,10 +534,6 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     let pioneerData = null
     let gtmData = null
     let jobSeekerData = null
-
-    // CHECK FOR GTM INTENT (sales, leads, customers)
-    const lastUserMessage = messages[messages.length - 1]?.content || ''
-    const conversationHistory = messages.map((m: any) => m.content)
 
     // CHECK FOR JOB SEEKER INTENT (career, job search, resume)
     const jobSeekerKeywords = ['job', 'career', 'resume', 'looking for work', 'find a job', 'hire me', 'employment', 'position']
