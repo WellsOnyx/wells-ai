@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { UserButton, useUser } from '@clerk/nextjs'
+import { useSession, signOut } from 'next-auth/react'
 
 export default function LuxuryLanding() {
-  const { isSignedIn, user } = useUser()
+  const { data: session, status } = useSession()
+  const user = session?.user
+  const isSignedIn = status === 'authenticated'
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [scrollY, setScrollY] = useState(0)
 
@@ -142,14 +144,12 @@ export default function LuxuryLanding() {
                 >
                   Enter
                 </Link>
-                <UserButton
-                  afterSignOutUrl="/"
-                  appearance={{
-                    elements: {
-                      avatarBox: "w-10 h-10 ring-1 ring-[#daa520]/20"
-                    }
-                  }}
-                />
+                <button
+                  onClick={() => signOut()}
+                  className="text-sm tracking-wide text-[#f5f5f0]/70 hover:text-[#daa520] transition-colors duration-300"
+                >
+                  Sign Out
+                </button>
               </>
             ) : (
               <>

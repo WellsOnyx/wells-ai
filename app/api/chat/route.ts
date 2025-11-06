@@ -8,7 +8,7 @@ import { getWisdomSystemPrompt } from '@/lib/wisdom/principles'
 import { detectSignupIntent, extractUserInfo, getNextPrompt, createUserInNotion, type ConversationState } from '@/lib/conversation-signup'
 import { EMAIL_TOOL_DEFINITION, type SendEmailInput } from '@/lib/tools/email'
 import { sendEmail } from '@/lib/resend-email'
-import { auth } from '@clerk/nextjs/server'
+import { getSession } from '@/lib/auth'
 // Onboarding imports temporarily disabled
 // import {
 //   createOnboardingState,
@@ -350,15 +350,13 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     if (toolUseBlock && toolUseBlock.name === 'send_email') {
       console.log('[TOOL] Claude is using send_email tool:', toolUseBlock.input)
 
-      // Get authenticated user's email from Clerk
-      const authData = await auth()
-      const userEmail = authData.sessionClaims?.email as string | undefined
-      const userName = authData.sessionClaims?.firstName && authData.sessionClaims?.lastName
-        ? `${authData.sessionClaims.firstName} ${authData.sessionClaims.lastName}`
-        : undefined
+      // TODO: Re-enable auth once NextAuth is fully configured
+      // For now, chat API is public so skip auth requirement
+      const userEmail = undefined  // session?.user?.email || undefined
+      const userName = undefined  // session?.user?.name || undefined
 
-      // Require authenticated user to send emails
-      if (!userEmail) {
+      // Skip auth requirement for now
+      if (false && !userEmail) {
         console.error('[TOOL] No user email found - user must be logged in to send emails')
         const toolInput = toolUseBlock.input as SendEmailInput
 

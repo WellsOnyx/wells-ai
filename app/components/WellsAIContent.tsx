@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
+import { useSession } from 'next-auth/react'
 import Onboarding, { UserData } from './Onboarding'
 import PartnershipPitch from './PartnershipPitch'
 import PartnershipTiers from './PartnershipTiers'
@@ -56,7 +56,9 @@ interface Message {
 export default function WellsAIContent() {
   const searchParams = useSearchParams()
   const isEmbedded = searchParams.get('embed') === 'true'
-  const { user, isLoaded } = useUser()
+  const { data: session, status } = useSession()
+  const user = session?.user
+  const isLoaded = status !== 'loading'
 
   const [userData, setUserData] = useState<UserData | null>(null)
   const [onboardingState, setOnboardingState] = useState<any | null>(null) // Onboarding state for legendary flow
@@ -120,12 +122,17 @@ export default function WellsAIContent() {
     setAnonymousUserId(userId)
   }, [])
 
-  // Load user data from Clerk metadata
+  // Load user data from session
   useEffect(() => {
-    if (isLoaded && user?.unsafeMetadata) {
-      const metadata = user.unsafeMetadata as Partial<UserData>
-      if (metadata.userType && metadata.name && metadata.email) {
-        setUserData(metadata as UserData)
+    if (isLoaded && user) {
+      // In NextAuth, we'll store user data differently
+      // For now, check if user has complete profile
+      if (user.email && user.name) {
+        setUserData({
+          name: user.name,
+          email: user.email,
+          userType: 'buyer' // Default, will be updated during onboarding
+        })
       }
     }
   }, [isLoaded, user])
@@ -182,14 +189,21 @@ export default function WellsAIContent() {
     migrateConversations()
   }, [isLoaded, user, anonymousUserId])
 
-  const handleOnboardingComplete = async (data: UserData) => {
-    // Save to Clerk user metadata
+  const handleOnboardingComplete = async (data: any) => {
+    // Save user data to database via API
     try {
-      await user?.update({
-        unsafeMetadata: data as Record<string, any>
+      const response = await fetch('/api/user/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
       })
-      setUserData(data)
-      setShowChat(true) // Show chat after onboarding
+
+      if (response.ok) {
+        setUserData(data)
+        setShowChat(true) // Show chat after onboarding
+      } else {
+        console.error('Failed to save user data')
+      }
     } catch (error) {
       console.error('Failed to save user data:', error)
     }
