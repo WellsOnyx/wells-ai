@@ -39,7 +39,7 @@ export const DEMO_SCRIPT: DemoScene[] = [
         role: 'assistant',
         content: "Let me show you how I work. Imagine you need to source 10,000 semiconductor chips for a new product launch...",
         typing: true,
-        delay: 3000
+        delay: 4500
       }
     ]
   },
@@ -55,21 +55,21 @@ export const DEMO_SCRIPT: DemoScene[] = [
         role: 'user',
         content: "Wells, I need 10,000 STM32 microcontrollers for Q1 production. Can you help me find suppliers?",
         typing: false,
-        delay: 1000
+        delay: 2000
       },
       {
         id: 'msg-4',
         role: 'assistant',
         content: "Absolutely. Let me search our global supplier network...",
         typing: true,
-        delay: 2000
+        delay: 3000
       },
       {
         id: 'msg-5',
         role: 'assistant',
         content: "I found 47 verified suppliers. Here are the top 3 matches based on your requirements:",
         typing: true,
-        delay: 3500,
+        delay: 4500,
         component: {
           type: 'supplier-card',
           data: {
@@ -122,35 +122,35 @@ export const DEMO_SCRIPT: DemoScene[] = [
         role: 'user',
         content: "TechSource Global looks good, but can you negotiate on price and lead time?",
         typing: false,
-        delay: 1500
+        delay: 3000
       },
       {
         id: 'msg-7',
         role: 'assistant',
         content: "I'll handle the negotiation. One moment...",
         typing: true,
-        delay: 2500
+        delay: 3500
       },
       {
         id: 'msg-8',
         role: 'assistant',
         content: "Great news! I negotiated:\n• Price: $2.45 → **$2.28/unit** (7% savings)\n• Lead time: 6 weeks → **4 weeks**\n• Payment terms: Net 30\n• Total: **$22,800** (saved $1,700)",
         typing: true,
-        delay: 5000
+        delay: 6000
       },
       {
         id: 'msg-9',
         role: 'user',
         content: "Perfect! Can you handle the payment and contracts?",
         typing: false,
-        delay: 8000
+        delay: 6000
       },
       {
         id: 'msg-10',
         role: 'assistant',
         content: "Already done. I've:\n✓ Generated contract with our legal templates\n✓ Routed payment through Grain Vault\n✓ Scheduled delivery tracking\n✓ Set up quality inspection checkpoints",
         typing: true,
-        delay: 10000,
+        delay: 8000,
         component: {
           type: 'payment-flow',
           data: {
@@ -176,7 +176,7 @@ export const DEMO_SCRIPT: DemoScene[] = [
         role: 'assistant',
         content: "Here's what just happened in 60 seconds:\n\n**Traditional Process:**\n• 2 weeks of supplier research\n• 5 days of back-and-forth negotiation\n• 3 days for legal review\n• 2 days for payment processing\n\n**With Wells:**\n✨ 60 seconds, start to finish",
         typing: true,
-        delay: 2000,
+        delay: 4000,
         component: {
           type: 'savings-chart',
           data: {
@@ -200,14 +200,14 @@ export const DEMO_SCRIPT: DemoScene[] = [
         role: 'assistant',
         content: "This is **Grain & Vault**:\n\n🌾 **Grain Vault** – Treasury that earns yield on every dollar\n⚡ **33 bps pricing** – Simple, transparent transaction fee\n🤖 **Wells AI** – Your 24/7 commerce companion\n🌍 **0 friction** – Buy or sell anything, anywhere",
         typing: true,
-        delay: 2000
+        delay: 4000
       },
       {
         id: 'msg-13',
         role: 'assistant',
         content: "Want to see this in your business? Create a free account and let's start with your first transaction.",
         typing: true,
-        delay: 7000
+        delay: 8000
       }
     ]
   }
