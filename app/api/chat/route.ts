@@ -10,6 +10,15 @@ import { EMAIL_TOOL_DEFINITION, type SendEmailInput } from '@/lib/tools/email'
 import { sendEmail } from '@/lib/resend-email'
 import { getSession } from '@/lib/auth'
 import { notifyDealRequest, extractDealDetails } from '@/lib/notifications'
+import { moderateContent } from '@/lib/content-moderation'
+import {
+  detectSellerIntent,
+  getSellerOnboardingQuestions,
+  createSellerProfile,
+  getSellerWelcomeMessage,
+  type SellerProfile
+} from '@/lib/seller-onboarding'
+import { createSellerProfile as saveSellerProfile, getSellerProfileByUserId } from '@/lib/db/seller-helpers'
 // Onboarding imports temporarily disabled
 // import {
 //   createOnboardingState,
@@ -489,6 +498,25 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       var finalAssistantMessage = assistantMessage
     }
 
+    // CONTENT MODERATION: Block illegal activities FIRST (before any intent detection)
+    const moderationResult = moderateContent(lastUserMessage)
+    if (!moderationResult.allowed) {
+      console.log('[MODERATION] Blocked request:', {
+        category: moderationResult.category,
+        severity: moderationResult.severity,
+        confidence: moderationResult.confidence
+      })
+
+      return NextResponse.json({
+        message: moderationResult.reason || "I can't help with that request. Wells is designed for legitimate B2B commerce only.",
+        moderation: {
+          blocked: true,
+          category: moderationResult.category,
+          severity: moderationResult.severity
+        }
+      })
+    }
+
     // Analyze intent based on user type
     let intent = null
     try {
@@ -633,14 +661,86 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       })
     }
 
-    // SELLER: Add them to supplier database (we'll build this next)
-    if ((userData?.userType === 'seller' || userData?.userType === 'both') && intent?.shouldMatch) {
-      // TODO: Build seller onboarding flow
-      // For now, just acknowledge
-      return NextResponse.json({
-        message: finalAssistantMessage,
-        procurementData: null
-      })
+    // CHECK FOR SELLER INTENT: Detect if user wants to sell products/services
+    let sellerData = null
+    const conversationHistory = messages.map((m: any) => m.content)
+    const sellerIntent = detectSellerIntent(lastUserMessage, conversationHistory)
+
+    if (sellerIntent.detected && sellerIntent.confidence > 0.7 && userData?.userId) {
+      console.log('[SELLER] Intent detected:', sellerIntent)
+
+      try {
+        // Check if seller already has profile
+        const existingProfile = await getSellerProfileByUserId(userData.userId)
+
+        if (existingProfile) {
+          // Seller already onboarded - provide marketplace status
+          sellerData = {
+            detected: true,
+            hasProfile: true,
+            profile: {
+              companyName: existingProfile.companyName,
+              categories: existingProfile.categories,
+              products: existingProfile.products,
+              verified: existingProfile.verified,
+              completedDeals: existingProfile.completedDeals,
+              rating: existingProfile.rating
+            }
+          }
+        } else {
+          // New seller - start onboarding
+          // Build partial profile from conversation so far
+          const partialProfile: Partial<SellerProfile> = {
+            userId: userData.userId,
+            email: sellerIntent.extractedInfo.email,
+            phone: sellerIntent.extractedInfo.phone,
+            products: sellerIntent.products || []
+          }
+
+          // Get next onboarding question
+          const nextQuestion = getSellerOnboardingQuestions(partialProfile)
+
+          if (nextQuestion) {
+            // Still collecting info
+            sellerData = {
+              detected: true,
+              hasProfile: false,
+              onboarding: {
+                currentField: nextQuestion.field,
+                question: nextQuestion.question,
+                type: nextQuestion.type,
+                options: nextQuestion.options,
+                progress: Object.keys(partialProfile).length / 8 // ~8 required fields
+              }
+            }
+          } else {
+            // All info collected - create profile
+            const profile = createSellerProfile(partialProfile)
+            await saveSellerProfile(profile)
+
+            const welcomeMessage = getSellerWelcomeMessage(profile)
+
+            sellerData = {
+              detected: true,
+              hasProfile: true,
+              justOnboarded: true,
+              welcomeMessage,
+              profile: {
+                companyName: profile.companyName,
+                categories: profile.categories,
+                products: profile.products
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[SELLER] Profile creation error:', error)
+        sellerData = {
+          detected: true,
+          hasProfile: false,
+          error: 'Failed to create seller profile. Please try again.'
+        }
+      }
     }
 
     // PROCUREMENT FLOW: Start supplier outreach immediately, continue conversation
@@ -796,7 +896,8 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       procurementData,
       gtmData,
       jobSeekerData,
-      signupData
+      signupData,
+      sellerData
     })
   } catch (error: any) {
     console.error('[CHAT] Unexpected error:', error)
