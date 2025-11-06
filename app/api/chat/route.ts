@@ -9,6 +9,7 @@ import { detectSignupIntent, extractUserInfo, getNextPrompt, createUserInNotion,
 import { EMAIL_TOOL_DEFINITION, type SendEmailInput } from '@/lib/tools/email'
 import { sendEmail } from '@/lib/resend-email'
 import { getSession } from '@/lib/auth'
+import { notifyDealRequest, extractDealDetails } from '@/lib/notifications'
 // Onboarding imports temporarily disabled
 // import {
 //   createOnboardingState,
@@ -646,12 +647,25 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     if (intent?.shouldMatch && intent?.category && intent?.requirements) {
       console.log('[PROCUREMENT] Intent detected:', intent)
 
+      const requestId = `req_${Date.now()}`
+
+      // NOTIFY JONAH IMMEDIATELY (non-blocking)
+      try {
+        const dealDetails = extractDealDetails(messages, { ...intent, requestId }, userData)
+        notifyDealRequest(dealDetails).catch(err => {
+          console.error('[NOTIFICATIONS] Failed to notify (non-critical):', err)
+        })
+        console.log('[NOTIFICATIONS] Deal request notification sent for:', requestId)
+      } catch (error) {
+        console.error('[NOTIFICATIONS] Failed to extract deal details (non-critical):', error)
+      }
+
       // Immediately kick off supplier pings in background (async, non-blocking)
       fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/procurement/ping-suppliers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          requestId: `req_${Date.now()}`,
+          requestId,
           category: intent.category,
           description: intent.requirements,
           buyerContext: lastUserMessage
@@ -662,7 +676,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       procurementData = {
         detected: true,
         sourcing: true,
-        requestId: `req_${Date.now()}`,
+        requestId,
         category: intent.category,
         suppliersContacted: 0, // Will be updated via webhook/polling
         status: 'reaching_out'
