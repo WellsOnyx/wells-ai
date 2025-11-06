@@ -143,7 +143,7 @@ export default function WellsAIContent() {
       // Wells introduces itself warmly
       setMessages([{
         role: 'assistant',
-        content: "Hi, I'm Grain.\n\nI'm here to help you buy or sell anything anywhere in the world. Never speak to a human.\n\nWhat brings you here today?"
+        content: "Hi, I'm Wells.\n\nI'm here to help you buy or sell anything anywhere in the world. Never speak to a human.\n\nWhat brings you here today?"
       }])
     }
   }, [isLoaded, userData, messages.length])
@@ -723,7 +723,7 @@ export default function WellsAIContent() {
                       </svg>
                     </div>
                     <div>
-                      <div className="font-medium text-[#183b6d] text-sm tracking-wide">Grain</div>
+                      <div className="font-medium text-[#183b6d] text-sm tracking-wide">Wells</div>
                       <div className="text-xs text-[#575757]">Your AI Companion</div>
                     </div>
                   </div>
@@ -757,7 +757,7 @@ export default function WellsAIContent() {
                         Start a conversation
                       </h2>
                       <p className="text-[#575757] mb-8 leading-relaxed">
-                        Tell Grain what you need. We handle procurement, executive search, partnerships,
+                        Tell Wells what you need. We handle procurement, executive search, partnerships,
                         and enterprise transactions across any industry.
                       </p>
                       <div className="grid md:grid-cols-3 gap-4 text-sm">

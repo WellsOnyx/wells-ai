@@ -520,7 +520,7 @@ export default function EnterpriseLanding() {
               Built for Every Industry
             </h2>
             <p className="text-xl text-white/80 max-w-3xl mx-auto">
-              Grain understands your business language. From procurement to hiring to GTM.
+              Wells understands your business language. From procurement to hiring to GTM.
             </p>
           </div>
 
@@ -554,7 +554,7 @@ export default function EnterpriseLanding() {
                 for Every Transaction
               </h2>
               <p className="text-xl text-[#575757] mb-8 leading-relaxed">
-                Grain is your personal AI agent that handles everything from supplier discovery to
+                Wells is your personal AI agent that handles everything from supplier discovery to
                 candidate outreach to payment reconciliation. Just chat naturally.
               </p>
               <ul className="space-y-4">
@@ -655,7 +655,7 @@ export default function EnterpriseLanding() {
                 <li><Link href="/app" className="hover:text-white transition">GRAIN Stablecoin</Link></li>
                 <li><Link href="/app" className="hover:text-white transition">Vault Treasury</Link></li>
                 <li><Link href="/app" className="hover:text-white transition">Escrow & Payments</Link></li>
-                <li><Link href="/app" className="hover:text-white transition">Grain AI</Link></li>
+                <li><Link href="/app" className="hover:text-white transition">Wells AI</Link></li>
               </ul>
             </div>
             <div>
