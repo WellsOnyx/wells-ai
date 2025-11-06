@@ -5,8 +5,8 @@ import { SessionProvider } from '@/app/components/SessionProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Wells AI | Conversational Commerce',
-  description: 'Intelligent procurement matching for enterprise buyers and suppliers',
+  title: 'Grain & Vault | B2B Commerce Platform',
+  description: 'Buy or sell anything anywhere in the world. Never speak to a human. Treasury + Grain Vault. 33bps, 0 friction.',
   other: {
     'impact-site-verification': '923256ae-9a83-4361-8115-b4934d461ef6',
   },

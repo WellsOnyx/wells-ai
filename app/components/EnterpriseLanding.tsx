@@ -467,7 +467,7 @@ export default function EnterpriseLanding() {
             </h2>
             <p className="text-xl text-[#575757] max-w-3xl mx-auto">
               From stablecoin to escrow to settlements. Everything you need for B2B commerce,
-              powered by Wells AI.
+              powered by Grain & Vault.
             </p>
           </div>
 
@@ -520,7 +520,7 @@ export default function EnterpriseLanding() {
               Built for Every Industry
             </h2>
             <p className="text-xl text-white/80 max-w-3xl mx-auto">
-              Wells AI understands your business language. From procurement to hiring to GTM.
+              Grain understands your business language. From procurement to hiring to GTM.
             </p>
           </div>
 
@@ -547,14 +547,14 @@ export default function EnterpriseLanding() {
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
               <div className="inline-block px-4 py-2 bg-[#F4A460]/10 border border-[#F4A460]/20 rounded-sm mb-6">
-                <span className="text-sm font-semibold text-[#F4A460]">POWERED BY WELLS AI</span>
+                <span className="text-sm font-semibold text-[#F4A460]">POWERED BY GRAIN & VAULT</span>
               </div>
               <h2 className="text-5xl font-bold text-[#1a2332] mb-6">
                 Your AI Companion<br />
                 for Every Transaction
               </h2>
               <p className="text-xl text-[#575757] mb-8 leading-relaxed">
-                Wells is your personal AI agent that handles everything from supplier discovery to
+                Grain is your personal AI agent that handles everything from supplier discovery to
                 candidate outreach to payment reconciliation. Just chat naturally.
               </p>
               <ul className="space-y-4">
@@ -655,7 +655,7 @@ export default function EnterpriseLanding() {
                 <li><Link href="/app" className="hover:text-white transition">GRAIN Stablecoin</Link></li>
                 <li><Link href="/app" className="hover:text-white transition">Vault Treasury</Link></li>
                 <li><Link href="/app" className="hover:text-white transition">Escrow & Payments</Link></li>
-                <li><Link href="/app" className="hover:text-white transition">Wells</Link></li>
+                <li><Link href="/app" className="hover:text-white transition">Grain AI</Link></li>
               </ul>
             </div>
             <div>
