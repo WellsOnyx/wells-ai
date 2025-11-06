@@ -128,7 +128,7 @@ export default function LuxuryLanding() {
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[#daa520]/10 bg-[#0a0a0a]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-8 py-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="text-2xl font-serif tracking-wider text-[#daa520]">WELLS</div>
+            <div className="text-2xl font-serif tracking-wider text-[#daa520]">Grain & Vault</div>
             <div className="h-6 w-px bg-[#daa520]/30"></div>
             <div className="text-xs tracking-[0.3em] text-[#f5f5f0]/50 uppercase">B2B Commerce Platform</div>
           </div>
