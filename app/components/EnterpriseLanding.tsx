@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { UserButton, useUser } from '@clerk/nextjs'
 
 export default function EnterpriseLanding() {
+  const { isSignedIn, user } = useUser()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [navPrice, setNavPrice] = useState(1.0417) // Mock GRAIN price
   const [totalNAV, setTotalNAV] = useState(127500000) // Mock total NAV
@@ -322,16 +324,34 @@ export default function EnterpriseLanding() {
             </Link>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/app" className="text-sm text-[#575757] hover:text-[#1a2332] transition-colors">
-              Sign In
-            </Link>
-            <Link
-              href="/app"
-              className="px-5 py-2 bg-[#1a2332] text-white text-sm font-medium rounded-sm hover:bg-[#0d1723] transition-all relative overflow-hidden group"
-            >
-              <span className="relative z-10">Reserve Your Spot</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-[#F4A460]/0 via-[#F4A460]/10 to-[#F4A460]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            </Link>
+            {isSignedIn ? (
+              <>
+                <Link href="/app" className="text-sm text-[#575757] hover:text-[#1a2332] transition-colors">
+                  Go to App
+                </Link>
+                <UserButton
+                  afterSignOutUrl="/"
+                  appearance={{
+                    elements: {
+                      avatarBox: "w-10 h-10"
+                    }
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                <Link href="/app" className="text-sm text-[#575757] hover:text-[#1a2332] transition-colors">
+                  Sign In
+                </Link>
+                <Link
+                  href="/app"
+                  className="px-5 py-2 bg-[#1a2332] text-white text-sm font-medium rounded-sm hover:bg-[#0d1723] transition-all relative overflow-hidden group"
+                >
+                  <span className="relative z-10">Reserve Your Spot</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#F4A460]/0 via-[#F4A460]/10 to-[#F4A460]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
