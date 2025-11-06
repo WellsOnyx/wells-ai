@@ -123,12 +123,14 @@ export default function WellsAIContent() {
   // Load user data from session
   useEffect(() => {
     if (isLoaded && user) {
-      // In NextAuth, we'll store user data differently
-      // For now, check if user has complete profile
-      if (user.email && user.name) {
+      // Get email from Clerk's email addresses array
+      const primaryEmail = user.emailAddresses?.[0]?.emailAddress
+      const userName = user.fullName || user.firstName || user.username
+
+      if (primaryEmail && userName) {
         setUserData({
-          name: user.name,
-          email: user.email,
+          name: userName,
+          email: primaryEmail,
           userType: 'buyer' // Default, will be updated during onboarding
         })
       }
