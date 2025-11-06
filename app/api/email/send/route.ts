@@ -7,7 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail, getWarmupStatus, isValidEmail } from '@/lib/resend-email'
-import { auth } from '@clerk/nextjs/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
@@ -25,12 +26,10 @@ interface EmailRequest {
 
 export async function POST(req: NextRequest) {
   try {
-    // Get authenticated user from Clerk
-    const authData = await auth()
-    const userEmail = authData.sessionClaims?.email as string | undefined
-    const userName = authData.sessionClaims?.firstName && authData.sessionClaims?.lastName
-      ? `${authData.sessionClaims.firstName} ${authData.sessionClaims.lastName}`
-      : undefined
+    // Get authenticated user from NextAuth
+    const session = await getServerSession(authOptions)
+    const userEmail = session?.user?.email || undefined
+    const userName = session?.user?.name || undefined
 
     const body: EmailRequest = await req.json()
 
