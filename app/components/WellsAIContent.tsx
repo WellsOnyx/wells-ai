@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import Onboarding, { UserData } from './Onboarding'
 import PartnershipPitch from './PartnershipPitch'
 import PartnershipTiers from './PartnershipTiers'
@@ -56,9 +56,7 @@ interface Message {
 export default function WellsAIContent() {
   const searchParams = useSearchParams()
   const isEmbedded = searchParams.get('embed') === 'true'
-  const { data: session, status } = useSession()
-  const user = session?.user
-  const isLoaded = status !== 'loading'
+  const { user, isLoaded } = useUser()
 
   const [userData, setUserData] = useState<UserData | null>(null)
   const [onboardingState, setOnboardingState] = useState<any | null>(null) // Onboarding state for legendary flow
