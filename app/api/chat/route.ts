@@ -663,7 +663,6 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
 
     // CHECK FOR SELLER INTENT: Detect if user wants to sell products/services
     let sellerData = null
-    const conversationHistory = messages.map((m: any) => m.content)
     const sellerIntent = detectSellerIntent(lastUserMessage, conversationHistory)
 
     if (sellerIntent.detected && sellerIntent.confidence > 0.7 && userData?.userId) {
