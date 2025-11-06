@@ -206,6 +206,9 @@ model RFQ {
   // Notion reference
   notionPageId String?
 
+  // Quotes from sellers
+  quotes SellerQuote[]
+
   @@index([userId])
   @@index([status])
   @@index([category])
@@ -649,6 +652,121 @@ model PartnerReferral {
 
   @@index([userId])
   @@index([partnerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================
+// SELLER PROFILES & MARKETPLACE SUPPLY
+// Two-sided marketplace: Buyers request, Sellers fulfill
+// ============================================
+
+enum PricingModel {
+  FIXED             // Fixed price per unit
+  VOLUME_DISCOUNT   // Volume-based pricing tiers
+  NEGOTIABLE        // Case-by-case negotiation
+  RFQ_ONLY          // Must request quote with specs
+}
+
+enum NotificationFrequency {
+  INSTANT         // Real-time notifications
+  DAILY_DIGEST    // Once per day summary
+  WEEKLY_DIGEST   // Once per week summary
+}
+
+// Seller profile - suppliers on the platform
+model SellerProfile {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // User reference
+  userId String @unique // Clerk user ID
+
+  // Company info
+  companyName String
+  contactName String
+  email       String
+  phone       String?
+
+  // What they sell
+  categories String[] // e.g., ['Electronics', 'PCB Manufacturing']
+  products   String[] // e.g., ['STM32 Microcontrollers', 'Custom PCBs']
+  services   String[] // e.g., ['PCB Design', 'Prototyping']
+
+  // Capabilities
+  minimumOrderQuantity Int?
+  maximumOrderQuantity Int?
+  leadTimeDays         Int? // Typical lead time in days
+  shippingRegions      String[] // e.g., ['North America', 'Global']
+
+  // Business details
+  yearsInBusiness Int?
+  certifications  String[] // e.g., ['ISO 9001', 'RoHS', 'UL']
+  website         String?
+
+  // Pricing
+  pricingModel      PricingModel @default(NEGOTIABLE)
+  typicalPriceRange String? // e.g., '$1-10 per unit'
+
+  // Notification preferences
+  notificationChannels  String[] // ['email', 'sms']
+  notificationFrequency NotificationFrequency @default(INSTANT)
+
+  // Status
+  verified      Boolean @default(false)
+  active        Boolean @default(true)
+  rating        Float? // 1-5 stars
+  completedDeals Int    @default(0)
+
+  // Onboarding state (JSON serialized partial profile data)
+  onboardingState     Json?
+  onboardingCompleted Boolean @default(false)
+
+  // Quotes sent by this seller
+  quotes SellerQuote[]
+
+  @@index([userId])
+  @@index([active])
+  @@index([verified])
+  @@index([categories])
+}
+
+// Seller quote in response to an RFQ
+model SellerQuote {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Seller reference
+  sellerId String
+  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // RFQ reference
+  rfqId String
+  rfq   RFQ @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+
+  // Quote details
+  pricePerUnit    Int // in cents
+  totalPrice      Int // in cents
+  quantity        Int
+  leadTimeDays    Int
+  validUntil      DateTime
+
+  // Additional details
+  notes           String? @db.Text
+  terms           String? @db.Text
+  specifications  Json? // Detailed specs and compliance info
+
+  // Status
+  status String @default("pending") // "pending", "accepted", "rejected", "expired"
+
+  // If accepted
+  acceptedAt DateTime?
+  acceptedBy String? // Buyer user ID
+
+  @@index([sellerId])
+  @@index([rfqId])
   @@index([status])
   @@index([createdAt])
 }
