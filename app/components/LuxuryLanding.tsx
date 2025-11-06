@@ -199,7 +199,7 @@ export default function LuxuryLanding() {
           {/* CTA */}
           <div className="flex items-center gap-6">
             <Link
-              href="/app"
+              href="/demo"
               className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#daa520] to-[#b8860b] text-[#0a0a0a] font-medium tracking-wide hover:from-[#b8860b] hover:to-[#daa520] transition-all duration-500 shadow-2xl shadow-[#daa520]/30 hover:scale-105"
             >
               <svg
