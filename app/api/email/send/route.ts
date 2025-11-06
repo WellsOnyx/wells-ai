@@ -7,8 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail, getWarmupStatus, isValidEmail } from '@/lib/resend-email'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth, currentUser } from '@clerk/nextjs/server'
 
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
@@ -26,10 +25,12 @@ interface EmailRequest {
 
 export async function POST(req: NextRequest) {
   try {
-    // Get authenticated user from NextAuth
-    const session = await getServerSession(authOptions)
-    const userEmail = session?.user?.email || undefined
-    const userName = session?.user?.name || undefined
+    // Get authenticated user from Clerk
+    const user = await currentUser()
+    const userEmail = user?.emailAddresses[0]?.emailAddress || undefined
+    const userName = user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.firstName || undefined
 
     const body: EmailRequest = await req.json()
 
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
       fromName: body.fromName || userName, // Use logged-in user's name
       replyTo: body.replyTo,
       tags: {
-        userId: body.userId || authData.userId || 'anonymous',
+        userId: body.userId || user?.id || 'anonymous',
         source: 'wells-chat'
       }
     })

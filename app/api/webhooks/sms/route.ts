@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No active requests found' }, { status: 404 });
     }
 
-    const request = requestsQuery.results[0];
+    const activeRequest = requestsQuery.results[0];
     const bodyLower = body.toLowerCase().trim();
 
     // Handle numeric responses (1=Interested, 2=Pass)
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     console.log(`[SMS Webhook] Supplier: ${supplierName} | Response: "${body}" | Status: ${responseStatus}`);
 
     await notion.comments.create({
-      parent: { page_id: request.id },
+      parent: { page_id: activeRequest.id },
       rich_text: [
         {
           text: {

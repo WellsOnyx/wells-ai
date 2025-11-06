@@ -1,66 +1,26 @@
-import { withAuth } from 'next-auth/middleware'
-import { NextResponse } from 'next/server'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
 // Public routes that don't require authentication
-const publicRoutes = [
+const isPublicRoute = createRouteMatcher([
   '/',
-  '/sign-in',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
   '/verify-request',
   '/auth/error',
   '/early-access',
   '/sms-opt-in',
-]
-
-// API routes that are public
-const publicApiRoutes = [
-  '/api/auth',
-  '/api/webhooks',
-  '/api/email',
+  '/api/webhooks(.*)',
+  '/api/email(.*)',
   '/api/test-anthropic',
-  '/api/waitlist',
-]
+  '/api/waitlist(.*)',
+  '/api/widget(.*)',
+])
 
-export default withAuth(
-  function middleware(req) {
-    const { pathname } = req.nextUrl
-
-    // Allow public routes
-    if (publicRoutes.some(route => pathname === route || pathname.startsWith(route))) {
-      return NextResponse.next()
-    }
-
-    // Allow public API routes
-    if (publicApiRoutes.some(route => pathname.startsWith(route))) {
-      return NextResponse.next()
-    }
-
-    // All other routes require authentication (handled by withAuth)
-    return NextResponse.next()
-  },
-  {
-    callbacks: {
-      authorized: ({ req, token }) => {
-        const { pathname } = req.nextUrl
-
-        // Check if route is public
-        if (publicRoutes.some(route => pathname === route || pathname.startsWith(route))) {
-          return true
-        }
-
-        // Check if API route is public
-        if (publicApiRoutes.some(route => pathname.startsWith(route))) {
-          return true
-        }
-
-        // For all other routes, require authentication
-        return !!token
-      },
-    },
-    pages: {
-      signIn: '/sign-in',
-    },
+export default clerkMiddleware(async (auth, req) => {
+  if (!isPublicRoute(req)) {
+    await auth.protect()
   }
-)
+})
 
 export const config = {
   matcher: [

@@ -2,12 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useSession, signOut } from 'next-auth/react'
+import { useUser, SignOutButton } from '@clerk/nextjs'
 
 export default function LuxuryLanding() {
-  const { data: session, status } = useSession()
-  const user = session?.user
-  const isSignedIn = status === 'authenticated'
+  const { user, isSignedIn } = useUser()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [scrollY, setScrollY] = useState(0)
 
@@ -144,12 +142,11 @@ export default function LuxuryLanding() {
                 >
                   Enter
                 </Link>
-                <button
-                  onClick={() => signOut()}
-                  className="text-sm tracking-wide text-[#f5f5f0]/70 hover:text-[#daa520] transition-colors duration-300"
-                >
-                  Sign Out
-                </button>
+                <SignOutButton>
+                  <button className="text-sm tracking-wide text-[#f5f5f0]/70 hover:text-[#daa520] transition-colors duration-300">
+                    Sign Out
+                  </button>
+                </SignOutButton>
               </>
             ) : (
               <>
@@ -196,7 +193,7 @@ export default function LuxuryLanding() {
 
           {/* Subtitle - refined typography */}
           <p className="text-xl md:text-2xl text-[#f5f5f0]/60 max-w-2xl mb-12 leading-relaxed font-light">
-            Enterprise treasury automation meets intelligent commerce. Eliminate payment friction, accelerate cash flow, and orchestrate B2B operations with unprecedented precision.
+            B2B commerce platform with Treasury + Grain Vault. Pay 33bps, enjoy 0 friction. Move capital at the speed of conversation.
           </p>
 
           {/* CTA */}
@@ -231,18 +228,18 @@ export default function LuxuryLanding() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#daa520]/10">
             {[
               {
-                title: 'Intelligent Treasury',
-                description: 'Autonomous payment orchestration, real-time cash positioning, and predictive liquidity management across all accounts.',
+                title: 'Treasury + Grain Vault',
+                description: 'Unified treasury with Grain tokenomics. Earn on float, optimize working capital, and unlock liquidity across your entire operation. 0 friction, real-time settlement.',
                 icon: '✦'
               },
               {
-                title: 'Supply Chain Intelligence',
-                description: 'AI-powered procurement, automated supplier matching, and dynamic pricing optimization for every transaction.',
+                title: '33bps Transaction Fee',
+                description: 'Simple, transparent pricing. Pay 33 basis points per transaction. No monthly fees, no hidden costs, no surprises. Scale commerce profitably from day one.',
                 icon: '◆'
               },
               {
-                title: 'Unified Commerce Operations',
-                description: 'RFQ management, contract negotiation, and order fulfillment—orchestrated through conversational intelligence.',
+                title: 'B2B Commerce Platform',
+                description: 'Source suppliers, negotiate contracts, manage RFQs. From semiconductors to executive search—everything transactable, conversationally orchestrated.',
                 icon: '●'
               }
             ].map((feature, i) => (
@@ -270,12 +267,12 @@ export default function LuxuryLanding() {
       <section className="relative py-40 px-8">
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className="font-serif text-4xl md:text-5xl leading-relaxed text-[#f5f5f0] italic mb-8">
-            "The most profitable companies<br />
-            move capital at the speed of thought."
+            "33 basis points. 0 friction.<br />
+            Treasury that thinks. Commerce that flows."
           </blockquote>
           <div className="flex items-center justify-center gap-3">
             <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#daa520]/50"></div>
-            <span className="text-sm tracking-[0.3em] text-[#daa520] uppercase">Enterprise Velocity</span>
+            <span className="text-sm tracking-[0.3em] text-[#daa520] uppercase">Grain Vault Powered</span>
             <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#daa520]/50"></div>
           </div>
         </div>
