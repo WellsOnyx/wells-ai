@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { UserButton, useUser } from '@clerk/nextjs'
+import { useSession, signOut } from 'next-auth/react'
 
 export default function LuxuryLanding() {
-  const { isSignedIn, user } = useUser()
+  const { data: session, status } = useSession()
+  const isSignedIn = !!session?.user
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [scrollY, setScrollY] = useState(0)
 
@@ -130,7 +131,7 @@ export default function LuxuryLanding() {
           <div className="flex items-center gap-3">
             <div className="text-2xl font-serif tracking-wider text-[#daa520]">WELLS</div>
             <div className="h-6 w-px bg-[#daa520]/30"></div>
-            <div className="text-xs tracking-[0.3em] text-[#f5f5f0]/50 uppercase">AI Concierge</div>
+            <div className="text-xs tracking-[0.3em] text-[#f5f5f0]/50 uppercase">B2B Commerce Platform</div>
           </div>
 
           <div className="flex items-center gap-6">
@@ -142,14 +143,15 @@ export default function LuxuryLanding() {
                 >
                   Enter
                 </Link>
-                <UserButton
-                  afterSignOutUrl="/"
-                  appearance={{
-                    elements: {
-                      avatarBox: "w-10 h-10 ring-1 ring-[#daa520]/20"
-                    }
-                  }}
-                />
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-[#f5f5f0]/70">{session?.user?.email}</div>
+                  <button
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    className="text-sm tracking-wide text-[#f5f5f0]/70 hover:text-[#daa520] transition-colors duration-300"
+                  >
+                    Sign Out
+                  </button>
+                </div>
               </>
             ) : (
               <>
@@ -188,15 +190,15 @@ export default function LuxuryLanding() {
 
           {/* Main headline - large, editorial style */}
           <h1 className="font-serif text-7xl md:text-8xl lg:text-9xl leading-[0.9] mb-8 tracking-tight">
-            <span className="block text-[#f5f5f0]">The Art of</span>
+            <span className="block text-[#f5f5f0]">Zero Friction</span>
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#daa520] via-[#f0e68c] to-[#daa520]">
-              Intelligence
+              Commerce
             </span>
           </h1>
 
           {/* Subtitle - refined typography */}
           <p className="text-xl md:text-2xl text-[#f5f5f0]/60 max-w-2xl mb-12 leading-relaxed font-light">
-            An AI companion that understands nuance, anticipates needs, and elevates every interaction to an art form.
+            Enterprise treasury automation meets intelligent commerce. Eliminate payment friction, accelerate cash flow, and orchestrate B2B operations with unprecedented precision.
           </p>
 
           {/* CTA */}
@@ -205,7 +207,7 @@ export default function LuxuryLanding() {
               href="/app"
               className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-[#daa520] to-[#b8860b] text-[#0a0a0a] font-medium tracking-wide hover:from-[#b8860b] hover:to-[#daa520] transition-all duration-500 shadow-2xl shadow-[#daa520]/30"
             >
-              <span>Request Access</span>
+              <span>Schedule Consultation</span>
               <svg
                 className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1"
                 fill="none"
@@ -231,18 +233,18 @@ export default function LuxuryLanding() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#daa520]/10">
             {[
               {
-                title: 'Conversational Mastery',
-                description: 'Every exchange feels natural, intuitive, and perfectly timed.',
+                title: 'Intelligent Treasury',
+                description: 'Autonomous payment orchestration, real-time cash positioning, and predictive liquidity management across all accounts.',
                 icon: '✦'
               },
               {
-                title: 'Contextual Memory',
-                description: 'Remembers your preferences, relationships, and history across sessions.',
+                title: 'Supply Chain Intelligence',
+                description: 'AI-powered procurement, automated supplier matching, and dynamic pricing optimization for every transaction.',
                 icon: '◆'
               },
               {
-                title: 'Executive Actions',
-                description: 'Send emails, manage tasks, orchestrate workflows—all through conversation.',
+                title: 'Unified Commerce Operations',
+                description: 'RFQ management, contract negotiation, and order fulfillment—orchestrated through conversational intelligence.',
                 icon: '●'
               }
             ].map((feature, i) => (
@@ -270,12 +272,12 @@ export default function LuxuryLanding() {
       <section className="relative py-40 px-8">
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className="font-serif text-4xl md:text-5xl leading-relaxed text-[#f5f5f0] italic mb-8">
-            "Technology should feel like magic,<br />
-            not machinery."
+            "The most profitable companies<br />
+            move capital at the speed of thought."
           </blockquote>
           <div className="flex items-center justify-center gap-3">
             <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#daa520]/50"></div>
-            <span className="text-sm tracking-[0.3em] text-[#daa520] uppercase">Wells Philosophy</span>
+            <span className="text-sm tracking-[0.3em] text-[#daa520] uppercase">Enterprise Velocity</span>
             <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#daa520]/50"></div>
           </div>
         </div>
