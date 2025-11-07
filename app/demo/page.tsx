@@ -166,6 +166,12 @@ function CTAOverlay() {
             Create Free Account
           </Link>
           <Link
+            href="/demo/seller"
+            className="w-full sm:w-auto px-8 py-4 bg-[#f5f5f0]/10 border border-[#f5f5f0]/20 text-[#f5f5f0] font-semibold hover:bg-[#f5f5f0]/20 transition-all duration-200"
+          >
+            See Seller Side
+          </Link>
+          <Link
             href="/"
             className="w-full sm:w-auto px-8 py-4 border border-[#daa520]/30 text-[#f5f5f0] hover:border-[#daa520]/50 hover:bg-[#daa520]/5 transition-all duration-300"
           >
