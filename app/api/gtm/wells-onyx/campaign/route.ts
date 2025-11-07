@@ -344,7 +344,7 @@ export async function PATCH(request: NextRequest) {
         const result = await approveCampaign({
           campaign,
           instantlyApiKey: apiKey,
-          instantlyCampaignId: validatedData.instantlyCampaignId || dbCampaign.instantlyCampaignId,
+          instantlyCampaignId: validatedData.instantlyCampaignId || dbCampaign.instantlyCampaignId || undefined,
         })
 
         // Update campaign status

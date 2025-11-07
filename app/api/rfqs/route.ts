@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         category,
         title,
         description,
-        requirements: requirements ? { requirements } : null,
+        requirements: requirements ? { requirements } : undefined,
         status: 'open'
       }
     })

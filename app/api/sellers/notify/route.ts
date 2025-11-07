@@ -52,13 +52,13 @@ export async function POST(request: NextRequest) {
     const matchResult = await matchRFQWithSellers(
       {
         id: rfqId,
-        category: rfq.category || 'General',
-        title: rfq.title || 'RFQ',
-        description: rfq.description || '',
-        requirements: rfq.requirements || rfq.description || '',
-        quantity: rfq.quantity,
-        budget: rfq.budget,
-        userId: rfq.buyerId || userId
+        category: (rfq as any).category || 'General',
+        title: (rfq as any).title || 'RFQ',
+        description: (rfq as any).description || '',
+        requirements: (rfq as any).requirements || (rfq as any).description || '',
+        quantity: (rfq as any).quantity,
+        budget: (rfq as any).budget,
+        userId: (rfq as any).buyerId || userId
       },
       {
         minMatchScore: 30, // Lower threshold for matching
@@ -101,15 +101,15 @@ export async function POST(request: NextRequest) {
       } else {
         // Actually send the notification
         const result = await sendRFQMatchNotification(seller, {
-          rfqId: rfq.id,
-          category: rfq.category || 'General',
-          title: rfq.title || 'RFQ',
-          description: rfq.description || '',
-          requirements: rfq.requirements || rfq.description || '',
-          quantity: rfq.quantity,
-          budget: rfq.budget,
-          buyerName: rfq.buyerName,
-          createdAt: new Date(rfq.createdAt || Date.now())
+          rfqId: (rfq as any).id,
+          category: (rfq as any).category || 'General',
+          title: (rfq as any).title || 'RFQ',
+          description: (rfq as any).description || '',
+          requirements: (rfq as any).requirements || (rfq as any).description || '',
+          quantity: (rfq as any).quantity,
+          budget: (rfq as any).budget,
+          buyerName: (rfq as any).buyerName,
+          createdAt: new Date((rfq as any).createdAt || Date.now())
         })
 
         notificationResults.push(result)

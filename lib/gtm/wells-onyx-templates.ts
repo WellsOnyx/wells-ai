@@ -112,7 +112,7 @@ Worth a quick call to see if we can help?`
       companySize: ['11-50', '51-200', '201-500'],
       commonPainPoints: [
         'Need regulatory-savvy executives (SEC, OCC, state licensing)',
-        'Can't find candidates with payments experience',
+        'Can\'t find candidates with payments experience',
         'Recent exam findings require senior leadership',
         'Scaling compliance team for growth',
         'Board demanding stronger risk management'
@@ -238,7 +238,7 @@ Recent placement: CTO at defense tech unicorn (TS/SCI). Happy to share insights 
         'FDA submission requires clinical leadership',
         'Investors demanding Chief Medical Officer hire',
         'Physician adoption depends on clinical credibility',
-        'Tired of recruiters who don't understand HIPAA/HL7/FHIR'
+        'Tired of recruiters who don\'t understand HIPAA/HL7/FHIR'
       ],
       avgDealSize: 38000
     },
@@ -300,9 +300,9 @@ We've placed CMOs at 5 FDA-regulated healthtech companies. Happy to share insigh
       companySize: ['11-50', '51-200', '201-500'],
       commonPainPoints: [
         'Plateaued at $5M ARR, need enterprise sales leader',
-        'Founder-led sales isn't scalable anymore',
+        'Founder-led sales isn\'t scalable anymore',
         'Board demanding predictable pipeline',
-        'Need someone who's built 0→$50M ARR before',
+        'Need someone who\'s built 0→$50M ARR before',
         'Lost last 3 enterprise deals in final stages'
       ],
       avgDealSize: 42000
