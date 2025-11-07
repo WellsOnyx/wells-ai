@@ -53,7 +53,7 @@ export const WELLS_ONYX_PRACTICE_GROUPS: Record<string, PracticeGroup> = {
         'Need cybersecurity leadership fast (board pressure)',
         'Compliance deadlines approaching',
         'Recent security incident exposed leadership gap',
-        'Tired of using generalist recruiters who don't understand InfoSec'
+        'Tired of using generalist recruiters who don\'t understand InfoSec'
       ],
       avgDealSize: 35000 // $35K placement fee
     },
