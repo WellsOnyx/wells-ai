@@ -211,12 +211,12 @@ function SellerDemoContent() {
       setTimeout(() => {
         setIsTyping(false)
         setMessages((prev) => [...prev, currentMessage])
-        setTimeout(() => setCurrentIndex(currentIndex + 1), currentMessage.delay || 800)
-      }, 1000)
+        setTimeout(() => setCurrentIndex(currentIndex + 1), currentMessage.delay || 2000)
+      }, 2000)
     } else {
       // User messages appear immediately
       setMessages((prev) => [...prev, currentMessage])
-      setTimeout(() => setCurrentIndex(currentIndex + 1), currentMessage.delay || 800)
+      setTimeout(() => setCurrentIndex(currentIndex + 1), currentMessage.delay || 1500)
     }
   }, [currentIndex])
 

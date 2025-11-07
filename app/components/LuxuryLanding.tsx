@@ -224,6 +224,91 @@ export default function LuxuryLanding() {
         </div>
       </section>
 
+      {/* See Wells in Action - Demo Showcase */}
+      <section className="relative py-24 px-8 border-t border-[#daa520]/10">
+        <div className="max-w-5xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-6 border border-[#daa520]/20 bg-[#daa520]/5 backdrop-blur-sm">
+            <svg className="w-4 h-4 text-[#daa520]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-xs tracking-[0.25em] text-[#daa520] uppercase">Interactive Demos</span>
+          </div>
+
+          <h2 className="font-serif text-5xl md:text-6xl text-[#f5f5f0] mb-6 tracking-tight">
+            See Wells in Action
+          </h2>
+
+          <p className="text-lg text-[#f5f5f0]/60 mb-12 max-w-2xl mx-auto leading-relaxed">
+            Experience how Wells transforms B2B commerce from both perspectives—whether you're sourcing suppliers or seeking buyers.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {/* Buyer Demo */}
+            <Link
+              href="/demo"
+              className="group relative bg-[#1a1a1a] border border-[#daa520]/20 p-8 hover:border-[#daa520]/50 transition-all duration-500 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#daa520]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl"></div>
+
+              <div className="relative z-10">
+                <div className="w-12 h-12 mb-4 rounded-full bg-gradient-to-br from-[#daa520] to-[#b8860b] flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[#0a0a0a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+
+                <h3 className="font-serif text-2xl text-[#f5f5f0] mb-3 tracking-tight">
+                  Buyer Experience
+                </h3>
+
+                <p className="text-[#f5f5f0]/60 mb-6 leading-relaxed">
+                  Watch Wells source suppliers, negotiate contracts, and close deals—all through conversation.
+                </p>
+
+                <div className="inline-flex items-center gap-2 text-[#daa520] text-sm font-medium group-hover:gap-3 transition-all duration-300">
+                  <span>Start Demo</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </Link>
+
+            {/* Seller Demo */}
+            <Link
+              href="/demo/seller"
+              className="group relative bg-[#1a1a1a] border border-[#daa520]/20 p-8 hover:border-[#daa520]/50 transition-all duration-500 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#daa520]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl"></div>
+
+              <div className="relative z-10">
+                <div className="w-12 h-12 mb-4 rounded-full bg-gradient-to-br from-[#daa520] to-[#b8860b] flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[#0a0a0a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+
+                <h3 className="font-serif text-2xl text-[#f5f5f0] mb-3 tracking-tight">
+                  Seller Experience
+                </h3>
+
+                <p className="text-[#f5f5f0]/60 mb-6 leading-relaxed">
+                  See how Wells handles RFQs, matches you with buyers, and automates deal orchestration.
+                </p>
+
+                <div className="inline-flex items-center gap-2 text-[#daa520] text-sm font-medium group-hover:gap-3 transition-all duration-300">
+                  <span>Start Demo</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Featured Capabilities - Editorial grid */}
       <section id="experience" className="relative py-32 px-8 border-t border-[#daa520]/10">
         <div className="max-w-7xl mx-auto">
