@@ -1,8 +1,22 @@
 /**
  * Job Seeker Journey Flows
  *
- * Enables executive candidates to find opportunities through Wells Onyx.
- * Matches candidates with executive roles based on their profile and preferences.
+ * THE CAMERA PRINCIPLE:
+ * As technology commoditizes the generic, the specialized become more valuable.
+ * - Point-and-shoot cameras: Market way down (replaced by phones)
+ * - High-end DSLR cameras: Up triple digits
+ * - Why? Technology made generic photography worthless, but specialized photography invaluable
+ *
+ * THE ARCHITECT STORY:
+ * Mid-level architect in Brooklyn whose job was eliminated by AI.
+ * Wells becomes his friend and mentor, helps him discover his passion for gardening,
+ * apply his architect skills to design world-class garden boxes, and rebuild his life
+ * inside Wells - having the most fun of his career and making more money than before.
+ *
+ * THE GOAL: Give 3 million people dignity.
+ *
+ * This isn't just about executive placement. It's about self-discovery, reinvention,
+ * and helping people find work that makes them come alive.
  */
 
 export interface JobSeekerProfile {
@@ -466,27 +480,81 @@ I'm committed to making this work and excited to join the team. Looking forward 
 }
 
 /**
+ * Explore passions and identify specialized skills (The Camera Principle)
+ *
+ * This function helps users discover work that makes them come alive,
+ * not just their next job title. Like the architect who became a garden box designer.
+ */
+export async function explorePassionsAndSpecialization(params: {
+  userId: string
+  currentRole: string
+  interests?: string[]
+  hobbies?: string[]
+  previousExperience?: string[]
+}): Promise<{
+  passionAreas: Array<{
+    passion: string
+    description: string
+    howToSpecialize: string
+    marketDemand: 'low' | 'medium' | 'high'
+    examplePath: string
+  }>
+  nextSteps: string[]
+}> {
+  // In production: Use Claude to analyze user's background and suggest
+  // specialized paths that combine their skills with their passions
+
+  // Example: Architect + Gardening = Garden Box Designer
+  return {
+    passionAreas: [
+      {
+        passion: 'Sustainable Design',
+        description: 'Combine your architectural skills with eco-friendly product design',
+        howToSpecialize: 'Design garden boxes, raised beds, or modular outdoor spaces that maximize urban farming',
+        marketDemand: 'high',
+        examplePath: 'Start by designing 3 prototypes, sell on Etsy/Shopify, scale to B2B landscape companies'
+      },
+      {
+        passion: 'Educational Content',
+        description: 'Teach others your specialized architectural knowledge',
+        howToSpecialize: 'Create online courses about residential design, zoning, or sustainable building',
+        marketDemand: 'medium',
+        examplePath: 'Launch course on Teachable, build YouTube channel, offer 1:1 consulting'
+      }
+    ],
+    nextSteps: [
+      'I\'ll ask you about what makes you lose track of time',
+      'We\'ll explore how your existing skills apply to new areas',
+      'I\'ll research market demand for specialized combinations',
+      'Together we\'ll prototype your new path inside Wells'
+    ]
+  }
+}
+
+/**
  * Get conversation starters for job seekers
  */
 export function getJobSeekerConversationStarters(profile?: Partial<JobSeekerProfile>): string[] {
   if (!profile) {
     return [
-      'Help me find executive opportunities',
-      'Review my resume and suggest roles',
-      'What should I look for in my next job?',
-      'How do I negotiate a job offer?'
+      'Help me discover what I should really be doing',
+      'I lost my job - what are my options?',
+      'Find me executive opportunities',
+      'What should I look for in my next chapter?'
     ]
   }
 
   const starters: string[] = []
 
+  // Self-discovery comes first
   if (profile.availability?.status === 'actively-looking') {
-    starters.push('Find me CTO roles at Series B companies')
-    starters.push('What companies are hiring right now?')
+    starters.push('Help me explore my passions and skills')
+    starters.push('What could I specialize in?')
   }
 
+  // Traditional job search
   if (profile.targetRoles?.length) {
-    starters.push(`Match me with ${profile.targetRoles[0]} opportunities`)
+    starters.push(`Find me ${profile.targetRoles[0]} opportunities`)
   }
 
   starters.push('Prepare me for my upcoming interview')
