@@ -243,7 +243,7 @@ export const CREDIT_LINE_CONFIG = {
       minOnTimePaymentRate: 0.85  // 85%
     },
     terms: {
-      interestFreeDay: 45,
+      interestFreeDays: 45,
       interestRateAPR: 0.06  // 6% APR after 45 days
     }
   },

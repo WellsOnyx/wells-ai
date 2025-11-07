@@ -390,6 +390,7 @@ export async function startProcurementFlow(params: {
     return {
       success: false,
       message: `Failed to create RFQ: ${error.message}`,
+      estimatedQuotes: 0,
       nextSteps: ['Try again or contact support']
     }
   }

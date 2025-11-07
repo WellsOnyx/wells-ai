@@ -11,7 +11,19 @@
 
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy initialization - only create Resend client when actually needed
+let resend: Resend | null = null
+
+function getResendClient(): Resend {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY environment variable not set')
+    }
+    resend = new Resend(apiKey)
+  }
+  return resend
+}
 
 // ====================
 // WARMUP & THROTTLING
@@ -192,7 +204,8 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
 
   try {
     // Send via Resend
-    const result = await resend.emails.send({
+    const client = getResendClient()
+    const result = await client.emails.send({
       from: fromAddress,
       to: params.to,
       subject: params.subject,
