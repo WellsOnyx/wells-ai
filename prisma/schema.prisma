@@ -1,6 +1,3 @@
-// Wells AI Database Schema
-// Transaction engine for $7T B2B platform
-
 generator client {
   provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
@@ -11,11 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================
-// NEXTAUTH MODELS
-// Authentication system using email magic links
-// ============================================
-
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -24,7 +16,6 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-
   accounts      Account[]
   sessions      Session[]
 
@@ -37,15 +28,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -71,60 +61,28 @@ model VerificationToken {
   @@index([identifier])
 }
 
-// Transaction statuses
-enum TransactionStatus {
-  DRAFT           // RFQ created, finding matches
-  QUOTED          // Suppliers sent quotes
-  ACCEPTED        // Buyer accepted, escrow pending
-  ESCROWED        // Funds in escrow
-  IN_PROGRESS     // Work happening
-  COMPLETED       // Work done, awaiting release
-  RELEASED        // Funds released, deal complete
-  DISPUTED        // Issue raised
-  CANCELLED       // Deal cancelled
-}
-
-// Main transaction model
 model Transaction {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // RFQ reference
-  rfqId String
-
-  // Parties
-  buyerId  String
-  sellerId String
-
-  // Status tracking
-  status TransactionStatus @default(DRAFT)
-
-  // Financial (all amounts in cents)
-  amount          Int    // Deal value
-  wellsFee        Int    // Platform fee
-  wellsFeePercent Float  // Fee percentage (e.g., 2.5)
-
-  // Airwallex payment details
+  id                       String             @id @default(uuid())
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  rfqId                    String
+  buyerId                  String
+  sellerId                 String
+  status                   TransactionStatus  @default(DRAFT)
+  amount                   Int
+  wellsFee                 Int
+  wellsFeePercent          Float
   airwallexPaymentIntentId String?
   airwallexClientSecret    String?
   escrowedAt               DateTime?
   releasedAt               DateTime?
-
-  // Trust/ratings (1-5 stars)
-  buyerRating  Float?
-  sellerRating Float?
-  buyerReview  String?
-  sellerReview String?
-
-  // Completion tracking
-  completedAt DateTime?
-
-  // Audit trail
-  events TransactionEvent[]
-
-  // Metadata
-  metadata Json? // Flexible field for additional data
+  buyerRating              Float?
+  sellerRating             Float?
+  buyerReview              String?
+  sellerReview             String?
+  completedAt              DateTime?
+  metadata                 Json?
+  events                   TransactionEvent[]
 
   @@index([buyerId])
   @@index([sellerId])
@@ -133,81 +91,52 @@ model Transaction {
   @@index([rfqId])
 }
 
-// Transaction event log (audit trail)
 model TransactionEvent {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-
-  // Link to transaction
+  id            String      @id @default(uuid())
+  createdAt     DateTime    @default(now())
   transactionId String
+  action        String
+  actor         String
+  metadata      Json?
   transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-
-  // Event details
-  action   String // e.g., "transaction_created", "payment_escrowed", "funds_released"
-  actor    String // "buyer", "seller", or "system"
-  metadata Json?  // Additional event data
 
   @@index([transactionId])
   @@index([createdAt])
 }
 
-// User trust scores (for reputation system)
 model UserTrustScore {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // User reference
-  userId String @unique
-
-  // Trust metrics
-  score            Int   @default(50) // 0-100
-  totalTransactions Int  @default(0)
-  completedDeals   Int   @default(0)
-  cancelledDeals   Int   @default(0)
-  disputedDeals    Int   @default(0)
-
-  // Rating stats
-  averageRating  Float @default(0) // 1-5 stars
-  totalRatings   Int   @default(0)
-
-  // Deal value stats (in cents)
-  totalGMV       BigInt @default(0)
-  averageDealSize BigInt @default(0)
-
-  // Completion rate (percentage)
-  completionRate Float @default(0)
-
-  // Verification level
-  verificationLevel String @default("none") // "none", "basic", "enhanced", "premium"
+  id                String   @id @default(uuid())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userId            String   @unique
+  score             Int      @default(50)
+  totalTransactions Int      @default(0)
+  completedDeals    Int      @default(0)
+  cancelledDeals    Int      @default(0)
+  disputedDeals     Int      @default(0)
+  averageRating     Float    @default(0)
+  totalRatings      Int      @default(0)
+  totalGMV          BigInt   @default(0)
+  averageDealSize   BigInt   @default(0)
+  completionRate    Float    @default(0)
+  verificationLevel String   @default("none")
 
   @@index([userId])
   @@index([score])
 }
 
-// RFQ (Request for Quote) - minimal model, most data in Notion
 model RFQ {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Requester
-  userId String
-
-  // Category and details
+  id           String        @id @default(uuid())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  userId       String
   category     String
   title        String
   description  String
   requirements Json?
-
-  // Status
-  status String @default("open") // "open", "matched", "closed"
-
-  // Notion reference
+  status       String        @default("open")
   notionPageId String?
-
-  // Quotes from sellers
-  quotes SellerQuote[]
+  quotes       SellerQuote[]
 
   @@index([userId])
   @@index([status])
@@ -215,159 +144,96 @@ model RFQ {
   @@index([createdAt])
 }
 
-// ============================================
-// MEMORY & RELATIONSHIP SYSTEM
-// Wells remembers EVERYTHING and builds deep companion relationships
-// ============================================
-
-// Conversation session - groups messages together
 model Conversation {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // User reference
-  userId String
-
-  // Session metadata
-  sessionId String @unique // Frontend session ID
-  device    String? // "web", "mobile", "widget"
-  source    String? // "app", "widget", "api"
-
-  // Onboarding state (JSON serialized OnboardingState)
-  onboardingState Json?
-  onboardingCompleted Boolean @default(false)
+  id                    String      @id @default(uuid())
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  userId                String
+  sessionId             String      @unique
+  device                String?
+  source                String?
+  onboardingState       Json?
+  onboardingCompleted   Boolean     @default(false)
   onboardingCompletedAt DateTime?
-
-  // Relationship metrics
-  messageCount     Int @default(0)
-  trustScore       Int @default(0) // 0-100
-  conversationDepth Int @default(0)
-
-  // Last activity
-  lastActivityAt DateTime @default(now())
-  lastActivity   String? // What Wells was doing/thinking about
-
-  // Messages in this conversation
-  messages Message[]
-
-  // Link to user context
-  userContext UserContext? @relation(fields: [userId], references: [userId])
+  messageCount          Int         @default(0)
+  trustScore            Int         @default(0)
+  conversationDepth     Int         @default(0)
+  lastActivityAt        DateTime    @default(now())
+  lastActivity          String?
+  userContext           UserContext @relation(fields: [userId], references: [userId])
+  messages              Message[]
 
   @@index([userId])
   @@index([sessionId])
   @@index([lastActivityAt])
 }
 
-// Individual message with embeddings for semantic search
 model Message {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-
-  // Link to conversation
+  id             String       @id @default(uuid())
+  createdAt      DateTime     @default(now())
   conversationId String
+  role           String
+  content        String
+  embedding      Json?
+  sentiment      String?
+  intent         String?
+  entities       Json?
+  isImportant    Boolean      @default(false)
+  importance     Int          @default(0)
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  // Message content
-  role    String // "user" or "assistant"
-  content String @db.Text
-
-  // Vector embedding for semantic search (stored as JSON array)
-  embedding Json? // [0.123, 0.456, ...] - 1536 dimensions for OpenAI embeddings
-
-  // Message metadata
-  sentiment String? // "positive", "neutral", "negative", "urgent", "stressed"
-  intent    String? // "question", "request", "greeting", "feedback", etc.
-
-  // Extracted entities (names, companies, dates, etc.)
-  entities Json? // {"people": ["John"], "companies": ["Acme Corp"], ...}
-
-  // Important message flag (Wells should remember this)
-  isImportant Boolean @default(false)
-  importance  Int @default(0) // 0-10 importance score
 
   @@index([conversationId])
   @@index([createdAt])
   @@index([isImportant])
 }
 
-// User context - what Wells has learned about the user
 model UserContext {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // User reference
-  userId String @unique
-
-  // Basic info (from onboarding)
-  name          String?
-  preferredName String?
-  email         String?
-  phone         String?
-  userType      String? // "buyer", "seller", "both", "job_seeker", "founder"
-
-  // Deep context (learned over time)
-  company       String?
-  role          String?
-  industry      String?
-  goals         Json? // ["Find better suppliers", "Grow revenue", ...]
-  painPoints    Json? // ["High costs", "Slow delivery", ...]
-  preferences   Json? // {"communication": "email", "frequency": "daily", ...}
-
-  // Relationship tracking
-  totalConversations Int @default(0)
-  totalMessages      Int @default(0)
-  firstSeenAt        DateTime @default(now())
-  lastSeenAt         DateTime @default(now())
-
-  // Trust & relationship
-  trustScore         Int @default(0) // 0-100
-  relationshipDepth  Int @default(0) // How well Wells knows them
-
-  // Behavioral patterns
-  preferredTimes     Json? // When they usually chat
-  responseStyle      String? // "brief", "detailed", "technical"
-  conversationPace   String? // "fast", "normal", "contemplative"
-
-  // Important memories (quick access)
-  memories Memory[]
-
-  // Conversations
-  conversations Conversation[]
+  id                 String         @id @default(uuid())
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  userId             String         @unique
+  name               String?
+  preferredName      String?
+  email              String?
+  phone              String?
+  userType           String?
+  company            String?
+  role               String?
+  industry           String?
+  goals              Json?
+  painPoints         Json?
+  preferences        Json?
+  totalConversations Int            @default(0)
+  totalMessages      Int            @default(0)
+  firstSeenAt        DateTime       @default(now())
+  lastSeenAt         DateTime       @default(now())
+  trustScore         Int            @default(0)
+  relationshipDepth  Int            @default(0)
+  preferredTimes     Json?
+  responseStyle      String?
+  conversationPace   String?
+  conversations      Conversation[]
+  memories           Memory[]
 
   @@index([userId])
   @@index([userType])
   @@index([lastSeenAt])
 }
 
-// Important memories Wells should always remember
 model Memory {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Link to user
-  userId      String
-  userContext UserContext @relation(fields: [userId], references: [userId], onDelete: Cascade)
-
-  // Memory content
-  category    String // "fact", "preference", "goal", "pain_point", "relationship", "event"
-  content     String @db.Text
-  context     String? @db.Text // Additional context about when/how this was learned
-
-  // Importance (1-10)
-  importance  Int @default(5)
-
-  // Embedding for semantic retrieval
-  embedding Json?
-
-  // Verification
-  isVerified Boolean @default(false) // User confirmed this is accurate
-  lastUsedAt DateTime @default(now()) // When Wells last recalled this memory
-
-  // Related message
+  id              String      @id @default(uuid())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  userId          String
+  category        String
+  content         String
+  context         String?
+  importance      Int         @default(5)
+  embedding       Json?
+  isVerified      Boolean     @default(false)
+  lastUsedAt      DateTime    @default(now())
   sourceMessageId String?
+  userContext     UserContext @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@index([userId])
   @@index([category])
@@ -375,245 +241,133 @@ model Memory {
   @@index([lastUsedAt])
 }
 
-// ============================================
-// PARTNER ECOSYSTEM & CO-SELL PLAYBOOKS
-// Powers 33-partner network generating $24.75M/year
-// ============================================
-
-enum PlaybookStatus {
-  DRAFT           // Being created
-  ACTIVE          // Live and running outreach
-  PAUSED          // Temporarily paused
-  COMPLETED       // All targets contacted
-  ARCHIVED        // No longer active
-}
-
-enum DealStage {
-  PROSPECTING     // Initial outreach
-  QUALIFIED       // Target expressed interest
-  DEMO_SCHEDULED  // Demo booked
-  PROPOSAL_SENT   // Proposal delivered
-  NEGOTIATION     // In negotiation
-  CLOSED_WON      // Deal won!
-  CLOSED_LOST     // Deal lost
-}
-
-// Strategic partner definition
 model Partner {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Partner info
-  name              String @unique
-  industry          String
-  website           String?
-  logo              String?
-
-  // Contact details
-  primaryContactName  String
-  primaryContactEmail String
-  primaryContactTitle String?
-  primaryContactPhone String?
-
-  // Partnership details
-  partnershipType   String // "Technology", "Channel", "Reseller", "Referral"
-  signedDate        DateTime?
-  contractValue     Int? // Annual contract value in cents
-
-  // Deal split (JSON)
-  defaultDealSplit  Json // {"wells": 30, "partner": 70}
-
-  // Status
-  status            String @default("active") // "active", "inactive", "pending"
-
-  // Relationship metrics
-  totalPlaybooks    Int @default(0)
-  totalDeals        Int @default(0)
-  totalRevenue      BigInt @default(0)
-
-  // Referral tracking (for partner recommendations)
-  referralUrl           String? // Tracked referral link with partner ID
-  referralCategory      String? // "Payment Processing", "Infrastructure", "SaaS", etc.
-  partnerDescription    String? // What the partner offers
-  commissionRate        Float? // Percentage (e.g., 0.15 for 15%)
-  recommendationTriggers String[] // Keywords for Wells to detect recommendation opportunities
-
-  // Co-sell playbooks
-  playbooks CoSellPlaybook[]
-
-  // Referral tracking
-  referrals PartnerReferral[]
+  id                     String            @id @default(uuid())
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  name                   String            @unique
+  industry               String
+  website                String?
+  logo                   String?
+  primaryContactName     String
+  primaryContactEmail    String
+  primaryContactTitle    String?
+  primaryContactPhone    String?
+  partnershipType        String
+  signedDate             DateTime?
+  contractValue          Int?
+  defaultDealSplit       Json
+  status                 String            @default("active")
+  totalPlaybooks         Int               @default(0)
+  totalDeals             Int               @default(0)
+  totalRevenue           BigInt            @default(0)
+  referralUrl            String?
+  referralCategory       String?
+  partnerDescription     String?
+  commissionRate         Float?
+  recommendationTriggers String[]
+  playbooks              CoSellPlaybook[]
+  referrals              PartnerReferral[]
 
   @@index([name])
   @@index([status])
   @@index([referralCategory])
 }
 
-// Co-sell playbook (campaign for a specific partner)
 model CoSellPlaybook {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Partner link
-  partnerId String
-  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-
-  // Partner contact for this playbook
+  id                  String          @id @default(uuid())
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  partnerId           String
   partnerContactEmail String
-
-  // Playbook details
-  name              String
-  valueProposition  String @db.Text
-  dealSplit         Json // {"wells": 30, "partner": 70}
-  outreachStrategy  String @default("email-sequence") // "email-sequence", "linkedin", "cold-call"
-
-  // Status
-  status PlaybookStatus @default(DRAFT)
-
-  // Created by
-  createdBy String // Clerk user ID
-
-  // Target accounts
-  targetAccounts TargetAccount[]
-
-  // Email sequence
-  emailSequence EmailSequence?
-
-  // Metrics
-  totalTargets   Int @default(0)
-  contacted      Int @default(0)
-  responded      Int @default(0)
-  meetingsBooked Int @default(0)
-  dealsWon       Int @default(0)
-  totalRevenue   BigInt @default(0)
+  name                String
+  valueProposition    String
+  dealSplit           Json
+  outreachStrategy    String          @default("email-sequence")
+  status              PlaybookStatus  @default(DRAFT)
+  createdBy           String
+  totalTargets        Int             @default(0)
+  contacted           Int             @default(0)
+  responded           Int             @default(0)
+  meetingsBooked      Int             @default(0)
+  dealsWon            Int             @default(0)
+  totalRevenue        BigInt          @default(0)
+  partner             Partner         @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  emailSequence       EmailSequence?
+  targetAccounts      TargetAccount[]
 
   @@index([partnerId])
   @@index([status])
   @@index([createdBy])
 }
 
-// Target account for co-sell
 model TargetAccount {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Playbook link
-  playbookId String
-  playbook   CoSellPlaybook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
-
-  // Company info
+  id                String         @id @default(uuid())
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  playbookId        String
   companyName       String
   industry          String?
-  revenue           String? // "$10M-50M", "$50M-100M", etc.
-  employeeCount     String? // "50-200", "200-500", etc.
-
-  // Pain point & solution
-  painPoint         String @db.Text
-  solution          String @db.Text
-  estimatedDealSize Int @default(500000) // in cents
-
-  // Contact info
-  contactName  String?
-  contactEmail String?
-  contactTitle String?
-  contactPhone String?
-  linkedinUrl  String?
-
-  // Outreach tracking
-  outreachSequence Json? // Track which emails have been sent
-  lastContactedAt  DateTime?
-  nextFollowUpAt   DateTime?
-
-  // Deal tracking
-  dealStage        DealStage @default(PROSPECTING)
-  dealValue        Int? // Actual deal value if won
-  wonAt            DateTime?
-  lostAt           DateTime?
-  lostReason       String?
-
-  // Notes
-  notes String? @db.Text
+  revenue           String?
+  employeeCount     String?
+  painPoint         String
+  solution          String
+  estimatedDealSize Int            @default(500000)
+  contactName       String?
+  contactEmail      String?
+  contactTitle      String?
+  contactPhone      String?
+  linkedinUrl       String?
+  outreachSequence  Json?
+  lastContactedAt   DateTime?
+  nextFollowUpAt    DateTime?
+  dealStage         DealStage      @default(PROSPECTING)
+  dealValue         Int?
+  wonAt             DateTime?
+  lostAt            DateTime?
+  lostReason        String?
+  notes             String?
+  playbook          CoSellPlaybook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
 
   @@index([playbookId])
   @@index([dealStage])
   @@index([nextFollowUpAt])
 }
 
-// Email sequence template
 model EmailSequence {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Playbook link
-  playbookId String @unique
+  id         String         @id @default(uuid())
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  playbookId String         @unique
+  sequence   Json
   playbook   CoSellPlaybook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
-
-  // Sequence definition (JSON array of email templates)
-  sequence Json // [{day: 0, subject: "...", body: "...", type: "INTRO"}, ...]
 
   @@index([playbookId])
 }
 
-// ============================================
-// GRAIN & VAULT ESCROW TRANSACTIONS
-// Powers $3T transaction volume
-// ============================================
-
-enum EscrowStatus {
-  PENDING         // Awaiting deposit
-  ACTIVE          // Funds escrowed, milestones in progress
-  MILESTONE_1     // First milestone completed
-  MILESTONE_2     // Second milestone completed
-  COMPLETED       // All milestones done, funds released
-  DISPUTED        // Dispute raised
-  CANCELLED       // Escrow cancelled
-  EXPIRED         // Expired without completion
-}
-
-// Blockchain escrow transaction
 model GrainEscrow {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // On-chain reference
-  escrowId         String @unique // On-chain escrow ID
-  chainId          Int // 8453 for Base, etc.
-  contractAddress  String // Smart contract address
-  transactionHash  String? // Creation transaction hash
-
-  // Parties
-  depositor    String // Wallet address or Clerk user ID
-  beneficiary  String // Wallet address or Clerk user ID
-  arbitrator   String? // Wallet address for dispute resolution
-
-  // Amount (in USDC/GRAIN, 6 decimals)
-  totalAmount     BigInt
-  releasedAmount  BigInt @default(0)
-
-  // Status
-  status EscrowStatus @default(PENDING)
-
-  // Milestones (JSON array)
-  milestones Json // [{description: "...", percentage: 50, completed: false}, ...]
-
-  // Timestamps
-  depositedAt   DateTime?
-  firstReleaseAt DateTime?
-  completedAt   DateTime?
-  disputedAt    DateTime?
-
-  // Deal metadata
-  dealId          String? // External reference (e.g., "DR-$3B-2025")
-  dealDescription String? @db.Text
-
-  // Fees
-  escrowFeePercent Float @default(0.5) // 0.5% escrow service fee
-  escrowFee        BigInt? // Calculated fee in cents
+  id               String       @id @default(uuid())
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  escrowId         String       @unique
+  chainId          Int
+  contractAddress  String
+  transactionHash  String?
+  depositor        String
+  beneficiary      String
+  arbitrator       String?
+  totalAmount      BigInt
+  releasedAmount   BigInt       @default(0)
+  status           EscrowStatus @default(PENDING)
+  milestones       Json
+  depositedAt      DateTime?
+  firstReleaseAt   DateTime?
+  completedAt      DateTime?
+  disputedAt       DateTime?
+  dealId           String?
+  dealDescription  String?
+  escrowFeePercent Float        @default(0.5)
+  escrowFee        BigInt?
 
   @@index([escrowId])
   @@index([depositor])
@@ -622,33 +376,20 @@ model GrainEscrow {
   @@index([createdAt])
 }
 
-// Partner referral tracking - when Wells recommends a partner service to a user
 model PartnerReferral {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // User who received the recommendation
-  userId String // Clerk user ID
-
-  // Partner being recommended
-  partnerId String
-  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-
-  // Referral tracking
-  referralUrl String // The tracked URL that was shared with the user
-  context     String @db.Text // What triggered the recommendation (e.g., "User asked about payment processing")
-
-  // Interaction tracking
-  clickedAt   DateTime? // When user clicked the referral link
-  convertedAt DateTime? // When user completed sign-up/purchase
-
-  // Revenue tracking
-  conversionValue BigInt? // Value of the conversion in cents
-  commissionEarned BigInt? // Commission earned by Wells Onyx in cents
-
-  // Status
-  status String @default("pending") // "pending", "clicked", "converted", "expired"
+  id               String    @id @default(uuid())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  userId           String
+  partnerId        String
+  referralUrl      String
+  context          String
+  clickedAt        DateTime?
+  convertedAt      DateTime?
+  conversionValue  BigInt?
+  commissionEarned BigInt?
+  status           String    @default("pending")
+  partner          Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([partnerId])
@@ -656,79 +397,38 @@ model PartnerReferral {
   @@index([createdAt])
 }
 
-// ============================================
-// SELLER PROFILES & MARKETPLACE SUPPLY
-// Two-sided marketplace: Buyers request, Sellers fulfill
-// ============================================
-
-enum PricingModel {
-  FIXED             // Fixed price per unit
-  VOLUME_DISCOUNT   // Volume-based pricing tiers
-  NEGOTIABLE        // Case-by-case negotiation
-  RFQ_ONLY          // Must request quote with specs
-}
-
-enum NotificationFrequency {
-  INSTANT         // Real-time notifications
-  DAILY_DIGEST    // Once per day summary
-  WEEKLY_DIGEST   // Once per week summary
-}
-
-// Seller profile - suppliers on the platform
 model SellerProfile {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // User reference
-  userId String @unique // Clerk user ID
-
-  // Company info
-  companyName String
-  contactName String
-  email       String
-  phone       String?
-
-  // What they sell
-  categories String[] // e.g., ['Electronics', 'PCB Manufacturing']
-  products   String[] // e.g., ['STM32 Microcontrollers', 'Custom PCBs']
-  services   String[] // e.g., ['PCB Design', 'Prototyping']
-
-  // Capabilities
-  minimumOrderQuantity Int?
-  maximumOrderQuantity Int?
-  leadTimeDays         Int? // Typical lead time in days
-  shippingRegions      String[] // e.g., ['North America', 'Global']
-
-  // Business details
-  yearsInBusiness Int?
-  certifications  String[] // e.g., ['ISO 9001', 'RoHS', 'UL']
-  website         String?
-
-  // Pricing
-  pricingModel      PricingModel @default(NEGOTIABLE)
-  typicalPriceRange String? // e.g., '$1-10 per unit'
-
-  // Notification preferences
-  notificationChannels  String[] // ['email', 'sms']
-  notificationFrequency NotificationFrequency @default(INSTANT)
-
-  // Status
-  verified      Boolean @default(false)
-  active        Boolean @default(true)
-  rating        Float? // 1-5 stars
-  completedDeals Int    @default(0)
-
-  // Onboarding state (JSON serialized partial profile data)
-  onboardingState     Json?
-  onboardingCompleted Boolean @default(false)
-
-  // Quotes sent by this seller
-  quotes SellerQuote[]
-
-  // Notifications sent to this seller
-  notifications SellerNotification[]
+  id                      String                        @id @default(uuid())
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  userId                  String                        @unique
+  companyName             String
+  contactName             String
+  email                   String
+  phone                   String?
+  categories              String[]
+  products                String[]
+  services                String[]
+  minimumOrderQuantity    Int?
+  maximumOrderQuantity    Int?
+  leadTimeDays            Int?
+  shippingRegions         String[]
+  yearsInBusiness         Int?
+  certifications          String[]
+  website                 String?
+  pricingModel            PricingModel                  @default(NEGOTIABLE)
+  typicalPriceRange       String?
+  notificationChannels    String[]
+  notificationFrequency   NotificationFrequency         @default(INSTANT)
+  verified                Boolean                       @default(false)
+  active                  Boolean                       @default(true)
+  rating                  Float?
+  completedDeals          Int                           @default(0)
+  onboardingState         Json?
+  onboardingCompleted     Boolean                       @default(false)
+  notifications           SellerNotification[]
   notificationPreferences SellerNotificationPreference?
+  quotes                  SellerQuote[]
 
   @@index([userId])
   @@index([active])
@@ -736,38 +436,25 @@ model SellerProfile {
   @@index([categories])
 }
 
-// Seller quote in response to an RFQ
 model SellerQuote {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Seller reference
-  sellerId String
-  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-
-  // RFQ reference
-  rfqId String
-  rfq   RFQ @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-
-  // Quote details
-  pricePerUnit    Int // in cents
-  totalPrice      Int // in cents
-  quantity        Int
-  leadTimeDays    Int
-  validUntil      DateTime
-
-  // Additional details
-  notes           String? @db.Text
-  terms           String? @db.Text
-  specifications  Json? // Detailed specs and compliance info
-
-  // Status
-  status String @default("pending") // "pending", "accepted", "rejected", "expired"
-
-  // If accepted
-  acceptedAt DateTime?
-  acceptedBy String? // Buyer user ID
+  id             String        @id @default(uuid())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  sellerId       String
+  rfqId          String
+  pricePerUnit   Int
+  totalPrice     Int
+  quantity       Int
+  leadTimeDays   Int
+  validUntil     DateTime
+  notes          String?
+  terms          String?
+  specifications Json?
+  status         String        @default("pending")
+  acceptedAt     DateTime?
+  acceptedBy     String?
+  rfq            RFQ           @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  seller         SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
   @@index([sellerId])
   @@index([rfqId])
@@ -775,64 +462,28 @@ model SellerQuote {
   @@index([createdAt])
 }
 
-// ============================================
-// SELLER NOTIFICATION SYSTEM
-// Tracks RFQ match notifications sent to sellers
-// ============================================
-
-enum NotificationStatus {
-  PENDING     // Created but not sent yet (for digest)
-  SENT        // Successfully sent
-  DELIVERED   // Confirmed delivery (SMS delivery receipt)
-  FAILED      // Failed to send
-  BOUNCED     // Email bounced
-}
-
-enum NotificationType {
-  INSTANT       // Real-time notification
-  DAILY_DIGEST  // Daily summary
-  WEEKLY_DIGEST // Weekly summary
-}
-
-// Seller notification tracking
 model SellerNotification {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Seller reference
-  sellerId String
-  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-
-  // RFQ reference
-  rfqId String
-
-  // Notification details
-  notificationType NotificationType @default(INSTANT)
-  matchScore       Int // Match score (0-100)
-  matchReasons     String[] // Why this seller was matched
-
-  // Channels used
-  channels String[] // ['email', 'sms']
-
-  // Status tracking
-  status      NotificationStatus @default(PENDING)
-  sentAt      DateTime?
-  deliveredAt DateTime?
-  openedAt    DateTime? // When seller opened email/clicked link
-  clickedAt   DateTime? // When seller clicked through to RFQ
-
-  // SMS tracking
-  smsSid    String? // Twilio message SID
-  smsStatus String? // Twilio delivery status
-
-  // Email tracking
-  emailStatus String? // Email delivery status
-  emailId     String? // Email service message ID
-
-  // Engagement
-  responded Boolean @default(false) // Whether seller submitted a quote
-  respondedAt DateTime?
+  id               String             @id @default(uuid())
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  sellerId         String
+  rfqId            String
+  notificationType NotificationType   @default(INSTANT)
+  matchScore       Int
+  matchReasons     String[]
+  channels         String[]
+  status           NotificationStatus @default(PENDING)
+  sentAt           DateTime?
+  deliveredAt      DateTime?
+  openedAt         DateTime?
+  clickedAt        DateTime?
+  smsSid           String?
+  smsStatus        String?
+  emailStatus      String?
+  emailId          String?
+  responded        Boolean            @default(false)
+  respondedAt      DateTime?
+  seller           SellerProfile      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
   @@index([sellerId])
   @@index([rfqId])
@@ -841,90 +492,127 @@ model SellerNotification {
   @@index([notificationType])
 }
 
-// Seller notification preferences (opt-outs, frequency changes)
 model SellerNotificationPreference {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Seller reference
-  sellerId String @unique
-  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-
-  // Opt-out tracking
-  smsOptedOut   Boolean @default(false)
-  emailOptedOut Boolean @default(false)
-  optedOutAt    DateTime?
-  optOutReason  String?
-
-  // Category preferences (which categories to receive notifications for)
-  enabledCategories String[] // Empty = all categories
-  disabledCategories String[] // Categories to exclude
-
-  // Quiet hours
-  quietHoursEnabled Boolean @default(false)
-  quietHoursStart   String? // e.g., "22:00"
-  quietHoursEnd     String? // e.g., "08:00"
-  quietHoursTimezone String? // e.g., "America/New_York"
+  id                 String        @id @default(uuid())
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  sellerId           String        @unique
+  smsOptedOut        Boolean       @default(false)
+  emailOptedOut      Boolean       @default(false)
+  optedOutAt         DateTime?
+  optOutReason       String?
+  enabledCategories  String[]
+  disabledCategories String[]
+  quietHoursEnabled  Boolean       @default(false)
+  quietHoursStart    String?
+  quietHoursEnd      String?
+  quietHoursTimezone String?
+  seller             SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
   @@index([sellerId])
 }
 
-// ============================================
-// WELLS ONYX GTM CAMPAIGNS
-// Powers exec search campaign management
-// ============================================
-
-enum CampaignStatus {
-  DRAFT           // Campaign created, messages pending review
-  READY           // Messages approved, ready to send
-  SENDING         // Messages being sent
-  SENT            // All messages sent
-  COMPLETED       // Campaign finished
-  PAUSED          // Temporarily paused
-}
-
-// Wells Onyx GTM Campaign
 model WellsOnyxCampaign {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Campaign reference
-  campaignId String @unique // wo_gtm_123
-
-  // User who created it
-  userId String
-
-  // Practice group
-  practiceGroupId   String
-  practiceGroupName String
-
-  // Status
-  status CampaignStatus @default(DRAFT)
-
-  // Metrics
-  prospectCount Int @default(0)
-  messageCount  Int @default(0)
-  approvedCount Int @default(0)
-  sentCount     Int @default(0)
-
-  // Campaign data (JSON serialized)
-  practiceGroupData Json? // Full practice group config
-  prospectsData     Json? // Array of prospects
-  messagesData      Json? // Array of messages with approval status
-
-  // Integration keys
-  instantlyApiKey     String? // User's Instantly API key
-  instantlyCampaignId String? // Instantly campaign ID
-
-  // Timestamps
-  approvedAt  DateTime?
-  sentAt      DateTime?
-  completedAt DateTime?
+  id                  String         @id @default(uuid())
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  campaignId          String         @unique
+  userId              String
+  practiceGroupId     String
+  practiceGroupName   String
+  status              CampaignStatus @default(DRAFT)
+  prospectCount       Int            @default(0)
+  messageCount        Int            @default(0)
+  approvedCount       Int            @default(0)
+  sentCount           Int            @default(0)
+  practiceGroupData   Json?
+  prospectsData       Json?
+  messagesData        Json?
+  instantlyApiKey     String?
+  instantlyCampaignId String?
+  approvedAt          DateTime?
+  sentAt              DateTime?
+  completedAt         DateTime?
 
   @@index([userId])
   @@index([campaignId])
   @@index([status])
   @@index([createdAt])
+}
+
+enum TransactionStatus {
+  DRAFT
+  QUOTED
+  ACCEPTED
+  ESCROWED
+  IN_PROGRESS
+  COMPLETED
+  RELEASED
+  DISPUTED
+  CANCELLED
+}
+
+enum PlaybookStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum DealStage {
+  PROSPECTING
+  QUALIFIED
+  DEMO_SCHEDULED
+  PROPOSAL_SENT
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum EscrowStatus {
+  PENDING
+  ACTIVE
+  MILESTONE_1
+  MILESTONE_2
+  COMPLETED
+  DISPUTED
+  CANCELLED
+  EXPIRED
+}
+
+enum PricingModel {
+  FIXED
+  VOLUME_DISCOUNT
+  NEGOTIABLE
+  RFQ_ONLY
+}
+
+enum NotificationFrequency {
+  INSTANT
+  DAILY_DIGEST
+  WEEKLY_DIGEST
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+enum NotificationType {
+  INSTANT
+  DAILY_DIGEST
+  WEEKLY_DIGEST
+}
+
+enum CampaignStatus {
+  DRAFT
+  READY
+  SENDING
+  SENT
+  COMPLETED
+  PAUSED
 }
