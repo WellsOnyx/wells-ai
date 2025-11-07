@@ -22,7 +22,7 @@ import {
 export interface QuickLaunchParams {
   practiceGroupId: string  // 'cybersecurity', 'fintech', 'aerospace', etc.
   targetCount?: number     // How many prospects to find (default: 25)
-  instantly ApiKey?: string // User's Instantly API key (optional - can use Wells stack)
+  instantlyApiKey?: string // User's Instantly API key (optional - can use Wells stack)
 }
 
 export interface Prospect {
