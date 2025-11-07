@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useUser, SignOutButton } from '@clerk/nextjs'
+import Footer from './Footer'
 
 export default function LuxuryLanding() {
   const { user, isSignedIn } = useUser()
@@ -280,21 +281,7 @@ export default function LuxuryLanding() {
       </section>
 
       {/* Footer */}
-      <footer className="relative border-t border-[#daa520]/10 py-12 px-8">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="text-sm text-[#f5f5f0]/30">
-            © 2025 Wells Onyx. All rights reserved.
-          </div>
-          <div className="flex items-center gap-8">
-            <Link href="/privacy" className="text-sm text-[#f5f5f0]/50 hover:text-[#daa520] transition-colors">
-              Privacy
-            </Link>
-            <Link href="/terms" className="text-sm text-[#f5f5f0]/50 hover:text-[#daa520] transition-colors">
-              Terms
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <Footer variant="luxury" />
     </div>
   )
 }

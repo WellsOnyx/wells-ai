@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type FC } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import Onboarding, { UserData } from './Onboarding'
@@ -15,11 +15,15 @@ import ProcurementStatusCard from './chat/cards/ProcurementStatusCard'
 import SupplierMatchCard from './chat/cards/SupplierMatchCard'
 import Link from 'next/link'
 
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
 interface Message {
-  role: string
+  role: 'user' | 'assistant' | 'system'
   content: string
-  type?: ChatMessage['type'] // Support new message types
-  data?: any // Component data
+  type?: ChatMessage['type']
+  data?: any
   procurementData?: {
     detected: boolean
     requestId?: string
@@ -53,22 +57,36 @@ interface Message {
   selectedTier?: 1 | 2 | 3
 }
 
+interface OnboardingState {
+  phase?: string
+  name?: string
+  email?: string
+  userType?: 'buyer' | 'seller'
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
 export default function WellsAIContent() {
   const searchParams = useSearchParams()
   const isEmbedded = searchParams.get('embed') === 'true'
   const { user, isLoaded } = useUser()
 
+  // State management
   const [userData, setUserData] = useState<UserData | null>(null)
-  const [onboardingState, setOnboardingState] = useState<any | null>(null) // Onboarding state for legendary flow
+  const [onboardingState, setOnboardingState] = useState<OnboardingState | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [showChat, setShowChat] = useState(true) // Always show chat - discovery through conversation
+  const [error, setError] = useState<string | null>(null)
+  const [showChat, setShowChat] = useState(true)
+  const [anonymousUserId, setAnonymousUserId] = useState<string | null>(null)
+
+  // Refs
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // Generate or load anonymous userId for memory system
-  const [anonymousUserId, setAnonymousUserId] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   // Load messages from localStorage on mount
   useEffect(() => {
@@ -479,18 +497,15 @@ export default function WellsAIContent() {
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsLoading(true)
+    setError(null)
 
     if (!showChat) setShowChat(true)
 
     try {
       // Clean messages to only send role and content (strip UI-only fields)
-      // Filter out component messages (they don't have content)
       const cleanMessages = [...messages, userMessage]
-        .filter(msg => msg.content) // Only include messages with content
-        .map(({ role, content }) => ({
-          role,
-          content
-        }))
+        .filter(msg => msg.content)
+        .map(({ role, content }) => ({ role, content }))
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -499,28 +514,31 @@ export default function WellsAIContent() {
           messages: cleanMessages,
           userData: {
             ...userData,
-            userId: user?.id || anonymousUserId, // CRITICAL: Include userId for memory system
+            userId: user?.id || anonymousUserId,
             onboardingState: onboardingState
           },
-          organizationId: null // Organizations not required for basic chat
+          organizationId: null
         }),
       })
 
       const data = await response.json()
 
-      // Check if API returned an error
+      // Handle errors
       if (!response.ok || data.error) {
-        console.error('API error:', data.error || data.details || 'Unknown error')
+        const errorMessage = data.error || data.details || 'Failed to process your request'
+        console.error('API error:', errorMessage)
+        setError(errorMessage)
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: `I apologize, but I encountered an error: ${data.error || 'Failed to process your request'}. Please try again.`
+          content: `I apologize, but I encountered an error: ${errorMessage}. Please try again.`
         }])
         return
       }
 
-      // Check if we have a valid message
+      // Validate response
       if (!data.message) {
         console.error('No message in response:', data)
+        setError('Invalid response from server')
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: 'I apologize, but I received an invalid response. Please try again.'
@@ -528,12 +546,10 @@ export default function WellsAIContent() {
         return
       }
 
-      // Update onboarding state if we're in onboarding
+      // Update onboarding state
       if (data.isOnboarding && data.onboardingState) {
-        console.log('[ONBOARDING] Updating state:', data.onboardingState.phase)
         setOnboardingState(data.onboardingState)
 
-        // If onboarding completed, update userData
         if (data.onboardingComplete && data.onboardingState.name) {
           const newUserData: UserData = {
             name: data.onboardingState.name,
@@ -541,29 +557,25 @@ export default function WellsAIContent() {
             userType: data.onboardingState.userType || 'buyer'
           }
           setUserData(newUserData)
-          console.log('[ONBOARDING] Complete! User data:', newUserData)
         }
       }
 
-      // Check for auth prompt (inline email collection)
+      // Handle auth prompt
       if (data.authPrompt) {
-        console.log('[AUTH] Auth prompt received from API')
         setMessages(prev => [
           ...prev,
-          {
-            role: 'assistant',
-            content: data.message
-          },
+          { role: 'assistant', content: data.message },
           {
             role: 'assistant',
             type: data.authPrompt.type,
             data: data.authPrompt.data,
-            content: '' // Required but not used for component messages
+            content: ''
           }
         ])
         return
       }
 
+      // Add assistant message
       const assistantMessage: Message = {
         role: 'assistant',
         content: data.message,
@@ -574,13 +586,16 @@ export default function WellsAIContent() {
 
       setMessages(prev => [...prev, assistantMessage])
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Network error'
       console.error('Error:', error)
+      setError(errorMessage)
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'I apologize, but I encountered an error. Please try again.'
+        content: 'I apologize, but I encountered a network error. Please check your connection and try again.'
       }])
     } finally {
       setIsLoading(false)
+      inputRef.current?.focus()
     }
   }
 
@@ -604,13 +619,16 @@ export default function WellsAIContent() {
     ))
   }
 
-  // Show loading while Clerk initializes
+  // Loading state while Clerk initializes
   if (!isLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#fafbfc] via-white to-[#fafbfc]">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-[#183b6d] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-sm text-[#575757]">Loading...</p>
+          <div className="relative w-16 h-16 mx-auto mb-6">
+            <div className="absolute inset-0 border-4 border-[#183b6d]/20 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-[#dba63f] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-sm text-[#575757] tracking-wide">Loading Wells...</p>
         </div>
       </div>
     )
@@ -621,12 +639,12 @@ export default function WellsAIContent() {
   const needsWelcome = !userData && messages.length === 0
 
   return (
-    <div className="relative min-h-screen bg-white text-[#000000] overflow-hidden">
-      {/* Subtle constellation background */}
+    <div className="relative min-h-screen bg-gradient-to-br from-[#fafbfc] via-white to-[#f5f5f0] text-[#000000] overflow-hidden">
+      {/* Animated constellation background */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 pointer-events-none"
-        style={{ opacity: 1 }}
+        className="fixed inset-0 pointer-events-none transition-opacity duration-1000"
+        style={{ opacity: 0.9 }}
       />
 
       <div className="relative z-10">
@@ -708,41 +726,52 @@ export default function WellsAIContent() {
         ) : (
           // Chat interface
           <div className="min-h-screen flex flex-col">
-            {/* Header - minimal (hidden when embedded) */}
+            {/* Header - luxury minimal */}
             {!isEmbedded && (
-              <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b border-[#9ea1a7]/20">
-                <div className="max-w-4xl mx-auto px-6 py-6 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 flex items-center justify-center">
-                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                        <circle cx="16" cy="8" r="2" fill="#183b6d" />
-                        <line x1="16" y1="10" x2="10" y2="20" stroke="#183b6d" strokeWidth="0.5" />
-                        <line x1="16" y1="10" x2="22" y2="20" stroke="#183b6d" strokeWidth="0.5" />
+              <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-[#dba63f]/10 shadow-sm transition-all duration-300">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex items-center justify-between">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="relative w-10 h-10 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#183b6d]/10 to-[#dba63f]/10 rounded-full"></div>
+                      <svg width="24" height="24" viewBox="0 0 32 32" fill="none" className="relative z-10">
+                        <circle cx="16" cy="8" r="2.5" fill="#183b6d" />
+                        <line x1="16" y1="10.5" x2="10" y2="20" stroke="#183b6d" strokeWidth="1" />
+                        <line x1="16" y1="10.5" x2="22" y2="20" stroke="#183b6d" strokeWidth="1" />
                         <circle cx="10" cy="20" r="1.5" fill="#183b6d" />
                         <circle cx="22" cy="20" r="1.5" fill="#183b6d" />
+                        <circle cx="16" cy="8" r="1" fill="#dba63f" opacity="0.8" />
                       </svg>
                     </div>
                     <div>
-                      <div className="font-medium text-[#183b6d] text-sm tracking-wide">Wells</div>
-                      <div className="text-xs text-[#575757]">Your AI Companion</div>
+                      <div className="font-semibold text-[#183b6d] text-sm sm:text-base tracking-tight">Wells</div>
+                      <div className="text-xs text-[#575757]/70 hidden sm:block">Conversational Commerce</div>
                     </div>
                   </div>
 
-                  {/* OrganizationSelector and Dashboard removed - chat works immediately without setup
-                      Organizations are for team features (coming later) */}
+                  {error && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-sm">
+                      <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-xs text-red-700 hidden sm:inline">Connection issue</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Messages */}
-            <div className={`flex-1 overflow-y-auto px-6 ${isEmbedded ? 'py-6' : 'py-12'}`}>
-              <div className="max-w-4xl mx-auto space-y-8">
-                {/* Empty state explainer - only show when no messages */}
+            <div className={`flex-1 overflow-y-auto px-4 sm:px-6 ${isEmbedded ? 'py-6' : 'py-8 sm:py-12'}`}>
+              <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+                {/* Empty state - elegant welcome */}
                 {messages.length === 0 && (
-                  <div className="flex items-center justify-center min-h-[60vh]">
-                    <div className="text-center max-w-2xl">
-                      <div className="mb-8">
-                        <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="mx-auto opacity-20">
+                  <div className="flex items-center justify-center min-h-[60vh] animate-fade-in">
+                    <div className="text-center max-w-2xl px-4">
+                      <div className="mb-8 relative">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-20 h-20 bg-gradient-to-br from-[#183b6d]/5 to-[#dba63f]/5 rounded-full blur-2xl"></div>
+                        </div>
+                        <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="mx-auto relative z-10 opacity-30">
                           <circle cx="40" cy="24" r="6" fill="#183b6d" />
                           <line x1="40" y1="30" x2="24" y2="56" stroke="#183b6d" strokeWidth="2" />
                           <line x1="40" y1="30" x2="40" y2="64" stroke="#183b6d" strokeWidth="2" />
@@ -750,58 +779,78 @@ export default function WellsAIContent() {
                           <circle cx="24" cy="56" r="5" fill="#183b6d" />
                           <circle cx="56" cy="56" r="5" fill="#183b6d" />
                           <circle cx="40" cy="64" r="5" fill="#183b6d" />
-                          <circle cx="40" cy="24" r="3" fill="#dba63f" opacity="0.9" />
+                          <circle cx="40" cy="24" r="3" fill="#dba63f" />
                         </svg>
                       </div>
-                      <h2 className="text-3xl font-serif text-[#183b6d] mb-4">
+                      <h2 className="text-2xl sm:text-3xl font-serif text-[#183b6d] mb-3 sm:mb-4 tracking-tight">
                         Start a conversation
                       </h2>
-                      <p className="text-[#575757] mb-8 leading-relaxed">
+                      <p className="text-sm sm:text-base text-[#575757]/80 mb-6 sm:mb-8 leading-relaxed">
                         Tell Wells what you need. We handle procurement, executive search, partnerships,
                         and enterprise transactions across any industry.
                       </p>
-                      <div className="grid md:grid-cols-3 gap-4 text-sm">
-                        <div className="p-4 bg-[#183b6d]/5 rounded-sm cursor-pointer hover:bg-[#183b6d]/10 transition" onClick={() => setInput('I need to source materials')}>
-                          <div className="font-semibold text-[#183b6d] mb-1">Procurement</div>
-                          <div className="text-xs text-[#575757]">Source suppliers & materials</div>
-                        </div>
-                        <div className="p-4 bg-[#183b6d]/5 rounded-sm cursor-pointer hover:bg-[#183b6d]/10 transition" onClick={() => setInput('I am looking for a job')}>
-                          <div className="font-semibold text-[#183b6d] mb-1">Job Search</div>
-                          <div className="text-xs text-[#575757]">Find your next opportunity</div>
-                        </div>
-                        <div className="p-4 bg-[#183b6d]/5 rounded-sm cursor-pointer hover:bg-[#183b6d]/10 transition" onClick={() => setInput('I need professional services')}>
-                          <div className="font-semibold text-[#183b6d] mb-1">Services</div>
-                          <div className="text-xs text-[#575757]">Connect with professionals</div>
-                        </div>
+                      <div className="grid sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
+                        {[
+                          { title: 'Procurement', desc: 'Source suppliers & materials', prompt: 'I need to source materials' },
+                          { title: 'Job Search', desc: 'Find your next opportunity', prompt: 'I am looking for a job' },
+                          { title: 'Services', desc: 'Connect with professionals', prompt: 'I need professional services' }
+                        ].map((item, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setInput(item.prompt)}
+                            className="group p-4 bg-white border border-[#9ea1a7]/20 rounded-sm hover:border-[#dba63f]/50 hover:shadow-lg hover:scale-105 transition-all duration-300 text-left"
+                          >
+                            <div className="font-semibold text-[#183b6d] mb-1 group-hover:text-[#dba63f] transition-colors">
+                              {item.title}
+                            </div>
+                            <div className="text-xs text-[#575757]/70">{item.desc}</div>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
                 )}
 
                 {messages.map((message, index) => (
-                  <div key={index}>
-                    {/* New component-based messages (email, consent, partners, etc.) */}
+                  <div
+                    key={index}
+                    className="animate-fade-in-up"
+                    style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
+                  >
+                    {/* Component-based messages */}
                     {message.type && message.type !== 'text' ? (
                       <ChatMessageRenderer
                         message={{
                           id: `msg_${index}`,
-                          role: message.role as any,
+                          role: message.role,
                           type: message.type,
                           data: message.data,
                           timestamp: new Date().toISOString()
                         } as ChatMessage}
                       />
                     ) : (
-                      /* Traditional text messages */
+                      /* Text messages - enhanced styling */
                       <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`max-w-[75%] rounded-sm px-6 py-4 ${
+                          className={`max-w-[85%] sm:max-w-[75%] rounded-lg px-4 sm:px-6 py-3 sm:py-4 shadow-sm transition-all duration-300 hover:shadow-md ${
                             message.role === 'user'
-                              ? 'bg-[#183b6d] text-white'
-                              : 'bg-white border border-[#9ea1a7]/20'
+                              ? 'bg-gradient-to-br from-[#183b6d] to-[#0d2545] text-white'
+                              : 'bg-white border border-[#9ea1a7]/20 text-[#000000]'
                           }`}
                         >
-                          <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+                          <div className={`whitespace-pre-wrap text-sm sm:text-base leading-relaxed ${
+                            message.role === 'user' ? 'text-white' : 'text-[#000000]'
+                          }`}>
+                            {message.content}
+                          </div>
+                          {message.role === 'assistant' && (
+                            <div className="mt-2 pt-2 border-t border-[#9ea1a7]/10 flex items-center gap-2 text-xs text-[#9ea1a7]">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>Just now</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -948,13 +997,17 @@ export default function WellsAIContent() {
                   </div>
                 ))}
 
+                {/* Loading indicator - elegant animation */}
                 {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-white border border-[#9ea1a7]/20 rounded-sm px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-[#183b6d] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-1.5 h-1.5 bg-[#183b6d] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-1.5 h-1.5 bg-[#183b6d] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="flex justify-start animate-fade-in">
+                    <div className="bg-white border border-[#dba63f]/20 rounded-lg px-4 sm:px-6 py-3 sm:py-4 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 bg-[#183b6d] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-[#dba63f] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-[#183b6d] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="text-xs text-[#575757] hidden sm:inline">Wells is thinking...</span>
                       </div>
                     </div>
                   </div>
@@ -964,24 +1017,36 @@ export default function WellsAIContent() {
               </div>
             </div>
 
-            {/* Input - fixed bottom */}
-            <div className="sticky bottom-0 z-20 bg-white/95 backdrop-blur-sm border-t border-[#9ea1a7]/20">
-              <div className="max-w-4xl mx-auto px-6 py-6">
-                <div className="flex gap-4">
+            {/* Input - fixed bottom with luxury styling */}
+            <div className="sticky bottom-0 z-20 bg-white/90 backdrop-blur-xl border-t border-[#dba63f]/10 shadow-lg">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+                <div className="flex gap-2 sm:gap-4">
                   <input
+                    ref={inputRef}
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Continue the conversation..."
-                    className="flex-1 px-4 py-3 text-sm bg-white border border-[#9ea1a7]/30 rounded-sm focus:outline-none focus:border-[#183b6d] transition-colors placeholder:text-[#9ea1a7]"
+                    disabled={isLoading}
+                    className="flex-1 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base bg-white border border-[#9ea1a7]/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#dba63f]/50 focus:border-[#dba63f] transition-all placeholder:text-[#9ea1a7]/60 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                   />
                   <button
                     onClick={sendMessage}
                     disabled={isLoading || !input.trim()}
-                    className="px-8 py-3 bg-[#183b6d] text-white font-normal text-xs tracking-wider uppercase rounded-sm hover:bg-[#0d2545] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-br from-[#183b6d] to-[#0d2545] text-white font-medium text-xs sm:text-sm tracking-wide rounded-lg hover:from-[#0d2545] hover:to-[#183b6d] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
                   >
-                    Send
+                    {isLoading ? (
+                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    ) : (
+                      <span className="hidden sm:inline">Send</span>
+                    )}
+                    <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
                   </button>
                 </div>
               </div>

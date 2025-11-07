@@ -869,3 +869,62 @@ model SellerNotificationPreference {
 
   @@index([sellerId])
 }
+
+// ============================================
+// WELLS ONYX GTM CAMPAIGNS
+// Powers exec search campaign management
+// ============================================
+
+enum CampaignStatus {
+  DRAFT           // Campaign created, messages pending review
+  READY           // Messages approved, ready to send
+  SENDING         // Messages being sent
+  SENT            // All messages sent
+  COMPLETED       // Campaign finished
+  PAUSED          // Temporarily paused
+}
+
+// Wells Onyx GTM Campaign
+model WellsOnyxCampaign {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Campaign reference
+  campaignId String @unique // wo_gtm_123
+
+  // User who created it
+  userId String
+
+  // Practice group
+  practiceGroupId   String
+  practiceGroupName String
+
+  // Status
+  status CampaignStatus @default(DRAFT)
+
+  // Metrics
+  prospectCount Int @default(0)
+  messageCount  Int @default(0)
+  approvedCount Int @default(0)
+  sentCount     Int @default(0)
+
+  // Campaign data (JSON serialized)
+  practiceGroupData Json? // Full practice group config
+  prospectsData     Json? // Array of prospects
+  messagesData      Json? // Array of messages with approval status
+
+  // Integration keys
+  instantlyApiKey     String? // User's Instantly API key
+  instantlyCampaignId String? // Instantly campaign ID
+
+  // Timestamps
+  approvedAt  DateTime?
+  sentAt      DateTime?
+  completedAt DateTime?
+
+  @@index([userId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([createdAt])
+}

@@ -14,3 +14,70 @@
                       radial-gradient(circle at 80% 80%, rgba(219, 166, 63, 0.1) 0%, transparent 50%);
   }
 }
+
+@layer utilities {
+  /* Smooth fade-in animation */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out;
+  }
+
+  /* Fade-in with upward motion */
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.4s ease-out;
+  }
+
+  /* Smooth pulse for status indicators */
+  @keyframes soft-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  .animate-soft-pulse {
+    animation: soft-pulse 2s ease-in-out infinite;
+  }
+
+  /* Shimmer effect for loading states */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(219, 166, 63, 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 1000px 100%;
+  }
+}
