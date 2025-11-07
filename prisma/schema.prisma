@@ -726,6 +726,10 @@ model SellerProfile {
   // Quotes sent by this seller
   quotes SellerQuote[]
 
+  // Notifications sent to this seller
+  notifications SellerNotification[]
+  notificationPreferences SellerNotificationPreference?
+
   @@index([userId])
   @@index([active])
   @@index([verified])
@@ -769,4 +773,99 @@ model SellerQuote {
   @@index([rfqId])
   @@index([status])
   @@index([createdAt])
+}
+
+// ============================================
+// SELLER NOTIFICATION SYSTEM
+// Tracks RFQ match notifications sent to sellers
+// ============================================
+
+enum NotificationStatus {
+  PENDING     // Created but not sent yet (for digest)
+  SENT        // Successfully sent
+  DELIVERED   // Confirmed delivery (SMS delivery receipt)
+  FAILED      // Failed to send
+  BOUNCED     // Email bounced
+}
+
+enum NotificationType {
+  INSTANT       // Real-time notification
+  DAILY_DIGEST  // Daily summary
+  WEEKLY_DIGEST // Weekly summary
+}
+
+// Seller notification tracking
+model SellerNotification {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Seller reference
+  sellerId String
+  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // RFQ reference
+  rfqId String
+
+  // Notification details
+  notificationType NotificationType @default(INSTANT)
+  matchScore       Int // Match score (0-100)
+  matchReasons     String[] // Why this seller was matched
+
+  // Channels used
+  channels String[] // ['email', 'sms']
+
+  // Status tracking
+  status      NotificationStatus @default(PENDING)
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  openedAt    DateTime? // When seller opened email/clicked link
+  clickedAt   DateTime? // When seller clicked through to RFQ
+
+  // SMS tracking
+  smsSid    String? // Twilio message SID
+  smsStatus String? // Twilio delivery status
+
+  // Email tracking
+  emailStatus String? // Email delivery status
+  emailId     String? // Email service message ID
+
+  // Engagement
+  responded Boolean @default(false) // Whether seller submitted a quote
+  respondedAt DateTime?
+
+  @@index([sellerId])
+  @@index([rfqId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([notificationType])
+}
+
+// Seller notification preferences (opt-outs, frequency changes)
+model SellerNotificationPreference {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Seller reference
+  sellerId String @unique
+  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // Opt-out tracking
+  smsOptedOut   Boolean @default(false)
+  emailOptedOut Boolean @default(false)
+  optedOutAt    DateTime?
+  optOutReason  String?
+
+  // Category preferences (which categories to receive notifications for)
+  enabledCategories String[] // Empty = all categories
+  disabledCategories String[] // Categories to exclude
+
+  // Quiet hours
+  quietHoursEnabled Boolean @default(false)
+  quietHoursStart   String? // e.g., "22:00"
+  quietHoursEnd     String? // e.g., "08:00"
+  quietHoursTimezone String? // e.g., "America/New_York"
+
+  @@index([sellerId])
 }

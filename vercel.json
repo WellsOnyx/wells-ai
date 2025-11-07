@@ -3,6 +3,14 @@
     {
       "path": "/api/gtm/automation/run",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/daily-digest",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-digest",
+      "schedule": "0 8 * * 1"
     }
   ]
 }

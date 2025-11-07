@@ -19,6 +19,8 @@ import {
   type SellerProfile
 } from '@/lib/seller-onboarding'
 import { createSellerProfile as saveSellerProfile, getSellerProfileByUserId } from '@/lib/db/seller-helpers'
+import { detectFounderIntent } from '@/lib/journeys/founder-detection'
+import { getFounderActions, getQuickActions, getFounderConversationStarters } from '@/lib/journeys/founder-flows'
 // Onboarding imports temporarily disabled
 // import {
 //   createOnboardingState,
@@ -570,6 +572,35 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     let pioneerData = null
     let gtmData = null
     let jobSeekerData = null
+    let founderData = null
+
+    // CHECK FOR FOUNDER INTENT (detect if user is a founder with multiple needs)
+    try {
+      const founderProfile = await detectFounderIntent({
+        messages,
+        userData
+      })
+
+      if (founderProfile.isFounder && founderProfile.confidence > 0.6) {
+        console.log('[FOUNDER] Intent detected:', founderProfile)
+
+        // Get recommended actions for this founder
+        const actions = getFounderActions(founderProfile)
+        const quickActions = getQuickActions(founderProfile)
+        const conversationStarters = getFounderConversationStarters(founderProfile)
+
+        founderData = {
+          detected: true,
+          profile: founderProfile,
+          recommendedActions: actions.slice(0, 5), // Top 5 actions
+          quickActions,
+          conversationStarters,
+          dashboardUrl: '/founder/dashboard'
+        }
+      }
+    } catch (error) {
+      console.error('[FOUNDER] Detection failed (non-critical):', error)
+    }
 
     // CHECK FOR JOB SEEKER INTENT (career, job search, resume)
     const jobSeekerKeywords = ['job', 'career', 'resume', 'looking for work', 'find a job', 'hire me', 'employment', 'position']
@@ -931,6 +962,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       procurementData,
       gtmData,
       jobSeekerData,
+      founderData,
       signupData,
       sellerData
     })
