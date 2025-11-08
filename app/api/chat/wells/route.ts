@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { PrismaClient } from '@prisma/client'
+import { searchApollo } from '@/lib/gtm/apollo-search'
 
 const prisma = new PrismaClient()
 
@@ -374,8 +375,22 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
           break
 
         case 'CREATE_CAMPAIGN':
-          // TODO: Implement campaign creation when WellsOnyxCampaign schema is available
-          actions.push({ type: 'campaign_created', params })
+          const campaign = await prisma.wellsOnyxCampaign.create({
+            data: {
+              campaignId: `camp_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+              userId: conversation.userId,
+              practiceGroupId: 'wells-ai',
+              practiceGroupName: params.name || 'Outbound Campaign',
+              status: 'DRAFT',
+              practiceGroupData: {
+                icp: params.icp || {},
+                value_prop: params.value_prop || '',
+                messaging: params.messaging || '',
+                cta: params.cta || ''
+              }
+            }
+          })
+          actions.push({ type: 'campaign_created', campaignId: campaign.id, params })
           break
 
         case 'CREATE_RFQ':
@@ -407,6 +422,49 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
             }
           })
           actions.push({ type: 'memory_created', params })
+          break
+
+        case 'FIND_LEADS':
+          try {
+            const prospects = await searchApollo({
+              titles: params.titles || params.icp_criteria?.title ? [params.icp_criteria.title] : [],
+              industries: params.icp_criteria?.industry ? [params.icp_criteria.industry] : undefined,
+              companySize: params.icp_criteria?.company_size || undefined,
+              location: params.icp_criteria?.location || undefined,
+              limit: params.limit || 25
+            })
+            actions.push({
+              type: 'leads_found',
+              count: prospects.length,
+              prospects: prospects.slice(0, 10), // Return first 10 in action result
+              total: prospects.length
+            })
+          } catch (error: any) {
+            console.error('[FIND_LEADS] Apollo search failed:', error)
+            actions.push({
+              type: 'leads_search_failed',
+              error: error.message,
+              fallback: 'Apollo API not configured or rate limited'
+            })
+          }
+          break
+
+        case 'FIND_SUPPLIERS':
+          // For now, return placeholder - can integrate with supplier API later
+          actions.push({
+            type: 'suppliers_found',
+            message: 'Supplier search coming soon - RFQ created and will match with suppliers',
+            suppliers: []
+          })
+          break
+
+        case 'FIND_JOBS':
+          // For now, return placeholder - can integrate with job board API later
+          actions.push({
+            type: 'jobs_found',
+            message: 'Job search coming soon - building job matching engine',
+            jobs: []
+          })
           break
 
         // Add more action handlers as needed
