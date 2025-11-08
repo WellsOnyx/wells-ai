@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { PrismaClient } from '@prisma/client'
 import { searchApollo } from '@/lib/gtm/apollo-search'
+import { addLeadToCampaign } from '@/lib/instantly'
 
 const prisma = new PrismaClient()
 
@@ -465,6 +466,113 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
             message: 'Job search coming soon - building job matching engine',
             jobs: []
           })
+          break
+
+        case 'GENERATE_OUTREACH':
+          // Use Claude to generate personalized outreach message
+          try {
+            const prospect = params.prospect || {}
+            const campaign = params.campaign || {}
+
+            const outreachPrompt = `Generate a personalized cold outreach email for:
+
+PROSPECT:
+- Name: ${prospect.name || 'there'}
+- Title: ${prospect.title || 'Unknown'}
+- Company: ${prospect.company || 'their company'}
+
+CAMPAIGN:
+- Value Prop: ${campaign.value_prop || params.value_prop || 'Our solution helps companies grow'}
+- Tone: ${params.tone || 'professional and friendly'}
+
+REQUIREMENTS:
+- Subject line (< 50 chars)
+- Email body (< 150 words)
+- Personal, relevant, conversational
+- Clear CTA
+- No fluff, get to the point
+
+Return JSON:
+{"subject":"...","body":"..."}`
+
+            const outreachResponse = await anthropic.messages.create({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 1024,
+              messages: [{
+                role: 'user',
+                content: outreachPrompt
+              }]
+            })
+
+            const generatedText = outreachResponse.content[0].type === 'text'
+              ? outreachResponse.content[0].text
+              : ''
+
+            // Extract JSON from response
+            const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
+            const outreachData = jsonMatch ? JSON.parse(jsonMatch[0]) : {
+              subject: 'Quick question',
+              body: generatedText
+            }
+
+            actions.push({
+              type: 'outreach_generated',
+              subject: outreachData.subject,
+              body: outreachData.body,
+              prospect: prospect
+            })
+          } catch (error: any) {
+            console.error('[GENERATE_OUTREACH] Failed:', error)
+            actions.push({
+              type: 'outreach_generation_failed',
+              error: error.message
+            })
+          }
+          break
+
+        case 'SEND_OUTREACH':
+          try {
+            const leads = params.leads || []
+            const instantlyCampaignId = params.instantly_campaign_id || params.campaign_id
+
+            if (!instantlyCampaignId) {
+              throw new Error('Instantly campaign ID required')
+            }
+
+            const results = []
+            for (const lead of leads.slice(0, 10)) { // Limit to 10 at a time
+              try {
+                await addLeadToCampaign({
+                  lead: {
+                    email: lead.email,
+                    firstName: lead.firstName || lead.name?.split(' ')[0],
+                    lastName: lead.lastName || lead.name?.split(' ').slice(1).join(' '),
+                    companyName: lead.company || lead.companyName,
+                    customVariables: lead.customVariables || {}
+                  },
+                  campaignId: instantlyCampaignId,
+                  skipIfInWorkspace: true,
+                  skipIfInCampaign: true
+                })
+                results.push({ email: lead.email, status: 'sent' })
+              } catch (error: any) {
+                results.push({ email: lead.email, status: 'failed', error: error.message })
+              }
+            }
+
+            actions.push({
+              type: 'outreach_sent',
+              sent: results.filter(r => r.status === 'sent').length,
+              failed: results.filter(r => r.status === 'failed').length,
+              results: results
+            })
+          } catch (error: any) {
+            console.error('[SEND_OUTREACH] Failed:', error)
+            actions.push({
+              type: 'outreach_send_failed',
+              error: error.message
+            })
+          }
           break
 
         // Add more action handlers as needed
