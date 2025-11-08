@@ -236,10 +236,10 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
           const rfq = await prisma.rFQ.create({
             data: {
               userId: conversation.userId,
-              product: params.product,
-              specifications: params.specs,
-              quantity: params.quantity,
-              status: 'draft'
+              category: params.category || 'general',
+              title: params.product ||'RFQ Request',
+              description: params.specs || '',
+              status: 'open'
             }
           })
           actions.push({ type: 'rfq_created', rfqId: rfq.id })
