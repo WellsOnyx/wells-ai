@@ -14,6 +14,7 @@ import { PrismaClient } from '@prisma/client'
 import { searchApollo } from '@/lib/gtm/apollo-search'
 import { addLeadToCampaign } from '@/lib/instantly'
 import { findSuppliers, sendRFQToSuppliers } from '@/lib/supplier-matching'
+import { findJobs, applyToJob } from '@/lib/job-matching'
 
 const prisma = new PrismaClient()
 
@@ -499,12 +500,54 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
           break
 
         case 'FIND_JOBS':
-          // For now, return placeholder - can integrate with job board API later
-          actions.push({
-            type: 'jobs_found',
-            message: 'Job search coming soon - building job matching engine',
-            jobs: []
-          })
+          try {
+            const jobs = await findJobs({
+              skills: params.skills || [],
+              titles: params.titles || [],
+              location: params.location,
+              remote: params.remote,
+              minSalary: params.min_salary,
+              maxSalary: params.max_salary,
+              type: params.type
+            })
+
+            actions.push({
+              type: 'jobs_found',
+              count: jobs.length,
+              jobs: jobs.slice(0, 10), // Return top 10
+              total: jobs.length
+            })
+          } catch (error: any) {
+            console.error('[FIND_JOBS] Failed:', error)
+            actions.push({
+              type: 'jobs_search_failed',
+              error: error.message
+            })
+          }
+          break
+
+        case 'APPLY_TO_JOB':
+          try {
+            const result = await applyToJob({
+              jobId: params.job_id,
+              userId: conversation.userId,
+              resumeUrl: params.resume_url,
+              coverLetter: params.cover_letter
+            })
+
+            actions.push({
+              type: 'application_submitted',
+              jobId: params.job_id,
+              applicationId: result.applicationId,
+              success: result.success
+            })
+          } catch (error: any) {
+            console.error('[APPLY_TO_JOB] Failed:', error)
+            actions.push({
+              type: 'application_failed',
+              error: error.message
+            })
+          }
           break
 
         case 'GENERATE_OUTREACH':
