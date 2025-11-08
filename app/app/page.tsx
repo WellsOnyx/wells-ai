@@ -43,16 +43,28 @@ export default function WellsApp() {
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
     setMessage('')
 
-    // Route based on journey
+    // Simple journey detection - all conversation happens HERE, not on other pages
     const lower = userMessage.toLowerCase()
     if (lower.includes('buyer') || lower.includes('procurement') || lower.includes('sourcing')) {
-      router.push('/quotes')
+      setMessages(prev => [...prev, {
+        role: 'wells',
+        content: "Perfect. I'll help you source anything, anywhere. What do you need? Just describe it like you're texting a friend."
+      }])
     } else if (lower.includes('seller') || lower.includes('gtm') || lower.includes('revenue')) {
-      router.push('/gtm')
+      setMessages(prev => [...prev, {
+        role: 'wells',
+        content: "Got it. I'll handle your entire GTM engine. Who are you trying to reach? What problem do you solve?"
+      }])
     } else if (lower.includes('job') || lower.includes('career')) {
-      router.push('/job-seeker/dashboard')
+      setMessages(prev => [...prev, {
+        role: 'wells',
+        content: "Let's find your calling. What kind of work excites you? What are you naturally good at?"
+      }])
     } else if (lower.includes('founder') || lower.includes('leadership')) {
-      router.push('/founder/dashboard')
+      setMessages(prev => [...prev, {
+        role: 'wells',
+        content: "I'll be your command center. What's your business? What do you need help with today?"
+      }])
     } else {
       // Wells responds if unclear
       setMessages(prev => [...prev, {
