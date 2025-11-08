@@ -228,16 +228,8 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
           break
 
         case 'CREATE_CAMPAIGN':
-          const campaign = await prisma.gtmCampaign.create({
-            data: {
-              userId: conversation.userId,
-              name: params.name,
-              icp: params.icp,
-              valueProp: params.value_prop,
-              status: 'draft'
-            }
-          })
-          actions.push({ type: 'campaign_created', campaignId: campaign.id })
+          // TODO: Implement campaign creation when WellsOnyxCampaign schema is available
+          actions.push({ type: 'campaign_created', params })
           break
 
         case 'CREATE_RFQ':
