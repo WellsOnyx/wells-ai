@@ -13,6 +13,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { PrismaClient } from '@prisma/client'
 import { searchApollo } from '@/lib/gtm/apollo-search'
 import { addLeadToCampaign } from '@/lib/instantly'
+import { findSuppliers, sendRFQToSuppliers } from '@/lib/supplier-matching'
 
 const prisma = new PrismaClient()
 
@@ -451,12 +452,50 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
           break
 
         case 'FIND_SUPPLIERS':
-          // For now, return placeholder - can integrate with supplier API later
-          actions.push({
-            type: 'suppliers_found',
-            message: 'Supplier search coming soon - RFQ created and will match with suppliers',
-            suppliers: []
-          })
+          try {
+            const suppliers = await findSuppliers({
+              category: params.category || 'general',
+              location: params.location,
+              certifications: params.certifications,
+              minRating: params.min_rating || 4.0,
+              quantity: params.quantity
+            })
+
+            actions.push({
+              type: 'suppliers_found',
+              count: suppliers.length,
+              suppliers: suppliers.slice(0, 10), // Return top 10
+              total: suppliers.length
+            })
+          } catch (error: any) {
+            console.error('[FIND_SUPPLIERS] Failed:', error)
+            actions.push({
+              type: 'suppliers_search_failed',
+              error: error.message
+            })
+          }
+          break
+
+        case 'SEND_RFQ':
+          try {
+            const result = await sendRFQToSuppliers({
+              rfqId: params.rfq_id,
+              supplierIds: params.supplier_ids || []
+            })
+
+            actions.push({
+              type: 'rfq_sent',
+              rfqId: params.rfq_id,
+              sent: result.sent,
+              failed: result.failed
+            })
+          } catch (error: any) {
+            console.error('[SEND_RFQ] Failed:', error)
+            actions.push({
+              type: 'rfq_send_failed',
+              error: error.message
+            })
+          }
           break
 
         case 'FIND_JOBS':
