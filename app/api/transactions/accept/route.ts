@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { createTransaction, calculatePlatformFee } from '@/lib/transactions'
+import { createTransaction, calculatePlatformFee, calculateTrustScore } from '@/lib/transactions'
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,13 +30,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calculate platform fee
+    // Load trust scores for dynamic fee calculation
+    const buyerTrust = await calculateTrustScore(userId)
+    const sellerTrust = await calculateTrustScore(sellerId)
+
+    // Calculate platform fee based on trust scores
     const fee = calculatePlatformFee({
       amount,
       category: category || 'General',
-      // TODO: Load trust scores from database
-      buyerTrustScore: 50,
-      sellerTrustScore: 50
+      buyerTrustScore: buyerTrust.score,
+      sellerTrustScore: sellerTrust.score
     })
 
     // Create transaction
@@ -62,7 +65,11 @@ export async function POST(request: NextRequest) {
         wellsFee: transaction.wellsFee,
         feePercent: transaction.wellsFeePercent
       },
-      message: `Deal accepted! Platform fee: ${fee.feePercent}% ($${(fee.feeAmount / 100).toFixed(2)})`
+      trustScores: {
+        buyer: buyerTrust.score,
+        seller: sellerTrust.score
+      },
+      message: `Deal accepted! Platform fee: ${fee.feePercent}% ($${(fee.feeAmount / 100).toFixed(2)}). ${fee.reasoning}`
     })
   } catch (error: any) {
     console.error('[TRANSACTION] Accept error:', error)

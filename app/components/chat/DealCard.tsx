@@ -15,6 +15,8 @@ interface DealCardProps {
     name: string
     rating?: number
     completedDeals?: number
+    trustScore?: number
+    trustLevel?: string
   }
   quote: {
     amount: number
@@ -90,6 +92,16 @@ export function DealCard({ rfqId, supplier, quote, category, onAccept }: DealCar
               {supplier.completedDeals && (
                 <span>· {supplier.completedDeals} deals completed</span>
               )}
+            </div>
+          )}
+          {supplier.trustScore && (
+            <div className="flex items-center gap-2 mt-1">
+              <div className="px-2 py-1 bg-blue-600/20 border border-blue-500/30 rounded text-xs">
+                <span className="text-blue-400 font-semibold">Trust Score: {supplier.trustScore}</span>
+                {supplier.trustLevel && (
+                  <span className="text-blue-300 ml-1">({supplier.trustLevel})</span>
+                )}
+              </div>
             </div>
           )}
         </div>
