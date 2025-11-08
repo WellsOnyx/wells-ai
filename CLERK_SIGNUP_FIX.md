@@ -13,8 +13,8 @@ Clerk Dashboard configuration or environment variables are pointing to `/dashboa
 Add to your `.env.local` file:
 
 ```bash
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/founder
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/founder
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/app
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/app
 ```
 
 ### 2. Update Clerk Dashboard Settings
@@ -24,8 +24,8 @@ Go to [Clerk Dashboard](https://dashboard.clerk.com):
 1. Select your application
 2. Go to **Paths** section (in left sidebar)
 3. Update these settings:
-   - **After sign-up URL**: `/founder`
-   - **After sign-in URL**: `/founder`
+   - **After sign-up URL**: `/app`
+   - **After sign-in URL**: `/app`
    - (Or leave blank to use environment variable defaults)
 
 ### 3. Update Vercel Environment Variables
@@ -36,8 +36,8 @@ If deployed on Vercel:
 2. Select your project
 3. Go to Settings → Environment Variables
 4. Add:
-   - `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` = `/founder`
-   - `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` = `/founder`
+   - `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` = `/app`
+   - `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` = `/app`
 5. Redeploy
 
 ### 4. Test the Flow
@@ -45,14 +45,14 @@ If deployed on Vercel:
 1. Go to your site (grainandvault.com or localhost:3000)
 2. Click "Sign Up"
 3. Complete authentication (Apple, Google, or Email)
-4. Verify you land on `/founder` (not 404)
+4. Verify you land on `/app` (not 404)
 
 ## Why This Works
 
-- `/founder` route exists: `app/founder/page.tsx` ✅
+- `/app` route exists: `app/app/page.tsx` ✅
 - `/dashboard` route does NOT exist ❌
 - Clerk was trying to redirect to non-existent route
-- Now redirects to existing `/founder` page
+- Now redirects to existing `/app` page
 
 ## Files Changed
 
