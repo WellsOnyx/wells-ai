@@ -215,28 +215,30 @@ export async function getGrainPriceHistory(days: number = 30): Promise<Array<{
  * Take a price snapshot (run daily via cron)
  */
 export async function takeGrainPriceSnapshot(): Promise<void> {
-  try {
-    const price = await getGrainPrice()
-    const reserves = await getCircleBalance()
-    const supply = await getTotalGrainSupply()
+  // TODO: Re-enable after adding grainPriceSnapshot table to schema.prisma
+  return
+  // try {
+  //   const price = await getGrainPrice()
+  //   const reserves = await getCircleBalance()
+  //   const supply = await getTotalGrainSupply()
 
-    await prisma.grainPriceSnapshot.create({
-      data: {
-        price,
-        totalReserves: reserves,
-        totalSupply: supply
-      }
-    })
+  //   await prisma.grainPriceSnapshot.create({
+  //     data: {
+  //       price,
+  //       totalReserves: reserves,
+  //       totalSupply: supply
+  //     }
+  //   })
 
-    console.log('[PRICING] Snapshot taken:', {
-      price: price.toFixed(4),
-      reserves: reserves.toFixed(2),
-      supply: supply.toFixed(2)
-    })
-  } catch (error: any) {
-    console.error('[PRICING] Snapshot error:', error)
-    // Don't throw - this is a background job
-  }
+  //   console.log('[PRICING] Snapshot taken:', {
+  //     price: price.toFixed(4),
+  //     reserves: reserves.toFixed(2),
+  //     supply: supply.toFixed(2)
+  //   })
+  // } catch (error: any) {
+  //   console.error('[PRICING] Snapshot error:', error)
+  //   // Don't throw - this is a background job
+  // }
 }
 
 /**
