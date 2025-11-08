@@ -35,42 +35,64 @@ export default function WellsApp() {
     }
   }, [user])
 
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
   const handleSend = async () => {
-    if (!message.trim()) return
+    if (!message.trim() || isLoading) return
 
     // Add user message
     const userMessage = message
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
     setMessage('')
+    setIsLoading(true)
 
-    // Simple journey detection - all conversation happens HERE, not on other pages
-    const lower = userMessage.toLowerCase()
-    if (lower.includes('buyer') || lower.includes('procurement') || lower.includes('sourcing')) {
+    try {
+      // Call Wells AI backend
+      const response = await fetch('/api/chat/wells', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          userId: user?.id,
+          conversationId,
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      // Save conversation ID
+      if (data.conversationId && !conversationId) {
+        setConversationId(data.conversationId)
+      }
+
+      // Clean response (remove action markers)
+      const cleanResponse = data.response.replace(/\[ACTION:[^\]]+\]/g, '').trim()
+
+      // Add Wells response
       setMessages(prev => [...prev, {
         role: 'wells',
-        content: "Perfect. I'll help you source anything, anywhere. What do you need? Just describe it like you're texting a friend."
+        content: cleanResponse
       }])
-    } else if (lower.includes('seller') || lower.includes('gtm') || lower.includes('revenue')) {
+
+      // Handle any UI updates from actions
+      if (data.actions?.length > 0) {
+        console.log('[WELLS ACTIONS]', data.actions)
+        // Could show toast notifications for actions taken
+      }
+
+    } catch (error: any) {
+      console.error('[WELLS CHAT] Error:', error)
       setMessages(prev => [...prev, {
         role: 'wells',
-        content: "Got it. I'll handle your entire GTM engine. Who are you trying to reach? What problem do you solve?"
+        content: "Sorry, I hit a snag. Can you try that again?"
       }])
-    } else if (lower.includes('job') || lower.includes('career')) {
-      setMessages(prev => [...prev, {
-        role: 'wells',
-        content: "Let's find your calling. What kind of work excites you? What are you naturally good at?"
-      }])
-    } else if (lower.includes('founder') || lower.includes('leadership')) {
-      setMessages(prev => [...prev, {
-        role: 'wells',
-        content: "I'll be your command center. What's your business? What do you need help with today?"
-      }])
-    } else {
-      // Wells responds if unclear
-      setMessages(prev => [...prev, {
-        role: 'wells',
-        content: "I handle four journeys: Buyer (sourcing), Seller (revenue), Job Seeker (career), and Founder (leadership). Which one?"
-      }])
+    } finally {
+      setIsLoading(false)
     }
   }
 
