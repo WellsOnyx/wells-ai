@@ -27,18 +27,17 @@ export async function POST(req: NextRequest) {
       ? await prisma.conversation.findUnique({
           where: { id: conversationId },
           include: {
-            messages: { orderBy: { createdAt: 'asc' } },
-            user: true
+            messages: { orderBy: { createdAt: 'asc' } }
           }
         })
       : await prisma.conversation.create({
           data: {
             userId,
+            sessionId: `session_${Date.now()}_${Math.random().toString(36).substring(7)}`,
             activeJourney: null, // Will be set during onboarding
           },
           include: {
-            messages: { orderBy: { createdAt: 'asc' } },
-            user: true
+            messages: { orderBy: { createdAt: 'asc' } }
           }
         })
 
@@ -113,8 +112,8 @@ export async function POST(req: NextRequest) {
 }
 
 function buildSystemPrompt(conversation: any): string {
-  const hasProfile = !!conversation.user?.profile
   const activeJourney = conversation.activeJourney
+  const onboarded = conversation.onboardingCompleted
 
   return `You are Wells, an AI companion for business (like Ghost from Destiny).
 
@@ -125,11 +124,10 @@ PERSONALITY:
 - You remember everything
 
 CURRENT STATE:
-- User: ${conversation.user?.firstName || 'unknown'}
-- Profile: ${hasProfile ? 'exists' : 'needs onboarding'}
 - Active Journey: ${activeJourney || 'none selected'}
+- Onboarding: ${onboarded ? 'complete' : 'in progress'}
 
-${!hasProfile ? `
+${!onboarded ? `
 ONBOARDING MODE:
 You need to learn about this user. Ask natural questions:
 1. What do they do? (company, role, industry)
