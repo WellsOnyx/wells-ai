@@ -244,16 +244,20 @@ export async function getConversationHistory(
         orderBy: { createdAt: 'desc' },
         take: limit
       },
-      userContext: {
+      user: {
         include: {
-          memories: {
-            where: {
-              importance: {
-                gte: 7 // Only high-importance memories
+          userContext: {
+            include: {
+              memories: {
+                where: {
+                  importance: {
+                    gte: 7 // Only high-importance memories
+                  }
+                },
+                orderBy: { importance: 'desc' },
+                take: 10
               }
-            },
-            orderBy: { importance: 'desc' },
-            take: 10
+            }
           }
         }
       }
