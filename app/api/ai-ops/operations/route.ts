@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 
 /**
  * GET /api/ai-ops/operations
  * Get all AI operations for the current user
+ * WELLS ONYX EXCLUSIVE - Requires @wellsonyx.com email
  */
 export async function GET(req: NextRequest) {
   try {
@@ -11,6 +12,16 @@ export async function GET(req: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check for Wells Onyx email
+    const user = await currentUser()
+    const email = user?.primaryEmailAddress?.emailAddress || ''
+
+    if (!email.endsWith('@wellsonyx.com')) {
+      return NextResponse.json({
+        error: 'Access denied. AI Ops is exclusively for Wells Onyx team members.'
+      }, { status: 403 })
     }
 
     // Mock operations data (will be replaced with database)
@@ -110,6 +121,7 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/ai-ops/operations
  * Create a new AI operation
+ * WELLS ONYX EXCLUSIVE - Requires @wellsonyx.com email
  */
 export async function POST(req: NextRequest) {
   try {
@@ -117,6 +129,16 @@ export async function POST(req: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check for Wells Onyx email
+    const user = await currentUser()
+    const email = user?.primaryEmailAddress?.emailAddress || ''
+
+    if (!email.endsWith('@wellsonyx.com')) {
+      return NextResponse.json({
+        error: 'Access denied. AI Ops is exclusively for Wells Onyx team members.'
+      }, { status: 403 })
     }
 
     const { name, category, description, frequency, schedule, config } = await req.json()

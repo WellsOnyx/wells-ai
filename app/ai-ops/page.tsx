@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useUser } from '@clerk/nextjs'
 import { Bot, Zap, TrendingUp, Users, ShoppingCart, Briefcase, CheckCircle, Clock, Play, Pause, Settings, BarChart3, DollarSign } from 'lucide-react'
 
 interface AIOperation {
@@ -24,7 +25,58 @@ interface AIOperation {
 
 export default function AIOpsDashboard() {
   const router = useRouter()
+  const { isLoaded, isSignedIn, user } = useUser()
   const [activeTab, setActiveTab] = useState<'overview' | 'operations' | 'marketplace'>('overview')
+  const [hasAccess, setHasAccess] = useState(false)
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn && user) {
+      // Check if user has wellsonyx.com email
+      const email = user.primaryEmailAddress?.emailAddress || ''
+      const isWellsOnyxEmail = email.endsWith('@wellsonyx.com')
+      setHasAccess(isWellsOnyxEmail)
+
+      // Redirect if no access
+      if (!isWellsOnyxEmail) {
+        router.push('/')
+      }
+    }
+  }, [isLoaded, isSignedIn, user, router])
+
+  // Loading state
+  if (!isLoaded || !isSignedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    )
+  }
+
+  // Access denied
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+        <div className="max-w-md mx-auto p-8 bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700">
+          <div className="text-center">
+            <Bot className="w-16 h-16 text-purple-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-white mb-2">Wells Onyx Exclusive</h1>
+            <p className="text-gray-300 mb-4">
+              AI Ops is exclusively available to Wells Onyx team members.
+            </p>
+            <p className="text-sm text-gray-400 mb-6">
+              Requires a @wellsonyx.com email address.
+            </p>
+            <button
+              onClick={() => router.push('/')}
+              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            >
+              Return to Wells AI
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const operations: AIOperation[] = [
     {

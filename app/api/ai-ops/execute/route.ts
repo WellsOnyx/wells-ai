@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 
 /**
  * POST /api/ai-ops/execute
  * Manually trigger an AI operation
+ * WELLS ONYX EXCLUSIVE - Requires @wellsonyx.com email
  */
 export async function POST(req: NextRequest) {
   try {
@@ -11,6 +12,16 @@ export async function POST(req: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check for Wells Onyx email
+    const user = await currentUser()
+    const email = user?.primaryEmailAddress?.emailAddress || ''
+
+    if (!email.endsWith('@wellsonyx.com')) {
+      return NextResponse.json({
+        error: 'Access denied. AI Ops is exclusively for Wells Onyx team members.'
+      }, { status: 403 })
     }
 
     const { operationId } = await req.json()
