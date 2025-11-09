@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wells Onyx - Deploy AI Ops</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 min-h-screen text-white p-8">
+  <div class="max-w-2xl mx-auto">
+    <h1 class="text-4xl font-bold mb-2">🚀 Deploy AI Operation</h1>
+    <p class="text-gray-300 mb-8">Deploy a new AI operation to Wells Onyx</p>
+
+    <div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700 p-6 mb-4">
+      <form id="deployForm" class="space-y-4">
+
+        <!-- Deployment Secret -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Deployment Secret</label>
+          <input
+            type="password"
+            id="deploymentSecret"
+            value="cBXjR7LFgE5KQTQ6xSBM9t/4lo1/Il6xR/8RpMApFWk="
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            required
+          />
+        </div>
+
+        <!-- Operation Name -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Operation Name</label>
+          <input
+            type="text"
+            id="operationName"
+            placeholder="Daily Lead Generation"
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            required
+          />
+        </div>
+
+        <!-- Category -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Category</label>
+          <select
+            id="category"
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            required
+          >
+            <option value="sales">Sales</option>
+            <option value="procurement">Procurement</option>
+            <option value="hiring">Hiring</option>
+            <option value="finance">Finance</option>
+            <option value="customer_service">Customer Service</option>
+          </select>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Description</label>
+          <textarea
+            id="description"
+            rows="3"
+            placeholder="What does this operation do?"
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            required
+          ></textarea>
+        </div>
+
+        <!-- Frequency -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Frequency</label>
+          <select
+            id="frequency"
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="continuous">Continuous</option>
+            <option value="as_needed">As Needed</option>
+          </select>
+        </div>
+
+        <!-- Schedule -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Schedule (HH:MM)</label>
+          <input
+            type="time"
+            id="schedule"
+            value="09:00"
+            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+        </div>
+
+        <!-- Submit Button -->
+        <button
+          type="submit"
+          class="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-colors"
+        >
+          Deploy Operation
+        </button>
+      </form>
+    </div>
+
+    <!-- Response Display -->
+    <div id="response" class="hidden bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700 p-6">
+      <h3 class="text-xl font-bold mb-4">Response</h3>
+      <pre id="responseContent" class="text-sm text-gray-300 overflow-auto"></pre>
+    </div>
+
+    <!-- Instructions -->
+    <div class="bg-gray-800/30 rounded-lg p-4 text-sm text-gray-400">
+      <p class="font-semibold mb-2">How to use:</p>
+      <ol class="list-decimal list-inside space-y-1">
+        <li>Make sure you're signed in to Wells AI with your @wellsonyx.com email</li>
+        <li>Fill out the form above</li>
+        <li>Click "Deploy Operation"</li>
+        <li>View the deployed operation at <a href="/ai-ops" class="text-purple-400 hover:underline">/ai-ops</a></li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('deployForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+
+      const deploymentSecret = document.getElementById('deploymentSecret').value
+      const operationName = document.getElementById('operationName').value
+      const category = document.getElementById('category').value
+      const description = document.getElementById('description').value
+      const frequency = document.getElementById('frequency').value
+      const schedule = document.getElementById('schedule').value
+
+      const payload = {
+        deploymentSecret,
+        operation: {
+          name: operationName,
+          category,
+          description,
+          frequency,
+          schedule
+        }
+      }
+
+      try {
+        const response = await fetch('/api/deploy/ai-ops', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        })
+
+        const data = await response.json()
+
+        // Display response
+        document.getElementById('response').classList.remove('hidden')
+        document.getElementById('responseContent').textContent = JSON.stringify(data, null, 2)
+
+        // Scroll to response
+        document.getElementById('response').scrollIntoView({ behavior: 'smooth' })
+
+        // If successful, show success message
+        if (data.success) {
+          alert('✅ Operation deployed successfully!')
+        } else {
+          alert('❌ Deployment failed: ' + (data.error || 'Unknown error'))
+        }
+      } catch (error) {
+        document.getElementById('response').classList.remove('hidden')
+        document.getElementById('responseContent').textContent = 'Error: ' + error.message
+        alert('❌ Network error: ' + error.message)
+      }
+    })
+  </script>
+</body>
+</html>
