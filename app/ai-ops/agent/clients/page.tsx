@@ -1028,7 +1028,7 @@ export default function ClientManagementPage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-purple-300 text-sm">Response Time</span>
-                        <span className="text-white text-sm font-semibold">< 2hrs</span>
+                        <span className="text-white text-sm font-semibold">&lt; 2hrs</span>
                       </div>
                       <div className="w-full bg-gray-800 rounded-full h-2">
                         <div className="bg-gradient-to-r from-blue-600 to-blue-400 h-2 rounded-full" style={{ width: '94%' }} />
