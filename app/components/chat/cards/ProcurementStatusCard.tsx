@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import LoadingSpinner from '@/app/components/LoadingSpinner'
 
 interface ProcurementStatusProps {
   data: {
@@ -61,7 +62,7 @@ export default function ProcurementStatusCard({ data }: ProcurementStatusProps) 
     return (
       <div className="bg-white border border-[#9ea1a7]/20 rounded-sm p-6">
         <div className="flex items-center gap-3">
-          <div className="animate-spin h-5 w-5 border-2 border-[#183b6d] border-t-transparent rounded-full"></div>
+          <LoadingSpinner variant="ring" size="sm" />
           <p className="text-[#183b6d] text-sm font-medium">
             Reaching out to suppliers...
           </p>

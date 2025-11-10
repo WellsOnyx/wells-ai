@@ -13,6 +13,7 @@ import { ChatMessage } from '@/types/chat'
 import GTMConversionCard from './chat/cards/GTMConversionCard'
 import ProcurementStatusCard from './chat/cards/ProcurementStatusCard'
 import SupplierMatchCard from './chat/cards/SupplierMatchCard'
+import LoadingSpinner from './LoadingSpinner'
 import Link from 'next/link'
 
 // ============================================================================
@@ -639,10 +640,7 @@ export default function WellsAIContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#fafbfc] via-white to-[#fafbfc]">
         <div className="text-center">
-          <div className="relative w-16 h-16 mx-auto mb-6">
-            <div className="absolute inset-0 border-4 border-[#183b6d]/20 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-[#dba63f] border-t-transparent rounded-full animate-spin"></div>
-          </div>
+          <LoadingSpinner variant="pulse" size="lg" className="mb-6" />
           <p className="text-sm text-[#575757] tracking-wide">Loading Wells...</p>
         </div>
       </div>
@@ -1017,11 +1015,7 @@ export default function WellsAIContent() {
                   <div className="flex justify-start animate-fade-in">
                     <div className="bg-white border border-[#dba63f]/20 rounded-lg px-4 sm:px-6 py-3 sm:py-4 shadow-sm">
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 bg-[#183b6d] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 bg-[#dba63f] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 bg-[#183b6d] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </div>
+                        <LoadingSpinner variant="dots" size="md" />
                         <span className="text-xs text-[#575757] hidden sm:inline">Wells is thinking...</span>
                       </div>
                     </div>
