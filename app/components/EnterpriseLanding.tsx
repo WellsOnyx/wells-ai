@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useSession, signOut } from 'next-auth/react'
+import { useUser, useClerk } from '@clerk/nextjs'
 
 export default function EnterpriseLanding() {
-  const { data: session, status } = useSession()
-  const isSignedIn = !!session?.user
+  const { user, isLoaded } = useUser()
+  const { signOut } = useClerk()
+  const isSignedIn = isLoaded && !!user
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [navPrice, setNavPrice] = useState(1.0417) // Mock GRAIN price
   const [totalNAV, setTotalNAV] = useState(127500000) // Mock total NAV
@@ -331,9 +332,9 @@ export default function EnterpriseLanding() {
                   Go to App
                 </Link>
                 <div className="flex items-center gap-3">
-                  <div className="text-sm text-[#575757]">{session?.user?.email}</div>
+                  <div className="text-sm text-[#575757]">{user?.emailAddresses?.[0]?.emailAddress}</div>
                   <button
-                    onClick={() => signOut({ callbackUrl: '/' })}
+                    onClick={() => signOut()}
                     className="text-sm text-[#575757] hover:text-[#1a2332] transition-colors"
                   >
                     Sign Out

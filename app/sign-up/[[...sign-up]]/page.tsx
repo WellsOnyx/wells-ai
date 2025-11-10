@@ -21,7 +21,7 @@ export default function SignUpPage() {
         routing="path"
         path="/sign-up"
         signInUrl="/sign-in"
-        redirectUrl="/founder/dashboard"
+        redirectUrl={process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL || '/app'}
       />
     </div>
   )

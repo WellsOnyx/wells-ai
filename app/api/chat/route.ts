@@ -8,7 +8,7 @@ import { getWisdomSystemPrompt } from '@/lib/wisdom/principles'
 import { detectSignupIntent, extractUserInfo, getNextPrompt, createUserInNotion, type ConversationState } from '@/lib/conversation-signup'
 import { EMAIL_TOOL_DEFINITION, type SendEmailInput } from '@/lib/tools/email'
 import { sendEmail } from '@/lib/resend-email'
-import { getSession } from '@/lib/auth'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { notifyDealRequest, extractDealDetails } from '@/lib/notifications'
 import { moderateContent } from '@/lib/content-moderation'
 import {
@@ -398,13 +398,20 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     if (toolUseBlock && toolUseBlock.name === 'send_email') {
       console.log('[TOOL] Claude is using send_email tool:', toolUseBlock.input)
 
-      // TODO: Re-enable auth once NextAuth is fully configured
-      // For now, chat API is public so skip auth requirement
-      const userEmail = undefined  // session?.user?.email || undefined
-      const userName = undefined  // session?.user?.name || undefined
+      // Get authenticated user from Clerk
+      const { userId } = await auth()
+      let userEmail: string | undefined
+      let userName: string | undefined
 
-      // Skip auth requirement for now
-      if (false && !userEmail) {
+      if (userId) {
+        const client = await clerkClient()
+        const user = await client.users.getUser(userId)
+        userEmail = user.emailAddresses[0]?.emailAddress
+        userName = user.firstName || user.username || undefined
+      }
+
+      // Require authentication for email sending
+      if (!userEmail) {
         console.error('[TOOL] No user email found - user must be logged in to send emails')
         const toolInput = toolUseBlock.input as SendEmailInput
 
