@@ -138,33 +138,48 @@ export default function WellsAIContent() {
     setAnonymousUserId(userId)
   }, [])
 
-  // Load user data from session
+  // Load user data from session and check onboarding
   useEffect(() => {
     if (isLoaded && user) {
       // Get email from Clerk's email addresses array
       const primaryEmail = user.emailAddresses?.[0]?.emailAddress
       const userName = user.fullName || user.firstName || user.username
+      const onboardingComplete = user.publicMetadata?.onboardingComplete as boolean
+      const savedUserType = user.publicMetadata?.userType as UserData['userType']
 
       if (primaryEmail && userName) {
         setUserData({
           name: userName,
           email: primaryEmail,
-          userType: 'buyer' // Default, will be updated during onboarding
+          userType: savedUserType || 'buyer', // Load from metadata or default
+          company: user.publicMetadata?.company as string,
+          industry: user.publicMetadata?.industry as string,
         })
       }
-    }
-  }, [isLoaded, user])
 
-  // Wells' magical welcome for new users
-  useEffect(() => {
-    if (isLoaded && !userData && messages.length === 0) {
-      // Wells introduces itself warmly
+      // If user hasn't completed onboarding and has no messages, show personalized welcome
+      if (!onboardingComplete && messages.length === 0) {
+        const firstName = user.firstName || 'there'
+        setMessages([{
+          role: 'assistant',
+          content: `Hey ${firstName}, I'm Wells.\n\nI help people buy and sell anything, anywhere in the world — without ever having to speak to another human.\n\nWhat can I help you with today?`
+        }])
+      } else if (onboardingComplete && messages.length === 0) {
+        // Returning user - warm welcome back
+        const firstName = user.firstName || 'there'
+        setMessages([{
+          role: 'assistant',
+          content: `Welcome back, ${firstName}! What can I help you with today?`
+        }])
+      }
+    } else if (isLoaded && !user && messages.length === 0) {
+      // Anonymous user - standard welcome
       setMessages([{
         role: 'assistant',
-        content: "Hi, I'm Wells.\n\nI'm here to help you buy or sell anything anywhere in the world. Never speak to a human.\n\nWhat brings you here today?"
+        content: "Hi, I'm Wells.\n\nI help people buy and sell anything, anywhere in the world — without ever having to speak to another human.\n\nWhat brings you here today?"
       }])
     }
-  }, [isLoaded, userData, messages.length])
+  }, [isLoaded, user])
 
   // Auto-migrate anonymous conversations when user signs in
   useEffect(() => {
