@@ -14,6 +14,7 @@ import GTMConversionCard from './chat/cards/GTMConversionCard'
 import ProcurementStatusCard from './chat/cards/ProcurementStatusCard'
 import SupplierMatchCard from './chat/cards/SupplierMatchCard'
 import LoadingSpinner from './LoadingSpinner'
+import Button from './Button'
 import Link from 'next/link'
 
 // ============================================================================
@@ -1040,23 +1041,19 @@ export default function WellsAIContent() {
                     disabled={isLoading}
                     className="flex-1 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base bg-white border border-[#9ea1a7]/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#dba63f]/50 focus:border-[#dba63f] transition-all placeholder:text-[#9ea1a7]/60 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                   />
-                  <button
+                  <Button
                     onClick={sendMessage}
-                    disabled={isLoading || !input.trim()}
-                    className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-br from-[#183b6d] to-[#0d2545] text-white font-medium text-xs sm:text-sm tracking-wide rounded-lg hover:from-[#0d2545] hover:to-[#183b6d] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+                    disabled={!input.trim()}
+                    isLoading={isLoading}
+                    variant="primary"
+                    size="lg"
+                    className="px-6 sm:px-8"
                   >
-                    {isLoading ? (
-                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                    ) : (
-                      <span className="hidden sm:inline">Send</span>
-                    )}
+                    <span className="hidden sm:inline">Send</span>
                     <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

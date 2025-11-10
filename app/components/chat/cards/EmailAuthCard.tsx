@@ -6,6 +6,7 @@
 'use client'
 
 import { useState } from 'react'
+import Button from '@/app/components/Button'
 
 interface EmailAuthCardProps {
   data: {
@@ -109,13 +110,15 @@ export default function EmailAuthCard({ data }: EmailAuthCardProps) {
               disabled={loading}
               className="flex-1 px-4 py-2.5 border border-[#9ea1a7]/30 rounded-sm focus:outline-none focus:border-[#dba63f] transition-all text-sm disabled:opacity-50"
             />
-            <button
+            <Button
               onClick={handleSubmit}
-              disabled={loading || !email}
-              className="px-6 py-2.5 bg-[#dba63f] text-white font-medium text-sm rounded-sm hover:bg-[#c89430] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              disabled={!email}
+              isLoading={loading}
+              variant="secondary"
+              size="md"
             >
-              {loading ? 'Sending...' : 'Continue'}
-            </button>
+              Continue
+            </Button>
           </div>
           <p className="text-xs text-[#9ea1a7] mt-2">
             We'll send you a secure sign-in link. No password needed.

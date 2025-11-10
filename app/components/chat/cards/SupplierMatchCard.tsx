@@ -6,6 +6,7 @@
 'use client'
 
 import { useState } from 'react'
+import Button from '@/app/components/Button'
 
 interface Supplier {
   id: string
@@ -224,22 +225,19 @@ export default function SupplierMatchCard({ data = {} }: SupplierMatchCardProps)
 
               {/* Actions */}
               <div className="mt-4 flex gap-2">
-                <button
+                <Button
                   onClick={() => handleSelect(supplier)}
-                  className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
-                    isSelected
-                      ? 'bg-wells-blue text-white hover:bg-wells-blue/90'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  variant={isSelected ? 'primary' : 'ghost'}
+                  className="flex-1"
                 >
                   {isSelected ? '✓ Selected' : 'Select Supplier'}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => toggleExpand(supplier.id)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                  variant="outline"
                 >
                   {isExpanded ? 'Less Details' : 'More Details'}
-                </button>
+                </Button>
               </div>
             </div>
           )
