@@ -17,10 +17,11 @@ import { logMonitoringEvent } from '@/lib/monitoring';
 // GET - Get integration status
 export async function GET(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
-    const platform = params.platform as IntegrationPlatform;
+    const { platform: platformName } = await params;
+    const platform = platformName as IntegrationPlatform;
     const manager = IntegrationManager.getInstance();
 
     // Get client ID from query or auth
@@ -48,7 +49,7 @@ export async function GET(
 
     return NextResponse.json({ integration: sanitized });
   } catch (error: any) {
-    await logMonitoringEvent('integration_api_error', {
+    await logMonitoringEvent('integration_api_error', undefined, {
       endpoint: 'GET',
       error: error.message,
     });
@@ -63,10 +64,11 @@ export async function GET(
 // POST - Connect integration
 export async function POST(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
-    const platform = params.platform as IntegrationPlatform;
+    const { platform: platformName } = await params;
+    const platform = platformName as IntegrationPlatform;
     const body = await request.json();
     const { credentials, config, clientId = 'default_client' } = body;
 
@@ -123,7 +125,7 @@ export async function POST(
       status: 'connected',
     });
 
-    await logMonitoringEvent('integration_connected', {
+    await logMonitoringEvent('integration_connected', undefined, {
       platform,
       clientId,
     });
@@ -136,7 +138,7 @@ export async function POST(
       },
     });
   } catch (error: any) {
-    await logMonitoringEvent('integration_api_error', {
+    await logMonitoringEvent('integration_api_error', undefined, {
       endpoint: 'POST',
       error: error.message,
     });
@@ -151,10 +153,11 @@ export async function POST(
 // PATCH - Update integration config
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
-    const platform = params.platform as IntegrationPlatform;
+    const { platform: platformName } = await params;
+    const platform = platformName as IntegrationPlatform;
     const body = await request.json();
     const { config, credentials, clientId = 'default_client' } = body;
 
@@ -177,7 +180,7 @@ export async function PATCH(
       credentials: credentials || integration.credentials,
     });
 
-    await logMonitoringEvent('integration_updated', {
+    await logMonitoringEvent('integration_updated', undefined, {
       platform,
       clientId,
     });
@@ -187,7 +190,7 @@ export async function PATCH(
       integration: updated,
     });
   } catch (error: any) {
-    await logMonitoringEvent('integration_api_error', {
+    await logMonitoringEvent('integration_api_error', undefined, {
       endpoint: 'PATCH',
       error: error.message,
     });
@@ -202,10 +205,11 @@ export async function PATCH(
 // DELETE - Disconnect integration
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
-    const platform = params.platform as IntegrationPlatform;
+    const { platform: platformName } = await params;
+    const platform = platformName as IntegrationPlatform;
     const clientId = request.nextUrl.searchParams.get('clientId') || 'default_client';
 
     const manager = IntegrationManager.getInstance();
@@ -225,7 +229,7 @@ export async function DELETE(
     // Delete integration
     await manager.deleteIntegration(integration.id);
 
-    await logMonitoringEvent('integration_disconnected', {
+    await logMonitoringEvent('integration_disconnected', undefined, {
       platform,
       clientId,
     });
@@ -235,7 +239,7 @@ export async function DELETE(
       message: 'Integration disconnected successfully',
     });
   } catch (error: any) {
-    await logMonitoringEvent('integration_api_error', {
+    await logMonitoringEvent('integration_api_error', undefined, {
       endpoint: 'DELETE',
       error: error.message,
     });

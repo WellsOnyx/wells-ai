@@ -117,7 +117,7 @@ export class GmailIntegration extends IntegrationService {
     };
 
     const key = `gmail_sync:${this.integration.clientId}`;
-    await cache.set(key, JSON.stringify(syncData), 3600);
+    await cache.set(key, JSON.stringify(syncData), { ttl: 3600 });
 
     this.integration.lastSync = new Date().toISOString();
 

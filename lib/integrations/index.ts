@@ -126,7 +126,7 @@ export abstract class IntegrationService {
       throw new Error('No refresh token available');
     }
 
-    await logMonitoringEvent('integration_token_refresh', {
+    await logMonitoringEvent('integration_token_refresh', undefined, {
       platform: this.integration.platform,
       clientId: this.integration.clientId,
     });
@@ -147,7 +147,7 @@ export abstract class IntegrationService {
   // Rate limiting
   async checkRateLimit(): Promise<{ remaining: number; resetAt: string }> {
     const key = `rate_limit:${this.integration.platform}:${this.integration.clientId}`;
-    const data = await cache.get(key);
+    const data = await cache.get<string>(key);
 
     if (!data) {
       return { remaining: 1000, resetAt: new Date(Date.now() + 3600000).toISOString() };
@@ -172,7 +172,7 @@ export abstract class IntegrationService {
     };
 
     const key = `integration_actions:${this.integration.clientId}`;
-    const existing = await cache.get(key);
+    const existing = await cache.get<string>(key);
     const actions = existing ? JSON.parse(existing) : [];
     actions.unshift(actionLog);
 
@@ -181,9 +181,9 @@ export abstract class IntegrationService {
       actions.length = 100;
     }
 
-    await cache.set(key, JSON.stringify(actions), 86400); // 24 hours
+    await cache.set(key, JSON.stringify(actions), { ttl: 86400 }); // 24 hours
 
-    await logMonitoringEvent('integration_action', {
+    await logMonitoringEvent('integration_action', undefined, {
       platform: this.integration.platform,
       action,
       result,
@@ -210,7 +210,7 @@ export class IntegrationManager {
   private async loadIntegrations(): Promise<void> {
     // Load from cache or database
     const key = 'integrations:all';
-    const cached = await cache.get(key);
+    const cached = await cache.get<string>(key);
 
     if (cached) {
       const data = JSON.parse(cached);
@@ -246,7 +246,7 @@ export class IntegrationManager {
     this.integrations.set(newIntegration.id, newIntegration);
     await this.saveIntegrations();
 
-    await logMonitoringEvent('integration_created', {
+    await logMonitoringEvent('integration_created', undefined, {
       platform: newIntegration.platform,
       clientId: newIntegration.clientId,
     });
@@ -276,7 +276,7 @@ export class IntegrationManager {
     this.integrations.delete(id);
     await this.saveIntegrations();
 
-    await logMonitoringEvent('integration_deleted', {
+    await logMonitoringEvent('integration_deleted', undefined, {
       platform: integration.platform,
       clientId: integration.clientId,
     });
@@ -285,12 +285,12 @@ export class IntegrationManager {
   private async saveIntegrations(): Promise<void> {
     const key = 'integrations:all';
     const data = Array.from(this.integrations.values());
-    await cache.set(key, JSON.stringify(data), 86400);
+    await cache.set(key, JSON.stringify(data), { ttl: 86400 });
   }
 
   async getActions(clientId: string, limit: number = 100): Promise<IntegrationAction[]> {
     const key = `integration_actions:${clientId}`;
-    const cached = await cache.get(key);
+    const cached = await cache.get<string>(key);
 
     if (!cached) {
       return [];
@@ -302,7 +302,7 @@ export class IntegrationManager {
 
   async getWebhooks(integrationId: string): Promise<WebhookEvent[]> {
     const key = `webhooks:${integrationId}`;
-    const cached = await cache.get(key);
+    const cached = await cache.get<string>(key);
 
     if (!cached) {
       return [];
@@ -319,7 +319,7 @@ export class IntegrationManager {
     };
 
     const key = `webhooks:${event.integrationId}`;
-    const existing = await cache.get(key);
+    const existing = await cache.get<string>(key);
     const webhooks = existing ? JSON.parse(existing) : [];
     webhooks.unshift(webhookEvent);
 
@@ -328,9 +328,9 @@ export class IntegrationManager {
       webhooks.length = 50;
     }
 
-    await cache.set(key, JSON.stringify(webhooks), 86400);
+    await cache.set(key, JSON.stringify(webhooks), { ttl: 86400 });
 
-    await logMonitoringEvent('webhook_received', {
+    await logMonitoringEvent('webhook_received', undefined, {
       platform: event.platform,
       event: event.event,
     });

@@ -12,10 +12,11 @@ import { logMonitoringEvent } from '@/lib/monitoring';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
-    const platform = params.platform as IntegrationPlatform;
+    const { platform: platformName } = await params;
+    const platform = platformName as IntegrationPlatform;
     const clientId = request.nextUrl.searchParams.get('clientId') || 'default_client';
 
     const manager = IntegrationManager.getInstance();
@@ -58,7 +59,7 @@ export async function POST(
     // Check rate limit
     const rateLimit = await service.checkRateLimit();
 
-    await logMonitoringEvent('integration_test', {
+    await logMonitoringEvent('integration_test', undefined, {
       platform,
       clientId,
       connected,
@@ -93,8 +94,9 @@ export async function POST(
       });
     }
   } catch (error: any) {
-    await logMonitoringEvent('integration_test_error', {
-      platform: params.platform,
+    const { platform: platformName } = await params;
+    await logMonitoringEvent('integration_test_error', undefined, {
+      platform: platformName,
       error: error.message,
     });
 

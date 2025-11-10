@@ -65,7 +65,7 @@ export function useRealtime(options: UseRealtimeOptions): UseRealtimeReturn {
 
   // State
   const [events, setEvents] = useState<RealtimeEvent[]>([]);
-  const [isConnected, setIsConnected] = useState(false lookup);
+  const [isConnected, setIsConnected] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 

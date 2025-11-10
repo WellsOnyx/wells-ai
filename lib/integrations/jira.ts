@@ -125,7 +125,7 @@ export class JiraIntegration extends IntegrationService {
     };
 
     const key = `jira_sync:${this.integration.clientId}`;
-    await cache.set(key, JSON.stringify(syncData), 3600);
+    await cache.set(key, JSON.stringify(syncData), { ttl: 3600 });
 
     this.integration.lastSync = new Date().toISOString();
 

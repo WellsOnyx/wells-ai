@@ -244,3 +244,9 @@ export function getPerformanceStats() {
 
   return null
 }
+
+/**
+ * Log monitoring event - alias for trackAction
+ * Used by integration layer for compatibility
+ */
+export const logMonitoringEvent = trackAction

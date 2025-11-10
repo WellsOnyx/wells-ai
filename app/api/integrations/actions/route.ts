@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
       // Store mock actions
       const key = `integration_actions:${clientId}`;
       const { cache } = await import('@/lib/cache');
-      await cache.set(key, JSON.stringify(mockActions), 86400);
+      await cache.set(key, JSON.stringify(mockActions), { ttl: 86400 });
 
       actions = mockActions;
     }

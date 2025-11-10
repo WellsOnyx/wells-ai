@@ -87,7 +87,7 @@ export class SlackIntegration extends IntegrationService {
 
     // Cache the sync data
     const key = `slack_sync:${this.integration.clientId}`;
-    await cache.set(key, JSON.stringify(syncData), 3600); // 1 hour
+    await cache.set(key, JSON.stringify(syncData), { ttl: 3600 }); // 1 hour
 
     this.integration.lastSync = new Date().toISOString();
 
