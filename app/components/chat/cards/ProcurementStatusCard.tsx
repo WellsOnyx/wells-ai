@@ -72,8 +72,8 @@ export default function ProcurementStatusCard({ data }: ProcurementStatusProps) 
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-sm p-6">
-        <p className="text-red-600 text-sm">{error}</p>
+      <div className="bg-wells-error/10 border border-wells-error/20 rounded-sm p-6">
+        <p className="text-wells-error text-sm">{error}</p>
       </div>
     )
   }
@@ -94,9 +94,9 @@ export default function ProcurementStatusCard({ data }: ProcurementStatusProps) 
         </div>
         <div className={`px-3 py-1 rounded-full text-xs font-medium ${
           status.status === 'Receiving Responses'
-            ? 'bg-green-100 text-green-700'
+            ? 'bg-wells-success/20 text-wells-success'
             : status.status === 'Awaiting Responses'
-            ? 'bg-blue-100 text-blue-700'
+            ? 'bg-wells-info/20 text-wells-info'
             : 'bg-gray-100 text-gray-700'
         }`}>
           {status.status}

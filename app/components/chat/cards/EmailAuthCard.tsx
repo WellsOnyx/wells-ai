@@ -124,7 +124,7 @@ export default function EmailAuthCard({ data }: EmailAuthCardProps) {
       )}
 
       {result && (
-        <div className={`pl-10 p-3 rounded-sm text-sm ${result.success ? 'bg-green-50 text-green-900 border border-green-200' : 'bg-red-50 text-red-900 border border-red-200'}`}>
+        <div className={`pl-10 p-3 rounded-sm text-sm ${result.success ? 'bg-wells-success/10 text-wells-success border border-wells-success/20' : 'bg-wells-error/10 text-wells-error border border-wells-error/20'}`}>
           {result.message}
           {result.success && (
             <p className="text-xs mt-2 text-green-700">

@@ -26,8 +26,8 @@ export default function ChatMessageRenderer({ message }: ChatMessageRendererProp
         <div
           className={`max-w-[80%] rounded-lg px-4 py-2 ${
             message.role === 'user'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-900 border border-gray-200'
+              ? 'bg-wells-blue text-white'
+              : 'bg-wells-neutral-100 text-wells-neutral-900 border border-wells-neutral-200'
           }`}
         >
           <p className="whitespace-pre-wrap">{message.content}</p>

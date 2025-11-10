@@ -109,7 +109,7 @@ export default function SupplierMatchCard({ data = {} }: SupplierMatchCardProps)
               key={supplier.id}
               className={`border rounded-lg p-4 transition-all ${
                 isSelected
-                  ? 'border-blue-500 bg-blue-50'
+                  ? 'border-wells-info bg-wells-info/10'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
@@ -118,7 +118,7 @@ export default function SupplierMatchCard({ data = {} }: SupplierMatchCardProps)
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h4 className="font-semibold text-lg">{supplier.name}</h4>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
+                    <span className="px-2 py-1 bg-wells-success/20 text-wells-success text-xs font-medium rounded">
                       {supplier.score}% match
                     </span>
                   </div>
@@ -228,7 +228,7 @@ export default function SupplierMatchCard({ data = {} }: SupplierMatchCardProps)
                   onClick={() => handleSelect(supplier)}
                   className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
                     isSelected
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      ? 'bg-wells-blue text-white hover:bg-wells-blue/90'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -247,12 +247,12 @@ export default function SupplierMatchCard({ data = {} }: SupplierMatchCardProps)
       </div>
 
       {selectedSupplier && (
-        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
+        <div className="mt-6 p-4 bg-wells-success/10 border border-wells-success/20 rounded-md">
           <div className="flex items-start">
-            <svg className="h-5 w-5 text-green-600 mt-0.5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-5 w-5 text-wells-success mt-0.5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <div className="text-sm text-green-800">
+            <div className="text-sm text-wells-success">
               <strong>Supplier Selected!</strong>
               <p className="mt-1">I'll prepare a purchase order with {suppliers.find(s => s.id === selectedSupplier)?.name}.</p>
             </div>
