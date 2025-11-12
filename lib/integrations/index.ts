@@ -4,7 +4,7 @@
  */
 
 import { cache } from '@/lib/cache';
-import { logMonitoringEvent } from '@/lib/monitoring';
+import { trackAction } from '@/lib/monitoring';
 
 export type IntegrationPlatform =
   | 'slack'
@@ -126,7 +126,7 @@ export abstract class IntegrationService {
       throw new Error('No refresh token available');
     }
 
-    await logMonitoringEvent('integration_token_refresh', undefined, {
+    await trackAction('integration_token_refresh', undefined, {
       platform: this.integration.platform,
       clientId: this.integration.clientId,
     });
@@ -183,7 +183,7 @@ export abstract class IntegrationService {
 
     await cache.set(key, JSON.stringify(actions), { ttl: 86400 }); // 24 hours
 
-    await logMonitoringEvent('integration_action', undefined, {
+    await trackAction('integration_action', undefined, {
       platform: this.integration.platform,
       action,
       result,
@@ -246,7 +246,7 @@ export class IntegrationManager {
     this.integrations.set(newIntegration.id, newIntegration);
     await this.saveIntegrations();
 
-    await logMonitoringEvent('integration_created', undefined, {
+    await trackAction('integration_created', undefined, {
       platform: newIntegration.platform,
       clientId: newIntegration.clientId,
     });
@@ -276,7 +276,7 @@ export class IntegrationManager {
     this.integrations.delete(id);
     await this.saveIntegrations();
 
-    await logMonitoringEvent('integration_deleted', undefined, {
+    await trackAction('integration_deleted', undefined, {
       platform: integration.platform,
       clientId: integration.clientId,
     });
@@ -330,7 +330,7 @@ export class IntegrationManager {
 
     await cache.set(key, JSON.stringify(webhooks), { ttl: 86400 });
 
-    await logMonitoringEvent('webhook_received', undefined, {
+    await trackAction('webhook_received', undefined, {
       platform: event.platform,
       event: event.event,
     });

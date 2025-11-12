@@ -209,7 +209,10 @@ export async function listUserIntegrations(userId: string): Promise<{
   // Get all integrations for user
   const userIntegrations: any[] = []
 
-  for (const [key, value] of credentialStore.entries()) {
+  // Convert Map entries to array for TypeScript compatibility
+  const entries = Array.from(credentialStore.entries())
+
+  for (const [key, value] of entries) {
     if (key.startsWith(`${userId}:`)) {
       userIntegrations.push({
         integration: value.integration,
