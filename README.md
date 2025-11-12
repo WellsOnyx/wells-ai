@@ -1,251 +1,253 @@
-# Wells AI - Conversational Commerce Platform
+# Wells AI + GRAIN & Vault
 
-**Built for Wells Onyx | Trust + Outcomes**
+**Zero Friction B2B Commerce Platform**
 
-Intelligent procurement matching connecting enterprise buyers with qualified suppliers through AI-powered conversation.
-
----
-
-## 🎯 What This Is
-
-Wells AI is a branded conversational interface that:
-- Qualifies buyer needs through natural dialogue
-- Captures structured data for RFQ creation
-- Triggers real-time supplier notifications
-- Matches buyers with optimal suppliers
-
-**Transaction Types:**
-1. **Semiconductor Procurement** (product-based)
-2. **Executive Search** (service-based)
+Enterprise-grade conversational AI platform combining Wells AI (intelligent automation) with GRAIN & Vault (treasury-as-a-service). Deployed on Vercel with Next.js 15, powered by Claude AI.
 
 ---
 
-## 🎨 Brand
+## 🚀 Live Deployment
 
-Wells AI uses Wells Onyx brand identity:
-- **Colors:** Deep Blue (#183b6d), Gold (#dba63f), Grays
-- **Voice:** Expert & trusted, precise yet personal
-- **Theme:** Constellation metaphor (North Star + practice groups)
-
----
-
-## 🚀 Quick Deploy to Vercel (5 Minutes)
-
-### Step 1: Prerequisites
-- GitHub account
-- Vercel account (free tier works)
-- Claude API key from console.anthropic.com
-
-### Step 2: Deploy
-
-1. **Upload to GitHub:**
-   ```bash
-   # Create new repo on github.com
-   git init
-   git add .
-   git commit -m "Initial Wells AI"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/wells-ai.git
-   git push -u origin main
-   ```
-
-2. **Deploy on Vercel:**
-   - Go to vercel.com
-   - Click "Add New Project"
-   - Import your GitHub repo
-   - Add environment variable:
-     - `ANTHROPIC_API_KEY`: Your Claude API key
-   - Click "Deploy"
-
-3. **Done!** Your Wells AI is live at `your-project.vercel.app`
+- **Production**: https://wellsai.vercel.app
+- **Alt Domain**: https://grainandvault.com  
+- **Status**: ✅ Active
 
 ---
 
-## 🔧 Local Development
+## 📋 Project Overview
 
-### Install Dependencies:
+### Wells AI
+Conversational AI assistant for B2B operations:
+- **Universal GTM Engine**: Automated outreach for 6 use cases (hiring, sales, procurement, partnerships, finance, job seeking)
+- **AI Ops Management**: Deploy and manage autonomous AI operations
+- **Integration Hub**: Secure connections to Instantly, Clay, Apollo, Twilio, Notion, PhantomBuster
+- **LinkedIn Content Engine**: AI-generated content for inbound lead generation
+
+### GRAIN & Vault
+Treasury-as-a-Service platform:
+- **Escrow Services**: Vault-based transaction security
+- **Payment Processing**: Multi-currency, multi-method
+- **Negotiation Engine**: Real-time collaborative deal-making
+- **Supplier Matching**: AI-powered procurement
+
+---
+
+## 🛠 Tech Stack
+
+### Frontend
+- **Framework**: Next.js 15 (App Router, RSC)
+- **Language**: TypeScript 5
+- **Styling**: Tailwind CSS 3
+- **Components**: React 19
+- **Auth**: Clerk (OAuth + passwordless)
+
+### Backend
+- **Runtime**: Node.js (Vercel serverless)
+- **API**: Next.js API Routes  
+- **AI**: Anthropic Claude (Sonnet 4.5)
+- **Storage**: In-memory → Postgres (migration planned)
+
+### Infrastructure
+- **Hosting**: Vercel
+- **Monitoring**: Custom logging
+- **CDN**: Vercel Edge Network
+
+### Integrations
+- Instantly.ai, Clay.earth, Apollo.io
+- PhantomBuster, Twilio, Notion
+
+---
+
+## 📦 Installation
+
+### Prerequisites
 ```bash
+node >= 18.17.0
+npm >= 9.0.0
+```
+
+### Local Setup
+```bash
+# Clone repository
+git clone https://github.com/wellsonyx/wells-ai.git
+cd wells-ai
+
+# Install dependencies  
 npm install
-```
 
-### Set Up Environment:
-```bash
-cp .env.local.example .env.local
-# Edit .env.local and add your ANTHROPIC_API_KEY
-```
+# Set up environment
+cp .env.example .env.local
+# Edit .env.local with your credentials
 
-### Run Development Server:
-```bash
+# Run dev server
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000)
-
----
-
-## 📂 Project Structure
-
-```
-wells-ai-app/
-├── app/
-│   ├── api/
-│   │   └── chat/
-│   │       └── route.ts          # Claude API integration
-│   ├── globals.css               # Tailwind + Wells Onyx styles
-│   ├── layout.tsx                # Root layout
-│   └── page.tsx                  # Main chat interface
-├── public/                       # Static assets
-├── .env.local.example            # Environment template
-├── next.config.js                # Next.js config
-├── tailwind.config.js            # Wells Onyx brand colors
-├── package.json                  # Dependencies
-└── README.md                     # This file
-```
-
----
-
-## 🎨 Customization
-
-### Colors (tailwind.config.js):
-```javascript
-colors: {
-  'wells-blue': '#183b6d',    // Trust & Depth
-  'wells-gold': '#dba63f',    // Prosperity & Purpose
-  'wells-gray-dark': '#575757',
-  'wells-gray-light': '#9ea1a7',
-}
-```
-
-### Conversation Prompts (app/api/chat/route.ts):
-- Edit `WELLS_AI_SYSTEM_PROMPT` to adjust AI behavior
-- Add new categories beyond semiconductors/exec search
-- Modify qualification questions
-
----
-
-## 🔌 Embed on Your Website
-
-### Option 1: iframe
-```html
-<iframe 
-  src="https://your-wells-ai.vercel.app" 
-  width="100%" 
-  height="800px"
-  frameborder="0">
-</iframe>
-```
-
-### Option 2: Popup Widget (Coming Week 2)
-```html
-<script src="https://your-wells-ai.vercel.app/widget.js"></script>
-<div id="wells-ai-widget"></div>
-```
-
----
-
-## 📊 Current Features
-
-✅ **Week 1 - Proven:**
-- Branded chat interface (Wells Onyx identity)
-- Claude Sonnet 4.5 integration
-- Expert/trusted conversation voice
-- Semiconductor + Executive Search qualification
-- Mobile responsive design
-- Constellation-themed UI
-
-⏳ **Week 2 - Building:**
-- Notion database integration
-- Real-time SMS supplier alerts (Twilio)
-- RFQ creation automation
-- Supplier response collection
-
-⏳ **Week 3+ - Planned:**
-- Quote comparison dashboard
-- Transaction tracking
-- Billing automation (5.5% platform fee - includes all processing)
-- Analytics & reporting
-
----
-
-## 💰 Cost Breakdown
-
-### Fixed Monthly:
-- Vercel Hosting: **$0** (free tier)
-- Claude API: **~$0.04 per conversation**
-- Total: **~$30/month** at 10 RFQs/day
-
-### Variable (per RFQ):
-- Claude API: $0.04
-- Twilio SMS (Week 2): $0.06
-- **Total: $0.10 per RFQ**
-
-### ROI:
-- Wells AI platform fee: 5.5% (includes all payment processing costs)
-- Avg semiconductor deal: $12.5M → $687,500 revenue
-- Avg exec search: $100K → $5,500 revenue
-- **Margin: ~95%** (after operational costs)
 
 ---
 
 ## 🔐 Environment Variables
 
-Required immediately:
-```
-ANTHROPIC_API_KEY=sk-ant-api03-...
+### Required
+```bash
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+
+# Anthropic AI
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Encryption (generate: openssl rand -hex 32)
+ENCRYPTION_MASTER_SECRET=...
+
+# Deployment
+NEXT_PUBLIC_APP_URL=https://wellsai.vercel.app
 ```
 
-Week 2 additions:
-```
-NOTION_API_KEY=secret_...
-NOTION_RFQ_DATABASE_ID=...
-NOTION_SUPPLIER_DATABASE_ID=...
-TWILIO_ACCOUNT_SID=AC...
+### Optional
+```bash
+# Integrations
+TWILIO_ACCOUNT_SID=...
 TWILIO_AUTH_TOKEN=...
-TWILIO_PHONE_NUMBER=+1...
+NOTION_API_KEY=...
+
+# Database (future)
+DATABASE_URL=postgresql://...
 ```
 
 ---
 
-## 🧪 Testing
+## 🚀 Deployment
 
-### Test Scenario 1: Semiconductor
-**Input:** "I need 50,000 5nm chips for AI training, Q2 2026 delivery"
+### Vercel (Production)
+```bash
+# Install Vercel CLI
+npm i -g vercel
 
-**Wells AI Should:**
-- Ask about architecture (ARM, x86, etc.)
-- Clarify budget per unit
-- Discuss technical requirements
-- Understand timeline urgency
-- Summarize and confirm
+# Login
+vercel login
 
-### Test Scenario 2: Executive Search
-**Input:** "Need to hire a Chief Revenue Officer"
-
-**Wells AI Should:**
-- Ask about company stage/industry
-- Clarify compensation range
-- Understand timeline (90 days?)
-- Discuss key requirements
-- Ask about team they'll lead
+# Deploy
+vercel --prod
+```
 
 ---
 
-## 🐛 Troubleshooting
+## 📁 Project Structure
 
-### Issue: "API Key Invalid"
-- Verify `ANTHROPIC_API_KEY` in `.env.local`
-- Check key starts with `sk-ant-api03-`
-- Regenerate key at console.anthropic.com
+```
+wells-ai/
+├── app/
+│   ├── api/                # API Routes
+│   │   ├── chat/          # Chat endpoints
+│   │   ├── gtm/           # GTM automation
+│   │   ├── integrations/  # Integration mgmt
+│   │   └── webhooks/      # External webhooks
+│   ├── components/        # React components
+│   └── page.tsx          # Homepage
+├── lib/                   # Core libraries
+│   ├── gtm/              # GTM engine
+│   ├── settings/         # Settings mgmt
+│   ├── cache.ts
+│   ├── monitoring.ts
+│   └── notion.ts
+├── public/               # Static assets
+├── .env.example
+├── package.json
+└── README.md
+```
 
-### Issue: Conversation Not Loading
-- Check browser console for errors
-- Verify API route is accessible: `/api/chat`
-- Confirm environment variables are set in Vercel
+---
 
-### Issue: Styling Broken
-- Run `npm install` to install Tailwind
-- Check `tailwind.config.js` has correct paths
-- Clear Next.js cache: `rm -rf .next`
+## 🎯 Key Features
+
+### 1. Universal GTM Engine
+**6 Use Cases, Same Methodology:**
+- Hiring (employer → candidates)
+- Job Seeking (candidate → employers)
+- Sales (vendor → customers)
+- Procurement (buyer → suppliers)
+- Partnerships (platform → partners)
+- Finance (founder → investors)
+
+**Components:**
+- Use case detection
+- Adaptive qualification (6 questions/use case)
+- 80-90% zone targeting
+- 3-line message formula
+- Email/LinkedIn automation
+
+### 2. Integration APIs
+**4 Secure Endpoints:**
+- `POST /api/integrations/connect` - Connect & test
+- `POST /api/integrations/test` - Verify connection
+- `POST /api/integrations/disconnect` - Remove credentials
+- `GET /api/integrations/list` - List integrations
+
+**Security:**
+- AES-256-GCM encryption
+- User-specific keys
+- Connection testing
+- Zero credential exposure
+
+### 3. LinkedIn Content Engine
+**Inbound Lead Generation:**
+- 6 post types (insight, story, advice, milestone, question, controversial)
+- Content strategies per GTM use case
+- 7-day content calendar
+- Engagement estimation
+- Best practices built-in
+
+### 4. Conversational Settings
+**No Settings Pages:**
+- Detect integration setup in chat
+- Extract API keys from messages
+- Inline connection UI
+- Per-integration instructions
+
+---
+
+## 🔒 Security
+
+### Credential Storage
+- **Encryption**: AES-256-GCM
+- **Key Derivation**: scrypt (memory-hard)
+- **User Isolation**: Unique encryption keys
+- **Master Secret**: Environment-based
+
+### Authentication
+- **Clerk**: Industry-standard OAuth
+- **API Protection**: All endpoints authenticated
+- **Session Management**: Token-based
+
+---
+
+## 📝 Recent Updates
+
+### 2025-11-12
+- ✅ Universal GTM Engine (6 use cases)
+- ✅ LinkedIn Content Engine
+- ✅ Integration APIs (4 endpoints)
+- ✅ Encrypted Credential Storage
+- ✅ Conversational Settings Detection
+
+---
+
+## 🗺 Roadmap
+
+### Immediate
+- [ ] Migrate to Postgres storage
+- [ ] GitHub Actions CI/CD
+- [ ] Integration tests
+
+### Short-term
+- [ ] iOS/macOS native apps
+- [ ] Real-time collaboration
+- [ ] Analytics dashboard
+
+### Long-term
+- [ ] Multi-tenant architecture
+- [ ] AI agent orchestration
+- [ ] Integration marketplace
 
 ---
 
@@ -254,51 +256,13 @@ TWILIO_PHONE_NUMBER=+1...
 **Wells Onyx Contact:**
 - Email: jonah@wellsonyx.com
 - Phone: +1 (850) 456-1961
-- Website: wellsonyx.com
-
-**Documentation:**
-- Wells AI Core: [Notion Link]
-- Brand Guidelines: Wells_Onyx_Brand_Guide-_V1.pdf
-- Build Documentation: In Notion
 
 ---
 
-## 📝 Next Steps
+## 📄 License
 
-### Today (Week 1):
-1. ✅ Deploy to Vercel
-2. ✅ Test both conversation types
-3. ✅ Confirm brand styling matches
-4. ⏳ Embed on wellsonyx.com (optional)
-
-### This Week (Week 2):
-1. Connect Notion databases
-2. Build Twilio SMS alerts
-3. Test supplier activation
-4. Refine conversation prompts
-
-### Next Week (Week 3):
-1. Quote collection system
-2. Buyer notifications
-3. Analytics dashboard
-4. Scale testing (100+ RFQs/day)
+Proprietary - Wells Onyx LLC
 
 ---
 
-## 🌟 Wells Onyx Philosophy
-
-*"We don't chase unicorns. We build tabernacles."*
-
-Wells AI embodies:
-- **Trust:** Every connection begins with honesty
-- **Humanity:** Systems that serve people, not replace them
-- **Purpose:** Growth that strengthens what matters
-- **Endurance:** Built to outlast trends
-
-Like the constellations that guide us, Wells AI is meant to endure.
-
----
-
-**Built with precision. Powered by trust. Designed for generations.**
-
-*Wells Onyx | Trust + Outcomes*
+**Built with ⚡️ by Wells Onyx**
