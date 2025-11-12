@@ -637,3 +637,185 @@ model UserProfile {
 
   @@index([userId])
 }
+
+// ============================================
+// GTM CONTACT DATABASE (Scale-ready for 300k+ contacts)
+// ============================================
+
+model Contact {
+  id              String   @id @default(cuid())
+  userId          String   // Clerk user ID - CRITICAL for user isolation
+
+  // Basic Info
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  linkedinUrl     String?
+
+  // Professional Info
+  company         String?
+  title           String?
+  department      String?
+  seniority       String?  // C-Level, VP, Director, Manager, IC
+
+  // Location
+  location        String?
+  city            String?
+  state           String?
+  country         String?
+
+  // Company Details
+  companySize     String?  // 1-10, 11-50, 51-200, 201-500, 501-1000, 1000+
+  companyRevenue  String?  // $0-1M, $1M-10M, $10M-50M, $50M-100M, $100M+
+  industry        String?
+  companyType     String?  // Startup, SMB, Mid-Market, Enterprise
+
+  // Enriched Data
+  keywords        String[] // For targeting ['B2B', 'SaaS', 'AI/ML']
+  bio             String?  @db.Text
+  skills          String[] // Top skills
+
+  // Targeting Signals
+  targetingScore  Int?     // 0-100 (calculated based on criteria)
+  targetingZone   String?  // '50-below', '80-90', '100-avoid'
+
+  // Metadata
+  source          String   // 'uploaded', 'apollo', 'clay', 'manual'
+  uploadedAt      DateTime @default(now())
+  lastEnriched    DateTime?
+  lastContacted   DateTime?
+
+  // Relationships
+  campaigns       CampaignContact[]
+  interactions    Interaction[]
+
+  // Composite unique: One email per user (allow same email across users)
+  @@unique([userId, email])
+
+  // Indexes for fast queries with 300k+ records
+  @@index([userId])                    // Primary isolation
+  @@index([userId, company])           // "Show contacts from Acme"
+  @@index([userId, title])             // "Find all VPs"
+  @@index([userId, targetingZone])     // Get 80-90% zone
+  @@index([userId, lastContacted])     // "Who haven't I contacted?"
+  @@index([userId, uploadedAt])        // "Contacts added this week"
+  @@index([email])                     // Duplicate detection
+
+  @@map("gtm_contacts")
+}
+
+model Campaign {
+  id              String   @id @default(cuid())
+  userId          String   // User isolation
+
+  // Campaign Info
+  name            String
+  useCase         String   // hiring, sales, procurement, partnerships, finance, job_seeking
+  status          String   // draft, active, paused, completed
+
+  // Configuration
+  targetCount     Int      // Total contacts targeted
+  messagesGenerated Int    @default(0)
+  messagesSent    Int      @default(0)
+  replies         Int      @default(0)
+
+  // GTM Profile (stored as JSON)
+  profile         Json     // UniversalGTMProfile data
+
+  // Timing
+  createdAt       DateTime @default(now())
+  launchedAt      DateTime?
+  completedAt     DateTime?
+
+  // Relationships
+  contacts        CampaignContact[]
+  interactions    Interaction[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, useCase])
+
+  @@map("gtm_campaigns")
+}
+
+model CampaignContact {
+  id              String   @id @default(cuid())
+
+  campaignId      String
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  contactId       String
+  contact         Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  // Message for this contact
+  message         String?  @db.Text
+  subject         String?
+
+  // Status
+  status          String   @default("pending") // pending, sent, replied, bounced, unsubscribed
+  sentAt          DateTime?
+  repliedAt       DateTime?
+
+  addedAt         DateTime @default(now())
+
+  @@unique([campaignId, contactId])
+  @@index([campaignId])
+  @@index([contactId])
+  @@index([status])
+
+  @@map("gtm_campaign_contacts")
+}
+
+model Interaction {
+  id              String   @id @default(cuid())
+  userId          String
+
+  contactId       String
+  contact         Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  campaignId      String?
+  campaign        Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  // Interaction Details
+  type            String   // email_sent, email_replied, linkedin_message, call, meeting
+  direction       String   // outbound, inbound
+
+  subject         String?
+  message         String?  @db.Text
+  response        String?  @db.Text
+
+  timestamp       DateTime @default(now())
+
+  @@index([userId])
+  @@index([contactId])
+  @@index([campaignId])
+  @@index([timestamp])
+
+  @@map("gtm_interactions")
+}
+
+model UploadBatch {
+  id              String   @id @default(cuid())
+  userId          String
+
+  // Upload Info
+  filename        String
+  totalRows       Int
+  validRows       Int
+  duplicates      Int
+  errors          Int
+
+  // Status
+  status          String   // processing, completed, failed
+  errorLog        Json?    // Array of error details
+
+  // Timing
+  uploadedAt      DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([userId])
+  @@index([userId, uploadedAt])
+
+  @@map("gtm_upload_batches")
+}
