@@ -110,3 +110,10 @@ PARTNERS_CREDENTIALS.md
 /out
 
 /lib/generated/prisma
+
+# iCloud metadata
+*.icloud
+.Spotlight-V100
+.Trashes
+.TemporaryItems
+.fseventsd
