@@ -162,7 +162,7 @@ ORDER BY total_executions DESC;
 CREATE OR REPLACE VIEW active_slack_rfqs AS
 SELECT
   r.id as rfq_id,
-  r.product_name,
+  r.requirements,
   r.status,
   src.team_id,
   src.channel_id,
@@ -174,8 +174,8 @@ SELECT
 FROM rfqs r
 JOIN slack_rfq_channels src ON r.id = src.rfq_id
 LEFT JOIN quotes q ON r.id = q.rfq_id
-WHERE r.status IN ('pending', 'quoted', 'negotiating')
-GROUP BY r.id, r.product_name, r.status, src.team_id, src.channel_id, src.channel_name, src.message_ts, src.thread_ts, src.created_at
+WHERE r.status IN ('open', 'quoted', 'negotiating')
+GROUP BY r.id, r.requirements, r.status, src.team_id, src.channel_id, src.channel_name, src.message_ts, src.thread_ts, src.created_at
 ORDER BY src.created_at DESC;
 
 -- Function: Log Slack Command

@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail, getWarmupStatus, isValidEmail } from '@/lib/resend-email'
 import { auth, currentUser } from '@clerk/nextjs/server'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 interface EmailRequest {

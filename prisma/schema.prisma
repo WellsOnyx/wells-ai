@@ -819,3 +819,63 @@ model UploadBatch {
 
   @@map("gtm_upload_batches")
 }
+
+// ============================================
+// USER EMAIL CONFIGURATION
+// ============================================
+
+model UserEmailConfig {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+
+  // Email Provider
+  provider        EmailProvider @default(RESEND)
+
+  // Email Settings
+  fromEmail       String
+  fromName        String?
+  replyTo         String?
+
+  // SMTP Settings (encrypted)
+  smtpHost        String?
+  smtpPort        Int?
+  smtpUsername    String?
+  smtpPassword    String?   // Encrypted
+  smtpSecure      Boolean   @default(true)
+
+  // Resend Settings
+  resendApiKey    String?   // Encrypted
+
+  // OAuth Settings (Future: Gmail, Outlook)
+  oauthProvider   String?
+  oauthToken      String?   // Encrypted
+  oauthRefresh    String?   // Encrypted
+  oauthExpiry     DateTime?
+
+  // Status & Testing
+  isVerified      Boolean   @default(false)
+  lastTested      DateTime?
+  testStatus      EmailTestStatus?
+  testError       String?
+
+  // Metadata
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+
+  @@map("user_email_configs")
+}
+
+enum EmailProvider {
+  RESEND
+  SMTP
+  GMAIL_OAUTH
+  OUTLOOK_OAUTH
+}
+
+enum EmailTestStatus {
+  SUCCESS
+  FAILED
+  PENDING
+}

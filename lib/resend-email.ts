@@ -177,8 +177,10 @@ export interface SendEmailResult {
 
 /**
  * Send email with automatic warmup protection
+ *
+ * @param userId - Optional Clerk user ID. If provided, will use user's email config instead of default
  */
-export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
+export async function sendEmail(params: SendEmailParams, userId?: string): Promise<SendEmailResult> {
   // Check if we can send
   const throttleCheck = canSendEmail()
 
@@ -193,17 +195,60 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     }
   }
 
-  // Prepare email
-  // Always send from Wells (wells@grainandvault.com)
-  const from = params.from || process.env.RESEND_FROM_EMAIL || 'wells@grainandvault.com'
-  const fromName = params.fromName || 'Wells'
-  const fromAddress = `${fromName} <${from}>`
-
   // Generate HTML from text if not provided
   const html = params.html || generateHtmlFromText(params.text)
 
   try {
-    // Send via Resend
+    // Try to use user's email configuration if userId is provided
+    if (userId) {
+      const { getEmailConfigForUser, sendEmailWithUserConfig } = await import('./email-config')
+
+      try {
+        const userConfig = await getEmailConfigForUser(userId)
+
+        // Send via user's config
+        const result = await sendEmailWithUserConfig(userConfig, {
+          to: params.to,
+          subject: params.subject,
+          text: params.text,
+          html
+        })
+
+        if (result.success) {
+          // Track success
+          const todayStats = getTodayStats()
+          todayStats.sentCount++
+
+          console.log('[EMAIL] Email sent successfully via user config:', {
+            userId,
+            provider: userConfig.provider,
+            to: params.to,
+            subject: params.subject,
+            messageId: result.messageId,
+            sentToday: todayStats.sentCount,
+            dailyLimit: throttleCheck.dailyLimit
+          })
+
+          return {
+            success: true,
+            messageId: result.messageId,
+            dailyLimit: throttleCheck.dailyLimit,
+            sentToday: todayStats.sentCount
+          }
+        }
+
+        // If user config failed, fall through to default
+        console.warn('[EMAIL] User config failed, falling back to default:', result.error)
+      } catch (error) {
+        console.warn('[EMAIL] Failed to load user config, falling back to default:', error)
+      }
+    }
+
+    // Fallback: Send via default Resend config
+    const from = params.from || process.env.RESEND_FROM_EMAIL || 'wells@grainandvault.com'
+    const fromName = params.fromName || 'Wells'
+    const fromAddress = `${fromName} <${from}>`
+
     const client = getResendClient()
     const result = await client.emails.send({
       from: fromAddress,
@@ -218,7 +263,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     const todayStats = getTodayStats()
     todayStats.sentCount++
 
-    console.log('[RESEND] Email sent successfully:', {
+    console.log('[RESEND] Email sent successfully via default config:', {
       to: params.to,
       subject: params.subject,
       messageId: result.data?.id,

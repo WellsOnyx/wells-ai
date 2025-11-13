@@ -11,7 +11,7 @@
 CREATE TABLE IF NOT EXISTS purchase_orders (
   id SERIAL PRIMARY KEY,
   po_number VARCHAR(100) UNIQUE NOT NULL,
-  supplier_id INTEGER REFERENCES suppliers(id),
+  supplier_id UUID,
   buyer_id VARCHAR(255) NOT NULL,
   status VARCHAR(50) NOT NULL DEFAULT 'draft',
   -- Status: draft, pending_approval, approved, sent, received, completed, cancelled, rejected
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS inventory_items (
   warehouse VARCHAR(100),
   unit_cost DECIMAL(15, 2),
   last_restock_date DATE,
-  preferred_supplier_id INTEGER REFERENCES suppliers(id),
+  preferred_supplier_id UUID,
   status VARCHAR(50) DEFAULT 'active',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS reorder_alerts (
   product_name VARCHAR(500) NOT NULL,
   current_quantity INTEGER NOT NULL,
   reorder_quantity INTEGER NOT NULL,
-  supplier_id INTEGER REFERENCES suppliers(id),
+  supplier_id UUID,
   status VARCHAR(50) DEFAULT 'pending',
   -- Status: pending, po_created, ordered, cancelled
   po_id INTEGER REFERENCES purchase_orders(id),
@@ -117,7 +117,7 @@ CREATE INDEX IF NOT EXISTS idx_reorder_item ON reorder_alerts(inventory_item_id)
 -- Supplier Performance Metrics
 CREATE TABLE IF NOT EXISTS supplier_metrics (
   id SERIAL PRIMARY KEY,
-  supplier_id INTEGER REFERENCES suppliers(id) ON DELETE CASCADE,
+  supplier_id UUID,
   po_id INTEGER REFERENCES purchase_orders(id),
   metric_period VARCHAR(50),
   -- Period: daily, weekly, monthly, quarterly, yearly
@@ -137,7 +137,7 @@ CREATE INDEX IF NOT EXISTS idx_supplier_metrics_period ON supplier_metrics(metri
 -- Supplier Issues/Incidents
 CREATE TABLE IF NOT EXISTS supplier_issues (
   id SERIAL PRIMARY KEY,
-  supplier_id INTEGER REFERENCES suppliers(id) ON DELETE CASCADE,
+  supplier_id UUID,
   po_id INTEGER REFERENCES purchase_orders(id),
   issue_type VARCHAR(100) NOT NULL,
   -- Type: late_delivery, quality_issue, pricing_error, communication, contract_breach
@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   -- Type: receivable (we bill), payable (we pay)
   customer_id VARCHAR(255),
   -- For receivables
-  supplier_id INTEGER REFERENCES suppliers(id),
+  supplier_id UUID,
   -- For payables
   po_id INTEGER REFERENCES purchase_orders(id),
   -- Link to PO if applicable
@@ -289,7 +289,7 @@ CREATE TABLE IF NOT EXISTS payments (
   -- Check number, transaction ID, etc.
   customer_id VARCHAR(255),
   -- For received payments
-  supplier_id INTEGER REFERENCES suppliers(id),
+  supplier_id UUID,
   -- For sent payments
   bank_account VARCHAR(100),
   status VARCHAR(50) DEFAULT 'pending',
@@ -535,6 +535,62 @@ ON CONFLICT DO NOTHING;
 -- ============================================
 -- COMPLETION
 -- ============================================
+
+-- Add foreign key constraints if suppliers table exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'suppliers') THEN
+    -- Purchase orders supplier FK
+    ALTER TABLE purchase_orders
+    DROP CONSTRAINT IF EXISTS purchase_orders_supplier_id_fkey;
+    ALTER TABLE purchase_orders
+    ADD CONSTRAINT purchase_orders_supplier_id_fkey
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id);
+
+    -- Inventory items preferred supplier FK
+    ALTER TABLE inventory_items
+    DROP CONSTRAINT IF EXISTS inventory_items_preferred_supplier_id_fkey;
+    ALTER TABLE inventory_items
+    ADD CONSTRAINT inventory_items_preferred_supplier_id_fkey
+    FOREIGN KEY (preferred_supplier_id) REFERENCES suppliers(id);
+
+    -- Reorder alerts supplier FK
+    ALTER TABLE reorder_alerts
+    DROP CONSTRAINT IF EXISTS reorder_alerts_supplier_id_fkey;
+    ALTER TABLE reorder_alerts
+    ADD CONSTRAINT reorder_alerts_supplier_id_fkey
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id);
+
+    -- Supplier metrics supplier FK
+    ALTER TABLE supplier_metrics
+    DROP CONSTRAINT IF EXISTS supplier_metrics_supplier_id_fkey;
+    ALTER TABLE supplier_metrics
+    ADD CONSTRAINT supplier_metrics_supplier_id_fkey
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE;
+
+    -- Supplier issues supplier FK
+    ALTER TABLE supplier_issues
+    DROP CONSTRAINT IF EXISTS supplier_issues_supplier_id_fkey;
+    ALTER TABLE supplier_issues
+    ADD CONSTRAINT supplier_issues_supplier_id_fkey
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE;
+
+    -- Invoices supplier FK
+    ALTER TABLE invoices
+    DROP CONSTRAINT IF EXISTS invoices_supplier_id_fkey;
+    ALTER TABLE invoices
+    ADD CONSTRAINT invoices_supplier_id_fkey
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id);
+
+    -- Payments supplier FK
+    ALTER TABLE payments
+    DROP CONSTRAINT IF EXISTS payments_supplier_id_fkey;
+    ALTER TABLE payments
+    ADD CONSTRAINT payments_supplier_id_fkey
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id);
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Verify all tables created
 DO $$
