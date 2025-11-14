@@ -11,7 +11,8 @@ import { UnifiedCalendarService } from '@/lib/integrations/calendar/unified'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth()
+    const authResult = await auth()
+    const userId = authResult.userId
 
     if (!userId) {
       return NextResponse.json(

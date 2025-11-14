@@ -19,7 +19,8 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
+    const authResult = await auth()
+    const userId = authResult.userId
 
     if (!userId) {
       return NextResponse.json(
@@ -63,7 +64,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth()
+    const authResult = await auth()
+    const userId = authResult.userId
 
     if (!userId) {
       return NextResponse.json(
@@ -115,7 +117,8 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId } = await auth()
+    const authResult = await auth()
+    const userId = authResult.userId
 
     if (!userId) {
       return NextResponse.json(
@@ -159,7 +162,8 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const { userId } = await auth()
+    const authResult = await auth()
+    const userId = authResult.userId
 
     if (!userId) {
       return NextResponse.json(
