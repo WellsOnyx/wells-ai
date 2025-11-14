@@ -9,12 +9,12 @@ import { monitorAPI } from '@/lib/monitoring'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { messageId: string } }
+  { params }: { params: Promise<{ messageId: string }> }
 ) {
   const monitor = monitorAPI('/api/inbox/[messageId]', 'GET')
 
   try {
-    const messageId = params.messageId
+    const { messageId } = await params
 
     // Get message
     const message = await InboundMessages.findById(messageId)

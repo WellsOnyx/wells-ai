@@ -13,12 +13,12 @@ import { sendSlackMessage as sendSlackDM } from '@/lib/slack'
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { messageId: string } }
+  { params }: { params: Promise<{ messageId: string }> }
 ) {
   const monitor = monitorAPI('/api/inbox/[messageId]/respond', 'POST')
 
   try {
-    const messageId = params.messageId
+    const { messageId } = await params
     const body = await req.json()
 
     // Get original message
