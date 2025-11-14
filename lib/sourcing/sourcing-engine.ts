@@ -6,6 +6,7 @@
  */
 
 import { EtsyClient, EtsyListing, formatEtsyPrice } from '@/lib/integrations/etsy'
+import { createAmazonClient, AmazonProduct } from '@/lib/integrations/amazon'
 
 // ==========================================
 // TYPES & INTERFACES
@@ -271,12 +272,62 @@ export async function sourceFromEbay(
 export async function sourceFromAmazon(
   request: SourceRequest
 ): Promise<SourcedProduct[]> {
-  // TODO: Implement Amazon Product Advertising API
-  // Requires: AWS credentials + Amazon Associates account
-  // API: https://webservices.amazon.com/paapi5/documentation/
+  try {
+    // Check if Amazon credentials are configured
+    if (!process.env.AMAZON_ACCESS_KEY || !process.env.AMAZON_SECRET_KEY) {
+      console.log('[Amazon Sourcing] API credentials not configured')
+      return []
+    }
 
-  console.log('[Amazon Sourcing] Not yet implemented')
-  return []
+    const amazonClient = createAmazonClient()
+
+    // Search for products
+    const searchResults = await amazonClient.searchItems({
+      keywords: request.query,
+      category: 'All',
+      minPrice: request.budget?.min,
+      maxPrice: request.budget?.max,
+      minRating: request.requirements?.minRating,
+      sortBy: 'Relevance',
+      itemsPerPage: 10,
+    })
+
+    // Map Amazon products to SourcedProduct format
+    return searchResults.items.map((product: AmazonProduct) => {
+      const affiliateUrl = generateAffiliateLink(
+        'amazon',
+        product.productUrl,
+        request.userId,
+        product.asin
+      )
+
+      return {
+        id: product.asin,
+        marketplace: 'amazon' as Marketplace,
+        title: product.title,
+        description: product.description || product.features.join(' | '),
+        price: product.price.amount,
+        currency: product.price.currency,
+        formattedPrice: product.price.formattedPrice,
+        quantity: request.quantity || 1,
+        leadTime: product.isPrime ? '2 days (Prime)' : '5-7 days',
+        imageUrl: product.images.primary,
+        productUrl: product.productUrl,
+        affiliateUrl,
+        supplierName: product.brand || 'Amazon',
+        supplierRating: product.rating?.value,
+        shipsFrom: 'US', // Amazon marketplace
+        shipsTo: ['US', 'CA', 'UK'], // Varies by product
+        tags: product.categoryPath,
+        customizable: false, // Amazon products generally not customizable
+        commissionRate: product.commissionRate,
+        estimatedCommission: product.estimatedCommission,
+      }
+    })
+  } catch (error) {
+    console.error('[Amazon Sourcing] Error:', error)
+    return []
+  }
 }
 
 // ==========================================
