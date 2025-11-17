@@ -13,9 +13,14 @@ export default function SignUpPage() {
             socialButtonsBlockButton: 'border-[#183b6d]/20 hover:border-[#183b6d]/40',
             formButtonPrimary: 'bg-[#183b6d] hover:bg-[#0f2847]',
             footerActionLink: 'text-[#183b6d] hover:text-[#0f2847]',
+            footer: 'display: none',
           },
           variables: {
             colorPrimary: '#183b6d',
+          },
+          layout: {
+            logoPlacement: 'inside',
+            showOptionalFields: false,
           },
         }}
         routing="path"
