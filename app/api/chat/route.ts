@@ -22,6 +22,7 @@ import {
 import { createSellerProfile as saveSellerProfile, getSellerProfileByUserId } from '@/lib/db/seller-helpers'
 import { detectFounderIntent } from '@/lib/journeys/founder-detection'
 import { getFounderActions, getQuickActions, getFounderConversationStarters } from '@/lib/journeys/founder-flows'
+import { detectContactIntent } from '@/lib/contacts/intent-detection'
 // Onboarding imports temporarily disabled
 // import {
 //   createOnboardingState,
@@ -441,6 +442,7 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
     let gtmData = null
     let jobSeekerData = null
     let founderData = null
+    let contactData = null
 
     // CHECK FOR FOUNDER INTENT (detect if user is a founder with multiple needs)
     try {
@@ -468,6 +470,39 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       }
     } catch (error) {
       console.error('[FOUNDER] Detection failed (non-critical):', error)
+    }
+
+    // CHECK FOR CONTACT MANAGEMENT INTENT
+    try {
+      const contactIntent = detectContactIntent(lastUserMessage, conversationHistory)
+
+      if (contactIntent.detected && contactIntent.confidence > 0.5) {
+        console.log('[CONTACTS] Intent detected:', contactIntent)
+
+        contactData = {
+          detected: true,
+          action: contactIntent.action,
+          parameters: contactIntent.parameters,
+          confidence: contactIntent.confidence
+        }
+
+        // If user wants stats, fetch them
+        if (contactIntent.action === 'view_stats') {
+          try {
+            const statsResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/contacts/stats`)
+            const statsData = await statsResponse.json()
+
+            if (statsData.success) {
+              contactData.stats = statsData.stats
+              contactData.formattedStats = statsData.formattedResponse
+            }
+          } catch (error) {
+            console.error('[CONTACTS] Failed to fetch stats:', error)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[CONTACTS] Detection failed (non-critical):', error)
     }
 
     // CHECK FOR JOB SEEKER INTENT (career, job search, resume)
@@ -832,7 +867,8 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       jobSeekerData,
       founderData,
       signupData,
-      sellerData
+      sellerData,
+      contactData
     })
   } catch (error: any) {
     console.error('[CHAT] Unexpected error:', error)

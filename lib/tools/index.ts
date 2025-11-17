@@ -8,9 +8,22 @@
  * - Process files
  * - Book meetings
  * - Make API calls
+ * - Manage contacts
  */
 
+import {
+  CONTACT_TOOLS,
+  executeSearchContacts,
+  executeGetContact,
+  executeAddContact,
+  executeUpdateContact,
+  executeGetContactStats,
+  executeCreateContactCampaign
+} from './contacts'
+
 export const WELLS_TOOLS = [
+  // Contact Management Tools
+  ...CONTACT_TOOLS,
   // Email Tool
   {
     name: 'send_email',
@@ -259,6 +272,26 @@ export async function executeWellsTool(
 
   try {
     switch (toolName) {
+      // Contact Management Tools
+      case 'search_contacts':
+        return await executeSearchContacts(toolInput, context)
+
+      case 'get_contact':
+        return await executeGetContact(toolInput, context)
+
+      case 'add_contact':
+        return await executeAddContact(toolInput, context)
+
+      case 'update_contact':
+        return await executeUpdateContact(toolInput, context)
+
+      case 'get_contact_stats':
+        return await executeGetContactStats(toolInput, context)
+
+      case 'create_contact_campaign':
+        return await executeCreateContactCampaign(toolInput, context)
+
+      // Existing Tools
       case 'send_email':
         return await executeSendEmail(toolInput, context)
 
