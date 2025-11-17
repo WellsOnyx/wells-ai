@@ -1,0 +1,84 @@
+{
+  "name": "Wells AI",
+  "short_name": "Wells AI",
+  "description": "AI-powered procurement platform for intelligent supplier discovery and deal management",
+  "version": "1.0.0",
+  "mini_app_version": "1.0",
+  "bundle_identifier": "com.wellsonyx.wellsai",
+
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0ea5e9",
+  "background_color": "#ffffff",
+
+  "categories": ["business", "productivity", "utilities"],
+
+  "permissions": [
+    {
+      "name": "notifications",
+      "reason": "To notify you about deal updates and new supplier matches"
+    },
+    {
+      "name": "storage",
+      "reason": "To cache search results and preferences locally"
+    }
+  ],
+
+  "in_app_purchases": [
+    {
+      "product_id": "com.wellsonyx.wellsai.pro.monthly",
+      "type": "subscription",
+      "tier": "pro",
+      "title": "Wells AI Pro - Monthly",
+      "description": "Unlimited searches, advanced filters, API access",
+      "price": "$49.99",
+      "period": "monthly"
+    },
+    {
+      "product_id": "com.wellsonyx.wellsai.pro.annual",
+      "type": "subscription",
+      "tier": "pro",
+      "title": "Wells AI Pro - Annual",
+      "description": "Unlimited searches, advanced filters, API access (Save 17%)",
+      "price": "$499.99",
+      "period": "annual"
+    }
+  ],
+
+  "api_endpoints": {
+    "base_url": "https://api.wellsonyx.com",
+    "chat": "/api/chat",
+    "search": "/api/suppliers/match",
+    "rfq": "/api/rfqs",
+    "deals": "/api/deals"
+  },
+
+  "features": {
+    "ai_chat": true,
+    "supplier_search": true,
+    "rfq_management": true,
+    "deal_pipeline": true,
+    "offline_mode": false,
+    "push_notifications": true
+  },
+
+  "distribution": {
+    "platform": "apple_mini_apps",
+    "min_host_version": "17.0",
+    "requires_account": false
+  }
+}
