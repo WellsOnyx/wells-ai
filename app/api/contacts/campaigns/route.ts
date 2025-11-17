@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { Pool } from '@vercel/postgres';
-
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
+import { sql } from '@vercel/postgres';
 
 // GET /api/contacts/campaigns - List all campaigns for user
 export async function GET(req: NextRequest) {
@@ -19,49 +15,63 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    let query = `
-      SELECT
-        id,
-        name,
-        description,
-        status,
-        filters,
-        goal,
-        start_date,
-        end_date,
-        contact_count,
-        messages_sent,
-        responses_received,
-        metadata,
-        created_at,
-        updated_at
-      FROM contact_campaigns
-      WHERE user_id = $1
-    `;
-
-    const params: any[] = [userId];
-    let paramIndex = 2;
+    let result;
+    let countResult;
 
     if (status) {
-      query += ` AND status = $${paramIndex}`;
-      params.push(status);
-      paramIndex++;
+      result = await sql`
+        SELECT
+          id,
+          name,
+          description,
+          status,
+          filters,
+          goal,
+          start_date,
+          end_date,
+          contact_count,
+          messages_sent,
+          responses_received,
+          metadata,
+          created_at,
+          updated_at
+        FROM contact_campaigns
+        WHERE user_id = ${userId} AND status = ${status}
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+
+      countResult = await sql`
+        SELECT COUNT(*) FROM contact_campaigns WHERE user_id = ${userId} AND status = ${status}
+      `;
+    } else {
+      result = await sql`
+        SELECT
+          id,
+          name,
+          description,
+          status,
+          filters,
+          goal,
+          start_date,
+          end_date,
+          contact_count,
+          messages_sent,
+          responses_received,
+          metadata,
+          created_at,
+          updated_at
+        FROM contact_campaigns
+        WHERE user_id = ${userId}
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+
+      countResult = await sql`
+        SELECT COUNT(*) FROM contact_campaigns WHERE user_id = ${userId}
+      `;
     }
 
-    query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(limit, offset);
-
-    const result = await pool.query(query, params);
-
-    // Get total count
-    let countQuery = 'SELECT COUNT(*) FROM contact_campaigns WHERE user_id = $1';
-    const countParams: any[] = [userId];
-    if (status) {
-      countQuery += ' AND status = $2';
-      countParams.push(status);
-    }
-
-    const countResult = await pool.query(countQuery, countParams);
     const totalCount = parseInt(countResult.rows[0].count);
 
     return NextResponse.json({
@@ -121,8 +131,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create campaign
-    const result = await pool.query(
-      `
+    const result = await sql`
       INSERT INTO contact_campaigns (
         user_id,
         name,
@@ -133,21 +142,9 @@ export async function POST(req: NextRequest) {
         start_date,
         end_date,
         metadata
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ) VALUES (${userId}, ${name}, ${description}, ${status}, ${JSON.stringify(filters)}, ${goal}, ${start_date}, ${end_date}, ${JSON.stringify(metadata)})
       RETURNING *
-      `,
-      [
-        userId,
-        name,
-        description,
-        status,
-        JSON.stringify(filters),
-        goal,
-        start_date,
-        end_date,
-        JSON.stringify(metadata),
-      ]
-    );
+    `;
 
     const campaign = result.rows[0];
 
@@ -160,10 +157,9 @@ export async function POST(req: NextRequest) {
       }
 
       // Refresh campaign to get updated contact_count
-      const updatedCampaign = await pool.query(
-        'SELECT * FROM contact_campaigns WHERE id = $1',
-        [campaign.id]
-      );
+      const updatedCampaign = await sql`
+        SELECT * FROM contact_campaigns WHERE id = ${campaign.id}
+      `;
       return NextResponse.json({
         campaign: updatedCampaign.rows[0],
         contacts_added: contactIds.length,
@@ -185,52 +181,38 @@ async function findContactsByFilters(
   userId: string,
   filters: any
 ): Promise<string[]> {
-  let query = 'SELECT id FROM contacts WHERE user_id = $1 AND status = $2';
-  const params: any[] = [userId, 'active'];
-  let paramIndex = 3;
+  // Build dynamic query using sql unsafe for complex filtering
+  let query = `SELECT id FROM contacts WHERE user_id = '${userId}' AND status = 'active'`;
 
   // Build dynamic WHERE clause based on filters
   if (filters.relationship_type) {
-    query += ` AND relationship_type = $${paramIndex}`;
-    params.push(filters.relationship_type);
-    paramIndex++;
+    query += ` AND relationship_type = '${filters.relationship_type}'`;
   }
 
   if (filters.importance_score) {
     if (filters.importance_score.min !== undefined) {
-      query += ` AND importance_score >= $${paramIndex}`;
-      params.push(filters.importance_score.min);
-      paramIndex++;
+      query += ` AND importance_score >= ${filters.importance_score.min}`;
     }
     if (filters.importance_score.max !== undefined) {
-      query += ` AND importance_score <= $${paramIndex}`;
-      params.push(filters.importance_score.max);
-      paramIndex++;
+      query += ` AND importance_score <= ${filters.importance_score.max}`;
     }
   }
 
   if (filters.company) {
-    query += ` AND company ILIKE $${paramIndex}`;
-    params.push(`%${filters.company}%`);
-    paramIndex++;
+    query += ` AND company ILIKE '%${filters.company.replace(/'/g, "''")}'%`;
   }
 
   if (filters.role) {
-    query += ` AND role ILIKE $${paramIndex}`;
-    params.push(`%${filters.role}%`);
-    paramIndex++;
+    query += ` AND role ILIKE '%${filters.role.replace(/'/g, "''")}'%`;
   }
 
   if (filters.preferred_channel) {
-    query += ` AND preferred_channel = $${paramIndex}`;
-    params.push(filters.preferred_channel);
-    paramIndex++;
+    query += ` AND preferred_channel = '${filters.preferred_channel}'`;
   }
 
   if (filters.tags && Array.isArray(filters.tags)) {
-    query += ` AND tags && $${paramIndex}`;
-    params.push(filters.tags);
-    paramIndex++;
+    const tagArray = filters.tags.map((t: string) => `'${t.replace(/'/g, "''")}'`).join(',');
+    query += ` AND tags && ARRAY[${tagArray}]`;
   }
 
   if (filters.last_contact_days) {
@@ -243,7 +225,7 @@ async function findContactsByFilters(
     query += ` AND (last_contact_date IS NULL OR last_contact_date < NOW() - INTERVAL '${parseInt(filters.dormant_days)} days')`;
   }
 
-  const result = await pool.query(query, params);
+  const result = await sql.unsafe(query);
   return result.rows.map((row) => row.id);
 }
 
@@ -255,20 +237,12 @@ async function addContactsToCampaign(
 ): Promise<void> {
   if (contactIds.length === 0) return;
 
-  // Build bulk insert query
-  const values = contactIds
-    .map(
-      (_, index) =>
-        `($1, $${index + 2}, NOW(), $${contactIds.length + 2})`
-    )
-    .join(', ');
-
-  const query = `
-    INSERT INTO campaign_contacts (campaign_id, contact_id, added_at, added_by)
-    VALUES ${values}
-    ON CONFLICT (campaign_id, contact_id) DO NOTHING
-  `;
-
-  const params = [campaignId, ...contactIds, addedBy];
-  await pool.query(query, params);
+  // Insert contacts into campaign
+  for (const contactId of contactIds) {
+    await sql`
+      INSERT INTO campaign_contacts (campaign_id, contact_id, added_at, added_by)
+      VALUES (${campaignId}, ${contactId}, NOW(), ${addedBy})
+      ON CONFLICT (campaign_id, contact_id) DO NOTHING
+    `;
+  }
 }

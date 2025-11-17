@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { Pool } from '@vercel/postgres';
-
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
+import { sql } from '@vercel/postgres';
 
 // GET /api/contacts/campaigns/[id] - Get campaign details with contacts
 export async function GET(
@@ -24,13 +20,10 @@ export async function GET(
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // Get campaign
-    const campaignResult = await pool.query(
-      `
+    const campaignResult = await sql`
       SELECT * FROM contact_campaigns
-      WHERE id = $1 AND user_id = $2
-      `,
-      [id, userId]
-    );
+      WHERE id = ${id} AND user_id = ${userId}
+    `;
 
     if (campaignResult.rows.length === 0) {
       return NextResponse.json(
@@ -46,8 +39,7 @@ export async function GET(
     let contactsPagination = null;
 
     if (includeContacts) {
-      const contactsResult = await pool.query(
-        `
+      const contactsResult = await sql`
         SELECT
           c.*,
           cc.added_at,
@@ -57,20 +49,17 @@ export async function GET(
           cc.responded as campaign_responded
         FROM campaign_contacts cc
         JOIN contacts c ON cc.contact_id = c.id
-        WHERE cc.campaign_id = $1
+        WHERE cc.campaign_id = ${id}
         ORDER BY cc.added_at DESC
-        LIMIT $2 OFFSET $3
-        `,
-        [id, limit, offset]
-      );
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
       contacts = contactsResult.rows;
 
       // Get total contact count (should match campaign.contact_count but query for accuracy)
-      const countResult = await pool.query(
-        'SELECT COUNT(*) FROM campaign_contacts WHERE campaign_id = $1',
-        [id]
-      );
+      const countResult = await sql`
+        SELECT COUNT(*) FROM campaign_contacts WHERE campaign_id = ${id}
+      `;
       const totalContacts = parseInt(countResult.rows[0].count);
 
       contactsPagination = {
@@ -110,10 +99,9 @@ export async function PATCH(
     const body = await req.json();
 
     // Verify ownership
-    const ownershipCheck = await pool.query(
-      'SELECT id FROM contact_campaigns WHERE id = $1 AND user_id = $2',
-      [id, userId]
-    );
+    const ownershipCheck = await sql`
+      SELECT id FROM contact_campaigns WHERE id = ${id} AND user_id = ${userId}
+    `;
 
     if (ownershipCheck.rows.length === 0) {
       return NextResponse.json(
@@ -134,39 +122,42 @@ export async function PATCH(
       'metadata',
     ];
 
-    const updates: string[] = [];
-    const values: any[] = [];
-    let valueIndex = 1;
+    const updateObj: { [key: string]: any } = {};
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        updates.push(`${field} = $${valueIndex}`);
         // Stringify JSON fields
         if (['filters', 'metadata'].includes(field)) {
-          values.push(JSON.stringify(body[field]));
+          updateObj[field] = JSON.stringify(body[field]);
         } else {
-          values.push(body[field]);
+          updateObj[field] = body[field];
         }
-        valueIndex++;
       }
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(updateObj).length === 0) {
       return NextResponse.json(
         { error: 'No valid fields to update' },
         { status: 400 }
       );
     }
 
-    values.push(id);
-    const query = `
-      UPDATE contact_campaigns
-      SET ${updates.join(', ')}
-      WHERE id = $${valueIndex}
-      RETURNING *
-    `;
+    // Build SQL update dynamically
+    let query = 'UPDATE contact_campaigns SET ';
+    const setParts = [];
+    for (const field of Object.keys(updateObj)) {
+      const value = updateObj[field];
+      if (value === null) {
+        setParts.push(`${field} = NULL`);
+      } else if (typeof value === 'string') {
+        setParts.push(`${field} = '${value.replace(/'/g, "''")}'`);
+      } else {
+        setParts.push(`${field} = '${JSON.stringify(value).replace(/'/g, "''")}'`);
+      }
+    }
+    query += setParts.join(', ') + ` WHERE id = '${id}' RETURNING *`;
 
-    const result = await pool.query(query, values);
+    const result = await sql.unsafe(query);
 
     return NextResponse.json({ campaign: result.rows[0] });
   } catch (error: any) {
@@ -192,14 +183,11 @@ export async function DELETE(
     const { id } = params;
 
     // Delete campaign (cascade will remove campaign_contacts entries)
-    const result = await pool.query(
-      `
+    const result = await sql`
       DELETE FROM contact_campaigns
-      WHERE id = $1 AND user_id = $2
+      WHERE id = ${id} AND user_id = ${userId}
       RETURNING id
-      `,
-      [id, userId]
-    );
+    `;
 
     if (result.rows.length === 0) {
       return NextResponse.json(

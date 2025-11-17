@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { Pool } from '@vercel/postgres';
-
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
+import { sql } from '@vercel/postgres';
 
 // GET /api/contacts/analytics - Get comprehensive contact analytics
 export async function GET(req: NextRequest) {
@@ -78,8 +74,7 @@ export async function GET(req: NextRequest) {
 
 // Overview metrics
 async function getOverview(userId: string): Promise<any> {
-  const result = await pool.query(
-    `
+  const result = await sql`
     SELECT
       COUNT(*) as total_contacts,
       COUNT(*) FILTER (WHERE status = 'active') as active_contacts,
@@ -92,18 +87,15 @@ async function getOverview(userId: string): Promise<any> {
       COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') as new_this_week,
       COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as new_this_month
     FROM contacts
-    WHERE user_id = $1
-    `,
-    [userId]
-  );
+    WHERE user_id = ${userId}
+  `;
 
   return result.rows[0];
 }
 
 // Contacts by source
 async function getBySource(userId: string): Promise<any> {
-  const result = await pool.query(
-    `
+  const result = await sql`
     SELECT
       COALESCE(cs.name, 'Unknown') as source,
       COUNT(c.id) as total,
@@ -113,20 +105,17 @@ async function getBySource(userId: string): Promise<any> {
       MAX(c.created_at) as most_recent_date
     FROM contacts c
     LEFT JOIN contact_sources cs ON c.source_id = cs.id
-    WHERE c.user_id = $1
+    WHERE c.user_id = ${userId}
     GROUP BY cs.name
     ORDER BY total DESC
-    `,
-    [userId]
-  );
+  `;
 
   return result.rows;
 }
 
 // Contacts by relationship type
 async function getByRelationship(userId: string): Promise<any> {
-  const result = await pool.query(
-    `
+  const result = await sql`
     SELECT
       COALESCE(relationship_type, 'Unknown') as relationship_type,
       COUNT(*) as total,
@@ -136,20 +125,17 @@ async function getByRelationship(userId: string): Promise<any> {
       AVG(total_messages_sent)::numeric(10,2) as avg_messages_sent,
       COUNT(*) FILTER (WHERE last_contact_date >= NOW() - INTERVAL '30 days') as active_last_30d
     FROM contacts
-    WHERE user_id = $1
+    WHERE user_id = ${userId}
     GROUP BY relationship_type
     ORDER BY total DESC
-    `,
-    [userId]
-  );
+  `;
 
   return result.rows;
 }
 
 // Top companies
 async function getByCompany(userId: string): Promise<any> {
-  const result = await pool.query(
-    `
+  const result = await sql`
     SELECT
       company,
       COUNT(*) as contact_count,
@@ -157,34 +143,29 @@ async function getByCompany(userId: string): Promise<any> {
       ARRAY_AGG(DISTINCT relationship_type) FILTER (WHERE relationship_type IS NOT NULL) as relationship_types,
       MAX(last_contact_date) as most_recent_contact
     FROM contacts
-    WHERE user_id = $1 AND company IS NOT NULL AND company != ''
+    WHERE user_id = ${userId} AND company IS NOT NULL AND company != ''
     GROUP BY company
     ORDER BY contact_count DESC, avg_importance DESC
     LIMIT 50
-    `,
-    [userId]
-  );
+  `;
 
   return result.rows;
 }
 
 // Top roles/titles
 async function getByRole(userId: string): Promise<any> {
-  const result = await pool.query(
-    `
+  const result = await sql`
     SELECT
       role,
       COUNT(*) as contact_count,
       AVG(importance_score)::numeric(10,2) as avg_importance,
       ARRAY_AGG(DISTINCT relationship_type) FILTER (WHERE relationship_type IS NOT NULL) as relationship_types
     FROM contacts
-    WHERE user_id = $1 AND role IS NOT NULL AND role != ''
+    WHERE user_id = ${userId} AND role IS NOT NULL AND role != ''
     GROUP BY role
     ORDER BY contact_count DESC
     LIMIT 50
-    `,
-    [userId]
-  );
+  `;
 
   return result.rows;
 }
@@ -198,8 +179,7 @@ async function getByLocation(userId: string): Promise<any> {
 
 // Engagement metrics
 async function getEngagement(userId: string): Promise<any> {
-  const result = await pool.query(
-    `
+  const result = await sql`
     SELECT
       COUNT(*) as total_contacts,
       -- Message engagement
@@ -228,10 +208,8 @@ async function getEngagement(userId: string): Promise<any> {
       COUNT(*) FILTER (WHERE last_contact_date >= NOW() - INTERVAL '30 days') as active_last_30d,
       COUNT(*) FILTER (WHERE last_contact_date >= NOW() - INTERVAL '90 days') as active_last_90d
     FROM contacts
-    WHERE user_id = $1 AND status = 'active'
-    `,
-    [userId]
-  );
+    WHERE user_id = ${userId} AND status = 'active'
+  `;
 
   return result.rows[0];
 }
@@ -246,38 +224,32 @@ async function getGrowth(
   const start = startDate || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const end = endDate || new Date().toISOString();
 
-  const result = await pool.query(
-    `
+  const result = await sql`
     SELECT
       DATE(created_at) as date,
       COUNT(*) as new_contacts,
       SUM(COUNT(*)) OVER (ORDER BY DATE(created_at)) as cumulative_total
     FROM contacts
-    WHERE user_id = $1
-      AND created_at >= $2
-      AND created_at <= $3
+    WHERE user_id = ${userId}
+      AND created_at >= ${start}
+      AND created_at <= ${end}
     GROUP BY DATE(created_at)
     ORDER BY date
-    `,
-    [userId, start, end]
-  );
+  `;
 
   // Also get weekly summary
-  const weeklyResult = await pool.query(
-    `
+  const weeklyResult = await sql`
     SELECT
       DATE_TRUNC('week', created_at) as week,
       COUNT(*) as new_contacts,
       ARRAY_AGG(DISTINCT relationship_type) FILTER (WHERE relationship_type IS NOT NULL) as relationship_types
     FROM contacts
-    WHERE user_id = $1
-      AND created_at >= $2
-      AND created_at <= $3
+    WHERE user_id = ${userId}
+      AND created_at >= ${start}
+      AND created_at <= ${end}
     GROUP BY DATE_TRUNC('week', created_at)
     ORDER BY week
-    `,
-    [userId, start, end]
-  );
+  `;
 
   return {
     daily: result.rows,
@@ -289,8 +261,7 @@ async function getGrowth(
 async function getConversion(userId: string): Promise<any> {
   // This is a placeholder for conversion tracking
   // You can enhance this based on your specific conversion stages
-  const result = await pool.query(
-    `
+  const result = await sql`
     SELECT
       relationship_type,
       COUNT(*) as total,
@@ -298,12 +269,10 @@ async function getConversion(userId: string): Promise<any> {
       COUNT(*) FILTER (WHERE total_messages_received > 0) as engaged,
       COUNT(*) FILTER (WHERE total_messages_received > 5) as highly_engaged
     FROM contacts
-    WHERE user_id = $1 AND status = 'active'
+    WHERE user_id = ${userId} AND status = 'active'
     GROUP BY relationship_type
     ORDER BY total DESC
-    `,
-    [userId]
-  );
+  `;
 
   return {
     by_relationship: result.rows,
@@ -325,7 +294,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Refresh materialized views
-    await pool.query('SELECT refresh_contact_analytics()');
+    await sql`SELECT refresh_contact_analytics()`;
 
     return NextResponse.json({
       success: true,

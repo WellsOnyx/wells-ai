@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { Pool } from '@vercel/postgres';
-
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
+import { sql } from '@vercel/postgres';
 
 // POST /api/contacts/campaigns/[id]/contacts - Add contacts to campaign
 export async function POST(
@@ -30,10 +26,9 @@ export async function POST(
     }
 
     // Verify campaign ownership
-    const campaignCheck = await pool.query(
-      'SELECT id FROM contact_campaigns WHERE id = $1 AND user_id = $2',
-      [campaignId, userId]
-    );
+    const campaignCheck = await sql`
+      SELECT id FROM contact_campaigns WHERE id = ${campaignId} AND user_id = ${userId}
+    `;
 
     if (campaignCheck.rows.length === 0) {
       return NextResponse.json(
@@ -43,13 +38,10 @@ export async function POST(
     }
 
     // Verify contacts belong to user
-    const contactsCheck = await pool.query(
-      `
+    const contactsCheck = await sql`
       SELECT id FROM contacts
-      WHERE id = ANY($1) AND user_id = $2
-      `,
-      [contact_ids, userId]
-    );
+      WHERE id = ANY(${contact_ids}) AND user_id = ${userId}
+    `;
 
     const validContactIds = contactsCheck.rows.map((row) => row.id);
 
@@ -61,17 +53,13 @@ export async function POST(
     }
 
     // Add contacts to campaign (ignore duplicates)
-    const values = validContactIds
-      .map((_, index) => `($1, $${index + 2}, NOW(), $${validContactIds.length + 2})`)
-      .join(', ');
-
-    const insertQuery = `
-      INSERT INTO campaign_contacts (campaign_id, contact_id, added_at, added_by)
-      VALUES ${values}
-      ON CONFLICT (campaign_id, contact_id) DO NOTHING
-    `;
-
-    await pool.query(insertQuery, [campaignId, ...validContactIds, added_by]);
+    for (const contactId of validContactIds) {
+      await sql`
+        INSERT INTO campaign_contacts (campaign_id, contact_id, added_at, added_by)
+        VALUES (${campaignId}, ${contactId}, NOW(), ${added_by})
+        ON CONFLICT (campaign_id, contact_id) DO NOTHING
+      `;
+    }
 
     // Get count of actually added contacts
     const addedCount = validContactIds.length;
@@ -125,10 +113,9 @@ export async function DELETE(
     }
 
     // Verify campaign ownership
-    const campaignCheck = await pool.query(
-      'SELECT id FROM contact_campaigns WHERE id = $1 AND user_id = $2',
-      [campaignId, userId]
-    );
+    const campaignCheck = await sql`
+      SELECT id FROM contact_campaigns WHERE id = ${campaignId} AND user_id = ${userId}
+    `;
 
     if (campaignCheck.rows.length === 0) {
       return NextResponse.json(
@@ -138,14 +125,11 @@ export async function DELETE(
     }
 
     // Remove contacts from campaign
-    const result = await pool.query(
-      `
+    const result = await sql`
       DELETE FROM campaign_contacts
-      WHERE campaign_id = $1 AND contact_id = ANY($2)
+      WHERE campaign_id = ${campaignId} AND contact_id = ANY(${contactIds})
       RETURNING contact_id
-      `,
-      [campaignId, contactIds]
-    );
+    `;
 
     const removedCount = result.rows.length;
 

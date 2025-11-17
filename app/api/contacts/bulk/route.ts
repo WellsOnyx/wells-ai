@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { Pool } from '@vercel/postgres';
-
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
+import { sql } from '@vercel/postgres';
 
 // POST /api/contacts/bulk - Bulk operations on contacts
 export async function POST(req: NextRequest) {
@@ -33,10 +29,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify contacts belong to user
-    const ownershipCheck = await pool.query(
-      'SELECT id FROM contacts WHERE id = ANY($1) AND user_id = $2',
-      [contact_ids, userId]
-    );
+    const ownershipCheck = await sql`
+      SELECT id FROM contacts WHERE id = ANY(${contact_ids}) AND user_id = ${userId}
+    `;
 
     const validContactIds = ownershipCheck.rows.map((row) => row.id);
 
@@ -143,37 +138,38 @@ async function bulkUpdate(
     'metadata',
   ];
 
-  const updateClauses: string[] = [];
-  const values: any[] = [];
-  let valueIndex = 1;
+  const updateObj: { [key: string]: any } = {};
 
   for (const field of allowedFields) {
     if (updates[field] !== undefined) {
-      updateClauses.push(`${field} = $${valueIndex}`);
       if (field === 'metadata') {
-        values.push(JSON.stringify(updates[field]));
+        updateObj[field] = JSON.stringify(updates[field]);
       } else {
-        values.push(updates[field]);
+        updateObj[field] = updates[field];
       }
-      valueIndex++;
     }
   }
 
-  if (updateClauses.length === 0) {
+  if (Object.keys(updateObj).length === 0) {
     return { message: 'No valid fields to update' };
   }
 
-  values.push(contactIds);
-  values.push(userId);
+  // Build dynamic SQL query
+  let query = 'UPDATE contacts SET ';
+  const setParts = [];
+  for (const field of Object.keys(updateObj)) {
+    const value = updateObj[field];
+    if (value === null) {
+      setParts.push(`${field} = NULL`);
+    } else if (typeof value === 'string') {
+      setParts.push(`${field} = '${value.replace(/'/g, "''")}'`);
+    } else {
+      setParts.push(`${field} = '${JSON.stringify(value).replace(/'/g, "''")}'`);
+    }
+  }
+  query += setParts.join(', ') + ` WHERE id = ANY('${contactIds.join(',')}') AND user_id = '${userId}' RETURNING id`;
 
-  const query = `
-    UPDATE contacts
-    SET ${updateClauses.join(', ')}
-    WHERE id = ANY($${valueIndex}) AND user_id = $${valueIndex + 1}
-    RETURNING id
-  `;
-
-  const result = await pool.query(query, values);
+  const result = await sql.unsafe(query);
 
   return {
     updated: result.rows.length,
@@ -183,14 +179,11 @@ async function bulkUpdate(
 
 // Bulk delete contacts
 async function bulkDelete(userId: string, contactIds: string[]): Promise<any> {
-  const result = await pool.query(
-    `
+  const result = await sql`
     DELETE FROM contacts
-    WHERE id = ANY($1) AND user_id = $2
+    WHERE id = ANY(${contactIds}) AND user_id = ${userId}
     RETURNING id
-    `,
-    [contactIds, userId]
-  );
+  `;
 
   return {
     deleted: result.rows.length,
@@ -204,8 +197,7 @@ async function bulkExport(
   contactIds: string[],
   format: string
 ): Promise<any> {
-  const result = await pool.query(
-    `
+  const result = await sql`
     SELECT
       id,
       name,
@@ -225,11 +217,9 @@ async function bulkExport(
       tags,
       created_at
     FROM contacts
-    WHERE id = ANY($1) AND user_id = $2
+    WHERE id = ANY(${contactIds}) AND user_id = ${userId}
     ORDER BY name
-    `,
-    [contactIds, userId]
-  );
+  `;
 
   if (format === 'csv') {
     // Generate CSV
@@ -286,26 +276,22 @@ async function addToCampaign(
   campaignId: string
 ): Promise<any> {
   // Verify campaign ownership
-  const campaignCheck = await pool.query(
-    'SELECT id FROM contact_campaigns WHERE id = $1 AND user_id = $2',
-    [campaignId, userId]
-  );
+  const campaignCheck = await sql`
+    SELECT id FROM contact_campaigns WHERE id = ${campaignId} AND user_id = ${userId}
+  `;
 
   if (campaignCheck.rows.length === 0) {
     throw new Error('Campaign not found');
   }
 
-  const values = contactIds
-    .map((_, index) => `($1, $${index + 2}, NOW(), 'bulk')`)
-    .join(', ');
-
-  const query = `
-    INSERT INTO campaign_contacts (campaign_id, contact_id, added_at, added_by)
-    VALUES ${values}
-    ON CONFLICT (campaign_id, contact_id) DO NOTHING
-  `;
-
-  await pool.query(query, [campaignId, ...contactIds]);
+  // Insert contacts into campaign
+  for (const contactId of contactIds) {
+    await sql`
+      INSERT INTO campaign_contacts (campaign_id, contact_id, added_at, added_by)
+      VALUES (${campaignId}, ${contactId}, NOW(), 'bulk')
+      ON CONFLICT (campaign_id, contact_id) DO NOTHING
+    `;
+  }
 
   return {
     campaign_id: campaignId,
@@ -320,15 +306,12 @@ async function addTags(
   tags: string[]
 ): Promise<any> {
   // Use array concatenation to add tags
-  const result = await pool.query(
-    `
+  const result = await sql`
     UPDATE contacts
-    SET tags = array(SELECT DISTINCT unnest(tags || $1))
-    WHERE id = ANY($2) AND user_id = $3
+    SET tags = array(SELECT DISTINCT unnest(tags || ARRAY[${tags.join(',')}]))
+    WHERE id = ANY(${contactIds}) AND user_id = ${userId}
     RETURNING id
-    `,
-    [tags, contactIds, userId]
-  );
+  `;
 
   return {
     tags_added: tags,
@@ -343,15 +326,12 @@ async function removeTags(
   tags: string[]
 ): Promise<any> {
   // Use array subtraction to remove tags
-  const result = await pool.query(
-    `
+  const result = await sql`
     UPDATE contacts
-    SET tags = array(SELECT unnest(tags) EXCEPT SELECT unnest($1))
-    WHERE id = ANY($2) AND user_id = $3
+    SET tags = array(SELECT unnest(tags) EXCEPT SELECT unnest(ARRAY[${tags.join(',')}]))
+    WHERE id = ANY(${contactIds}) AND user_id = ${userId}
     RETURNING id
-    `,
-    [tags, contactIds, userId]
-  );
+  `;
 
   return {
     tags_removed: tags,
@@ -370,15 +350,12 @@ async function changeStatus(
     throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
   }
 
-  const result = await pool.query(
-    `
+  const result = await sql`
     UPDATE contacts
-    SET status = $1
-    WHERE id = ANY($2) AND user_id = $3
+    SET status = ${status}
+    WHERE id = ANY(${contactIds}) AND user_id = ${userId}
     RETURNING id
-    `,
-    [status, contactIds, userId]
-  );
+  `;
 
   return {
     new_status: status,
