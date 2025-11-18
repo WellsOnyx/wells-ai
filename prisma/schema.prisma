@@ -9,18 +9,15 @@ datasource db {
 }
 
 model User {
-  id            String          @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String?
-  email         String          @unique
+  email         String    @unique
   emailVerified DateTime?
   image         String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   accounts      Account[]
   sessions      Session[]
-  conversations Conversation[]
-  userContext   UserContext?
-  userProfile   UserProfile?
 
   @@index([email])
 }
@@ -148,23 +145,22 @@ model RFQ {
 }
 
 model Conversation {
-  id                    String       @id @default(uuid())
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
+  id                    String      @id @default(uuid())
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
   userId                String
-  sessionId             String       @unique
+  sessionId             String      @unique
   device                String?
   source                String?
-  activeJourney         String?      // buyer, seller, job_seeker, founder
   onboardingState       Json?
-  onboardingCompleted   Boolean      @default(false)
+  onboardingCompleted   Boolean     @default(false)
   onboardingCompletedAt DateTime?
-  messageCount          Int          @default(0)
-  trustScore            Int          @default(0)
-  conversationDepth     Int          @default(0)
-  lastActivityAt        DateTime     @default(now())
+  messageCount          Int         @default(0)
+  trustScore            Int         @default(0)
+  conversationDepth     Int         @default(0)
+  lastActivityAt        DateTime    @default(now())
   lastActivity          String?
-  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  UserContext @relation(fields: [userId], references: [userId])
   messages              Message[]
 
   @@index([userId])
@@ -192,10 +188,10 @@ model Message {
 }
 
 model UserContext {
-  id                 String   @id @default(uuid())
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  userId             String   @unique
+  id                 String         @id @default(uuid())
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  userId             String         @unique
   name               String?
   preferredName      String?
   email              String?
@@ -207,16 +203,16 @@ model UserContext {
   goals              Json?
   painPoints         Json?
   preferences        Json?
-  totalConversations Int      @default(0)
-  totalMessages      Int      @default(0)
-  firstSeenAt        DateTime @default(now())
-  lastSeenAt         DateTime @default(now())
-  trustScore         Int      @default(0)
-  relationshipDepth  Int      @default(0)
+  totalConversations Int            @default(0)
+  totalMessages      Int            @default(0)
+  firstSeenAt        DateTime       @default(now())
+  lastSeenAt         DateTime       @default(now())
+  trustScore         Int            @default(0)
+  relationshipDepth  Int            @default(0)
   preferredTimes     Json?
   responseStyle      String?
   conversationPace   String?
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations      Conversation[]
   memories           Memory[]
 
   @@index([userId])
@@ -544,6 +540,1308 @@ model WellsOnyxCampaign {
   @@index([createdAt])
 }
 
+model ai_suggestions {
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  room_id           String?            @db.Uuid
+  suggestion_type   String             @db.VarChar(50)
+  suggestion        String
+  context           Json?              @default("{}")
+  shown_to          String             @db.VarChar(50)
+  was_helpful       Boolean?
+  feedback          String?
+  created_at        DateTime?          @default(now()) @db.Timestamp(6)
+  negotiation_rooms negotiation_rooms? @relation(fields: [room_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_suggestions_created")
+  @@index([room_id], map: "idx_suggestions_room")
+  @@index([suggestion_type], map: "idx_suggestions_type")
+}
+
+model analytics_cache {
+  id           Int       @id @default(autoincrement())
+  metric_key   String    @unique @db.VarChar(255)
+  metric_value Json
+  cache_period String?   @db.VarChar(50)
+  last_updated DateTime? @default(now()) @db.Timestamp(6)
+  expires_at   DateTime? @default(dbgenerated("(now() + '01:00:00'::interval)")) @db.Timestamp(6)
+
+  @@index([expires_at], map: "idx_analytics_expires")
+  @@index([metric_key], map: "idx_analytics_key")
+}
+
+model analytics_events {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  event_type String    @db.VarChar(100)
+  event_data Json      @default("{}")
+  user_id    String?   @db.VarChar(255)
+  session_id String?   @db.VarChar(255)
+  timestamp  DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([session_id], map: "idx_analytics_session")
+  @@index([timestamp(sort: Desc)], map: "idx_analytics_timestamp")
+  @@index([event_type], map: "idx_analytics_type")
+  @@index([user_id], map: "idx_analytics_user")
+}
+
+model approval_workflows {
+  id               Int       @id @default(autoincrement())
+  entity_type      String    @db.VarChar(50)
+  entity_id        Int
+  approval_level   Int       @default(1)
+  approver_id      String    @db.VarChar(255)
+  approver_name    String?   @db.VarChar(255)
+  approver_email   String?   @db.VarChar(255)
+  status           String?   @default("pending") @db.VarChar(50)
+  approved_at      DateTime? @db.Timestamp(6)
+  rejection_reason String?
+  notes            String?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([approver_id, status], map: "idx_approval_approver")
+  @@index([entity_type, entity_id], map: "idx_approval_entity")
+}
+
+model auto_response_rules {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id           String    @db.VarChar(255)
+  name              String    @db.VarChar(255)
+  enabled           Boolean?  @default(true)
+  priority          Int?      @default(50)
+  channel_filter    String?   @db.VarChar(50)
+  sender_filter     String?   @db.VarChar(255)
+  intent_filter     String?   @db.VarChar(100)
+  urgency_filter    String?   @db.VarChar(20)
+  keyword_filters   Json?     @default("[]")
+  time_window       Json?
+  action_type       String    @db.VarChar(50)
+  response_template String?
+  forward_to        String?   @db.VarChar(255)
+  require_approval  Boolean?  @default(false)
+  cooldown_hours    Int?      @default(24)
+  metadata          Json?     @default("{}")
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([priority(sort: Desc)], map: "idx_auto_response_rules_priority")
+  @@index([user_id], map: "idx_auto_response_rules_user")
+}
+
+model budget_plans {
+  id               Int       @id @default(autoincrement())
+  name             String    @db.VarChar(255)
+  department       String?   @db.VarChar(100)
+  category         String?   @db.VarChar(100)
+  fiscal_year      Int
+  fiscal_quarter   Int?
+  planned_amount   Decimal   @db.Decimal(15, 2)
+  actual_amount    Decimal?  @default(0) @db.Decimal(15, 2)
+  variance         Decimal?  @default(0) @db.Decimal(15, 2)
+  variance_percent Decimal?  @default(0) @db.Decimal(5, 2)
+  status           String?   @default("active") @db.VarChar(50)
+  owner_id         String?   @db.VarChar(255)
+  notes            String?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([category], map: "idx_budget_category")
+  @@index([fiscal_year, fiscal_quarter], map: "idx_budget_year")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model calendar_availability_preferences {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String    @unique
+  working_hours        Json?     @default("{\"friday\": {\"end\": \"17:00\", \"start\": \"09:00\", \"enabled\": true}, \"monday\": {\"end\": \"17:00\", \"start\": \"09:00\", \"enabled\": true}, \"sunday\": {\"end\": \"17:00\", \"start\": \"09:00\", \"enabled\": false}, \"tuesday\": {\"end\": \"17:00\", \"start\": \"09:00\", \"enabled\": true}, \"saturday\": {\"end\": \"17:00\", \"start\": \"09:00\", \"enabled\": false}, \"thursday\": {\"end\": \"17:00\", \"start\": \"09:00\", \"enabled\": true}, \"wednesday\": {\"end\": \"17:00\", \"start\": \"09:00\", \"enabled\": true}}")
+  timezone             String?   @default("America/Los_Angeles")
+  buffer_before        Int?      @default(0)
+  buffer_after         Int?      @default(0)
+  min_meeting_duration Int?      @default(15)
+  max_meetings_per_day Int?      @default(10)
+  auto_accept_invites  Boolean?  @default(false)
+  auto_accept_domains  String[]
+  created_at           DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([user_id], map: "idx_availability_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model calendar_events {
+  id                        String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                   String
+  connection_id             String                    @db.Uuid
+  provider                  String
+  provider_event_id         String
+  title                     String
+  description               String?
+  location                  String?
+  start_time                DateTime                  @db.Timestamptz(6)
+  end_time                  DateTime                  @db.Timestamptz(6)
+  timezone                  String                    @default("UTC")
+  is_all_day                Boolean?                  @default(false)
+  organizer                 Json
+  attendees                 Json?                     @default("[]")
+  meeting_url               String?
+  conference_data           Json?
+  status                    String?                   @default("confirmed")
+  visibility                String?                   @default("public")
+  html_link                 String?
+  ical_uid                  String?
+  sequence                  Int?                      @default(0)
+  is_recurring              Boolean?                  @default(false)
+  recurrence_rule           String?
+  recurrence_exceptions     String[]
+  created_at                DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime?                 @default(now()) @db.Timestamptz(6)
+  deleted_at                DateTime?                 @db.Timestamptz(6)
+  user_calendar_connections user_calendar_connections @relation(fields: [connection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, provider, provider_event_id])
+  @@index([attendees], map: "idx_calendar_events_attendees", type: Gin)
+  @@index([connection_id], map: "idx_calendar_events_connection_id")
+  @@index([provider, provider_event_id], map: "idx_calendar_events_provider_id")
+  @@index([user_id, start_time, end_time], map: "idx_calendar_events_time_range")
+  @@index([user_id], map: "idx_calendar_events_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model calendar_sync_log {
+  id                        String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                   String
+  connection_id             String                    @db.Uuid
+  provider                  String
+  sync_type                 String
+  status                    String
+  events_added              Int?                      @default(0)
+  events_updated            Int?                      @default(0)
+  events_deleted            Int?                      @default(0)
+  error                     String?
+  started_at                DateTime?                 @default(now()) @db.Timestamptz(6)
+  completed_at              DateTime?                 @db.Timestamptz(6)
+  sync_token                String?
+  user_calendar_connections user_calendar_connections @relation(fields: [connection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([connection_id], map: "idx_sync_log_connection_id")
+  @@index([status, started_at], map: "idx_sync_log_status")
+  @@index([user_id], map: "idx_sync_log_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model calendar_webhooks {
+  id                        String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  connection_id             String                    @db.Uuid
+  provider                  String
+  webhook_id                String
+  resource_uri              String
+  expiration                DateTime                  @db.Timestamptz(6)
+  active                    Boolean?                  @default(true)
+  created_at                DateTime?                 @default(now()) @db.Timestamptz(6)
+  last_notification_at      DateTime?                 @db.Timestamptz(6)
+  user_calendar_connections user_calendar_connections @relation(fields: [connection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([connection_id], map: "idx_webhooks_connection_id")
+}
+
+model contacts {
+  id                        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id                   String    @db.VarChar(255)
+  name                      String?   @db.VarChar(255)
+  email                     String?   @db.VarChar(255)
+  phone                     String?   @db.VarChar(50)
+  company                   String?   @db.VarChar(255)
+  role                      String?   @db.VarChar(255)
+  slack_user_id             String?   @db.VarChar(255)
+  discord_user_id           String?   @db.VarChar(255)
+  teams_user_id             String?   @db.VarChar(255)
+  linkedin_url              String?   @db.VarChar(500)
+  relationship_type         String?   @db.VarChar(50)
+  importance_score          Int?      @default(50)
+  first_contact_date        DateTime? @db.Timestamp(6)
+  last_contact_date         DateTime? @db.Timestamp(6)
+  total_messages_received   Int?      @default(0)
+  total_messages_sent       Int?      @default(0)
+  avg_response_time_minutes Int?
+  preferred_channel         String?   @db.VarChar(50)
+  communication_style       String?
+  topics_discussed          Json?     @default("[]")
+  relationship_notes        String?
+  metadata                  Json?     @default("{}")
+  created_at                DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([user_id, email])
+  @@unique([user_id, phone])
+  @@index([email], map: "idx_contacts_email")
+  @@index([importance_score(sort: Desc)], map: "idx_contacts_importance")
+  @@index([last_contact_date(sort: Desc)], map: "idx_contacts_last_contact")
+  @@index([phone], map: "idx_contacts_phone")
+  @@index([relationship_type], map: "idx_contacts_relationship")
+  @@index([user_id], map: "idx_contacts_user")
+}
+
+model conversation_contexts {
+  id              Int       @id @default(autoincrement())
+  conversation_id String    @unique @db.VarChar(255)
+  user_id         String    @db.VarChar(255)
+  platform        String    @db.VarChar(50)
+  current_intent  String?   @db.VarChar(100)
+  context_data    Json?
+  last_activity   DateTime? @default(now()) @db.Timestamp(6)
+  expires_at      DateTime? @default(dbgenerated("(now() + '24:00:00'::interval)")) @db.Timestamp(6)
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([expires_at], map: "idx_conversation_expires")
+  @@index([user_id], map: "idx_conversation_user")
+}
+
+model conversations {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String?   @db.VarChar(255)
+  session_id String    @db.VarChar(255)
+  messages   Json      @default("[]")
+  metadata   Json?     @default("{}")
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([created_at(sort: Desc)], map: "idx_conversations_created")
+  @@index([session_id], map: "idx_conversations_session")
+  @@index([user_id], map: "idx_conversations_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model counter_offers {
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  room_id           String?            @db.Uuid
+  supplier_id       String?            @db.Uuid
+  supplier_name     String             @db.VarChar(255)
+  original_price    Decimal?           @db.Decimal(12, 2)
+  offered_price     Decimal            @db.Decimal(12, 2)
+  delivery_time     String             @db.VarChar(100)
+  terms             String?
+  status            String?            @default("pending") @db.VarChar(50)
+  valid_until       DateTime           @db.Timestamp(6)
+  responded_at      DateTime?          @db.Timestamp(6)
+  response_message  String?
+  created_at        DateTime?          @default(now()) @db.Timestamp(6)
+  negotiation_rooms negotiation_rooms? @relation(fields: [room_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  suppliers         suppliers?         @relation(fields: [supplier_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_counter_offers_created")
+  @@index([room_id], map: "idx_counter_offers_room")
+  @@index([status], map: "idx_counter_offers_status")
+  @@index([supplier_id], map: "idx_counter_offers_supplier")
+}
+
+model deal_history {
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  room_id           String?            @db.Uuid
+  deal_id           String?            @db.Uuid
+  event_type        String             @db.VarChar(100)
+  event_data        Json?              @default("{}")
+  actor_id          String             @db.VarChar(255)
+  actor_type        String             @db.VarChar(50)
+  timestamp         DateTime?          @default(now()) @db.Timestamp(6)
+  deals             deals?             @relation(fields: [deal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  negotiation_rooms negotiation_rooms? @relation(fields: [room_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([deal_id], map: "idx_deal_history_deal")
+  @@index([event_type], map: "idx_deal_history_event")
+  @@index([room_id], map: "idx_deal_history_room")
+  @@index([timestamp(sort: Desc)], map: "idx_deal_history_timestamp")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model deals {
+  id                       String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  supplier_id              String?                    @db.Uuid
+  buyer_id                 String                     @db.VarChar(255)
+  quote_id                 String?                    @db.Uuid
+  amount                   Decimal                    @db.Decimal(12, 2)
+  wells_fee                Decimal                    @db.Decimal(12, 2)
+  status                   String?                    @default("pending") @db.VarChar(50)
+  payment_intent_id        String?                    @db.VarChar(255)
+  notion_id                String?                    @unique @db.VarChar(255)
+  created_at               DateTime?                  @default(now()) @db.Timestamp(6)
+  completed_at             DateTime?                  @db.Timestamp(6)
+  deal_history             deal_history[]
+  quotes                   quotes?                    @relation(fields: [quote_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  suppliers                suppliers?                 @relation(fields: [supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  erp_syncs                erp_syncs?
+  negotiation_rooms        negotiation_rooms[]
+  slack_deal_notifications slack_deal_notifications[]
+
+  @@index([buyer_id], map: "idx_deals_buyer")
+  @@index([created_at(sort: Desc)], map: "idx_deals_created")
+  @@index([status], map: "idx_deals_status")
+  @@index([supplier_id], map: "idx_deals_supplier")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model erp_sync_history {
+  id             String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  erp_sync_id    String?    @db.Uuid
+  deal_id        String     @db.Uuid
+  attempt_number Int
+  status         String     @db.VarChar(50)
+  started_at     DateTime?  @default(now()) @db.Timestamp(6)
+  completed_at   DateTime?  @db.Timestamp(6)
+  error_message  String?
+  request_data   Json?
+  response_data  Json?
+  created_at     DateTime?  @default(now()) @db.Timestamp(6)
+  erp_syncs      erp_syncs? @relation(fields: [erp_sync_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_erp_sync_history_created")
+  @@index([deal_id], map: "idx_erp_sync_history_deal")
+  @@index([erp_sync_id], map: "idx_erp_sync_history_sync")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model erp_syncs {
+  id                 String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  deal_id            String             @unique @db.Uuid
+  customer_id        String             @db.VarChar(255)
+  integration_name   String             @db.VarChar(100)
+  erp_vendor_id      String?            @db.VarChar(255)
+  erp_vendor_name    String?            @db.VarChar(255)
+  erp_po_id          String?            @db.VarChar(255)
+  erp_po_number      String?            @db.VarChar(255)
+  erp_po_status      String?            @db.VarChar(50)
+  erp_invoice_id     String?            @db.VarChar(255)
+  erp_invoice_number String?            @db.VarChar(255)
+  status             String?            @default("pending") @db.VarChar(50)
+  synced_at          DateTime?          @db.Timestamp(6)
+  error_message      String?
+  retry_count        Int?               @default(0)
+  sync_data          Json?
+  created_at         DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?          @default(now()) @db.Timestamp(6)
+  erp_sync_history   erp_sync_history[]
+  deals              deals              @relation(fields: [deal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_erp_syncs_created")
+  @@index([customer_id], map: "idx_erp_syncs_customer")
+  @@index([deal_id], map: "idx_erp_syncs_deal")
+  @@index([integration_name], map: "idx_erp_syncs_integration")
+  @@index([status], map: "idx_erp_syncs_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model erp_webhooks {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  account_token    String?   @db.VarChar(255)
+  event_type       String    @db.VarChar(100)
+  resource_type    String?   @db.VarChar(100)
+  resource_id      String?   @db.VarChar(255)
+  integration_name String?   @db.VarChar(100)
+  webhook_data     Json
+  processed        Boolean?  @default(false)
+  processed_at     DateTime? @db.Timestamp(6)
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([created_at(sort: Desc)], map: "idx_erp_webhooks_created")
+  @@index([event_type], map: "idx_erp_webhooks_event_type")
+  @@index([processed], map: "idx_erp_webhooks_processed")
+  @@index([resource_type, resource_id], map: "idx_erp_webhooks_resource")
+}
+
+model financial_transactions {
+  id               Int       @id @default(autoincrement())
+  transaction_date DateTime  @db.Date
+  transaction_type String    @db.VarChar(50)
+  reference_type   String?   @db.VarChar(50)
+  reference_id     Int?
+  account_code     String    @db.VarChar(50)
+  debit_amount     Decimal?  @default(0) @db.Decimal(15, 2)
+  credit_amount    Decimal?  @default(0) @db.Decimal(15, 2)
+  currency         String?   @default("USD") @db.VarChar(3)
+  description      String?
+  posted_by        String?   @db.VarChar(255)
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([account_code], map: "idx_fin_tx_account")
+  @@index([transaction_date], map: "idx_fin_tx_date")
+  @@index([transaction_type], map: "idx_fin_tx_type")
+}
+
+model gtm_outreach {
+  id            String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  prospect_id   String?        @db.Uuid
+  channel       String         @db.VarChar(50)
+  message       String
+  status        String?        @default("pending") @db.VarChar(50)
+  sent_at       DateTime?      @db.Timestamp(6)
+  replied_at    DateTime?      @db.Timestamp(6)
+  notion_id     String?        @unique @db.VarChar(255)
+  created_at    DateTime?      @default(now()) @db.Timestamp(6)
+  gtm_prospects gtm_prospects? @relation(fields: [prospect_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([channel], map: "idx_outreach_channel")
+  @@index([prospect_id], map: "idx_outreach_prospect")
+  @@index([status], map: "idx_outreach_status")
+}
+
+model gtm_prospects {
+  id               String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  practice_group   String         @db.VarChar(100)
+  company_name     String         @db.VarChar(255)
+  contact_name     String?        @db.VarChar(255)
+  contact_title    String?        @db.VarChar(255)
+  contact_email    String?        @db.VarChar(255)
+  contact_linkedin String?        @db.VarChar(500)
+  company_size     String?        @db.VarChar(50)
+  industry         String?        @db.VarChar(100)
+  signals          Json?          @default("[]")
+  icp_score        Decimal?       @default(0.00) @db.Decimal(5, 2)
+  status           String?        @default("discovered") @db.VarChar(50)
+  notion_id        String?        @unique @db.VarChar(255)
+  created_at       DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?      @default(now()) @db.Timestamp(6)
+  gtm_outreach     gtm_outreach[]
+
+  @@index([contact_email], map: "idx_prospects_email")
+  @@index([practice_group], map: "idx_prospects_practice_group")
+  @@index([icp_score(sort: Desc)], map: "idx_prospects_score")
+  @@index([status], map: "idx_prospects_status")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model inbound_messages {
+  id                     String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id                String              @db.VarChar(255)
+  channel                String              @db.VarChar(50)
+  channel_message_id     String?             @db.VarChar(500)
+  sender_id              String?             @db.VarChar(255)
+  sender_name            String?             @db.VarChar(255)
+  sender_email           String?             @db.VarChar(255)
+  sender_phone           String?             @db.VarChar(50)
+  sender_metadata        Json?               @default("{}")
+  subject                String?             @db.VarChar(1000)
+  body                   String
+  html_body              String?
+  attachments            Json?               @default("[]")
+  thread_id              String?             @db.VarChar(500)
+  internal_thread_id     String?             @db.Uuid
+  parent_message_id      String?             @db.Uuid
+  is_thread_start        Boolean?            @default(false)
+  intent                 String?             @db.VarChar(100)
+  urgency                String?             @default("normal") @db.VarChar(20)
+  sentiment              String?             @db.VarChar(20)
+  entities               Json?               @default("{}")
+  action_items           Json?               @default("[]")
+  requires_response      Boolean?            @default(false)
+  suggested_response     String?
+  processed_at           DateTime?           @db.Timestamp(6)
+  responded_at           DateTime?           @db.Timestamp(6)
+  response_message_id    String?             @db.Uuid
+  raw_payload            Json?
+  headers                Json?               @default("{}")
+  metadata               Json?               @default("{}")
+  created_at             DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?           @default(now()) @db.Timestamp(6)
+  inbound_messages       inbound_messages?   @relation("inbound_messagesToinbound_messages", fields: [parent_message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_inbound_messages inbound_messages[]  @relation("inbound_messagesToinbound_messages")
+  outbound_messages      outbound_messages[]
+  webhook_events         webhook_events[]
+
+  @@index([channel], map: "idx_inbound_messages_channel")
+  @@index([created_at(sort: Desc)], map: "idx_inbound_messages_created")
+  @@index([intent], map: "idx_inbound_messages_intent")
+  @@index([internal_thread_id], map: "idx_inbound_messages_internal_thread")
+  @@index([sender_email], map: "idx_inbound_messages_sender_email")
+  @@index([sender_phone], map: "idx_inbound_messages_sender_phone")
+  @@index([thread_id], map: "idx_inbound_messages_thread")
+  @@index([urgency], map: "idx_inbound_messages_urgency")
+  @@index([user_id], map: "idx_inbound_messages_user")
+}
+
+model inventory_items {
+  id                     Int                      @id @default(autoincrement())
+  product_name           String                   @db.VarChar(500)
+  sku                    String?                  @unique @db.VarChar(100)
+  description            String?
+  category               String?                  @db.VarChar(100)
+  quantity               Int                      @default(0)
+  unit                   String?                  @default("units") @db.VarChar(50)
+  reorder_point          Int?                     @default(10)
+  reorder_quantity       Int?                     @default(50)
+  location               String?                  @db.VarChar(255)
+  warehouse              String?                  @db.VarChar(100)
+  unit_cost              Decimal?                 @db.Decimal(15, 2)
+  last_restock_date      DateTime?                @db.Date
+  preferred_supplier_id  String?                  @db.Uuid
+  status                 String?                  @default("active") @db.VarChar(50)
+  created_at             DateTime?                @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamp(6)
+  suppliers              suppliers?               @relation(fields: [preferred_supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inventory_transactions inventory_transactions[]
+  reorder_alerts         reorder_alerts[]
+
+  @@index([product_name], map: "idx_inventory_name")
+  @@index([quantity, reorder_point], map: "idx_inventory_reorder")
+  @@index([sku], map: "idx_inventory_sku")
+}
+
+model inventory_transactions {
+  id                Int              @id @default(autoincrement())
+  inventory_item_id Int?
+  transaction_type  String           @db.VarChar(50)
+  quantity_change   Int
+  quantity_before   Int
+  quantity_after    Int
+  reference_type    String?          @db.VarChar(50)
+  reference_id      String?          @db.VarChar(100)
+  performed_by      String           @db.VarChar(255)
+  notes             String?
+  created_at        DateTime?        @default(now()) @db.Timestamp(6)
+  inventory_items   inventory_items? @relation(fields: [inventory_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_inventory_tx_date")
+  @@index([inventory_item_id], map: "idx_inventory_tx_item")
+}
+
+model invoice_line_items {
+  id          Int       @id @default(autoincrement())
+  invoice_id  Int?
+  line_number Int
+  description String
+  quantity    Decimal   @db.Decimal(10, 2)
+  unit_price  Decimal   @db.Decimal(15, 2)
+  line_total  Decimal   @db.Decimal(15, 2)
+  tax_rate    Decimal?  @default(0) @db.Decimal(5, 2)
+  tax_amount  Decimal?  @default(0) @db.Decimal(15, 2)
+  product_sku String?   @db.VarChar(100)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  invoices    invoices? @relation(fields: [invoice_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([invoice_id], map: "idx_invoice_lines_invoice")
+}
+
+model invoices {
+  id                  Int                   @id @default(autoincrement())
+  invoice_number      String                @unique @db.VarChar(100)
+  invoice_type        String                @db.VarChar(50)
+  customer_id         String?               @db.VarChar(255)
+  supplier_id         String?               @db.Uuid
+  po_id               Int?
+  invoice_date        DateTime              @db.Date
+  due_date            DateTime              @db.Date
+  subtotal            Decimal               @db.Decimal(15, 2)
+  tax_amount          Decimal?              @default(0) @db.Decimal(15, 2)
+  discount_amount     Decimal?              @default(0) @db.Decimal(15, 2)
+  total_amount        Decimal               @db.Decimal(15, 2)
+  currency            String?               @default("USD") @db.VarChar(3)
+  status              String?               @default("draft") @db.VarChar(50)
+  payment_terms       String?               @db.VarChar(100)
+  notes               String?
+  generated_by        String?               @db.VarChar(255)
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?             @default(now()) @db.Timestamp(6)
+  invoice_line_items  invoice_line_items[]
+  purchase_orders     purchase_orders?      @relation(fields: [po_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  suppliers           suppliers?            @relation(fields: [supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  payment_allocations payment_allocations[]
+
+  @@index([customer_id], map: "idx_invoice_customer")
+  @@index([invoice_date, due_date], map: "idx_invoice_dates")
+  @@index([status], map: "idx_invoice_status")
+  @@index([supplier_id], map: "idx_invoice_supplier")
+  @@index([invoice_type], map: "idx_invoice_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model merge_account_tokens {
+  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id        String    @db.VarChar(255)
+  account_token      String
+  integration_name   String    @db.VarChar(100)
+  integration_slug   String?   @db.VarChar(100)
+  organization_name  String?   @db.VarChar(255)
+  end_user_email     String?   @db.VarChar(255)
+  end_user_origin_id String?   @db.VarChar(255)
+  is_active          Boolean?  @default(true)
+  is_test_account    Boolean?  @default(false)
+  last_synced_at     DateTime? @db.Timestamp(6)
+  metadata           Json?
+  created_at         DateTime? @default(now()) @db.Timestamp(6)
+  updated_at         DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([customer_id, integration_name])
+  @@index([is_active], map: "idx_merge_account_tokens_active")
+  @@index([customer_id], map: "idx_merge_account_tokens_customer")
+  @@index([integration_name], map: "idx_merge_account_tokens_integration")
+}
+
+model message_attachments {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  message_id       String?   @db.Uuid
+  message_type     String    @db.VarChar(20)
+  filename         String    @db.VarChar(500)
+  content_type     String?   @db.VarChar(255)
+  size_bytes       BigInt?
+  storage_provider String?   @db.VarChar(50)
+  storage_url      String
+  storage_key      String?   @db.VarChar(500)
+  extracted_text   String?
+  ai_summary       String?
+  metadata         Json?     @default("{}")
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([content_type], map: "idx_attachments_content_type")
+  @@index([message_id, message_type], map: "idx_attachments_message")
+}
+
+model message_threads {
+  id                 String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id            String              @db.VarChar(255)
+  channel            String              @db.VarChar(50)
+  platform_thread_id String?             @db.VarChar(500)
+  subject            String?             @db.VarChar(1000)
+  participants       Json?               @default("[]")
+  message_count      Int?                @default(0)
+  status             String?             @default("active") @db.VarChar(50)
+  last_message_at    DateTime?           @db.Timestamp(6)
+  thread_summary     String?
+  thread_context     Json?               @default("{}")
+  created_at         DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?           @default(now()) @db.Timestamp(6)
+  outbound_messages  outbound_messages[]
+
+  @@index([channel], map: "idx_message_threads_channel")
+  @@index([last_message_at(sort: Desc)], map: "idx_message_threads_last_message")
+  @@index([platform_thread_id], map: "idx_message_threads_platform_thread")
+  @@index([status], map: "idx_message_threads_status")
+  @@index([user_id], map: "idx_message_threads_user")
+}
+
+model negotiation_rooms {
+  id                String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  rfq_id            String?             @db.Uuid
+  buyer_id          String              @db.VarChar(255)
+  buyer_email       String              @db.VarChar(255)
+  status            String?             @default("active") @db.VarChar(50)
+  started_at        DateTime?           @default(now()) @db.Timestamp(6)
+  closed_at         DateTime?           @db.Timestamp(6)
+  deal_id           String?             @db.Uuid
+  room_code         String              @unique @db.VarChar(50)
+  metadata          Json?               @default("{}")
+  created_at        DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?           @default(now()) @db.Timestamp(6)
+  ai_suggestions    ai_suggestions[]
+  counter_offers    counter_offers[]
+  deal_history      deal_history[]
+  deals             deals?              @relation(fields: [deal_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rfqs              rfqs?               @relation(fields: [rfq_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  room_messages     room_messages[]
+  room_participants room_participants[]
+
+  @@index([buyer_id], map: "idx_rooms_buyer")
+  @@index([room_code], map: "idx_rooms_code")
+  @@index([rfq_id], map: "idx_rooms_rfq")
+  @@index([started_at(sort: Desc)], map: "idx_rooms_started")
+  @@index([status], map: "idx_rooms_status")
+}
+
+model outbound_messages {
+  id                  String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id             String            @db.VarChar(255)
+  in_reply_to         String?           @db.Uuid
+  thread_id           String?           @db.Uuid
+  channel             String            @db.VarChar(50)
+  recipient_id        String?           @db.VarChar(255)
+  recipient_email     String?           @db.VarChar(255)
+  recipient_phone     String?           @db.VarChar(50)
+  subject             String?           @db.VarChar(1000)
+  body                String
+  html_body           String?
+  attachments         Json?             @default("[]")
+  status              String?           @default("draft") @db.VarChar(50)
+  approved_by         String?           @db.VarChar(255)
+  approved_at         DateTime?         @db.Timestamp(6)
+  sent_at             DateTime?         @db.Timestamp(6)
+  delivered_at        DateTime?         @db.Timestamp(6)
+  read_at             DateTime?         @db.Timestamp(6)
+  platform_message_id String?           @db.VarChar(500)
+  platform_response   Json?
+  error_message       String?
+  metadata            Json?             @default("{}")
+  created_at          DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?         @default(now()) @db.Timestamp(6)
+  inbound_messages    inbound_messages? @relation(fields: [in_reply_to], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  message_threads     message_threads?  @relation(fields: [thread_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([channel], map: "idx_outbound_messages_channel")
+  @@index([created_at(sort: Desc)], map: "idx_outbound_messages_created")
+  @@index([in_reply_to], map: "idx_outbound_messages_reply_to")
+  @@index([status], map: "idx_outbound_messages_status")
+  @@index([thread_id], map: "idx_outbound_messages_thread")
+  @@index([user_id], map: "idx_outbound_messages_user")
+}
+
+model payment_allocations {
+  id               Int       @id @default(autoincrement())
+  payment_id       Int?
+  invoice_id       Int?
+  allocated_amount Decimal   @db.Decimal(15, 2)
+  notes            String?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  invoices         invoices? @relation(fields: [invoice_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  payments         payments? @relation(fields: [payment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([invoice_id], map: "idx_payment_alloc_invoice")
+  @@index([payment_id], map: "idx_payment_alloc_payment")
+}
+
+model payments {
+  id                  Int                   @id @default(autoincrement())
+  payment_number      String                @unique @db.VarChar(100)
+  payment_type        String                @db.VarChar(50)
+  payment_method      String                @db.VarChar(50)
+  amount              Decimal               @db.Decimal(15, 2)
+  currency            String?               @default("USD") @db.VarChar(3)
+  payment_date        DateTime              @db.Date
+  reference_number    String?               @db.VarChar(255)
+  customer_id         String?               @db.VarChar(255)
+  supplier_id         String?               @db.Uuid
+  bank_account        String?               @db.VarChar(100)
+  status              String?               @default("pending") @db.VarChar(50)
+  notes               String?
+  processed_by        String?               @db.VarChar(255)
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?             @default(now()) @db.Timestamp(6)
+  payment_allocations payment_allocations[]
+  suppliers           suppliers?            @relation(fields: [supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_payment_customer")
+  @@index([payment_date], map: "idx_payment_date")
+  @@index([status], map: "idx_payment_status")
+  @@index([supplier_id], map: "idx_payment_supplier")
+  @@index([payment_type], map: "idx_payment_type")
+}
+
+model performance_metrics {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  metric_type    String    @db.VarChar(100)
+  operation_name String    @db.VarChar(255)
+  duration_ms    Int
+  success        Boolean?  @default(true)
+  metadata       Json?     @default("{}")
+  timestamp      DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([duration_ms(sort: Desc)], map: "idx_metrics_duration")
+  @@index([timestamp(sort: Desc)], map: "idx_metrics_timestamp")
+  @@index([metric_type], map: "idx_metrics_type")
+}
+
+model po_line_items {
+  id              Int              @id @default(autoincrement())
+  po_id           Int?
+  line_number     Int
+  product_name    String           @db.VarChar(500)
+  description     String?
+  quantity        Int
+  unit            String?          @default("units") @db.VarChar(50)
+  unit_price      Decimal          @db.Decimal(15, 2)
+  total_price     Decimal          @db.Decimal(15, 2)
+  delivery_date   DateTime?        @db.Date
+  notes           String?
+  created_at      DateTime?        @default(now()) @db.Timestamp(6)
+  purchase_orders purchase_orders? @relation(fields: [po_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([po_id], map: "idx_po_line_items_po")
+}
+
+model purchase_orders {
+  id               Int                @id @default(autoincrement())
+  po_number        String             @unique @db.VarChar(100)
+  supplier_id      String?            @db.Uuid
+  buyer_id         String             @db.VarChar(255)
+  status           String             @default("draft") @db.VarChar(50)
+  total_amount     Decimal            @db.Decimal(15, 2)
+  currency         String?            @default("USD") @db.VarChar(3)
+  due_date         DateTime?          @db.Date
+  requested_by     String             @db.VarChar(255)
+  approved_by      String?            @db.VarChar(255)
+  approved_at      DateTime?          @db.Timestamp(6)
+  notes            String?
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamp(6)
+  invoices         invoices[]
+  po_line_items    po_line_items[]
+  suppliers        suppliers?         @relation(fields: [supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reorder_alerts   reorder_alerts[]
+  supplier_issues  supplier_issues[]
+  supplier_metrics supplier_metrics[]
+
+  @@index([buyer_id], map: "idx_po_buyer")
+  @@index([created_at], map: "idx_po_created")
+  @@index([status], map: "idx_po_status")
+  @@index([supplier_id], map: "idx_po_supplier")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model quotes {
+  id            String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  supplier_id   String?    @db.Uuid
+  rfq_id        String?    @db.Uuid
+  price         Decimal    @db.Decimal(12, 2)
+  delivery_time String?    @db.VarChar(100)
+  terms         String?
+  notes         String?
+  status        String?    @default("pending") @db.VarChar(50)
+  notion_id     String?    @unique @db.VarChar(255)
+  submitted_at  DateTime?  @default(now()) @db.Timestamp(6)
+  responded_at  DateTime?  @db.Timestamp(6)
+  deals         deals[]
+  rfqs          rfqs?      @relation(fields: [rfq_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  suppliers     suppliers? @relation(fields: [supplier_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([price], map: "idx_quotes_price")
+  @@index([rfq_id], map: "idx_quotes_rfq")
+  @@index([status], map: "idx_quotes_status")
+  @@index([supplier_id], map: "idx_quotes_supplier")
+}
+
+model reorder_alerts {
+  id                Int              @id @default(autoincrement())
+  inventory_item_id Int?
+  product_name      String           @db.VarChar(500)
+  current_quantity  Int
+  reorder_quantity  Int
+  supplier_id       String?          @db.Uuid
+  status            String?          @default("pending") @db.VarChar(50)
+  po_id             Int?
+  triggered_by      String?          @db.VarChar(255)
+  resolved_by       String?          @db.VarChar(255)
+  resolved_at       DateTime?        @db.Timestamp(6)
+  created_at        DateTime?        @default(now()) @db.Timestamp(6)
+  inventory_items   inventory_items? @relation(fields: [inventory_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  purchase_orders   purchase_orders? @relation(fields: [po_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  suppliers         suppliers?       @relation(fields: [supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([inventory_item_id], map: "idx_reorder_item")
+  @@index([status], map: "idx_reorder_status")
+}
+
+model rfqs {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  buyer_id           String               @db.VarChar(255)
+  buyer_email        String               @db.VarChar(255)
+  requirements       String
+  categories         String[]
+  quantity           Int?
+  budget             Decimal?             @db.Decimal(12, 2)
+  deadline           DateTime?            @db.Date
+  status             String?              @default("open") @db.VarChar(50)
+  notion_id          String?              @unique @db.VarChar(255)
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(6)
+  negotiation_rooms  negotiation_rooms[]
+  quotes             quotes[]
+  slack_rfq_channels slack_rfq_channels[]
+
+  @@index([buyer_id], map: "idx_rfqs_buyer")
+  @@index([created_at(sort: Desc)], map: "idx_rfqs_created")
+  @@index([status], map: "idx_rfqs_status")
+}
+
+model room_messages {
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  room_id           String?            @db.Uuid
+  sender_id         String             @db.VarChar(255)
+  sender_name       String             @db.VarChar(255)
+  sender_type       String             @db.VarChar(50)
+  content           String
+  message_type      String?            @default("text") @db.VarChar(50)
+  metadata          Json?              @default("{}")
+  timestamp         DateTime?          @default(now()) @db.Timestamp(6)
+  negotiation_rooms negotiation_rooms? @relation(fields: [room_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([room_id], map: "idx_messages_room")
+  @@index([sender_id], map: "idx_messages_sender")
+  @@index([timestamp(sort: Desc)], map: "idx_messages_timestamp")
+  @@index([message_type], map: "idx_messages_type")
+}
+
+model room_participants {
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  room_id           String?            @db.Uuid
+  participant_id    String             @db.VarChar(255)
+  participant_type  String             @db.VarChar(50)
+  participant_name  String             @db.VarChar(255)
+  participant_email String?            @db.VarChar(255)
+  supplier_id       String?            @db.Uuid
+  joined_at         DateTime?          @default(now()) @db.Timestamp(6)
+  last_seen_at      DateTime?          @default(now()) @db.Timestamp(6)
+  is_active         Boolean?           @default(true)
+  metadata          Json?              @default("{}")
+  negotiation_rooms negotiation_rooms? @relation(fields: [room_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  suppliers         suppliers?         @relation(fields: [supplier_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([room_id, participant_id], map: "idx_participants_unique")
+  @@index([room_id], map: "idx_participants_room")
+  @@index([supplier_id], map: "idx_participants_supplier")
+  @@index([participant_type], map: "idx_participants_type")
+}
+
+model saved_reports {
+  id            Int       @id @default(autoincrement())
+  report_type   String    @db.VarChar(100)
+  report_period String    @db.VarChar(50)
+  start_date    DateTime  @db.Date
+  end_date      DateTime  @db.Date
+  report_data   Json
+  generated_by  String?   @db.VarChar(255)
+  generated_at  DateTime? @default(now()) @db.Timestamp(6)
+  expires_at    DateTime? @default(dbgenerated("(now() + '7 days'::interval)")) @db.Timestamp(6)
+
+  @@index([start_date, end_date], map: "idx_saved_reports_dates")
+  @@index([report_type, report_period], map: "idx_saved_reports_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model slack_command_history {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  team_id           String    @db.VarChar(255)
+  user_id           String    @db.VarChar(255)
+  user_name         String?   @db.VarChar(255)
+  channel_id        String?   @db.VarChar(255)
+  channel_name      String?   @db.VarChar(255)
+  command           String    @db.VarChar(100)
+  command_text      String?
+  response_url      String?
+  trigger_id        String?   @db.VarChar(255)
+  success           Boolean?  @default(true)
+  error_message     String?
+  execution_time_ms Int?
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([command], map: "idx_slack_command_history_command")
+  @@index([created_at(sort: Desc)], map: "idx_slack_command_history_created")
+  @@index([team_id], map: "idx_slack_command_history_team")
+  @@index([user_id], map: "idx_slack_command_history_user")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model slack_deal_notifications {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  deal_id           String?   @db.Uuid
+  team_id           String    @db.VarChar(255)
+  channel_id        String    @db.VarChar(255)
+  message_ts        String    @db.VarChar(255)
+  notification_type String    @db.VarChar(50)
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  deals             deals?    @relation(fields: [deal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([deal_id], map: "idx_slack_deal_notifications_deal")
+  @@index([team_id], map: "idx_slack_deal_notifications_team")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model slack_events_log {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  team_id       String    @db.VarChar(255)
+  event_type    String    @db.VarChar(100)
+  event_data    Json
+  processed     Boolean?  @default(false)
+  error_message String?
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([created_at(sort: Desc)], map: "idx_slack_events_log_created")
+  @@index([processed], map: "idx_slack_events_log_processed")
+  @@index([team_id], map: "idx_slack_events_log_team")
+  @@index([event_type], map: "idx_slack_events_log_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model slack_installations {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  team_id           String    @unique @db.VarChar(255)
+  team_name         String    @db.VarChar(255)
+  bot_user_id       String    @db.VarChar(255)
+  bot_token         String
+  scope             String
+  app_id            String?   @db.VarChar(255)
+  authed_user_id    String?   @db.VarChar(255)
+  authed_user_token String?
+  metadata          Json?
+  is_active         Boolean?  @default(true)
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([is_active], map: "idx_slack_installations_active")
+  @@index([team_id], map: "idx_slack_installations_team_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model slack_rfq_channels {
+  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  rfq_id             String?   @db.Uuid
+  team_id            String    @db.VarChar(255)
+  channel_id         String    @db.VarChar(255)
+  channel_name       String?   @db.VarChar(255)
+  message_ts         String?   @db.VarChar(255)
+  thread_ts          String?   @db.VarChar(255)
+  created_by_user_id String?   @db.VarChar(255)
+  created_at         DateTime? @default(now()) @db.Timestamp(6)
+  rfqs               rfqs?     @relation(fields: [rfq_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([rfq_id, team_id, channel_id])
+  @@index([rfq_id], map: "idx_slack_rfq_channels_rfq")
+  @@index([team_id, channel_id], map: "idx_slack_rfq_channels_team_channel")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model slack_user_mappings {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  slack_user_id    String    @db.VarChar(255)
+  slack_team_id    String    @db.VarChar(255)
+  wells_user_id    String?   @db.VarChar(255)
+  wells_user_email String?   @db.VarChar(255)
+  metadata         Json?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([slack_user_id, slack_team_id])
+  @@index([slack_user_id, slack_team_id], map: "idx_slack_user_mappings_slack_user")
+  @@index([wells_user_id], map: "idx_slack_user_mappings_wells_user")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model supplier_erp_mappings {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  supplier_id      String    @db.Uuid
+  customer_id      String    @db.VarChar(255)
+  integration_name String    @db.VarChar(100)
+  erp_vendor_id    String    @db.VarChar(255)
+  erp_vendor_name  String?   @db.VarChar(255)
+  last_synced_at   DateTime? @default(now()) @db.Timestamp(6)
+  metadata         Json?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  suppliers        suppliers @relation(fields: [supplier_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([supplier_id, customer_id, integration_name])
+  @@index([customer_id], map: "idx_supplier_erp_mappings_customer")
+  @@index([erp_vendor_id], map: "idx_supplier_erp_mappings_erp_vendor")
+  @@index([supplier_id], map: "idx_supplier_erp_mappings_supplier")
+}
+
+model supplier_issues {
+  id              Int              @id @default(autoincrement())
+  supplier_id     String?          @db.Uuid
+  po_id           Int?
+  issue_type      String           @db.VarChar(100)
+  severity        String           @db.VarChar(50)
+  description     String
+  resolution      String?
+  resolved_by     String?          @db.VarChar(255)
+  resolved_at     DateTime?        @db.Timestamp(6)
+  status          String?          @default("open") @db.VarChar(50)
+  created_at      DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?        @default(now()) @db.Timestamp(6)
+  purchase_orders purchase_orders? @relation(fields: [po_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  suppliers       suppliers?       @relation(fields: [supplier_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([status], map: "idx_supplier_issues_status")
+  @@index([supplier_id], map: "idx_supplier_issues_supplier")
+}
+
+model supplier_metrics {
+  id                  Int              @id @default(autoincrement())
+  supplier_id         String?          @db.Uuid
+  po_id               Int?
+  metric_period       String?          @db.VarChar(50)
+  delivered_on_time   Boolean?         @default(false)
+  delivery_days       Int?
+  quality_rating      Decimal?         @db.Decimal(3, 2)
+  response_time_hours Int?
+  total_amount        Decimal?         @db.Decimal(15, 2)
+  notes               String?
+  created_at          DateTime?        @default(now()) @db.Timestamp(6)
+  purchase_orders     purchase_orders? @relation(fields: [po_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  suppliers           suppliers?       @relation(fields: [supplier_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([metric_period, created_at], map: "idx_supplier_metrics_period")
+  @@index([supplier_id], map: "idx_supplier_metrics_supplier")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model suppliers {
+  id                    String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                  String                  @db.VarChar(255)
+  email                 String                  @unique @db.VarChar(255)
+  phone                 String?                 @db.VarChar(50)
+  categories            String[]                @default([])
+  capabilities          String[]                @default([])
+  certifications        String[]                @default([])
+  rating                Decimal?                @default(0.00) @db.Decimal(3, 2)
+  completed_deals       Int?                    @default(0)
+  notion_id             String?                 @unique @db.VarChar(255)
+  created_at            DateTime?               @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?               @default(now()) @db.Timestamp(6)
+  merge_vendor_id       String?                 @db.VarChar(255)
+  counter_offers        counter_offers[]
+  deals                 deals[]
+  inventory_items       inventory_items[]
+  invoices              invoices[]
+  payments              payments[]
+  purchase_orders       purchase_orders[]
+  quotes                quotes[]
+  reorder_alerts        reorder_alerts[]
+  room_participants     room_participants[]
+  supplier_erp_mappings supplier_erp_mappings[]
+  supplier_issues       supplier_issues[]
+  supplier_metrics      supplier_metrics[]
+
+  @@index([categories], map: "idx_suppliers_categories", type: Gin)
+  @@index([email], map: "idx_suppliers_email")
+  @@index([merge_vendor_id], map: "idx_suppliers_merge_vendor")
+  @@index([notion_id], map: "idx_suppliers_notion_id")
+  @@index([rating(sort: Desc)], map: "idx_suppliers_rating")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_calendar_connections {
+  id                      String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                 String
+  provider                String
+  provider_account_id     String
+  email                   String
+  display_name            String?
+  access_token_encrypted  String
+  refresh_token_encrypted String
+  token_expires_at        DateTime            @db.Timestamptz(6)
+  scope                   String
+  connected               Boolean?            @default(true)
+  is_primary              Boolean?            @default(false)
+  created_at              DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?           @default(now()) @db.Timestamptz(6)
+  last_sync_at            DateTime?           @db.Timestamptz(6)
+  calendar_events         calendar_events[]
+  calendar_sync_log       calendar_sync_log[]
+  calendar_webhooks       calendar_webhooks[]
+
+  @@unique([user_id, provider, email])
+  @@index([provider], map: "idx_calendar_connections_provider")
+  @@index([user_id], map: "idx_calendar_connections_user_id")
+}
+
+model webhook_events {
+  id                 String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  source             String            @db.VarChar(50)
+  event_type         String            @db.VarChar(100)
+  event_id           String?           @db.VarChar(500)
+  signature          String?           @db.VarChar(500)
+  signature_valid    Boolean?
+  raw_payload        Json
+  headers            Json?             @default("{}")
+  processed          Boolean?          @default(false)
+  processed_at       DateTime?         @db.Timestamp(6)
+  error_message      String?
+  created_message_id String?           @db.Uuid
+  created_at         DateTime?         @default(now()) @db.Timestamp(6)
+  inbound_messages   inbound_messages? @relation(fields: [created_message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_webhook_events_created")
+  @@index([source], map: "idx_webhook_events_source")
+  @@index([event_type], map: "idx_webhook_events_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model widget_api_keys {
+  id                    String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  api_key               String    @unique @db.VarChar(255)
+  owner_email           String    @db.VarChar(255)
+  owner_name            String?   @db.VarChar(255)
+  company_name          String?   @db.VarChar(255)
+  plan                  String?   @default("free") @db.VarChar(50)
+  monthly_message_limit Int?      @default(1000)
+  monthly_message_count Int?      @default(0)
+  status                String?   @default("active") @db.VarChar(50)
+  metadata              Json?
+  created_at            DateTime? @default(now()) @db.Timestamp(6)
+  updated_at            DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([owner_email], map: "idx_widget_api_keys_email")
+  @@index([status], map: "idx_widget_api_keys_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model widget_conversations {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  conversation_id  String    @unique @db.VarChar(255)
+  api_key          String    @db.VarChar(255)
+  url              String
+  message_count    Int?      @default(0)
+  first_message_at DateTime? @default(now()) @db.Timestamp(6)
+  last_message_at  DateTime? @default(now()) @db.Timestamp(6)
+  metadata         Json?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([api_key], map: "idx_widget_conversations_api_key")
+  @@index([conversation_id], map: "idx_widget_conversations_conversation_id")
+  @@index([url], map: "idx_widget_conversations_url")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model widget_events {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  api_key    String    @db.VarChar(255)
+  event_type String    @db.VarChar(100)
+  url        String
+  version    String?   @db.VarChar(50)
+  metadata   Json?
+  ip_address String?   @db.VarChar(100)
+  user_agent String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([api_key], map: "idx_widget_events_api_key")
+  @@index([created_at(sort: Desc)], map: "idx_widget_events_created")
+  @@index([event_type], map: "idx_widget_events_type")
+  @@index([url], map: "idx_widget_events_url")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model widget_installations {
+  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  api_key            String    @db.VarChar(255)
+  url                String
+  version            String?   @db.VarChar(50)
+  first_installed_at DateTime? @default(now()) @db.Timestamp(6)
+  last_seen_at       DateTime? @default(now()) @db.Timestamp(6)
+  event_count        Int?      @default(1)
+  status             String?   @default("active") @db.VarChar(50)
+  metadata           Json?
+  created_at         DateTime? @default(now()) @db.Timestamp(6)
+  updated_at         DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([api_key, url])
+  @@index([api_key], map: "idx_widget_installations_api_key")
+  @@index([last_seen_at(sort: Desc)], map: "idx_widget_installations_last_seen")
+  @@index([url], map: "idx_widget_installations_url")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model widget_messages {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  conversation_id  String    @db.VarChar(255)
+  api_key          String    @db.VarChar(255)
+  sender_type      String    @db.VarChar(50)
+  message_text     String
+  url              String?
+  response_time_ms Int?
+  metadata         Json?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([api_key], map: "idx_widget_messages_api_key")
+  @@index([conversation_id], map: "idx_widget_messages_conversation")
+  @@index([created_at(sort: Desc)], map: "idx_widget_messages_created")
+}
+
 enum TransactionStatus {
   DRAFT
   QUOTED
@@ -619,263 +1917,4 @@ enum CampaignStatus {
   SENT
   COMPLETED
   PAUSED
-}
-
-
-// User profile for Wells onboarding
-model UserProfile {
-  id               String   @id @default(uuid())
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  userId           String   @unique
-  company          String?
-  role             String?
-  industry         String?
-  goals            String?  @db.Text
-  preferredJourney String?  // buyer, seller, job_seeker, founder
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-// ============================================
-// GTM CONTACT DATABASE (Scale-ready for 300k+ contacts)
-// ============================================
-
-model Contact {
-  id              String   @id @default(cuid())
-  userId          String   // Clerk user ID - CRITICAL for user isolation
-
-  // Basic Info
-  firstName       String
-  lastName        String
-  email           String?
-  phone           String?
-  linkedinUrl     String?
-
-  // Professional Info
-  company         String?
-  title           String?
-  department      String?
-  seniority       String?  // C-Level, VP, Director, Manager, IC
-
-  // Location
-  location        String?
-  city            String?
-  state           String?
-  country         String?
-
-  // Company Details
-  companySize     String?  // 1-10, 11-50, 51-200, 201-500, 501-1000, 1000+
-  companyRevenue  String?  // $0-1M, $1M-10M, $10M-50M, $50M-100M, $100M+
-  industry        String?
-  companyType     String?  // Startup, SMB, Mid-Market, Enterprise
-
-  // Enriched Data
-  keywords        String[] // For targeting ['B2B', 'SaaS', 'AI/ML']
-  bio             String?  @db.Text
-  skills          String[] // Top skills
-
-  // Targeting Signals
-  targetingScore  Int?     // 0-100 (calculated based on criteria)
-  targetingZone   String?  // '50-below', '80-90', '100-avoid'
-
-  // Metadata
-  source          String   // 'uploaded', 'apollo', 'clay', 'manual'
-  uploadedAt      DateTime @default(now())
-  lastEnriched    DateTime?
-  lastContacted   DateTime?
-
-  // Relationships
-  campaigns       CampaignContact[]
-  interactions    Interaction[]
-
-  // Composite unique: One email per user (allow same email across users)
-  @@unique([userId, email])
-
-  // Indexes for fast queries with 300k+ records
-  @@index([userId])                    // Primary isolation
-  @@index([userId, company])           // "Show contacts from Acme"
-  @@index([userId, title])             // "Find all VPs"
-  @@index([userId, targetingZone])     // Get 80-90% zone
-  @@index([userId, lastContacted])     // "Who haven't I contacted?"
-  @@index([userId, uploadedAt])        // "Contacts added this week"
-  @@index([email])                     // Duplicate detection
-
-  @@map("gtm_contacts")
-}
-
-model Campaign {
-  id              String   @id @default(cuid())
-  userId          String   // User isolation
-
-  // Campaign Info
-  name            String
-  useCase         String   // hiring, sales, procurement, partnerships, finance, job_seeking
-  status          String   // draft, active, paused, completed
-
-  // Configuration
-  targetCount     Int      // Total contacts targeted
-  messagesGenerated Int    @default(0)
-  messagesSent    Int      @default(0)
-  replies         Int      @default(0)
-
-  // GTM Profile (stored as JSON)
-  profile         Json     // UniversalGTMProfile data
-
-  // Timing
-  createdAt       DateTime @default(now())
-  launchedAt      DateTime?
-  completedAt     DateTime?
-
-  // Relationships
-  contacts        CampaignContact[]
-  interactions    Interaction[]
-
-  @@index([userId])
-  @@index([userId, status])
-  @@index([userId, useCase])
-
-  @@map("gtm_campaigns")
-}
-
-model CampaignContact {
-  id              String   @id @default(cuid())
-
-  campaignId      String
-  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-
-  contactId       String
-  contact         Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-
-  // Message for this contact
-  message         String?  @db.Text
-  subject         String?
-
-  // Status
-  status          String   @default("pending") // pending, sent, replied, bounced, unsubscribed
-  sentAt          DateTime?
-  repliedAt       DateTime?
-
-  addedAt         DateTime @default(now())
-
-  @@unique([campaignId, contactId])
-  @@index([campaignId])
-  @@index([contactId])
-  @@index([status])
-
-  @@map("gtm_campaign_contacts")
-}
-
-model Interaction {
-  id              String   @id @default(cuid())
-  userId          String
-
-  contactId       String
-  contact         Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-
-  campaignId      String?
-  campaign        Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-
-  // Interaction Details
-  type            String   // email_sent, email_replied, linkedin_message, call, meeting
-  direction       String   // outbound, inbound
-
-  subject         String?
-  message         String?  @db.Text
-  response        String?  @db.Text
-
-  timestamp       DateTime @default(now())
-
-  @@index([userId])
-  @@index([contactId])
-  @@index([campaignId])
-  @@index([timestamp])
-
-  @@map("gtm_interactions")
-}
-
-model UploadBatch {
-  id              String   @id @default(cuid())
-  userId          String
-
-  // Upload Info
-  filename        String
-  totalRows       Int
-  validRows       Int
-  duplicates      Int
-  errors          Int
-
-  // Status
-  status          String   // processing, completed, failed
-  errorLog        Json?    // Array of error details
-
-  // Timing
-  uploadedAt      DateTime @default(now())
-  completedAt     DateTime?
-
-  @@index([userId])
-  @@index([userId, uploadedAt])
-
-  @@map("gtm_upload_batches")
-}
-
-// ============================================
-// USER EMAIL CONFIGURATION
-// ============================================
-
-model UserEmailConfig {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-
-  // Email Provider
-  provider        EmailProvider @default(RESEND)
-
-  // Email Settings
-  fromEmail       String
-  fromName        String?
-  replyTo         String?
-
-  // SMTP Settings (encrypted)
-  smtpHost        String?
-  smtpPort        Int?
-  smtpUsername    String?
-  smtpPassword    String?   // Encrypted
-  smtpSecure      Boolean   @default(true)
-
-  // Resend Settings
-  resendApiKey    String?   // Encrypted
-
-  // OAuth Settings (Future: Gmail, Outlook)
-  oauthProvider   String?
-  oauthToken      String?   // Encrypted
-  oauthRefresh    String?   // Encrypted
-  oauthExpiry     DateTime?
-
-  // Status & Testing
-  isVerified      Boolean   @default(false)
-  lastTested      DateTime?
-  testStatus      EmailTestStatus?
-  testError       String?
-
-  // Metadata
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([userId])
-
-  @@map("user_email_configs")
-}
-
-enum EmailProvider {
-  RESEND
-  SMTP
-  GMAIL_OAUTH
-  OUTLOOK_OAUTH
-}
-
-enum EmailTestStatus {
-  SUCCESS
-  FAILED
-  PENDING
 }
