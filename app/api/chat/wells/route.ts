@@ -16,19 +16,52 @@ import { addLeadToCampaign } from '@/lib/instantly'
 import { findSuppliers, sendRFQToSuppliers } from '@/lib/supplier-matching'
 import { findJobs, applyToJob } from '@/lib/job-matching'
 
-const prisma = new PrismaClient()
+// Lazy initialization to prevent hanging on module load
+let prisma: PrismaClient | null = null
+let anthropic: Anthropic | null = null
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
+function getPrisma() {
+  if (!prisma) {
+    console.log('[WELLS CHAT] Initializing Prisma Client...')
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL is not set')
+    }
+    prisma = new PrismaClient()
+    console.log('[WELLS CHAT] Prisma Client initialized successfully')
+  }
+  return prisma
+}
+
+function getAnthropic() {
+  if (!anthropic) {
+    console.log('[WELLS CHAT] Initializing Anthropic client...')
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY is not set')
+    }
+    anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    })
+    console.log('[WELLS CHAT] Anthropic client initialized successfully')
+  }
+  return anthropic
+}
 
 export async function POST(req: NextRequest) {
+  console.log('[WELLS CHAT] ===== REQUEST RECEIVED =====')
+  console.log('[WELLS CHAT] Environment check:', {
+    hasDatabaseUrl: !!process.env.DATABASE_URL,
+    hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
+    databasePrefix: process.env.DATABASE_URL?.substring(0, 20) + '...' || 'MISSING'
+  })
+
   try {
+    console.log('[WELLS CHAT] Parsing request body...')
     const { message, userId, conversationId } = await req.json()
+    console.log('[WELLS CHAT] Request parsed:', { messageLength: message?.length, userId, conversationId })
 
     // Get or create conversation with user context
     let conversation = conversationId
-      ? await prisma.conversation.findUnique({
+      ? await getPrisma().conversation.findUnique({
           where: { id: conversationId },
           include: {
             messages: { orderBy: { createdAt: 'asc' } },
@@ -48,7 +81,7 @@ export async function POST(req: NextRequest) {
             }
           }
         })
-      : await prisma.conversation.create({
+      : await getPrisma().conversation.create({
           data: {
             userId,
             sessionId: `session_${Date.now()}_${Math.random().toString(36).substring(7)}`,
@@ -78,7 +111,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Update conversation activity
-    await prisma.conversation.update({
+    await getPrisma().conversation.update({
       where: { id: conversation.id },
       data: {
         lastActivityAt: new Date(),
@@ -87,7 +120,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Save user message
-    await prisma.message.create({
+    await getPrisma().message.create({
       data: {
         conversationId: conversation.id,
         role: 'user',
@@ -111,7 +144,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt = buildSystemPrompt(conversation)
 
     // Call Claude
-    const response = await anthropic.messages.create({
+    const response = await getAnthropic().messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
       system: systemPrompt,
@@ -123,7 +156,7 @@ export async function POST(req: NextRequest) {
       : ''
 
     // Save Wells response
-    await prisma.message.create({
+    await getPrisma().message.create({
       data: {
         conversationId: conversation.id,
         role: 'assistant',
@@ -357,7 +390,7 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
     try {
       switch (actionType) {
         case 'CREATE_PROFILE':
-          await prisma.userProfile.upsert({
+          await getPrisma().userProfile.upsert({
             where: { userId: conversation.userId },
             create: {
               userId: conversation.userId,
@@ -366,7 +399,7 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
             update: params
           })
           // Also update onboarding state
-          await prisma.conversation.update({
+          await getPrisma().conversation.update({
             where: { id: conversation.id },
             data: {
               onboardingCompleted: true,
@@ -378,7 +411,7 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
           break
 
         case 'SET_JOURNEY':
-          await prisma.conversation.update({
+          await getPrisma().conversation.update({
             where: { id: conversation.id },
             data: {
               activeJourney: params.journey,
@@ -389,7 +422,7 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
           break
 
         case 'CREATE_CAMPAIGN':
-          const campaign = await prisma.wellsOnyxCampaign.create({
+          const campaign = await getPrisma().wellsOnyxCampaign.create({
             data: {
               campaignId: `camp_${Date.now()}_${Math.random().toString(36).substring(7)}`,
               userId: conversation.userId,
@@ -408,7 +441,7 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
           break
 
         case 'CREATE_RFQ':
-          const rfq = await prisma.rFQ.create({
+          const rfq = await getPrisma().rFQ.create({
             data: {
               userId: conversation.userId,
               category: params.category || 'general',
@@ -422,12 +455,12 @@ async function extractAndExecuteActions(response: string, conversation: any): Pr
 
         case 'CREATE_MEMORY':
           // Store important information about the user
-          await prisma.userContext.upsert({
+          await getPrisma().userContext.upsert({
             where: { userId: conversation.userId },
             create: { userId: conversation.userId },
             update: {}
           })
-          await prisma.memory.create({
+          await getPrisma().memory.create({
             data: {
               userId: conversation.userId,
               category: params.category || 'general',
@@ -588,7 +621,7 @@ REQUIREMENTS:
 Return JSON:
 {"subject":"...","body":"..."}`
 
-            const outreachResponse = await anthropic.messages.create({
+            const outreachResponse = await getAnthropic().messages.create({
               model: 'claude-sonnet-4-20250514',
               max_tokens: 1024,
               messages: [{
