@@ -49,7 +49,7 @@ export default function WellsApp() {
 
     try {
       // Call Wells AI backend
-      const response = await fetch('/api/chat/wells', {
+      const response = await fetch('/api/chat/wells-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
