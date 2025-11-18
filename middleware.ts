@@ -18,6 +18,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/waitlist(.*)',
   '/api/widget(.*)',
   '/api/chat/test-simple',
+  '/api/chat/wells-v2',
 ])
 
 export default clerkMiddleware(async (auth, req) => {
