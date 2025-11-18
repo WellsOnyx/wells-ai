@@ -243,7 +243,7 @@ export default function LuxuryLanding() {
             Experience how Wells transforms B2B commerce from both perspectives—whether you're sourcing suppliers or seeking buyers.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {/* Buyer Demo */}
             <Link
               href="/demo"
@@ -299,6 +299,37 @@ export default function LuxuryLanding() {
 
                 <div className="inline-flex items-center gap-2 text-[#daa520] text-sm font-medium group-hover:gap-3 transition-all duration-300">
                   <span>Start Demo</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </Link>
+
+            {/* Supplier Marketplace */}
+            <Link
+              href="/supplier-demo"
+              className="group relative bg-[#1a1a1a] border border-[#daa520]/20 p-8 hover:border-[#daa520]/50 transition-all duration-500 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#daa520]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl"></div>
+
+              <div className="relative z-10">
+                <div className="w-12 h-12 mb-4 rounded-full bg-gradient-to-br from-[#daa520] to-[#b8860b] flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[#0a0a0a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+
+                <h3 className="font-serif text-2xl text-[#f5f5f0] mb-3 tracking-tight">
+                  Supplier Marketplace
+                </h3>
+
+                <p className="text-[#f5f5f0]/60 mb-6 leading-relaxed">
+                  Browse the App Store for B2B procurement—verified suppliers, instant quoting, one-click purchasing.
+                </p>
+
+                <div className="inline-flex items-center gap-2 text-[#daa520] text-sm font-medium group-hover:gap-3 transition-all duration-300">
+                  <span>Browse Suppliers</span>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
