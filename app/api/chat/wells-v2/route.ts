@@ -70,30 +70,31 @@ export async function POST(req: Request) {
   const startTime = Date.now()
 
   try {
-    const { message, conversationId: existingConvId, userId } = await req.json()
+    const { messages, message, conversationId: existingConvId, userId } = await req.json()
 
-    if (!message) {
-      return Response.json({ error: 'Message is required' }, { status: 400 })
+    // Support both new format (messages array) and old format (single message)
+    const conversationMessages = messages || (message ? [{ role: 'user', content: message }] : null)
+
+    if (!conversationMessages || conversationMessages.length === 0) {
+      return Response.json({ error: 'Messages are required' }, { status: 400 })
     }
 
     // Get or create conversation (non-blocking on failure)
     const conversationId = existingConvId || await getOrCreateConversation(userId)
 
-    // Store user message (non-blocking)
-    storeMessage(conversationId, 'user', message, userId)
+    // Store the latest user message (non-blocking)
+    const latestUserMessage = conversationMessages[conversationMessages.length - 1]
+    if (latestUserMessage?.role === 'user') {
+      storeMessage(conversationId, 'user', latestUserMessage.content, userId)
+    }
 
     const anthropic = getAnthropic()
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: message
-        }
-      ],
-      system: `You are Wells, an AI executive assistant. You help with professional tasks like scheduling, research, and communications. Be helpful, concise, and professional.`
+      messages: conversationMessages,
+      system: `You are Wells, an AI executive assistant for B2B commerce. You help with professional tasks like scheduling, research, supplier sourcing, contract negotiation, and communications. Be helpful, concise, and professional. Remember the context of the conversation and refer back to previous messages when relevant.`
     })
 
     const assistantMessage = response.content[0].type === 'text'

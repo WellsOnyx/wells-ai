@@ -48,12 +48,20 @@ export default function WellsApp() {
     setIsLoading(true)
 
     try {
-      // Call Wells AI backend
+      // Build messages array for context (excluding the greeting)
+      const conversationHistory = [...messages, { role: 'user' as const, content: userMessage }]
+        .filter(msg => msg.role === 'user' || msg.role === 'wells')
+        .map(msg => ({
+          role: msg.role === 'wells' ? 'assistant' as const : 'user' as const,
+          content: msg.content
+        }))
+
+      // Call Wells AI backend with full conversation history
       const response = await fetch('/api/chat/wells-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: userMessage,
+          messages: conversationHistory,
           userId: user?.id,
           conversationId,
         })
