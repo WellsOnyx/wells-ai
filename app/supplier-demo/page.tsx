@@ -23,7 +23,9 @@ import {
   Scale,
   Users,
   Zap,
-  Truck
+  Truck,
+  Fish,
+  Beef
 } from 'lucide-react'
 
 // Supplier data with products
@@ -176,6 +178,159 @@ const suppliers = [
       { name: 'LED Retrofit', price: 15000, unit: 'floor' },
       { name: 'Smart Thermostat', price: 499, unit: 'unit' },
       { name: 'Carbon Offset', price: 25, unit: 'ton' },
+    ]
+  },
+  // Meat & Seafood Suppliers
+  {
+    id: 'sysco-meat',
+    name: 'Sysco Meat & Seafood',
+    icon: Beef,
+    color: 'from-rose-600 to-rose-700',
+    description: 'Sysco Meat & Seafood - Premium protein supplier serving nationwide. Specializing in USDA Choice/Prime beef, fresh poultry, and sustainable seafood.',
+    products: [
+      { name: 'USDA Prime Ribeye (Case)', price: 489, unit: 'case' },
+      { name: 'USDA Choice Strip Loin', price: 329, unit: 'case' },
+      { name: 'Ground Beef 80/20 (40lb)', price: 189, unit: 'case' },
+      { name: 'Boneless Chicken Breast', price: 145, unit: 'case' },
+      { name: 'Pork Tenderloin', price: 167, unit: 'case' },
+      { name: 'Atlantic Salmon Fillet', price: 289, unit: 'case' },
+      { name: 'Gulf Shrimp 16/20', price: 245, unit: 'case' },
+      { name: 'Sea Scallops U/10', price: 389, unit: 'case' },
+      { name: 'Lamb Rack Frenched', price: 445, unit: 'case' },
+      { name: 'Bacon Slab (15lb)', price: 98, unit: 'case' },
+    ]
+  },
+  {
+    id: 'usfoods-protein',
+    name: 'US Foods Protein Division',
+    icon: Beef,
+    color: 'from-red-600 to-red-700',
+    description: 'US Foods Protein Division - Premium meat supplier serving restaurants and institutions. Specializing in certified Angus beef, heritage pork, and artisan cuts.',
+    products: [
+      { name: 'Certified Angus Tenderloin', price: 567, unit: 'case' },
+      { name: 'Wagyu Beef Burger Patties', price: 234, unit: 'case' },
+      { name: 'Heritage Berkshire Pork Chop', price: 278, unit: 'case' },
+      { name: 'Free Range Chicken Wings', price: 156, unit: 'case' },
+      { name: 'Veal Osso Buco', price: 345, unit: 'case' },
+      { name: 'Duck Breast Magret', price: 289, unit: 'case' },
+      { name: 'Beef Short Ribs', price: 234, unit: 'case' },
+      { name: 'Italian Sausage Links', price: 145, unit: 'case' },
+      { name: 'Turkey Breast Skin-On', price: 189, unit: 'case' },
+      { name: 'Brisket Point Cut', price: 267, unit: 'case' },
+    ]
+  },
+  {
+    id: 'pfg-meat',
+    name: 'Performance Food Group - Meat',
+    icon: Beef,
+    color: 'from-orange-600 to-orange-700',
+    description: 'Performance Food Group - Premium meat supplier serving the Southeast. Specializing in portion-controlled cuts, marinated proteins, and value-added meats.',
+    products: [
+      { name: 'Portioned Filet Mignon 8oz', price: 445, unit: 'case' },
+      { name: 'Marinated Fajita Strips', price: 178, unit: 'case' },
+      { name: 'Pre-Seasoned Pulled Pork', price: 156, unit: 'case' },
+      { name: 'Breaded Chicken Cutlets', price: 134, unit: 'case' },
+      { name: 'Beef Kabob Cubes', price: 267, unit: 'case' },
+      { name: 'Smoked Ham Steaks', price: 145, unit: 'case' },
+      { name: 'BBQ Pork Ribs Rack', price: 198, unit: 'case' },
+      { name: 'Turkey Meatballs', price: 123, unit: 'case' },
+      { name: 'Corned Beef Brisket', price: 234, unit: 'case' },
+      { name: 'Beef Philly Steak Sliced', price: 289, unit: 'case' },
+    ]
+  },
+  {
+    id: 'samuels-seafood',
+    name: 'Samuels Seafood',
+    icon: Fish,
+    color: 'from-blue-600 to-blue-700',
+    description: 'Samuels Seafood - Premium seafood supplier serving the Mid-Atlantic. Specializing in wild-caught fish, live shellfish, and sushi-grade products.',
+    products: [
+      { name: 'Wild Alaskan Halibut', price: 456, unit: 'case' },
+      { name: 'Live Maine Lobster (1.5lb)', price: 34, unit: 'each' },
+      { name: 'Sushi-Grade Ahi Tuna', price: 389, unit: 'case' },
+      { name: 'Jumbo Lump Crab Meat', price: 567, unit: 'case' },
+      { name: 'Oysters Blue Point (100ct)', price: 145, unit: 'case' },
+      { name: 'Chilean Sea Bass Fillet', price: 489, unit: 'case' },
+      { name: 'Littleneck Clams (500ct)', price: 178, unit: 'case' },
+      { name: 'Black Cod Miso-Ready', price: 345, unit: 'case' },
+      { name: 'PEI Mussels (10lb)', price: 67, unit: 'bag' },
+      { name: 'Soft Shell Crabs (Dz)', price: 89, unit: 'dozen' },
+    ]
+  },
+  {
+    id: 'inland-market',
+    name: 'Inland Market',
+    icon: Beef,
+    color: 'from-amber-600 to-amber-700',
+    description: 'Inland Market - Premium protein supplier serving the Midwest. Specializing in farm-to-table beef, locally sourced pork, and specialty game meats.',
+    products: [
+      { name: 'Grass-Fed Ribeye Steak', price: 398, unit: 'case' },
+      { name: 'Pasture-Raised Pork Belly', price: 234, unit: 'case' },
+      { name: 'Farm Fresh Whole Chicken', price: 167, unit: 'case' },
+      { name: 'Venison Loin Medallions', price: 445, unit: 'case' },
+      { name: 'Bison Ground (5lb)', price: 89, unit: 'pack' },
+      { name: 'Elk Tenderloin', price: 389, unit: 'case' },
+      { name: 'Wild Boar Sausage', price: 198, unit: 'case' },
+      { name: 'Rabbit Whole Fryer', price: 145, unit: 'case' },
+      { name: 'Quail Semi-Boneless', price: 178, unit: 'case' },
+      { name: 'Goat Leg Bone-In', price: 234, unit: 'case' },
+    ]
+  },
+  {
+    id: 'true-world-foods',
+    name: 'True World Foods',
+    icon: Fish,
+    color: 'from-cyan-600 to-cyan-700',
+    description: 'True World Foods - Premium Japanese seafood supplier serving nationwide. Specializing in sushi-grade fish, uni, and authentic Japanese proteins.',
+    products: [
+      { name: 'Bluefin Tuna Akami', price: 678, unit: 'lb' },
+      { name: 'Hokkaido Uni (Tray)', price: 156, unit: 'tray' },
+      { name: 'Hamachi Fillet', price: 345, unit: 'case' },
+      { name: 'Kinmedai Golden Eye', price: 289, unit: 'case' },
+      { name: 'Ikura Salmon Roe', price: 234, unit: 'case' },
+      { name: 'Tako Octopus Leg', price: 198, unit: 'case' },
+      { name: 'A5 Wagyu Striploin', price: 890, unit: 'case' },
+      { name: 'Unagi Kabayaki Eel', price: 267, unit: 'case' },
+      { name: 'Madai Red Snapper', price: 234, unit: 'case' },
+      { name: 'Hotate Scallop Sashimi', price: 178, unit: 'case' },
+    ]
+  },
+  {
+    id: 'high-liner-foods',
+    name: 'High Liner Foods',
+    icon: Fish,
+    color: 'from-teal-600 to-teal-700',
+    description: 'High Liner Foods - Premium frozen seafood supplier serving North America. Specializing in sustainable sourced fish, breaded products, and value-added seafood.',
+    products: [
+      { name: 'Beer Battered Cod Fillet', price: 156, unit: 'case' },
+      { name: 'Panko Crusted Shrimp', price: 178, unit: 'case' },
+      { name: 'Wild Pacific Pollock', price: 134, unit: 'case' },
+      { name: 'Coconut Crusted Tilapia', price: 145, unit: 'case' },
+      { name: 'Haddock Loins', price: 198, unit: 'case' },
+      { name: 'Crab Cakes Premium', price: 234, unit: 'case' },
+      { name: 'Calamari Rings & Tentacles', price: 167, unit: 'case' },
+      { name: 'Stuffed Sole Florentine', price: 189, unit: 'case' },
+      { name: 'Salmon Burger Patties', price: 145, unit: 'case' },
+      { name: 'Lobster Mac & Cheese', price: 267, unit: 'case' },
+    ]
+  },
+  {
+    id: 'trident-seafoods',
+    name: 'Trident Seafoods',
+    icon: Fish,
+    color: 'from-indigo-600 to-indigo-700',
+    description: 'Trident Seafoods - Premium Alaskan seafood supplier serving worldwide. Specializing in wild Alaska salmon, crab, and sustainably harvested seafood.',
+    products: [
+      { name: 'Wild Alaska Sockeye Salmon', price: 345, unit: 'case' },
+      { name: 'King Crab Legs (10lb)', price: 567, unit: 'box' },
+      { name: 'Snow Crab Clusters', price: 389, unit: 'case' },
+      { name: 'Wild Alaska Pollock Fillet', price: 145, unit: 'case' },
+      { name: 'Copper River Salmon', price: 489, unit: 'case' },
+      { name: 'Dungeness Crab Whole', price: 234, unit: 'case' },
+      { name: 'Alaska Cod Loins', price: 178, unit: 'case' },
+      { name: 'Pink Salmon Portions', price: 134, unit: 'case' },
+      { name: 'Surimi Crab Flake', price: 98, unit: 'case' },
+      { name: 'Smoked Salmon Sliced', price: 267, unit: 'case' },
     ]
   },
 ]
