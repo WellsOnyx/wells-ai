@@ -63,7 +63,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'What does it cost?',
-    answer: "It's free to join and receive quote requests. We only charge a small transaction fee (2-3%) when you close a deal through the platform. No monthly fees, no subscriptions."
+    answer: "It's free to join and receive quote requests. We charge 33 basis points (0.33%) as a sourcing fee when you close a deal. Transactions run through your existing payment systems. No monthly fees, no subscriptions."
   },
   {
     question: 'How many quote requests will I receive?',
@@ -428,7 +428,7 @@ export default function SupplierJoinPage() {
           </button>
 
           <p className="text-center text-sm text-gray-500">
-            Free to join. No monthly fees. Only pay when you close deals (2-3% transaction fee).
+            Free to join. No monthly fees. Only 33bps (0.33%) sourcing fee when you close deals.
           </p>
         </form>
         </div>
