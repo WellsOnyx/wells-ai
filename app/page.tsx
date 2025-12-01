@@ -1,6 +1,16 @@
-import LuxuryLanding from './components/LuxuryLanding'
+/**
+ * Root Landing Page
+ *
+ * Product Split Strategy:
+ * - Wells AI is the primary product (most customers start here)
+ * - Grain & Vault is the infrastructure layer (developers/platforms)
+ *
+ * This page defaults to Wells AI, with navigation to Grain & Vault
+ */
 
-// Public marketing landing page - Premium luxury aesthetic
+import { redirect } from 'next/navigation'
+
 export default function Home() {
-  return <LuxuryLanding />
+  // Redirect to Wells AI landing (primary product)
+  redirect('/wells-ai')
 }
