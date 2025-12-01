@@ -1,40 +1,23 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-// Public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/demo',
-  '/demo/(.*)',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/verify-request',
-  '/auth/error',
-  '/early-access',
-  '/sms-opt-in',
-  '/api/webhooks(.*)',
-  '/api/email(.*)',
-  '/api/test-anthropic',
-  '/api/test-env',
-  '/api/waitlist(.*)',
-  '/api/widget(.*)',
-  '/api/chat/test-simple',
-  '/api/chat/wells-v2',
-  '/api/quotes(.*)',
-  '/api/suppliers(.*)',
-  '/suppliers/join',
-])
+export function middleware(request: NextRequest) {
+  const hostname = request.headers.get('host') || ''
 
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect()
+  // Handle root path routing based on domain
+  if (request.nextUrl.pathname === '/') {
+    // If grainandvault.com, show Grain & Vault landing
+    if (hostname.includes('grainandvault.com')) {
+      return NextResponse.rewrite(new URL('/grain-vault', request.url))
+    }
+
+    // For all other domains (wellsai.com, etc), show Wells AI landing
+    return NextResponse.rewrite(new URL('/wells-ai', request.url))
   }
-})
+
+  return NextResponse.next()
+}
 
 export const config = {
-  matcher: [
-    // Skip Next.js internals and all static files
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
-    '/(api|trpc)(.*)',
-  ],
+  matcher: '/',
 }
