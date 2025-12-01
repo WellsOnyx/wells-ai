@@ -23,13 +23,17 @@ import { createSellerProfile as saveSellerProfile, getSellerProfileByUserId } fr
 import { detectFounderIntent } from '@/lib/journeys/founder-detection'
 import { getFounderActions, getQuickActions, getFounderConversationStarters } from '@/lib/journeys/founder-flows'
 import { detectContactIntent } from '@/lib/contacts/intent-detection'
-// Onboarding imports temporarily disabled
-// import {
-//   createOnboardingState,
-//   updateOnboardingState,
-//   isOnboardingComplete,
-//   type OnboardingState
-// } from '@/lib/legendary-onboarding'
+// Onboarding imports - LEGENDARY ONBOARDING ENABLED
+import {
+  createOnboardingState,
+  updateOnboardingState,
+  isOnboardingComplete,
+  processOnboardingTurn,
+  getOnboardingSystemPrompt,
+  getCelebrationMessage,
+  awardMilestone,
+  type OnboardingState
+} from '@/lib/onboarding'
 // Memory system enabled with Prisma database
 import {
   buildConversationContext,
@@ -138,22 +142,10 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
       }, { status: 400 })
     }
 
-    // LEGENDARY ONBOARDING: Temporarily disabled until full integration is complete
-    // TODO: Properly integrate legendary onboarding system
-    // The onboarding system requires:
-    // 1. Getting Claude's response first
-    // 2. Parsing the response to determine if phase should advance
-    // 3. Updating state with both user message and Wells' response
-    /*
+    // LEGENDARY ONBOARDING: Initialize onboarding state
+    // This will be updated after we get Claude's response
     let onboardingState: OnboardingState | undefined = userData?.onboardingState
-    if (!onboardingState) {
-      const sessionId = userData?.userId || `session-${Date.now()}-${Math.random().toString(36).substring(7)}`
-      onboardingState = createOnboardingState(sessionId)
-    }
-    if (!isOnboardingComplete(onboardingState)) {
-      // Need to implement full onboarding flow with Claude integration
-    }
-    */
+    let onboardingActive = false
 
     // AUTHENTICATION CHECK: Prompt anonymous users to sign in for cross-device sync
     const isAnonymous = userData?.userId?.startsWith('anon-') || !userData?.userId
@@ -190,34 +182,57 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
         // Use daily session to enable cross-device conversation continuity
         const sessionId = userData.sessionId || `session-${userData.userId}-${new Date().toISOString().split('T')[0]}`
 
+        // Initialize or load onboarding state
+        if (!onboardingState) {
+          onboardingState = createOnboardingState(sessionId)
+        }
+
         // Get or create conversation
         const conversation = await getOrCreateConversation({
           userId: userData.userId,
           sessionId,
           device: userData.device,
           source: userData.source
-        }, undefined) // onboardingState temporarily disabled
+        }, onboardingState)
 
         conversationId = conversation.id
+
+        // Load onboarding state from conversation if it exists
+        if (conversation.onboardingState) {
+          onboardingState = conversation.onboardingState as OnboardingState
+        }
+
+        // Check if onboarding is active
+        onboardingActive = !isOnboardingComplete(onboardingState)
 
         // Build context from memory
         const context = await buildConversationContext(userData.userId, sessionId)
         memoryContext = formatContextForPrompt(context)
 
         console.log('[MEMORY] Loaded conversation context for user:', userData.userId)
+        console.log('[ONBOARDING] State:', onboardingState.phase, '| Active:', onboardingActive)
       } catch (error) {
         console.error('[MEMORY] Failed to load context (non-critical):', error)
         // Continue without memory if it fails
       }
     }
 
-    // Get Claude's response with new human personality + memory context
-    let systemPrompt = getWellsSystemPrompt({
-      userType: userData?.userType,
-      name: userData?.name,
-      company: userData?.company,
-      previousContext: memoryContext
-    })
+    // Get Claude's response with personality + memory + onboarding context
+    let systemPrompt: string
+
+    if (onboardingActive && onboardingState) {
+      // Use onboarding-specific system prompt
+      systemPrompt = getOnboardingSystemPrompt(onboardingState)
+      console.log('[ONBOARDING] Using onboarding system prompt for phase:', onboardingState.phase)
+    } else {
+      // Use standard Wells personality
+      systemPrompt = getWellsSystemPrompt({
+        userType: userData?.userType,
+        name: userData?.name,
+        company: userData?.company,
+        previousContext: memoryContext
+      })
+    }
 
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error('[CHAT] ANTHROPIC_API_KEY not configured')
@@ -839,19 +854,51 @@ export const POST = withValidation(chatRequestSchema, async (request) => {
           finalAssistantMessage
         )
 
-        // Update user context if onboarding just completed
-        // TODO: Re-enable when onboarding is fully integrated
-        /* if (onboardingState?.phase === 'complete' && onboardingState.name) {
-          await updateUserContext(userData.userId, {
-            name: onboardingState.name,
-            preferredName: onboardingState.preferredName,
-            email: onboardingState.email,
-            userType: onboardingState.userType,
-            company: onboardingState.company,
-            painPoints: onboardingState.painPoint ? [onboardingState.painPoint] : undefined,
-            goals: onboardingState.goal ? [onboardingState.goal] : undefined
-          })
-        } */
+        // ONBOARDING: Process this conversation turn
+        if (onboardingActive && onboardingState) {
+          try {
+            const updatedOnboardingState = await processOnboardingTurn(
+              lastUserMessage,
+              finalAssistantMessage,
+              onboardingState,
+              conversationHistory
+            )
+
+            // Save updated onboarding state
+            await updateConversationMetrics(conversationId, {
+              onboardingState: updatedOnboardingState,
+              trustScore: updatedOnboardingState.trustScore,
+              conversationDepth: updatedOnboardingState.conversationDepth,
+              onboardingCompleted: isOnboardingComplete(updatedOnboardingState)
+            })
+
+            // Update user context if onboarding just completed
+            if (isOnboardingComplete(updatedOnboardingState) && updatedOnboardingState.name) {
+              await updateUserContext(userData.userId, {
+                name: updatedOnboardingState.name,
+                preferredName: updatedOnboardingState.preferredName,
+                email: updatedOnboardingState.email,
+                phone: updatedOnboardingState.phone,
+                userType: updatedOnboardingState.journey,
+                company: updatedOnboardingState.company,
+                role: updatedOnboardingState.role,
+                painPoints: updatedOnboardingState.painPoint ? [updatedOnboardingState.painPoint] : undefined,
+                goals: updatedOnboardingState.goal ? [updatedOnboardingState.goal] : undefined
+              })
+
+              console.log('[ONBOARDING] Onboarding completed! User context updated.')
+            }
+
+            console.log('[ONBOARDING] State updated:', {
+              phase: updatedOnboardingState.phase,
+              trustScore: updatedOnboardingState.trustScore,
+              milestones: updatedOnboardingState.milestones.length
+            })
+          } catch (error) {
+            console.error('[ONBOARDING] Failed to process onboarding turn:', error)
+            // Continue - don't fail the request
+          }
+        }
 
         console.log('[MEMORY] Messages stored successfully')
       } catch (error) {

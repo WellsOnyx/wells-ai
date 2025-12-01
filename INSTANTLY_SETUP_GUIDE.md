@@ -1,7 +1,7 @@
 # Instantly.ai Email Integration Setup Guide
 
-**Last Updated:** November 4, 2025
-**Status:** Infrastructure complete, needs campaign configuration
+**Last Updated:** November 21, 2025
+**Status:** Infrastructure complete, API key needs verification
 
 ---
 
@@ -89,22 +89,29 @@ EOF
 
 ### Step 3: Verify Campaigns
 
-Run the campaign lister to confirm setup:
+**IMPORTANT:** The existing API key in the environment is failing authentication. You need to get a fresh API key from Instantly.
+
+Run the test script to verify your API key:
 
 ```bash
-INSTANTLY_API_KEY="YmE4YTc2ZWItZTM3Zi00YWEyLTk3NmQtZjRkOGUyOWRlY2VjOnVEb0FOY1JEbHVLWg==" \
-npx tsx scripts/list-instantly-campaigns.ts
+cd /Users/jonahmanning/Library/Mobile\ Documents/com~apple~CloudDocs/Wells/wells-ai-github-ready
+
+# Test with your API key
+./scripts/test-instantly-curl.sh 'YOUR_API_KEY_FROM_INSTANTLY'
 ```
 
 **Expected output:**
 ```
-✅ Found 1 campaign(s):
+✅ SUCCESS - Status 200
 
-1. Wells AI - Default Campaign
-   ID: camp_xxxxxxxxxxxxx
-   Status: active
-   Leads: 0
+- Wells GTM (ID: abc123..., Status: active)
+- Wells AI (ID: def456..., Status: paused)
+
+💾 Campaign IDs for Vercel:
+  INSTANTLY_DEFAULT_CAMPAIGN_ID="abc123..."
 ```
+
+If you see `❌ FAILED - Error: ERR_AUTH_FAILED`, your API key is invalid. Get a new one from Instantly dashboard.
 
 ### Step 4: Test Email Sending (Optional)
 

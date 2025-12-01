@@ -782,6 +782,56 @@ model contacts {
   @@index([user_id], map: "idx_contacts_user")
 }
 
+// GTM Contacts from Clay Export - for prospecting and outreach campaigns
+model gtm_contacts {
+  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Company fields (from Clay enrichment)
+  company_name       String?   @db.VarChar(500)
+  company_domain     String?   @db.VarChar(500)
+  company_size       String?   @db.VarChar(100)  // e.g., "1-10", "51-200", "501+"
+  company_industry   String?   @db.VarChar(500)
+
+  // Contact personal info
+  first_name         String?   @db.VarChar(255)
+  last_name          String?   @db.VarChar(255)
+  title              String?   @db.VarChar(500)
+  email              String?   @db.VarChar(500)
+  linkedin_url       String?   @db.VarChar(1000)
+
+  // Location fields
+  city               String?   @db.VarChar(255)
+  state              String?   @db.VarChar(255)
+  country            String?   @db.VarChar(255)
+
+  // Classification
+  seniority_level    String?   @db.VarChar(100)  // entry, mid, senior, director, vp, c-level
+  tags               String[]  @default([])      // Array of tags/categories
+  source             String    @default("clay")  @db.VarChar(100)  // clay, manually_added, etc.
+
+  // Campaign tracking
+  status             String    @default("new")   @db.VarChar(100)  // new, contacted, responded, qualified, unqualified, etc.
+  campaign_ids       String[]  @default([])      // IDs of campaigns this contact is part of
+  last_contacted_at  DateTime? @db.Timestamp(6)
+  last_responded_at  DateTime? @db.Timestamp(6)
+
+  // Metadata
+  raw_clay_data      Json?     @default("{}")    // Store original Clay export data
+  notes              String?                     // Free-form notes
+  created_at         DateTime  @default(now())   @db.Timestamp(6)
+  updated_at         DateTime  @updatedAt        @db.Timestamp(6)
+
+  @@index([email], map: "idx_gtm_contacts_email")
+  @@index([company_name], map: "idx_gtm_contacts_company")
+  @@index([title], map: "idx_gtm_contacts_title")
+  @@index([company_industry], map: "idx_gtm_contacts_industry")
+  @@index([seniority_level], map: "idx_gtm_contacts_seniority")
+  @@index([status], map: "idx_gtm_contacts_status")
+  @@index([created_at], map: "idx_gtm_contacts_created")
+  @@index([company_size], map: "idx_gtm_contacts_company_size")
+  @@index([city, state, country], map: "idx_gtm_contacts_location")
+}
+
 model conversation_contexts {
   id              Int       @id @default(autoincrement())
   conversation_id String    @unique @db.VarChar(255)

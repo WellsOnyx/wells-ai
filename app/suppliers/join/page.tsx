@@ -253,7 +253,7 @@ export default function SupplierJoinPage() {
                     <Star key={i} className="w-5 h-5 fill-amber-500 text-amber-500" />
                   ))}
                 </div>
-                <p className="text-gray-300 mb-4 italic">"{testimonial.quote}"</p>
+                <p className="text-gray-300 mb-4 italic">&quot;{testimonial.quote}&quot;</p>
                 <div className="border-t border-gray-800 pt-4">
                   <div className="font-semibold text-white">{testimonial.name}</div>
                   <div className="text-sm text-gray-500">{testimonial.company}</div>
