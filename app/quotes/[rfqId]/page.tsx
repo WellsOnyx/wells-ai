@@ -50,48 +50,44 @@ export default function QuoteComparison() {
   const loadQuotes = async () => {
     setLoading(true)
     try {
-      const rfqRes = await fetch(`/api/rfqs?id=${rfqId}`)
-      const rfqData = await rfqRes.json()
+      // Fetch RFQ with all submitted quotes
+      const res = await fetch(`/api/quotes/request?id=${rfqId}`)
+      const data = await res.json()
 
-      if (rfqData.success) {
-        setRfq(rfqData.rfq)
-      }
-
-      // TODO: Create quotes API endpoint
-      // For now, generate mock quotes
-      const mockQuotes: Quote[] = [
-        {
-          id: '1',
-          supplierName: 'Premium Components Inc',
-          price: 125000,
-          quantity: '1,000 units',
-          leadTime: '6 weeks',
-          terms: 'Net 30, FOB origin',
-          status: 'Pending',
-          createdDate: '2025-10-28'
-        },
-        {
-          id: '2',
-          supplierName: 'Global Parts Supply',
-          price: 118000,
-          quantity: '1,000 units',
-          leadTime: '8 weeks',
-          terms: 'Net 45, FOB origin',
-          status: 'Pending',
-          createdDate: '2025-10-28'
-        },
-        {
-          id: '3',
-          supplierName: 'FastTrack Manufacturing',
-          price: 135000,
-          quantity: '1,000 units',
-          leadTime: '4 weeks',
-          terms: 'Net 30, DDP delivered',
-          status: 'Pending',
-          createdDate: '2025-10-28'
+      if (data.rfq) {
+        // Map RFQ data to our RFQ interface
+        const mappedRfq: RFQ = {
+          id: data.rfq.id,
+          company: data.rfq.buyer_email,
+          productName: data.rfq.requirements.split('\n')[0].replace('Product: ', ''),
+          category: data.rfq.categories[0] || 'Unknown',
+          specifications: data.rfq.requirements,
+          quantity: data.rfq.quantity ? `${data.rfq.quantity} units` : undefined,
+          targetPrice: data.rfq.budget ? `$${data.rfq.budget.toLocaleString()}` : undefined,
+          timeline: data.rfq.deadline ? new Date(data.rfq.deadline).toLocaleDateString() : undefined,
+          status: data.rfq.status,
+          quotesReceived: data.quotesReceived || 0,
+          createdDate: new Date(data.rfq.created_at).toLocaleDateString()
         }
-      ]
-      setQuotes(mockQuotes)
+        setRfq(mappedRfq)
+
+        // Map quotes data to our Quote interface
+        if (data.quotes && data.quotes.length > 0) {
+          const mappedQuotes: Quote[] = data.quotes.map((q: any) => ({
+            id: q.id,
+            supplierName: q.supplier?.name || 'Unknown Supplier',
+            price: parseFloat(q.price),
+            quantity: data.rfq.quantity ? `${data.rfq.quantity} units` : 'As specified',
+            leadTime: q.delivery_time || 'Not specified',
+            terms: q.terms || 'Net 30, FOB origin',
+            status: q.status || 'pending',
+            createdDate: new Date(q.submitted_at).toLocaleDateString()
+          }))
+          setQuotes(mappedQuotes)
+        } else {
+          setQuotes([])
+        }
+      }
 
     } catch (error) {
       console.error('Failed to load quotes:', error)
@@ -108,17 +104,30 @@ export default function QuoteComparison() {
       const quote = quotes.find(q => q.id === selectedQuote)
       if (!quote) return
 
-      // Calculate fees
-      const dealValue = quote.price
-      const wellsAIFee = dealValue * 0.0033 // 33bps
-      const titheAmount = dealValue * 0.10 // 10%
-      const totalAmount = dealValue + wellsAIFee
+      // Create order via API
+      const res = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rfqId: rfqId,
+          quoteId: quote.id,
+          buyerId: 'demo-buyer-id', // In production, get from auth
+          buyerEmail: rfq.company
+        })
+      })
 
-      // Redirect to payment page with deal details
-      router.push(`/payment?rfqId=${rfqId}&quoteId=${quote.id}&amount=${totalAmount}&wellsAIFee=${wellsAIFee}&tithe=${titheAmount}`)
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        // Redirect to order confirmation
+        router.push(`/orders/${data.order.id}`)
+      } else {
+        alert(data.error || 'Failed to create order')
+      }
 
     } catch (error) {
       console.error('Failed to accept quote:', error)
+      alert('Failed to create order. Please try again.')
     } finally {
       setProcessing(false)
     }

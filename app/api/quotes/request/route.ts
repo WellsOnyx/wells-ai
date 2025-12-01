@@ -163,7 +163,7 @@ ${body.notes ? `Additional Notes: ${body.notes}` : ''}
                 </p>
 
                 <div style="text-align: center; margin-top: 30px;">
-                  <a href="https://wellsai.vercel.app/quotes/${rfq.id}?supplier=${supplier.id}"
+                  <a href="https://wellsai.vercel.app/suppliers/quote/${rfq.id}?supplier=${supplier.id}"
                      style="background: #f59e0b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
                     Submit Your Quote
                   </a>
