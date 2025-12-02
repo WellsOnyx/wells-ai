@@ -1,10 +1,11 @@
 'use client'
 
 /**
- * Wells AI Landing Page
+ * Wells Onyx Landing Page
  * wellsonyx.io
  *
- * Journey-focused conversational platform
+ * AI-powered B2B commerce platform
+ * Just tell Wells what you need. Get it done.
  */
 
 import Link from 'next/link'
@@ -15,73 +16,74 @@ import {
   Briefcase,
   ArrowRight,
   CheckCircle,
-  MessageSquare
+  MessageSquare,
+  Zap
 } from 'lucide-react'
 
 const JOURNEYS = [
   {
     icon: Rocket,
     title: 'Founder Journey',
-    tagline: 'Build your company faster',
-    description: 'Need to hire a CTO? Source equipment? Find your first 10 customers? Raise capital? Wells handles it.',
+    tagline: '"I need to hire a CTO"',
+    description: 'Tell Wells what you\'re building. Get matched with talent, suppliers, customers, and investors. Close deals in days, not months.',
     outcomes: [
-      'Hire key roles in weeks, not months',
-      'Source equipment and services instantly',
-      'Launch customer acquisition campaigns',
-      'Connect with investors'
+      'Say "I need a fractional CFO" → get 3 qualified candidates',
+      'Say "Source 1000 units" → get 5 supplier quotes',
+      'Say "Find enterprise customers" → get warm intros',
+      'Say "Raise a seed round" → connect with relevant VCs'
     ],
-    cta: 'Start Founder Journey',
+    cta: 'Talk to Wells',
     href: '/founder/chat',
     color: 'from-amber-500 to-orange-600'
   },
   {
     icon: ShoppingCart,
     title: 'Buyer Journey',
-    tagline: 'Procure without the pain',
-    description: 'Tell Wells what you need. Get matched with verified suppliers. Compare quotes. Close deals.',
+    tagline: '"I need industrial equipment"',
+    description: 'Describe what you need in plain English. Wells writes the RFQ, finds suppliers, compares quotes, and handles escrow.',
     outcomes: [
-      'RFQs that write themselves',
-      'Instant supplier matching',
-      'Compare quotes in real-time',
-      'Close deals with escrow protection'
+      '"Need 50 motors" → RFQ sent to verified suppliers',
+      'Compare quotes side-by-side in 24 hours',
+      'One click to accept → money escrowed instantly',
+      'Delivery confirmed → payment released automatically'
     ],
-    cta: 'Start Buying',
+    cta: 'Talk to Wells',
     href: '/buyer/chat',
     color: 'from-blue-500 to-cyan-600'
   },
   {
     icon: Store,
     title: 'Seller Journey',
-    tagline: 'Win deals on autopilot',
-    description: 'Get notified of qualified RFQs that match your catalog. Respond instantly. Win more business.',
+    tagline: '"Send me qualified leads"',
+    description: 'Register your catalog. Wells matches you with buyers. Get SMS alerts for hot RFQs. Win more business.',
     outcomes: [
-      'Pre-qualified leads delivered to you',
-      'SMS alerts for hot opportunities',
-      'Fast quote submission',
-      'Automated deal tracking'
+      'Wake up to qualified RFQs matching your products',
+      'One-tap quote submission from your phone',
+      'Get paid instantly via GRAIN escrow',
+      'Build trust score → win bigger deals'
     ],
-    cta: 'Start Selling',
+    cta: 'Join as Seller',
     href: '/suppliers/onboard',
     color: 'from-green-500 to-emerald-600'
   },
   {
     icon: Briefcase,
     title: 'Job Seeker Journey',
-    tagline: 'Find work that fits',
-    description: 'Tell Wells what you\'re looking for. Get matched with companies hiring. Skip the resume spam.',
+    tagline: '"I\'m looking for VP roles"',
+    description: 'Tell Wells your ideal role. Get matched with companies actually hiring. Skip the job board noise.',
     outcomes: [
-      'Personalized job matching',
-      'Direct company connections',
-      'Skills-based recommendations',
-      'Interview coordination'
+      '"Looking for remote eng roles" → matched with 5 companies',
+      'Direct intro to hiring managers (no HR filter)',
+      'Interview prep with AI coaching',
+      'Salary negotiation guidance included'
     ],
-    cta: 'Find Opportunities',
+    cta: 'Talk to Wells',
     href: '/jobs/chat',
     color: 'from-purple-500 to-pink-600'
   }
 ]
 
-export default function WellsAILanding() {
+export default function WellsOnyxLanding() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
@@ -90,7 +92,7 @@ export default function WellsAILanding() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600" />
-              <span className="text-xl font-bold">Wells AI</span>
+              <span className="text-xl font-bold">Wells Onyx</span>
             </div>
             <nav className="hidden md:flex items-center gap-6">
               <Link href="#journeys" className="text-gray-300 hover:text-white transition-colors">
@@ -99,8 +101,8 @@ export default function WellsAILanding() {
               <Link href="#how-it-works" className="text-gray-300 hover:text-white transition-colors">
                 How It Works
               </Link>
-              <Link href="/grain-vault" className="text-gray-300 hover:text-white transition-colors">
-                Grain & Vault
+              <Link href="#pricing" className="text-gray-300 hover:text-white transition-colors">
+                Pricing
               </Link>
               <Link
                 href="/founder/chat"
@@ -116,29 +118,36 @@ export default function WellsAILanding() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-24 text-center">
         <div className="max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-500/30 rounded-full text-amber-300 text-sm font-semibold mb-6">
+            <MessageSquare className="w-4 h-4" />
+            AI That Actually Does Things
+          </div>
           <h1 className="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Whatever Your Journey,
+            Talk to Wells.
             <br />
-            Wells Gets It Done
+            Get It Done.
           </h1>
-          <p className="text-xl md:text-2xl text-gray-400 mb-12">
-            Founder? Buyer? Seller? Job seeker? Just talk to Wells.
+          <p className="text-xl md:text-2xl text-gray-400 mb-8">
+            Need to hire? Source suppliers? Find customers? Close deals?
             <br />
-            The AI that turns conversations into outcomes.
+            <span className="text-white font-semibold">Just tell Wells what you need.</span>
+          </p>
+          <p className="text-lg text-amber-400 mb-12">
+            No forms. No searches. No back-and-forth. Just outcomes.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/founder/chat"
               className="px-8 py-4 bg-amber-500 text-black rounded-xl font-bold text-lg hover:bg-amber-600 transition-all hover:scale-105 flex items-center gap-2"
             >
-              Start Your Journey
+              Talk to Wells Now
               <ArrowRight className="w-5 h-5" />
             </Link>
             <Link
-              href="#how-it-works"
+              href="#journeys"
               className="px-8 py-4 bg-gray-900 border border-gray-800 rounded-xl font-semibold text-lg hover:border-amber-500 transition-all"
             >
-              See How It Works
+              See What Wells Can Do
             </Link>
           </div>
         </div>
@@ -147,8 +156,8 @@ export default function WellsAILanding() {
       {/* Journeys Section */}
       <section id="journeys" className="container mx-auto px-4 py-24">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">Choose Your Journey</h2>
-          <p className="text-xl text-gray-400">Each path designed for your specific needs</p>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">What Do You Need?</h2>
+          <p className="text-xl text-gray-400">Tell Wells. Watch it happen.</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-7xl mx-auto">
@@ -221,21 +230,77 @@ export default function WellsAILanding() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className="container mx-auto px-4 py-24">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Simple Pricing</h2>
+            <p className="text-xl text-gray-400">1% flat on closed deals. That's it.</p>
+          </div>
+
+          <div className="bg-gray-900 border border-amber-500/30 rounded-2xl p-8 md:p-12">
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 rounded-full text-amber-400 text-sm font-semibold mb-4">
+                  <Zap className="w-4 h-4" />
+                  Pay Only When You Win
+                </div>
+                <h3 className="text-3xl font-bold mb-4">1% Success Fee</h3>
+                <p className="text-gray-400 mb-6">
+                  We only charge when you close a deal. Searching, matching, quoting, and negotiation are all free.
+                </p>
+                <ul className="space-y-3">
+                  <li className="flex items-center gap-3 text-gray-300">
+                    <CheckCircle className="w-5 h-5 text-amber-500" />
+                    Free to search and get quotes
+                  </li>
+                  <li className="flex items-center gap-3 text-gray-300">
+                    <CheckCircle className="w-5 h-5 text-amber-500" />
+                    Free matching and introductions
+                  </li>
+                  <li className="flex items-center gap-3 text-gray-300">
+                    <CheckCircle className="w-5 h-5 text-amber-500" />
+                    1% only on completed transactions
+                  </li>
+                  <li className="flex items-center gap-3 text-gray-300">
+                    <CheckCircle className="w-5 h-5 text-amber-500" />
+                    Built-in escrow protection
+                  </li>
+                </ul>
+              </div>
+              <div className="bg-black/50 rounded-xl p-8 text-center">
+                <div className="text-6xl font-bold text-amber-500 mb-2">1%</div>
+                <div className="text-gray-400 mb-6">of deal value</div>
+                <Link
+                  href="/founder/chat"
+                  className="block w-full px-6 py-3 bg-amber-500 text-black rounded-lg font-semibold hover:bg-amber-600 transition-colors"
+                >
+                  Start for Free
+                </Link>
+                <p className="text-xs text-gray-500 mt-4">No credit card required</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-24">
         <div className="max-w-4xl mx-auto text-center bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-12">
           <MessageSquare className="w-16 h-16 mx-auto mb-6 text-black" />
           <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
-            Ready to Start?
+            Stop Searching.
+            <br />
+            Start Talking.
           </h2>
           <p className="text-xl text-black/80 mb-8">
-            No credit card. No setup. Just talk to Wells.
+            Tell Wells what you need. Get it done.
           </p>
           <Link
             href="/founder/chat"
             className="inline-flex items-center gap-2 px-8 py-4 bg-black text-white rounded-xl font-bold text-lg hover:bg-gray-900 transition-all hover:scale-105"
           >
-            Start Your Journey
+            Talk to Wells Now
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
@@ -248,7 +313,7 @@ export default function WellsAILanding() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600" />
-                <span className="text-xl font-bold">Wells AI</span>
+                <span className="text-xl font-bold">Wells Onyx</span>
               </div>
               <p className="text-gray-400 text-sm">
                 AI that turns conversations into outcomes
@@ -267,7 +332,7 @@ export default function WellsAILanding() {
               <h4 className="font-semibold mb-4">Platform</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><Link href="#how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
-                <li><Link href="/grain-vault" className="hover:text-white transition-colors">Grain & Vault</Link></li>
+                <li><Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link></li>
                 <li><Link href="/partnerships" className="hover:text-white transition-colors">Partnerships</Link></li>
               </ul>
             </div>
