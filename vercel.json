@@ -1,6 +1,0 @@
-{
-  "crons": [{
-    "path": "/api/cron/supplier-onboarding-emails",
-    "schedule": "0 9 * * *"
-  }]
-}

@@ -2,75 +2,83 @@
 
 /**
  * Wells AI Landing Page
- * wellsai.com
+ * wellsonyx.io
  *
- * Conversational B2B procurement platform
+ * Journey-focused conversational platform
  */
 
 import Link from 'next/link'
 import {
-  MessageSquare,
-  Zap,
-  Target,
-  CheckCircle,
+  Rocket,
+  ShoppingCart,
+  Store,
+  Briefcase,
   ArrowRight,
-  Users,
-  Clock,
-  DollarSign
+  CheckCircle,
+  MessageSquare
 } from 'lucide-react'
 
-const FEATURES = [
+const JOURNEYS = [
   {
-    icon: MessageSquare,
-    title: 'Conversational RFQs',
-    description: 'Tell Wells what you need in plain English. No forms, no complexity.'
-  },
-  {
-    icon: Zap,
-    title: 'Instant Matching',
-    description: 'AI finds and notifies the right suppliers in seconds, not days.'
-  },
-  {
-    icon: Target,
-    title: 'Automated Outreach',
-    description: 'Suppliers get SMS alerts immediately. Average 48hr quote turnaround.'
-  },
-  {
-    icon: CheckCircle,
-    title: 'Deal Tracking',
-    description: 'See quotes, negotiate terms, and close deals all in one place.'
-  }
-]
-
-const USE_CASES = [
-  {
-    title: 'For Founders',
-    description: 'Need a CTO? Equipment? First 10 customers? Wells handles it.',
-    cta: 'Start as Founder',
+    icon: Rocket,
+    title: 'Founder Journey',
+    tagline: 'Build your company faster',
+    description: 'Need to hire a CTO? Source equipment? Find your first 10 customers? Raise capital? Wells handles it.',
+    outcomes: [
+      'Hire key roles in weeks, not months',
+      'Source equipment and services instantly',
+      'Launch customer acquisition campaigns',
+      'Connect with investors'
+    ],
+    cta: 'Start Founder Journey',
     href: '/founder/chat',
-    stats: ['Hire a CTO in 2 weeks', 'Find 10 customers in 10 days', 'Source equipment in 48 hours']
+    color: 'from-amber-500 to-orange-600'
   },
   {
-    title: 'For Buyers',
-    description: 'Enterprise procurement teams sourcing suppliers at scale.',
-    cta: 'Start Sourcing',
-    href: '/chat',
-    stats: ['50+ verified suppliers', '$2M in deals closed', '33bps transaction fee']
+    icon: ShoppingCart,
+    title: 'Buyer Journey',
+    tagline: 'Procure without the pain',
+    description: 'Tell Wells what you need. Get matched with verified suppliers. Compare quotes. Close deals.',
+    outcomes: [
+      'RFQs that write themselves',
+      'Instant supplier matching',
+      'Compare quotes in real-time',
+      'Close deals with escrow protection'
+    ],
+    cta: 'Start Buying',
+    href: '/buyer/chat',
+    color: 'from-blue-500 to-cyan-600'
   },
   {
-    title: 'For Suppliers',
-    description: 'Get qualified RFQs delivered directly to your phone.',
-    cta: 'Join as Supplier',
-    href: '/suppliers/join',
-    stats: ['No monthly fees', 'SMS alerts', 'Pre-qualified leads']
+    icon: Store,
+    title: 'Seller Journey',
+    tagline: 'Win deals on autopilot',
+    description: 'Get notified of qualified RFQs that match your catalog. Respond instantly. Win more business.',
+    outcomes: [
+      'Pre-qualified leads delivered to you',
+      'SMS alerts for hot opportunities',
+      'Fast quote submission',
+      'Automated deal tracking'
+    ],
+    cta: 'Start Selling',
+    href: '/suppliers/onboard',
+    color: 'from-green-500 to-emerald-600'
+  },
+  {
+    icon: Briefcase,
+    title: 'Job Seeker Journey',
+    tagline: 'Find work that fits',
+    description: 'Tell Wells what you\'re looking for. Get matched with companies hiring. Skip the resume spam.',
+    outcomes: [
+      'Personalized job matching',
+      'Direct company connections',
+      'Skills-based recommendations',
+      'Interview coordination'
+    ],
+    cta: 'Find Opportunities',
+    href: '/jobs/chat',
+    color: 'from-purple-500 to-pink-600'
   }
-]
-
-const SOCIAL_PROOF = [
-  { metric: '50+', label: 'Active Suppliers' },
-  { metric: '$2M+', label: 'Deals Closed' },
-  { metric: '48hrs', label: 'Avg Quote Time' },
-  { metric: '0.33%', label: 'Transaction Fee' }
 ]
 
 export default function WellsAILanding() {
@@ -85,17 +93,14 @@ export default function WellsAILanding() {
               <span className="text-xl font-bold">Wells AI</span>
             </div>
             <nav className="hidden md:flex items-center gap-6">
-              <Link href="#features" className="text-gray-300 hover:text-white transition-colors">
-                Features
+              <Link href="#journeys" className="text-gray-300 hover:text-white transition-colors">
+                Journeys
               </Link>
-              <Link href="#use-cases" className="text-gray-300 hover:text-white transition-colors">
-                Use Cases
-              </Link>
-              <Link href="#pricing" className="text-gray-300 hover:text-white transition-colors">
-                Pricing
+              <Link href="#how-it-works" className="text-gray-300 hover:text-white transition-colors">
+                How It Works
               </Link>
               <Link href="/grain-vault" className="text-gray-300 hover:text-white transition-colors">
-                For Developers
+                Grain & Vault
               </Link>
               <Link
                 href="/founder/chat"
@@ -112,145 +117,105 @@ export default function WellsAILanding() {
       <section className="container mx-auto px-4 py-24 text-center">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Procurement That Talks Back
+            Whatever Your Journey,
+            <br />
+            Wells Gets It Done
           </h1>
           <p className="text-xl md:text-2xl text-gray-400 mb-12">
-            Talk to Wells. Get suppliers matched. Close deals faster.
+            Founder? Buyer? Seller? Job seeker? Just talk to Wells.
+            <br />
+            The AI that turns conversations into outcomes.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/founder/chat"
               className="px-8 py-4 bg-amber-500 text-black rounded-xl font-bold text-lg hover:bg-amber-600 transition-all hover:scale-105 flex items-center gap-2"
             >
-              Start Sourcing
+              Start Your Journey
               <ArrowRight className="w-5 h-5" />
             </Link>
             <Link
-              href="#demo"
+              href="#how-it-works"
               className="px-8 py-4 bg-gray-900 border border-gray-800 rounded-xl font-semibold text-lg hover:border-amber-500 transition-all"
             >
-              Watch Demo
+              See How It Works
             </Link>
           </div>
         </div>
-
-        {/* Social Proof */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 max-w-4xl mx-auto">
-          {SOCIAL_PROOF.map((item, index) => (
-            <div key={index} className="text-center">
-              <div className="text-4xl font-bold text-amber-500 mb-2">{item.metric}</div>
-              <div className="text-gray-400">{item.label}</div>
-            </div>
-          ))}
-        </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="container mx-auto px-4 py-24">
+      {/* Journeys Section */}
+      <section id="journeys" className="container mx-auto px-4 py-24">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">How Wells Works</h2>
-          <p className="text-xl text-gray-400">AI-powered procurement that actually works</p>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">Choose Your Journey</h2>
+          <p className="text-xl text-gray-400">Each path designed for your specific needs</p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-          {FEATURES.map((feature, index) => (
+        <div className="grid md:grid-cols-2 gap-8 max-w-7xl mx-auto">
+          {JOURNEYS.map((journey, index) => (
             <div
               key={index}
-              className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-amber-500 transition-all"
+              className="bg-gray-900 border border-gray-800 rounded-xl p-8 hover:border-amber-500 transition-all group"
             >
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center mb-4">
-                <feature.icon className="w-6 h-6 text-black" />
+              <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${journey.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                <journey.icon className="w-7 h-7 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-              <p className="text-gray-400">{feature.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Use Cases Section */}
-      <section id="use-cases" className="container mx-auto px-4 py-24 bg-gray-900/50">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">Built for Your Workflow</h2>
-          <p className="text-xl text-gray-400">Whether you're a founder, buyer, or supplier</p>
-        </div>
+              <h3 className="text-2xl font-bold mb-2">{journey.title}</h3>
+              <p className="text-amber-400 text-sm font-semibold mb-4">{journey.tagline}</p>
+              <p className="text-gray-400 mb-6">{journey.description}</p>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {USE_CASES.map((useCase, index) => (
-            <div
-              key={index}
-              className="bg-black border border-gray-800 rounded-xl p-8 hover:border-amber-500 transition-all"
-            >
-              <h3 className="text-2xl font-bold mb-3">{useCase.title}</h3>
-              <p className="text-gray-400 mb-6">{useCase.description}</p>
-
-              <ul className="space-y-2 mb-8">
-                {useCase.stats.map((stat, idx) => (
-                  <li key={idx} className="flex items-center gap-2 text-sm text-gray-300">
-                    <CheckCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                    {stat}
+              <ul className="space-y-3 mb-8">
+                {journey.outcomes.map((outcome, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
+                    <CheckCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    {outcome}
                   </li>
                 ))}
               </ul>
 
               <Link
-                href={useCase.href}
+                href={journey.href}
                 className="block w-full text-center px-6 py-3 bg-amber-500 text-black rounded-lg font-semibold hover:bg-amber-600 transition-colors"
               >
-                {useCase.cta}
+                {journey.cta}
               </Link>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="container mx-auto px-4 py-24">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">Simple, Transparent Pricing</h2>
-          <p className="text-xl text-gray-400 mb-12">
-            Free to use. Pay only when you close deals.
-          </p>
+      {/* How It Works */}
+      <section id="how-it-works" className="container mx-auto px-4 py-24 bg-gray-900/50">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">How Wells Works</h2>
+            <p className="text-xl text-gray-400">Just three steps. No forms. No complexity.</p>
+          </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12">
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <DollarSign className="w-16 h-16 text-amber-500" />
-              <div className="text-6xl font-bold">0.33%</div>
-            </div>
-            <p className="text-2xl text-gray-300 mb-8">
-              That's it. 33 basis points when deals close.
-            </p>
-
-            <div className="grid md:grid-cols-3 gap-6 text-left">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-1" />
-                <div>
-                  <div className="font-semibold mb-1">No Setup Fees</div>
-                  <div className="text-sm text-gray-400">Start sourcing immediately</div>
-                </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                1
               </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-1" />
-                <div>
-                  <div className="font-semibold mb-1">No Monthly Fees</div>
-                  <div className="text-sm text-gray-400">Pay per transaction only</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-1" />
-                <div>
-                  <div className="font-semibold mb-1">No Hidden Costs</div>
-                  <div className="text-sm text-gray-400">What you see is what you pay</div>
-                </div>
-              </div>
+              <h3 className="text-xl font-bold mb-2">Talk to Wells</h3>
+              <p className="text-gray-400">Tell Wells what you need in plain English. No forms, no templates.</p>
             </div>
 
-            <div className="mt-8 p-6 bg-black rounded-lg">
-              <div className="text-sm text-gray-400 mb-2">Example</div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">$100,000 deal</span>
-                <span className="text-2xl font-bold text-amber-500">$330 fee</span>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                2
               </div>
+              <h3 className="text-xl font-bold mb-2">Wells Gets to Work</h3>
+              <p className="text-gray-400">AI finds matches, sends outreach, coordinates responses automatically.</p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                3
+              </div>
+              <h3 className="text-xl font-bold mb-2">You Close Deals</h3>
+              <p className="text-gray-400">Review results, make decisions, close deals with built-in escrow.</p>
             </div>
           </div>
         </div>
@@ -259,17 +224,18 @@ export default function WellsAILanding() {
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-24">
         <div className="max-w-4xl mx-auto text-center bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-12">
+          <MessageSquare className="w-16 h-16 mx-auto mb-6 text-black" />
           <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
-            Ready to Talk to Wells?
+            Ready to Start?
           </h2>
           <p className="text-xl text-black/80 mb-8">
-            No credit card required. Start sourcing in seconds.
+            No credit card. No setup. Just talk to Wells.
           </p>
           <Link
             href="/founder/chat"
             className="inline-flex items-center gap-2 px-8 py-4 bg-black text-white rounded-xl font-bold text-lg hover:bg-gray-900 transition-all hover:scale-105"
           >
-            Start Sourcing
+            Start Your Journey
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
@@ -285,31 +251,30 @@ export default function WellsAILanding() {
                 <span className="text-xl font-bold">Wells AI</span>
               </div>
               <p className="text-gray-400 text-sm">
-                Conversational procurement for B2B commerce
+                AI that turns conversations into outcomes
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Product</h4>
+              <h4 className="font-semibold mb-4">Journeys</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link href="#features" className="hover:text-white transition-colors">Features</Link></li>
-                <li><Link href="#use-cases" className="hover:text-white transition-colors">Use Cases</Link></li>
-                <li><Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link href="/founder/chat" className="hover:text-white transition-colors">Get Started</Link></li>
+                <li><Link href="/founder/chat" className="hover:text-white transition-colors">Founder</Link></li>
+                <li><Link href="/buyer/chat" className="hover:text-white transition-colors">Buyer</Link></li>
+                <li><Link href="/suppliers/onboard" className="hover:text-white transition-colors">Seller</Link></li>
+                <li><Link href="/jobs/chat" className="hover:text-white transition-colors">Job Seeker</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Platform</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><Link href="#how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
+                <li><Link href="/grain-vault" className="hover:text-white transition-colors">Grain & Vault</Link></li>
+                <li><Link href="/partnerships" className="hover:text-white transition-colors">Partnerships</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Company</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><Link href="/about" className="hover:text-white transition-colors">About</Link></li>
-                <li><Link href="https://grainandvault.com" className="hover:text-white transition-colors">Grain & Vault</Link></li>
-                <li><Link href="/partnerships" className="hover:text-white transition-colors">Partnerships</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Resources</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link href="/docs" className="hover:text-white transition-colors">Documentation</Link></li>
-                <li><Link href="/api" className="hover:text-white transition-colors">API</Link></li>
                 <li><Link href="/support" className="hover:text-white transition-colors">Support</Link></li>
               </ul>
             </div>
