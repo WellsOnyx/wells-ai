@@ -588,14 +588,14 @@ export default function GrainVaultDemo() {
                 You've just experienced the future of B2B payments. Sub-second settlement,
                 zero chargebacks, and complete treasury visibility.
               </p>
-              <div className="flex items-center justify-center gap-4">
-                <Link
-                  href="https://docs.grainandvault.com"
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a
+                  href="mailto:sdk@grainandvault.com?subject=Treasury SDK Access Request&body=I just completed the Grain %26 Vault demo and I'm interested in getting SDK access for my organization.%0A%0ACompany:%0AUse Case:%0AExpected Monthly Volume:"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all"
                 >
-                  Get SDK Access
+                  Request SDK Access
                   <ArrowRight className="w-4 h-4" />
-                </Link>
+                </a>
                 <Link
                   href="/grain-vault"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"

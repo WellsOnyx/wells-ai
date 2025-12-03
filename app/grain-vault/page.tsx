@@ -65,7 +65,7 @@ export default function GrainVaultLanding() {
               </Link>
               <div className="flex items-center gap-3 ml-4">
                 <Link
-                  href="https://docs.grainandvault.com"
+                  href="/grain-vault/demo"
                   className="text-sm text-gray-400 hover:text-white transition-colors"
                 >
                   Docs
@@ -791,7 +791,7 @@ export default function GrainVaultLanding() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
-              href="https://docs.grainandvault.com"
+              href="/grain-vault/demo"
               className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-xl font-semibold text-lg transition-all flex items-center gap-2"
             >
               Read Documentation
@@ -845,9 +845,9 @@ export default function GrainVaultLanding() {
             <div>
               <h4 className="font-semibold mb-4 text-sm">Developers</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link href="https://docs.grainandvault.com" className="text-gray-400 hover:text-white transition-colors">Documentation</Link></li>
-                <li><Link href="https://docs.grainandvault.com/api" className="text-gray-400 hover:text-white transition-colors">API Reference</Link></li>
-                <li><Link href="https://docs.grainandvault.com/sdks" className="text-gray-400 hover:text-white transition-colors">SDKs</Link></li>
+                <li><Link href="/grain-vault/demo" className="text-gray-400 hover:text-white transition-colors">Documentation</Link></li>
+                <li><Link href="/grain-vault/demo" className="text-gray-400 hover:text-white transition-colors">API Reference</Link></li>
+                <li><Link href="/grain-vault/demo" className="text-gray-400 hover:text-white transition-colors">SDKs</Link></li>
                 <li><Link href="/grain-vault/demo" className="text-gray-400 hover:text-white transition-colors">Sandbox</Link></li>
               </ul>
             </div>
