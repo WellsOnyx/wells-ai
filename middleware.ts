@@ -33,6 +33,9 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/wells-ai',
   '/grain-vault',
+  '/grain-vault/demo',
+  '/demo',
+  '/onboarding',
   '/suppliers/join',
   '/suppliers/onboard',
   '/about',
@@ -40,6 +43,7 @@ const isPublicRoute = createRouteMatcher([
   '/partnerships',
   '/api/webhooks/(.*)',
   '/api/widget/(.*)',
+  '/api/onboarding/(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
 ])
@@ -103,8 +107,8 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 }, {
   signInUrl: '/sign-in',
   signUpUrl: '/sign-up',
-  afterSignInUrl: '/dashboard',
-  afterSignUpUrl: '/dashboard',
+  afterSignInUrl: '/onboarding',
+  afterSignUpUrl: '/onboarding',
 })
 
 // ============================================================================
