@@ -106,10 +106,11 @@ export async function POST(
           success: true,
           deal: result.deal,
           nextAction: result.nextAction,
-          clientSecret: result.clientSecret,
+          escrowAddress: result.escrowAddress,
+          totalRequired: result.totalRequired,
           message:
-            result.nextAction === 'escrow'
-              ? 'Deal accepted! Complete payment to secure escrow.'
+            result.nextAction === 'deposit_grain'
+              ? 'Deal accepted! Complete GRAIN deposit to secure escrow.'
               : result.nextAction === 'await_other_party'
               ? 'Your acceptance recorded. Awaiting other party.'
               : 'Deal already escrowed. Work can begin!',
