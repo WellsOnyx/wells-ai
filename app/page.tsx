@@ -129,14 +129,14 @@ export default function WellsOnyxHome() {
       {/* Content */}
       <div className="relative z-10">
         {/* Header */}
-        <header className="border-b border-white/10 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
+        <header className="border-b border-white/10 glass sticky top-0 z-50 shadow-xl">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <Link href="/" className="flex items-center gap-3 group">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all group-hover:scale-110">
                   <Sparkles className="w-5 h-5 text-black" />
                 </div>
-                <span className="text-xl font-bold tracking-tight">WellsAI</span>
+                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">WellsAI</span>
               </Link>
 
               <nav className="hidden md:flex items-center gap-8">
@@ -157,7 +157,7 @@ export default function WellsOnyxHome() {
                 </Link>
                 <Link
                   href="/sign-up"
-                  className="px-5 py-2 bg-amber-500 text-black rounded-lg font-semibold text-sm hover:bg-amber-400 transition-all hover:scale-105 hover:shadow-lg hover:shadow-amber-500/50"
+                  className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-lg font-semibold text-sm hover:from-amber-400 hover:to-amber-500 transition-all hover:scale-105 hover:shadow-xl hover:shadow-amber-500/50 active:scale-95"
                 >
                   Sign Up
                 </Link>
@@ -229,10 +229,10 @@ export default function WellsOnyxHome() {
             {/* Trust Metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
               {TRUST_METRICS.map((metric, index) => (
-                <div key={index} className="bg-white/5 border border-white/10 rounded-xl p-6 backdrop-blur-sm hover:bg-white/10 transition-all">
-                  <metric.icon className="w-6 h-6 text-amber-500 mb-3 mx-auto" />
-                  <div className="text-2xl md:text-3xl font-bold text-white mb-1">{metric.value}</div>
-                  <div className="text-sm text-gray-400">{metric.label}</div>
+                <div key={index} className="card-premium p-6 hover:scale-105 cursor-pointer group">
+                  <metric.icon className="w-6 h-6 text-amber-500 mb-3 mx-auto group-hover:scale-110 transition-transform" />
+                  <div className="text-2xl md:text-3xl font-bold text-white mb-1 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">{metric.value}</div>
+                  <div className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">{metric.label}</div>
                 </div>
               ))}
             </div>
@@ -253,13 +253,16 @@ export default function WellsOnyxHome() {
               <Link
                 key={index}
                 href={journey.href}
-                className="group relative bg-gradient-to-b from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8 hover:border-white/20 hover:from-white/10 hover:to-white/5 transition-all duration-300"
+                className="group relative bg-gradient-to-b from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8 hover:border-white/20 hover:from-white/10 hover:to-white/5 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-[1.02]"
               >
                 {/* Gradient Accent */}
-                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${journey.gradient} rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity`} />
+                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${journey.gradient} rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity shadow-lg`} />
+
+                {/* Ambient glow on hover */}
+                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${journey.gradient} opacity-0 group-hover:opacity-5 blur-xl transition-opacity pointer-events-none`} />
 
                 {/* Icon */}
-                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${journey.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg`}>
+                <div className={`relative w-14 h-14 rounded-xl bg-gradient-to-br ${journey.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-xl`}>
                   <journey.icon className="w-7 h-7 text-white" />
                 </div>
 
@@ -305,13 +308,13 @@ export default function WellsOnyxHome() {
             {FEATURES.map((feature, index) => (
               <div
                 key={index}
-                className="bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-sm"
+                className="card-premium p-8 hover:scale-105 cursor-pointer group"
               >
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center mb-4 shadow-lg group-hover:shadow-xl group-hover:shadow-amber-500/30 group-hover:scale-110 transition-all">
                   <feature.icon className="w-6 h-6 text-black" />
                 </div>
-                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{feature.description}</p>
+                <h3 className="text-xl font-bold mb-3 group-hover:text-amber-400 transition-colors">{feature.title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed group-hover:text-gray-300 transition-colors">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -348,15 +351,17 @@ export default function WellsOnyxHome() {
                 <div key={index} className="relative group">
                   {/* Connector Line */}
                   {index < 2 && (
-                    <div className="hidden md:block absolute top-16 left-1/2 w-full h-0.5 bg-gradient-to-r from-amber-500/50 to-transparent" />
+                    <div className="hidden md:block absolute top-16 left-1/2 w-full h-0.5 bg-gradient-to-r from-amber-500/50 to-transparent z-0" />
                   )}
 
-                  <div className="text-center relative">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-3xl font-bold mx-auto mb-6 shadow-2xl shadow-amber-500/50 group-hover:scale-110 transition-transform">
-                      {step.step}
+                  <div className="text-center relative z-10">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-3xl font-bold mx-auto mb-6 shadow-2xl shadow-amber-500/50 group-hover:scale-110 group-hover:shadow-amber-500/70 transition-all relative overflow-hidden">
+                      {/* Shimmer effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                      <span className="relative z-10">{step.step}</span>
                     </div>
-                    <h3 className="text-2xl font-bold mb-4">{step.title}</h3>
-                    <p className="text-gray-400 leading-relaxed">{step.description}</p>
+                    <h3 className="text-2xl font-bold mb-4 group-hover:text-amber-400 transition-colors">{step.title}</h3>
+                    <p className="text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors">{step.description}</p>
                   </div>
                 </div>
               ))}
