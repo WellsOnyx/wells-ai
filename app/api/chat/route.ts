@@ -11,8 +11,9 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { auth } from '@clerk/nextjs/server'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { runNegotiation, quickMatch, type PartyProfile, type NegotiationRequest } from '@/lib/ai-negotiation'
+import { UserProfile } from '@/lib/onboarding/types'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -282,13 +283,107 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Fetch user profile if authenticated
+    let profile: Partial<UserProfile> | null = null
+    if (userId) {
+      try {
+        const client = await clerkClient()
+        const user = await client.users.getUser(userId)
+
+        // Build profile from Clerk user data
+        profile = {
+          userId,
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.primaryEmailAddress?.emailAddress || '',
+          phone: user.primaryPhoneNumber?.phoneNumber,
+          avatarUrl: user.imageUrl,
+          journey: user.publicMetadata?.selectedJourney as UserProfile['journey'],
+        }
+
+        // Get extended profile from private metadata
+        const privateProfile = user.privateMetadata?.fullProfile as Partial<UserProfile> | undefined
+        if (privateProfile) {
+          Object.assign(profile, privateProfile)
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error)
+        // Continue without profile - better than failing
+      }
+    }
+
     // Get system prompt for this journey
     const systemPrompt = SYSTEM_PROMPTS[journey] || SYSTEM_PROMPTS.default
 
     // Add user context if authenticated
     let enhancedSystemPrompt = systemPrompt
-    if (userId) {
-      enhancedSystemPrompt += `\n\nThe user is authenticated with ID: ${userId}. You can take actions on their behalf.`
+    if (userId && profile) {
+      const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ')
+      const userContext = []
+
+      if (fullName) {
+        userContext.push(`You are talking to ${fullName}`)
+      }
+
+      if (profile.company) {
+        userContext.push(`from ${profile.company}`)
+      }
+
+      if (profile.role) {
+        userContext.push(`(${profile.role})`)
+      }
+
+      const userContextString = userContext.join(' ')
+
+      enhancedSystemPrompt += `\n\nUSER CONTEXT:\n${userContextString}`
+
+      if (profile.journey) {
+        enhancedSystemPrompt += `\nSelected journey: ${profile.journey}`
+      }
+
+      // Add journey-specific context
+      if (profile.founderProfile) {
+        enhancedSystemPrompt += `\nCompany: ${profile.founderProfile.companyName}`
+        if (profile.founderProfile.companyStage) {
+          enhancedSystemPrompt += ` (${profile.founderProfile.companyStage})`
+        }
+        if (profile.founderProfile.lookingFor && profile.founderProfile.lookingFor.length > 0) {
+          enhancedSystemPrompt += `\nLooking for: ${profile.founderProfile.lookingFor.join(', ')}`
+        }
+      }
+
+      if (profile.buyerProfile) {
+        enhancedSystemPrompt += `\nCompany: ${profile.buyerProfile.companyName}`
+        if (profile.buyerProfile.industry) {
+          enhancedSystemPrompt += ` (${profile.buyerProfile.industry})`
+        }
+        if (profile.buyerProfile.categories && profile.buyerProfile.categories.length > 0) {
+          enhancedSystemPrompt += `\nInterested in: ${profile.buyerProfile.categories.join(', ')}`
+        }
+      }
+
+      if (profile.sellerProfile) {
+        enhancedSystemPrompt += `\nCompany: ${profile.sellerProfile.companyName}`
+        if (profile.sellerProfile.productsServices && profile.sellerProfile.productsServices.length > 0) {
+          enhancedSystemPrompt += `\nOffers: ${profile.sellerProfile.productsServices.join(', ')}`
+        }
+      }
+
+      if (profile.jobsProfile) {
+        if (profile.jobsProfile.currentTitle) {
+          enhancedSystemPrompt += `\nCurrent role: ${profile.jobsProfile.currentTitle}`
+        }
+        if (profile.jobsProfile.desiredRoles && profile.jobsProfile.desiredRoles.length > 0) {
+          enhancedSystemPrompt += `\nLooking for: ${profile.jobsProfile.desiredRoles.join(', ')}`
+        }
+        if (profile.jobsProfile.skills && profile.jobsProfile.skills.length > 0) {
+          enhancedSystemPrompt += `\nSkills: ${profile.jobsProfile.skills.join(', ')}`
+        }
+      }
+
+      enhancedSystemPrompt += `\n\nIMPORTANT: Address them by their first name (${profile.firstName || 'there'}) in a warm, personal way. You know who they are and what they're working on. Be helpful and proactive.`
+    } else if (userId) {
+      enhancedSystemPrompt += `\n\nThe user is authenticated but profile data is incomplete. You can take actions on their behalf.`
     } else {
       enhancedSystemPrompt += `\n\nThe user is not logged in yet. You can still help them understand what Wells can do, but let them know they'll need to sign up to take actions.`
     }
@@ -359,10 +454,14 @@ Reply "Yes, go ahead" to approve, or let me know what to change.`,
       }
 
       // Build user profile for negotiation
+      const userName = profile?.firstName && profile?.lastName
+        ? `${profile.firstName} ${profile.lastName}`
+        : userProfile?.name || 'You'
+
       const initiator: PartyProfile = {
         id: userId || 'anonymous',
         type: journey === 'buyer' ? 'buyer' : journey === 'founder' ? 'buyer' : journey === 'jobs' ? 'candidate' : 'buyer',
-        name: userProfile?.name || 'You',
+        name: userName,
         preferences: {
           maxBudget: toolInput.requirements?.budget,
           targetPrice: toolInput.requirements?.budget,
