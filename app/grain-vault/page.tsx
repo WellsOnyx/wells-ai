@@ -122,11 +122,11 @@ export default function GrainVaultLanding() {
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
-                href="#demo"
+                href="/grain-vault/demo"
                 className="group px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-xl font-semibold text-lg transition-all flex items-center gap-2"
               >
                 <Play className="w-5 h-5" />
-                Watch Demo
+                Try Interactive Demo
               </Link>
             </div>
 
@@ -702,7 +702,7 @@ export default function GrainVaultLanding() {
                 Test in production-like environment. No credit card required.
               </p>
               <Link
-                href="https://sandbox.grainandvault.com"
+                href="/grain-vault/demo"
                 className="text-purple-400 hover:text-purple-300 text-sm font-medium inline-flex items-center gap-1"
               >
                 Try Sandbox
@@ -848,7 +848,7 @@ export default function GrainVaultLanding() {
                 <li><Link href="https://docs.grainandvault.com" className="text-gray-400 hover:text-white transition-colors">Documentation</Link></li>
                 <li><Link href="https://docs.grainandvault.com/api" className="text-gray-400 hover:text-white transition-colors">API Reference</Link></li>
                 <li><Link href="https://docs.grainandvault.com/sdks" className="text-gray-400 hover:text-white transition-colors">SDKs</Link></li>
-                <li><Link href="https://sandbox.grainandvault.com" className="text-gray-400 hover:text-white transition-colors">Sandbox</Link></li>
+                <li><Link href="/grain-vault/demo" className="text-gray-400 hover:text-white transition-colors">Sandbox</Link></li>
               </ul>
             </div>
 
