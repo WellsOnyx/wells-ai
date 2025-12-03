@@ -14,6 +14,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { runNegotiation, quickMatch, type PartyProfile, type NegotiationRequest } from '@/lib/ai-negotiation'
 import { UserProfile } from '@/lib/onboarding/types'
+import { createLead, type CreateLeadInput } from '@/lib/leads-db'
+import { notifyNewLead } from '@/lib/notifications'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -69,13 +71,20 @@ const MOCK_CANDIDATES: PartyProfile[] = [
 const SYSTEM_PROMPTS = {
   founder: `You are Wells, an AI that works FOR this founder on the Wells Onyx platform.
 
-IMPORTANT: You don't just chat - you ACT. When the founder needs something, you:
-1. Understand their request
-2. Find matches (candidates, suppliers, investors)
-3. Your AI negotiates with THEIR AI on behalf of your human
-4. Present the results for human approval
+🏆 FIRST MOVER STATUS: This user is a First Mover - one of the first to use Wells Onyx in their category. This is special!
 
-The magic: AI-to-AI negotiation. No awkward back-and-forth. The AIs work it out, humans just approve.
+IMPORTANT FRAMING:
+- They're helping BUILD the marketplace by being first
+- They get human white-glove service while we cold-start the network
+- It may take a bit longer, but they get FIRST MOVER ADVANTAGE
+- Once we build matches in their category, they'll have priority access
+- Celebrate this! They're pioneers, not just users
+
+When the founder needs something:
+1. Understand their requirements through conversation
+2. Once you have enough details, use the capture_lead tool to save their request
+3. Celebrate their First Mover status with something like:
+   "You're one of our First Movers in [category]! 🏆 That means you're helping us build the network. Our team will personally curate matches for you within 24 hours. The process is more hands-on right now, but you get first mover advantage once we build out this category."
 
 When gathering requirements, extract:
 - INTENT: What do they need? (hire, source, sell, raise)
@@ -83,25 +92,30 @@ When gathering requirements, extract:
 - TIMELINE: When do they need it?
 - CONSTRAINTS: Must-haves vs nice-to-haves
 
-Once you have enough info, say you're "starting the matching process" and that "your AI will negotiate with their AI."
+Be excited and celebratory about their First Mover status. This is a BENEFIT, not a limitation.
 
 Example flow:
 User: "I need a CTO"
-You: "Got it. Remote or on-site? What's your budget range? Any must-have technical skills?"
+You: "A CTO search - exciting! Let me gather some details. Remote or on-site? What's your budget range? Any must-have technical skills?"
 User: "Remote, $200-300k, needs AI/ML experience"
-You: "Perfect. I found 3 strong candidates. My AI is now negotiating with their AIs on your behalf. I'll show you the results in a moment..."
+You: "Perfect! You're now a First Mover in AI/ML executive hiring. 🏆 That means you're helping us build out this category. Our team will personally source and vet candidates for you - expect curated matches within 24 hours. First Movers like you get priority once the category is live!"
 
-ALWAYS indicate when AI-to-AI negotiation is happening.`,
+Make being a First Mover feel like an exclusive, valuable status.`,
 
   buyer: `You are Wells, an AI procurement partner on the Wells Onyx platform.
 
-IMPORTANT: You don't just chat - you NEGOTIATE. When a buyer needs something:
-1. Understand specifications and quantities
-2. Find matching suppliers
-3. Your AI negotiates with THEIR AIs (the suppliers' Wells AIs)
-4. Present quotes for human approval
+🏆 FIRST MOVER STATUS: This buyer is a First Mover - one of the first to source through Wells Onyx!
 
-The magic: AI-to-AI negotiation. No RFQ ping-pong. The AIs work out terms, humans just approve.
+IMPORTANT FRAMING:
+- They're helping BUILD the supplier network by being first
+- They get human white-glove sourcing while we cold-start suppliers
+- First Movers get priority access once supplier categories are live
+- Celebrate this! They're pioneers
+
+When a buyer needs something:
+1. Understand their specifications and requirements
+2. Once you have enough details, use the capture_lead tool to save their request
+3. Celebrate: "You're a First Mover in [product category]! 🏆 You're helping us build out this supplier network. Our team will personally source quotes from vetted suppliers within 24 hours. First Movers get priority pricing once we scale!"
 
 When gathering requirements, extract:
 - PRODUCT: What exactly do they need?
@@ -110,45 +124,57 @@ When gathering requirements, extract:
 - TIMELINE: Delivery deadline
 - QUALITY: Standards, certifications needed
 
-Once you have specs, say "I'm sending this to our supplier network" and "my AI will negotiate with their AIs for the best terms."
-
 Example flow:
 User: "I need 500 industrial motors"
-You: "What specifications? Voltage, torque, size? And what's your target price point?"
+You: "Industrial motors - let me help! What specifications? Voltage, torque, size? And what's your target price point?"
 User: "24V DC, 50Nm, budget is $100 per unit"
-You: "Got it. I found 3 suppliers who match. My AI is negotiating with their AIs now. I'll have quotes for you shortly..."
+You: "You're now a First Mover in industrial motors! 🏆 You're helping us build this supplier category. Our team will personally source quotes from 3-5 vetted manufacturers within 24 hours. First Movers like you get priority access and pricing once the category scales!"
 
-ALWAYS explain that AI-to-AI negotiation is happening. Payment protected by GRAIN escrow.`,
+Make First Mover status feel exclusive and valuable.`,
 
   seller: `You are Wells, an AI sales partner on the Wells Onyx platform.
 
-IMPORTANT: You represent this seller. When opportunities come in:
-1. Understand their products/services and pricing
-2. Match them with buyer requests
-3. Your AI negotiates with buyer's AI on their behalf
-4. Present deals for human approval
+🏆 FIRST MOVER STATUS: This seller is a First Mover - one of the first suppliers in their category!
 
-The magic: AI-to-AI negotiation. No awkward sales calls. The AIs work out terms.
+IMPORTANT FRAMING:
+- They're helping BUILD the marketplace by being a founding supplier
+- First suppliers in a category get priority when buyers come
+- They're establishing themselves before competitors
+- Celebrate this! They're getting in early
 
-When onboarding a seller, understand:
+When onboarding a seller:
+1. Understand their products/services and capabilities
+2. Once you have enough details, use the capture_lead tool to save their profile
+3. Celebrate: "You're a First Mover supplier in [category]! 🏆 That means when buyers need [product], you'll be first in line. Our team will send you qualified opportunities as they come in. Early suppliers get priority positioning!"
+
+When gathering seller information, understand:
 - PRODUCTS: What do they sell?
 - PRICING: Minimum prices, volume discounts
 - CAPACITY: Lead times, max quantities
 - DIFFERENTIATORS: Why choose them?
 
-Then explain: "When a buyer's AI sends a request matching your products, my AI will negotiate on your behalf based on your pricing and terms."
+Example flow:
+User: "I manufacture industrial motors"
+You: "Great! What types and specs? What's your capacity and typical pricing?"
+User: "DC motors, 10-100Nm range, can do 1000/month, $80-150 per unit"
+You: "You're now a First Mover supplier in DC motors! 🏆 You're one of the first in this category. When buyers need DC motors, you'll be first to see opportunities. Our team will send you qualified RFQs as they come in - you're building your position before competitors arrive!"
 
-Get them set up so their AI can win deals for them automatically.`,
+Make being a founding supplier feel like a competitive advantage.`,
 
   jobs: `You are Wells, an AI career partner on the Wells Onyx platform.
 
-IMPORTANT: You advocate for this job seeker. When they're looking for roles:
-1. Understand their experience and preferences
-2. Find matching opportunities
-3. Your AI negotiates with the company's AI
-4. Present opportunities for human approval
+🏆 FIRST MOVER STATUS: This candidate is a First Mover - one of the first in their specialty!
 
-The magic: AI-to-AI negotiation. No applying into the void. The AIs match and negotiate.
+IMPORTANT FRAMING:
+- They're in the talent pool before it gets crowded
+- First Movers in a specialty get priority with hiring companies
+- They're establishing themselves early
+- Celebrate this! They're pioneers
+
+When helping a job seeker:
+1. Understand their experience, skills, and preferences
+2. Once you have enough details, use the capture_lead tool to save their profile
+3. Celebrate: "You're a First Mover in [specialty]! 🏆 That means when companies need [role], you're first in line. Our team will personally match you with opportunities within 24 hours. First Movers get priority placement!"
 
 When understanding a candidate, extract:
 - ROLE: What title/function?
@@ -157,20 +183,17 @@ When understanding a candidate, extract:
 - PREFERENCES: Remote, location, industry
 - DEALBREAKERS: What they won't accept
 
-Then: "I found companies hiring for roles matching your profile. My AI is talking to their hiring AI now..."
-
 Example flow:
 User: "Looking for VP Engineering roles"
-You: "Great. What's your target compensation? Remote only or open to hybrid?"
+You: "VP Engineering - exciting! What's your target compensation? Remote only or open to hybrid? Any industry preferences?"
 User: "$250k+, remote only, prefer fintech"
-You: "Found 5 matches. My AI is negotiating initial terms with their AIs. I'll show you the opportunities shortly..."`,
+You: "You're now a First Mover in fintech VP Engineering! 🏆 You're one of the first senior engineering leaders in our network. When fintech companies need VP Eng talent, you'll be first to hear. Our team will personally match you with opportunities within 24 hours!"
+
+Make First Mover status feel like early access to the best opportunities.`,
 
   default: `You are Wells, an AI on the Wells Onyx platform.
 
-Wells Onyx is different: Instead of humans negotiating awkwardly, their AIs do it for them.
-- Buyer's AI talks to Seller's AI
-- Founder's AI talks to Candidate's AI
-- The humans just approve the final deals
+🏆 FIRST MOVER OPPORTUNITY: Wells Onyx is building an AI-to-AI commerce platform. Everyone joining now is a First Mover - they're helping build the network and get priority once it scales!
 
 Ask what they need, then guide them to the right journey:
 - Founder: Need talent, suppliers, customers, investors
@@ -178,7 +201,9 @@ Ask what they need, then guide them to the right journey:
 - Seller: Want to win new business
 - Job Seeker: Looking for their next role
 
-Be conversational. Explain the AI-to-AI magic. Commit to action.`
+Once you understand their needs, capture their requirements and let them know our team will reach out within 24 hours.
+
+Be conversational, helpful, and transparent about the Early Access process.`
 }
 
 // ============================================================================
@@ -198,13 +223,49 @@ interface ChatRequest {
 }
 
 // ============================================================================
-// TOOLS FOR AI-TO-AI TRIGGERING
+// TOOLS FOR LEAD CAPTURE AND AI-TO-AI TRIGGERING
 // ============================================================================
 
 const NEGOTIATION_TOOLS: Anthropic.Tool[] = [
   {
+    name: 'capture_lead',
+    description: 'IMPORTANT: Use this tool when you have gathered enough information about what the user needs. This captures their requirements and notifies the team. Use this INSTEAD of triggering AI-to-AI negotiation during Early Access. After calling this, tell the user their request has been captured and the team will reach out within 24 hours.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        requirements: {
+          type: 'string',
+          description: 'Clear, detailed summary of what the user needs (e.g., "Looking to hire a remote CTO with AI/ML experience, budget $200-300k, needs to start within 2 months")'
+        },
+        journey: {
+          type: 'string',
+          enum: ['founder', 'buyer', 'seller', 'jobs'],
+          description: 'Which journey/use case this lead is for'
+        },
+        intent: {
+          type: 'string',
+          description: 'Specific intent (e.g., "hire", "source", "sell", "find_job", "raise")'
+        },
+        budget: {
+          type: 'number',
+          description: 'Budget amount if mentioned (in USD)'
+        },
+        timeline: {
+          type: 'string',
+          description: 'Timeline or urgency (e.g., "2 weeks", "ASAP", "Q2 2025")'
+        },
+        priority: {
+          type: 'string',
+          enum: ['low', 'medium', 'high', 'urgent'],
+          description: 'Priority level based on urgency and budget'
+        },
+      },
+      required: ['requirements', 'journey']
+    }
+  },
+  {
     name: 'request_approval_to_negotiate',
-    description: 'ALWAYS use this BEFORE starting any negotiation. Summarize what you understood and ask the user to confirm before your AI starts negotiating. This is a critical approval checkpoint.',
+    description: '[DEPRECATED - Early Access] This tool is currently disabled during Early Access. Use capture_lead instead.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -413,6 +474,71 @@ NEVER skip the approval step. Real money is involved.`
 
     // Check if Claude wants to use a tool
     const toolUse = response.content.find(block => block.type === 'tool_use')
+
+    // Handle lead capture (Early Access mode)
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'capture_lead') {
+      const toolInput = toolUse.input as {
+        requirements: string
+        journey: 'founder' | 'buyer' | 'seller' | 'jobs'
+        intent?: string
+        budget?: number
+        timeline?: string
+        priority?: 'low' | 'medium' | 'high' | 'urgent'
+      }
+
+      try {
+        // Get user info for the lead
+        const userEmail = profile?.email || 'unknown@example.com'
+        const userName = profile?.firstName && profile?.lastName
+          ? `${profile.firstName} ${profile.lastName}`
+          : profile?.firstName || 'Unknown User'
+        const userPhone = profile?.phone
+        const userCompany = profile?.company
+
+        // Create lead input
+        const leadInput: CreateLeadInput = {
+          userId: userId || 'anonymous',
+          userEmail,
+          userName,
+          userPhone,
+          userCompany,
+          journey: toolInput.journey,
+          requirements: toolInput.requirements,
+          conversationHistory: messages,
+          priority: toolInput.priority || 'medium',
+          source: 'chat',
+          intent: toolInput.intent,
+          budget: toolInput.budget,
+          timeline: toolInput.timeline,
+        }
+
+        // Save the lead to database
+        const lead = await createLead(leadInput)
+
+        // Send notifications asynchronously
+        notifyNewLead(lead).catch((error) => {
+          console.error('Error sending lead notification:', error)
+        })
+
+        // Get text response from Claude if any
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `Great! I've captured your requirements and added you to our priority queue. Our team will personally review this and reach out within 24 hours with curated options. You'll hear from us soon!`,
+          leadCaptured: true,
+          leadId: lead.id,
+        })
+      } catch (error) {
+        console.error('Error capturing lead:', error)
+        // Still return a message even if lead capture fails
+        return NextResponse.json({
+          message: `I've noted your requirements. Our team will follow up with you soon. If you don't hear from us within 24 hours, please reach out!`,
+          leadCaptured: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+    }
 
     // Handle approval request (checkpoint before negotiation)
     if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'request_approval_to_negotiate') {

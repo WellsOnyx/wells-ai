@@ -204,6 +204,16 @@ export default function DashboardPage() {
                 <span className="text-sm font-semibold">{config.title}</span>
               </div>
 
+              {/* Admin Link - Only show for admin users */}
+              <Link
+                href="/admin/leads"
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-amber-500 hover:bg-white/5 transition-all"
+                title="Admin Dashboard"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Admin</span>
+              </Link>
+
               <button className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all">
                 <Bell className="w-5 h-5" />
               </button>
@@ -227,7 +237,7 @@ export default function DashboardPage() {
         <aside className="hidden lg:flex flex-col w-72 border-r border-white/10 bg-gradient-to-b from-white/5 to-transparent backdrop-blur-sm">
           {/* User Profile Summary */}
           <div className="p-4 border-b border-white/10">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-3">
               <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all`}>
                 <Icon className="w-6 h-6 text-white" />
               </div>
@@ -237,6 +247,14 @@ export default function DashboardPage() {
                   <div className="online-indicator" />
                   <p className="text-xs text-gray-400">{config.title}</p>
                 </div>
+              </div>
+            </div>
+            {/* First Mover Badge */}
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+              <span className="text-lg">🏆</span>
+              <div>
+                <p className="text-xs font-semibold text-amber-400">First Mover</p>
+                <p className="text-[10px] text-gray-400">Pioneer Status Unlocked</p>
               </div>
             </div>
           </div>

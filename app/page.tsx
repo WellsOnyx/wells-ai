@@ -185,6 +185,12 @@ export default function WellsOnyxHome() {
                   Pricing
                 </Link>
                 <Link
+                  href="/admin/leads"
+                  className="text-sm font-medium text-gray-400 hover:text-amber-500 transition-colors"
+                >
+                  Admin
+                </Link>
+                <Link
                   href="/sign-in"
                   className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
                 >
