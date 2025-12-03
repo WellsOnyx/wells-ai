@@ -239,10 +239,16 @@ export default function GrainVaultLanding() {
                   Docs
                 </Link>
                 <Link
-                  href="#treasury-sdk"
+                  href="/grain-vault/signin"
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/grain-vault/signup"
                   className="px-4 py-2 bg-green-500 hover:bg-green-600 text-black text-sm font-medium rounded-lg transition-all"
                 >
-                  Get Started
+                  Open Account
                 </Link>
               </div>
             </div>
@@ -283,18 +289,25 @@ export default function GrainVaultLanding() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
               <Link
-                href="#treasury-sdk"
+                href="/grain-vault/signup"
                 className="group px-8 py-4 bg-green-500 hover:bg-green-600 text-black rounded-xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-2xl hover:shadow-green-500/50 flex items-center gap-2"
               >
-                Start Building
+                Open Account
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link
+                href="#treasury-sdk"
+                className="group px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-xl font-semibold text-lg transition-all flex items-center gap-2"
+              >
+                <Code className="w-5 h-5" />
+                Explore SDK
               </Link>
               <Link
                 href="/grain-vault/demo"
                 className="group px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-xl font-semibold text-lg transition-all flex items-center gap-2"
               >
                 <Play className="w-5 h-5" />
-                Try Interactive Demo
+                Interactive Demo
               </Link>
             </div>
 
