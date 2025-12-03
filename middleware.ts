@@ -1,16 +1,28 @@
 /**
- * Wells Onyx Middleware
+ * Wells Onyx + Grain & Vault Middleware
  *
  * Handles:
+ * - Domain-based routing (wellsonyx.io vs grainandvault.com)
  * - Clerk authentication
  * - Route protection
- *
- * Domain routing (wellsonyx.io vs grainandvault.com) is handled
- * by vercel.json rewrites at the edge for better reliability.
  */
 
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
+
+// ============================================================================
+// DOMAIN ROUTING
+// ============================================================================
+
+const GRAIN_VAULT_DOMAINS = [
+  'grainandvault.com',
+  'www.grainandvault.com',
+  'grainandvault.vercel.app',
+]
+
+function isGrainVaultDomain(host: string): boolean {
+  return GRAIN_VAULT_DOMAINS.some(domain => host.includes(domain))
+}
 
 // ============================================================================
 // ROUTE MATCHERS
@@ -26,8 +38,8 @@ const isPublicRoute = createRouteMatcher([
   '/about',
   '/support',
   '/partnerships',
-  '/api/webhooks/(.*)',    // Webhooks are always public
-  '/api/widget/(.*)',      // Widget API is public
+  '/api/webhooks/(.*)',
+  '/api/widget/(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
 ])
@@ -36,7 +48,7 @@ const isPublicRoute = createRouteMatcher([
 const isPublicApiRoute = createRouteMatcher([
   '/api/suppliers/register',
   '/api/suppliers/cached',
-  '/api/chat',            // Chat API for anonymous users
+  '/api/chat',
   '/api/webhooks/(.*)',
 ])
 
@@ -54,7 +66,25 @@ const isProtectedRoute = createRouteMatcher([
 // MAIN MIDDLEWARE
 // ============================================================================
 
-export default clerkMiddleware(async (auth, request) => {
+export default clerkMiddleware(async (auth, request: NextRequest) => {
+  const host = request.headers.get('host') || ''
+  const pathname = request.nextUrl.pathname
+
+  // ========================================
+  // DOMAIN-BASED ROUTING
+  // ========================================
+
+  // If accessing grainandvault.com at root, rewrite to /grain-vault
+  if (isGrainVaultDomain(host) && pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/grain-vault'
+    return NextResponse.rewrite(url)
+  }
+
+  // ========================================
+  // AUTHENTICATION
+  // ========================================
+
   // Skip auth check for public routes
   if (isPublicRoute(request) || isPublicApiRoute(request)) {
     return NextResponse.next()
@@ -65,16 +95,12 @@ export default clerkMiddleware(async (auth, request) => {
     await auth.protect()
   }
 
-  // Add cache control headers to prevent stale auth state
+  // Add cache control headers
   const response = NextResponse.next()
-
-  // Prevent caching of auth-dependent responses
   response.headers.set('Cache-Control', 'no-store, max-age=0')
-  response.headers.set('X-Clerk-Auth-Reason', 'protected-route')
 
   return response
 }, {
-  // Clerk middleware options
   signInUrl: '/sign-in',
   signUpUrl: '/sign-up',
   afterSignInUrl: '/dashboard',
