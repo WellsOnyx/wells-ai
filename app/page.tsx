@@ -219,7 +219,7 @@ export default function WellsOnyxHome() {
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
-                href="#journeys"
+                href="/demo"
                 className="px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-semibold text-lg hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-sm"
               >
                 See What Wells Can Do
