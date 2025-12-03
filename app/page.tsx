@@ -302,20 +302,11 @@ export default function WellsOnyxHome() {
               </Link>
             </div>
 
-            {/* Social proof indicator */}
+            {/* Launch indicator */}
             <div className="flex items-center justify-center gap-6 mb-16 text-sm text-gray-400">
               <div className="flex items-center gap-2">
-                <div className="flex -space-x-2">
-                  {[...Array(4)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 border-2 border-black flex items-center justify-center text-xs font-bold text-black"
-                    >
-                      {String.fromCharCode(65 + i)}
-                    </div>
-                  ))}
-                </div>
-                <span className="ml-2">Trusted by 100+ companies</span>
+                <Rocket className="w-4 h-4 text-amber-500" />
+                <span>Now in Early Access</span>
               </div>
               <div className="hidden sm:block w-px h-4 bg-white/10" />
               <div className="flex items-center gap-2">
