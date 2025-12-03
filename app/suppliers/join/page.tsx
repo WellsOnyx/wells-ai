@@ -433,7 +433,6 @@ export default function SupplierJoinPage() {
         </form>
         </div>
       </div>
-      </div>
     </div>
   )
 }
