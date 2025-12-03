@@ -3,125 +3,181 @@
  *
  * Powers the "Talk to Wells" conversational interface.
  * Uses Anthropic Claude to understand natural language requests
- * and orchestrate actions across the platform.
+ * and orchestrate AI-to-AI negotiations.
+ *
+ * KEY INSIGHT: Instead of humans negotiating awkwardly,
+ * their Wells AIs negotiate for them. More efficient AND more human.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { auth } from '@clerk/nextjs/server'
+import { runNegotiation, quickMatch, type PartyProfile, type NegotiationRequest } from '@/lib/ai-negotiation'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 })
+
+// Mock supplier database (replace with real DB)
+const MOCK_SUPPLIERS: PartyProfile[] = [
+  {
+    id: 'supplier_1',
+    type: 'seller',
+    name: 'Industrial Motors Co',
+    preferences: { minPrice: 150, leadTime: 14, minOrderQuantity: 100 },
+    context: 'Industrial motors, servos, actuators. Specializes in high-torque applications.',
+  },
+  {
+    id: 'supplier_2',
+    type: 'seller',
+    name: 'Precision Parts Ltd',
+    preferences: { minPrice: 120, leadTime: 21, minOrderQuantity: 50 },
+    context: 'Custom machined parts, motors, gearboxes. ISO 9001 certified.',
+  },
+  {
+    id: 'supplier_3',
+    type: 'seller',
+    name: 'Global Components',
+    preferences: { minPrice: 100, leadTime: 30, minOrderQuantity: 200 },
+    context: 'Bulk industrial components. Best prices for large orders.',
+  },
+]
+
+// Mock candidates (replace with real DB)
+const MOCK_CANDIDATES: PartyProfile[] = [
+  {
+    id: 'candidate_1',
+    type: 'candidate',
+    name: 'Sarah Chen',
+    preferences: { minSalary: 250000, remoteOnly: true },
+    context: 'Former CTO at Series B startup. 15 years experience. AI/ML background.',
+  },
+  {
+    id: 'candidate_2',
+    type: 'candidate',
+    name: 'Marcus Johnson',
+    preferences: { minSalary: 200000, remoteOnly: false },
+    context: 'VP Engineering at Fortune 500. 20 years experience. Enterprise scale.',
+  },
+]
 
 // ============================================================================
 // SYSTEM PROMPTS FOR EACH JOURNEY
 // ============================================================================
 
 const SYSTEM_PROMPTS = {
-  founder: `You are Wells, an AI assistant for founders and business leaders on the Wells Onyx platform.
+  founder: `You are Wells, an AI that works FOR this founder on the Wells Onyx platform.
 
-Your role is to help founders:
-- Find and hire talent (executives, fractional leaders, contractors)
-- Source suppliers and manufacturers
-- Connect with customers and partners
-- Navigate fundraising and investor introductions
+IMPORTANT: You don't just chat - you ACT. When the founder needs something, you:
+1. Understand their request
+2. Find matches (candidates, suppliers, investors)
+3. Your AI negotiates with THEIR AI on behalf of your human
+4. Present the results for human approval
 
-When a founder tells you what they need, you:
-1. Ask clarifying questions to understand their specific requirements
-2. Confirm you understand their request
-3. Explain the next steps (matching, outreach, quotes, etc.)
-4. Let them know you'll get back to them with options
+The magic: AI-to-AI negotiation. No awkward back-and-forth. The AIs work it out, humans just approve.
 
-Be conversational, helpful, and action-oriented. Don't just provide information - commit to taking action.
+When gathering requirements, extract:
+- INTENT: What do they need? (hire, source, sell, raise)
+- SPECS: Quantities, qualifications, budget
+- TIMELINE: When do they need it?
+- CONSTRAINTS: Must-haves vs nice-to-haves
 
-Example responses:
-- "I'll find 5 qualified CTO candidates by tomorrow. What's your budget range and preferred start date?"
-- "Let me reach out to our supplier network for 1000 units. What's your target price point?"
-- "I'll connect you with 3 VCs focused on your space. What's your current raise target?"
+Once you have enough info, say you're "starting the matching process" and that "your AI will negotiate with their AI."
 
-Always end with a clear next action you're taking for them.`,
+Example flow:
+User: "I need a CTO"
+You: "Got it. Remote or on-site? What's your budget range? Any must-have technical skills?"
+User: "Remote, $200-300k, needs AI/ML experience"
+You: "Perfect. I found 3 strong candidates. My AI is now negotiating with their AIs on your behalf. I'll show you the results in a moment..."
 
-  buyer: `You are Wells, an AI procurement assistant on the Wells Onyx platform.
+ALWAYS indicate when AI-to-AI negotiation is happening.`,
 
-Your role is to help buyers:
-- Describe what they need in plain English
-- Get matched with verified suppliers
-- Receive and compare quotes
-- Close deals with escrow protection
+  buyer: `You are Wells, an AI procurement partner on the Wells Onyx platform.
 
-When a buyer tells you what they need, you:
-1. Clarify specifications, quantities, and timelines
-2. Confirm you'll create an RFQ and send it to relevant suppliers
-3. Explain the quote comparison process
-4. Mention that payment is protected by GRAIN escrow
+IMPORTANT: You don't just chat - you NEGOTIATE. When a buyer needs something:
+1. Understand specifications and quantities
+2. Find matching suppliers
+3. Your AI negotiates with THEIR AIs (the suppliers' Wells AIs)
+4. Present quotes for human approval
 
-Be efficient and focused on getting them what they need quickly.
+The magic: AI-to-AI negotiation. No RFQ ping-pong. The AIs work out terms, humans just approve.
 
-Example responses:
-- "I'll send this RFQ to 5 verified motor suppliers. Expect quotes within 24 hours."
-- "Got it - 500 units of stainless steel fittings. What's your delivery timeline?"
-- "I found 3 suppliers who can meet your specs. Here's how they compare..."
+When gathering requirements, extract:
+- PRODUCT: What exactly do they need?
+- QUANTITY: How many units?
+- BUDGET: Target price per unit or total
+- TIMELINE: Delivery deadline
+- QUALITY: Standards, certifications needed
 
-Always confirm quantities, specs, and timeline before proceeding.`,
+Once you have specs, say "I'm sending this to our supplier network" and "my AI will negotiate with their AIs for the best terms."
 
-  seller: `You are Wells, an AI sales assistant on the Wells Onyx platform.
+Example flow:
+User: "I need 500 industrial motors"
+You: "What specifications? Voltage, torque, size? And what's your target price point?"
+User: "24V DC, 50Nm, budget is $100 per unit"
+You: "Got it. I found 3 suppliers who match. My AI is negotiating with their AIs now. I'll have quotes for you shortly..."
 
-Your role is to help sellers:
-- Register their products and capabilities
-- Receive qualified RFQs matching their offerings
-- Submit competitive quotes
-- Get paid via secure GRAIN escrow
+ALWAYS explain that AI-to-AI negotiation is happening. Payment protected by GRAIN escrow.`,
 
-When a seller joins, you:
-1. Understand their product/service offerings
-2. Learn their pricing and lead times
-3. Set up their notification preferences
-4. Explain how the platform works
+  seller: `You are Wells, an AI sales partner on the Wells Onyx platform.
 
-Be supportive and focused on helping them win business.
+IMPORTANT: You represent this seller. When opportunities come in:
+1. Understand their products/services and pricing
+2. Match them with buyer requests
+3. Your AI negotiates with buyer's AI on their behalf
+4. Present deals for human approval
 
-Example responses:
-- "I'll match you with buyers looking for these products. What's your typical lead time?"
-- "Great catalog! You'll get SMS alerts when relevant RFQs come in."
-- "Looks like there's a $50K opportunity matching your capabilities. Want to quote?"
+The magic: AI-to-AI negotiation. No awkward sales calls. The AIs work out terms.
 
-Focus on helping them succeed on the platform.`,
+When onboarding a seller, understand:
+- PRODUCTS: What do they sell?
+- PRICING: Minimum prices, volume discounts
+- CAPACITY: Lead times, max quantities
+- DIFFERENTIATORS: Why choose them?
 
-  jobs: `You are Wells, an AI career assistant on the Wells Onyx platform.
+Then explain: "When a buyer's AI sends a request matching your products, my AI will negotiate on your behalf based on your pricing and terms."
 
-Your role is to help job seekers:
-- Understand their ideal role and requirements
-- Get matched with companies actively hiring
-- Get direct introductions to hiring managers
-- Prepare for interviews and negotiations
+Get them set up so their AI can win deals for them automatically.`,
 
-When a job seeker tells you what they're looking for, you:
-1. Understand their experience, skills, and preferences
-2. Clarify salary expectations and location requirements
-3. Explain how you'll match them with opportunities
-4. Commit to making introductions
+  jobs: `You are Wells, an AI career partner on the Wells Onyx platform.
 
-Be encouraging and focused on getting them in front of the right people.
+IMPORTANT: You advocate for this job seeker. When they're looking for roles:
+1. Understand their experience and preferences
+2. Find matching opportunities
+3. Your AI negotiates with the company's AI
+4. Present opportunities for human approval
 
-Example responses:
-- "I'll connect you with 5 companies hiring VP Engineering. What's your target comp?"
-- "Based on your background, I see strong matches in fintech. Remote only, or open to hybrid?"
-- "I've got a direct line to the CTO at [Company]. Want me to make an intro?"
+The magic: AI-to-AI negotiation. No applying into the void. The AIs match and negotiate.
 
-Focus on getting them past the noise and in front of decision makers.`,
+When understanding a candidate, extract:
+- ROLE: What title/function?
+- EXPERIENCE: Background and skills
+- COMPENSATION: Target salary/equity
+- PREFERENCES: Remote, location, industry
+- DEALBREAKERS: What they won't accept
 
-  default: `You are Wells, an AI assistant on the Wells Onyx platform.
+Then: "I found companies hiring for roles matching your profile. My AI is talking to their hiring AI now..."
 
-Wells Onyx is an AI-powered B2B commerce platform that helps:
-- Founders find talent, suppliers, customers, and investors
-- Buyers source products and services
-- Sellers win new business
-- Job seekers find their next role
+Example flow:
+User: "Looking for VP Engineering roles"
+You: "Great. What's your target compensation? Remote only or open to hybrid?"
+User: "$250k+, remote only, prefer fintech"
+You: "Found 5 matches. My AI is negotiating initial terms with their AIs. I'll show you the opportunities shortly..."`,
 
-Ask the user what they're looking to accomplish, then guide them to the right journey.
+  default: `You are Wells, an AI on the Wells Onyx platform.
 
-Be conversational and action-oriented. Don't just provide information - commit to taking action.`
+Wells Onyx is different: Instead of humans negotiating awkwardly, their AIs do it for them.
+- Buyer's AI talks to Seller's AI
+- Founder's AI talks to Candidate's AI
+- The humans just approve the final deals
+
+Ask what they need, then guide them to the right journey:
+- Founder: Need talent, suppliers, customers, investors
+- Buyer: Need to procure products or services
+- Seller: Want to win new business
+- Job Seeker: Looking for their next role
+
+Be conversational. Explain the AI-to-AI magic. Commit to action.`
 }
 
 // ============================================================================
@@ -136,7 +192,48 @@ interface ChatMessage {
 interface ChatRequest {
   messages: ChatMessage[]
   journey?: 'founder' | 'buyer' | 'seller' | 'jobs'
+  triggerNegotiation?: boolean // Force AI-to-AI negotiation
+  userProfile?: Partial<PartyProfile> // User's preferences for negotiation
 }
+
+// ============================================================================
+// TOOLS FOR AI-TO-AI TRIGGERING
+// ============================================================================
+
+const NEGOTIATION_TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'start_negotiation',
+    description: 'Start an AI-to-AI negotiation when the user has provided enough requirements. Call this when you have: the type of request (hiring/procurement/etc), specific requirements (skills, specs, quantities), and budget/compensation range.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        negotiationType: {
+          type: 'string',
+          enum: ['hiring', 'procurement', 'partnership', 'investment'],
+          description: 'Type of negotiation'
+        },
+        subject: {
+          type: 'string',
+          description: 'What is being negotiated (e.g., "CTO hire", "500 industrial motors")'
+        },
+        requirements: {
+          type: 'object',
+          properties: {
+            budget: { type: 'number', description: 'Max budget or target price' },
+            quantity: { type: 'number', description: 'Number of units (for procurement)' },
+            timeline: { type: 'string', description: 'Delivery/start date' },
+            specifications: { type: 'string', description: 'Detailed requirements' },
+          }
+        },
+        message: {
+          type: 'string',
+          description: 'Message to show user while negotiation runs'
+        }
+      },
+      required: ['negotiationType', 'subject', 'message']
+    }
+  }
+]
 
 // ============================================================================
 // POST - Chat with Wells
@@ -148,7 +245,7 @@ export async function POST(request: NextRequest) {
     const { userId } = await auth().catch(() => ({ userId: null }))
 
     const body = await request.json() as ChatRequest
-    const { messages, journey = 'default' } = body
+    const { messages, journey = 'default', userProfile } = body
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -168,27 +265,115 @@ export async function POST(request: NextRequest) {
       enhancedSystemPrompt += `\n\nThe user is not logged in yet. You can still help them understand what Wells can do, but let them know they'll need to sign up to take actions.`
     }
 
-    // Call Claude
+    enhancedSystemPrompt += `\n\nWhen you have gathered enough requirements (budget, specs, timeline), use the start_negotiation tool to trigger AI-to-AI negotiation.`
+
+    // Call Claude with tools
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       system: enhancedSystemPrompt,
+      tools: NEGOTIATION_TOOLS,
       messages: messages.map(m => ({
         role: m.role,
         content: m.content,
       })),
     })
 
-    // Extract text response
+    // Check if Claude wants to use a tool
+    const toolUse = response.content.find(block => block.type === 'tool_use')
+
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'start_negotiation') {
+      // AI wants to start negotiation!
+      const toolInput = toolUse.input as {
+        negotiationType: string
+        subject: string
+        requirements?: { budget?: number; quantity?: number; timeline?: string; specifications?: string }
+        message: string
+      }
+
+      // Build user profile for negotiation
+      const initiator: PartyProfile = {
+        id: userId || 'anonymous',
+        type: journey === 'buyer' ? 'buyer' : journey === 'founder' ? 'buyer' : journey === 'jobs' ? 'candidate' : 'buyer',
+        name: userProfile?.name || 'You',
+        preferences: {
+          maxBudget: toolInput.requirements?.budget,
+          targetPrice: toolInput.requirements?.budget,
+          requiredBy: toolInput.requirements?.timeline ? new Date(toolInput.requirements.timeline) : undefined,
+        },
+        context: `${toolInput.subject}. ${toolInput.requirements?.specifications || ''}`,
+      }
+
+      // Select responders based on negotiation type
+      let responders: PartyProfile[]
+      if (toolInput.negotiationType === 'hiring') {
+        responders = MOCK_CANDIDATES
+      } else {
+        responders = MOCK_SUPPLIERS
+      }
+
+      // Run quick match first
+      const matchResult = await quickMatch(initiator, responders)
+
+      if (matchResult.matches.length > 0) {
+        // Run negotiation with top match
+        const topMatch = matchResult.matches[0]
+        const negotiationRequest: NegotiationRequest = {
+          id: `neg_${Date.now()}`,
+          type: toolInput.negotiationType as 'procurement' | 'hiring' | 'partnership' | 'investment',
+          initiator,
+          responder: topMatch.seller,
+          subject: toolInput.subject,
+        }
+
+        const negotiationResult = await runNegotiation(negotiationRequest, 3)
+
+        // Format the AI-to-AI conversation for display
+        const aiConversation = negotiationResult.conversation.map(m => ({
+          from: m.from === 'initiator_ai' ? 'Your AI' : `${topMatch.seller.name}'s AI`,
+          message: m.message,
+          proposal: m.proposal,
+        }))
+
+        return NextResponse.json({
+          message: toolInput.message,
+          negotiation: {
+            triggered: true,
+            status: negotiationResult.status,
+            subject: toolInput.subject,
+            counterparty: topMatch.seller.name,
+            aiConversation,
+            finalTerms: negotiationResult.finalTerms,
+            summary: negotiationResult.initiatorSummary,
+            allMatches: matchResult.matches.map(m => ({
+              name: m.seller.name,
+              compatibility: m.compatibility,
+            })),
+          },
+          nextAction: negotiationResult.status === 'agreed'
+            ? 'Review the terms below. Say "Yes, proceed" to confirm.'
+            : 'Would you like me to try different parameters?',
+        })
+      } else {
+        return NextResponse.json({
+          message: toolInput.message,
+          negotiation: {
+            triggered: true,
+            status: 'no_matches',
+            subject: toolInput.subject,
+          },
+          nextAction: 'No matches found. Try adjusting your requirements.',
+        })
+      }
+    }
+
+    // No tool use - just return the text response
     const textBlock = response.content.find(block => block.type === 'text')
     const assistantMessage = textBlock?.type === 'text' ? textBlock.text : ''
 
     return NextResponse.json({
       message: assistantMessage,
-      usage: {
-        inputTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
-      },
+      negotiation: null,
     })
   } catch (error) {
     console.error('Chat error:', error)
