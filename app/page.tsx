@@ -136,7 +136,7 @@ export default function WellsOnyxHome() {
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all">
                   <Sparkles className="w-5 h-5 text-black" />
                 </div>
-                <span className="text-xl font-bold tracking-tight">Wells Onyx</span>
+                <span className="text-xl font-bold tracking-tight">WellsAI</span>
               </Link>
 
               <nav className="hidden md:flex items-center gap-8">
@@ -465,7 +465,7 @@ export default function WellsOnyxHome() {
                   <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
                     <Sparkles className="w-5 h-5 text-black" />
                   </div>
-                  <span className="text-xl font-bold tracking-tight">Wells Onyx</span>
+                  <span className="text-xl font-bold tracking-tight">WellsAI</span>
                 </div>
                 <p className="text-gray-400 text-sm leading-relaxed max-w-sm">
                   AI that turns conversations into outcomes. Just tell Wells what you need and watch it happen.
@@ -501,7 +501,7 @@ export default function WellsOnyxHome() {
             </div>
 
             <div className="border-t border-white/10 pt-8 text-center text-sm text-gray-500">
-              <p>© 2025 Wells Onyx. All rights reserved.</p>
+              <p>© 2025 WellsAI. All rights reserved.</p>
             </div>
           </div>
         </footer>

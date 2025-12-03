@@ -6,26 +6,26 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Wells Onyx | AI That Actually Does Things',
+  title: 'WellsAI | AI That Actually Does Things',
   description: 'Tell Wells what you need. Get it done. AI-to-AI negotiation with human approval. 1% success fee.',
   openGraph: {
-    title: 'Wells Onyx | AI That Actually Does Things',
+    title: 'WellsAI | AI That Actually Does Things',
     description: 'Tell Wells what you need. Get it done. AI-to-AI negotiation with human approval. 1% success fee.',
     url: 'https://wellsonyx.io',
-    siteName: 'Wells Onyx',
+    siteName: 'WellsAI',
     type: 'website',
     images: [
       {
         url: '/wells-onyx-og.png',
         width: 1200,
         height: 630,
-        alt: 'Wells Onyx - AI Commerce Platform',
+        alt: 'WellsAI - AI Commerce Platform',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Wells Onyx | AI That Actually Does Things',
+    title: 'WellsAI | AI That Actually Does Things',
     description: 'Tell Wells what you need. Get it done. AI-to-AI negotiation with human approval.',
     images: ['/wells-onyx-og.png'],
   },

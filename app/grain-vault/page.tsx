@@ -866,9 +866,16 @@ export default function GrainVaultLanding() {
 
           {/* Bottom Bar */}
           <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">
-              © 2025 Grain & Vault. All rights reserved.
-            </p>
+            <div className="text-sm text-gray-500">
+              <p>© 2025 Grain & Vault. All rights reserved.</p>
+              <p className="mt-1">
+                Grain & Vault is a{' '}
+                <Link href="https://wellsonyx.io" className="text-amber-400 hover:text-amber-300 transition-colors">
+                  Wells Onyx
+                </Link>
+                {' '}portfolio company.
+              </p>
+            </div>
             <div className="flex items-center gap-6 text-sm">
               <Link href="/privacy" className="text-gray-500 hover:text-white transition-colors">Privacy</Link>
               <Link href="/terms" className="text-gray-500 hover:text-white transition-colors">Terms</Link>
