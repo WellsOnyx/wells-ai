@@ -163,12 +163,9 @@ export class TreasurySDK {
     if (!wallet) throw new Error('Failed to create treasury wallet')
 
     // Generate Base L2 address
-    const addressResponse = await this.circle.wallets.generateAddress({
-      walletId: wallet.walletId!,
-      idempotencyKey: `treasury_addr_${this.config.organizationId}`,
-      currency: 'USD',
-      chain: 'BASE',
-    })
+    const addressResponse = await this.circle.wallets.generateAddress(
+      wallet.walletId!
+    )
 
     this.treasuryWallet = {
       id: `treasury_${this.config.organizationId}`,
@@ -322,9 +319,9 @@ export class TreasurySDK {
   async getBalance(): Promise<number> {
     if (!this.treasuryWallet) throw new Error('SDK not initialized')
 
-    const response = await this.circle.wallets.getWallet({
-      walletId: this.treasuryWallet.walletId,
-    })
+    const response = await this.circle.wallets.getWallet(
+      this.treasuryWallet.walletId
+    )
 
     const balances = response.data?.data?.balances || []
     const usdcBalance = balances.find(b => b.currency === 'USD')
@@ -469,12 +466,9 @@ export class TreasurySDK {
     const wallet = walletResponse.data?.data
     if (!wallet) throw new Error('Failed to create vendor wallet')
 
-    const addressResponse = await this.circle.wallets.generateAddress({
-      walletId: wallet.walletId!,
-      idempotencyKey: `vendor_addr_${params.vendorId}`,
-      currency: 'USD',
-      chain: 'BASE',
-    })
+    const addressResponse = await this.circle.wallets.generateAddress(
+      wallet.walletId!
+    )
 
     return {
       vendorId: params.vendorId,

@@ -22,6 +22,26 @@ const circle = new Circle(
     : CircleEnvironments.sandbox
 )
 
+// Default TrustScore for new users
+function getDefaultTrustScore(): TrustScore {
+  return {
+    overall: 50,
+    factors: {
+      completionRate: 50,
+      onTimeRate: 50,
+      disputeRate: 100,
+      tenureScore: 0,
+      verificationScore: 0,
+      paymentScore: 50,
+      volumeScore: 0,
+      responseScore: 50,
+    },
+    tier: 'new',
+    badges: [],
+    lastUpdated: new Date(),
+  }
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -162,12 +182,9 @@ export async function createWallet(party: Omit<Party, 'walletId' | 'walletAddres
   if (!wallet) throw new Error('Failed to create wallet')
 
   // Get the wallet address for Base L2
-  const addressResponse = await circle.wallets.generateAddress({
-    walletId: wallet.walletId!,
-    idempotencyKey: `addr_${party.id}_${Date.now()}`,
-    currency: 'USD',
-    chain: 'BASE', // Using Base L2 for low fees
-  })
+  const addressResponse = await circle.wallets.generateAddress(
+    wallet.walletId!
+  )
 
   const address = addressResponse.data?.data?.address
 
@@ -192,12 +209,9 @@ export async function createEscrowWallet(dealId: string): Promise<{
   const wallet = response.data?.data
   if (!wallet) throw new Error('Failed to create escrow wallet')
 
-  const addressResponse = await circle.wallets.generateAddress({
-    walletId: wallet.walletId!,
-    idempotencyKey: `escrow_addr_${dealId}_${Date.now()}`,
-    currency: 'USD',
-    chain: 'BASE',
-  })
+  const addressResponse = await circle.wallets.generateAddress(
+    wallet.walletId!
+  )
 
   return {
     walletId: wallet.walletId!,
@@ -209,7 +223,7 @@ export async function createEscrowWallet(dealId: string): Promise<{
  * Get wallet balance in USDC (GRAIN equivalent)
  */
 export async function getWalletBalance(walletId: string): Promise<number> {
-  const response = await circle.wallets.getWallet({ walletId })
+  const response = await circle.wallets.getWallet(walletId)
   const balances = response.data?.data?.balances || []
 
   // Find USDC balance
@@ -405,8 +419,8 @@ export function proposeDeal(
 ): Deal {
   const { feeAmount, feePercent } = calculatePlatformFee(
     terms.amount,
-    buyer.trustScore || { overall: 50, factors: {}, tier: 'new', badges: [], lastUpdated: new Date() },
-    seller.trustScore || { overall: 50, factors: {}, tier: 'new', badges: [], lastUpdated: new Date() }
+    buyer.trustScore || getDefaultTrustScore(),
+    seller.trustScore || getDefaultTrustScore()
   )
 
   const deal: Deal = {
@@ -451,8 +465,8 @@ export function counterPropose(
   if (newTerms.amount && newTerms.amount !== deal.terms.amount) {
     const feeCalc = calculatePlatformFee(
       newTerms.amount,
-      deal.buyer.trustScore || { overall: 50, factors: {}, tier: 'new', badges: [], lastUpdated: new Date() },
-      deal.seller.trustScore || { overall: 50, factors: {}, tier: 'new', badges: [], lastUpdated: new Date() }
+      deal.buyer.trustScore || getDefaultTrustScore(),
+      deal.seller.trustScore || getDefaultTrustScore()
     )
     platformFee = feeCalc.feeAmount
     platformFeePercent = feeCalc.feePercent

@@ -111,7 +111,6 @@ export async function POST(request: NextRequest) {
       type: 'buyer',
       name: 'Current User', // TODO: Get from Clerk user profile
       email: 'user@example.com', // TODO: Get from Clerk user profile
-      stripeAccountId: buyerData.stripeAccountId,
       trustScore: buyerTrust,
     }
 
@@ -120,14 +119,13 @@ export async function POST(request: NextRequest) {
       type: 'seller',
       name: body.seller.name,
       email: body.seller.email,
-      stripeAccountId: sellerData.stripeAccountId,
       trustScore: sellerTrust,
     }
 
     // Create deal terms
     const terms: DealTerms = {
       amount: body.terms.amount,
-      currency: body.terms.currency || 'usd',
+      currency: (body.terms.currency as 'GRAIN' | 'USDC') || 'GRAIN',
       description: body.terms.description,
       deliverables: body.terms.deliverables || [],
       timeline: body.terms.timeline
