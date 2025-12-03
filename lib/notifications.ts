@@ -60,8 +60,53 @@ function formatLeadForSlack(lead: Lead) {
   // Format budget if available
   const budgetText = lead.budget ? `$${lead.budget.toLocaleString()}` : 'Not specified'
 
+  // Build the section fields (we'll mutate this before adding to blocks)
+  const sectionFields: Array<{ type: string; text: string }> = [
+    {
+      type: 'mrkdwn',
+      text: `*Journey:*\n${lead.journey.charAt(0).toUpperCase() + lead.journey.slice(1)}`,
+    },
+    {
+      type: 'mrkdwn',
+      text: `*Email:*\n${lead.userEmail}`,
+    },
+    {
+      type: 'mrkdwn',
+      text: `*Priority:*\n${lead.priority || 'Medium'}`,
+    },
+    {
+      type: 'mrkdwn',
+      text: `*Budget:*\n${budgetText}`,
+    },
+  ]
+
+  // Add company if available
+  if (lead.userCompany) {
+    sectionFields.splice(1, 0, {
+      type: 'mrkdwn',
+      text: `*Company:*\n${lead.userCompany}`,
+    })
+  }
+
+  // Add phone if available
+  if (lead.userPhone) {
+    sectionFields.push({
+      type: 'mrkdwn',
+      text: `*Phone:*\n${lead.userPhone}`,
+    })
+  }
+
+  // Add timeline if available
+  if (lead.timeline) {
+    sectionFields.push({
+      type: 'mrkdwn',
+      text: `*Timeline:*\n${lead.timeline}`,
+    })
+  }
+
   // Build blocks for rich formatting
-  const blocks = [
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blocks: any[] = [
     {
       type: 'header',
       text: {
@@ -72,24 +117,7 @@ function formatLeadForSlack(lead: Lead) {
     },
     {
       type: 'section',
-      fields: [
-        {
-          type: 'mrkdwn',
-          text: `*Journey:*\n${lead.journey.charAt(0).toUpperCase() + lead.journey.slice(1)}`,
-        },
-        {
-          type: 'mrkdwn',
-          text: `*Email:*\n${lead.userEmail}`,
-        },
-        {
-          type: 'mrkdwn',
-          text: `*Priority:*\n${lead.priority || 'Medium'}`,
-        },
-        {
-          type: 'mrkdwn',
-          text: `*Budget:*\n${budgetText}`,
-        },
-      ],
+      fields: sectionFields,
     },
     {
       type: 'section',
@@ -99,30 +127,6 @@ function formatLeadForSlack(lead: Lead) {
       },
     },
   ]
-
-  // Add company if available
-  if (lead.userCompany) {
-    blocks[1].fields.splice(1, 0, {
-      type: 'mrkdwn',
-      text: `*Company:*\n${lead.userCompany}`,
-    })
-  }
-
-  // Add phone if available
-  if (lead.userPhone) {
-    blocks[1].fields.push({
-      type: 'mrkdwn',
-      text: `*Phone:*\n${lead.userPhone}`,
-    })
-  }
-
-  // Add timeline if available
-  if (lead.timeline) {
-    blocks[1].fields.push({
-      type: 'mrkdwn',
-      text: `*Timeline:*\n${lead.timeline}`,
-    })
-  }
 
   // Add conversation preview (last 2 messages)
   if (lead.conversationHistory && lead.conversationHistory.length > 0) {
