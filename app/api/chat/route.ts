@@ -202,8 +202,36 @@ interface ChatRequest {
 
 const NEGOTIATION_TOOLS: Anthropic.Tool[] = [
   {
+    name: 'request_approval_to_negotiate',
+    description: 'ALWAYS use this BEFORE starting any negotiation. Summarize what you understood and ask the user to confirm before your AI starts negotiating. This is a critical approval checkpoint.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        summary: {
+          type: 'string',
+          description: 'Clear summary of what the user wants (e.g., "500 industrial motors at $100/unit, delivered in 2 weeks")'
+        },
+        negotiationType: {
+          type: 'string',
+          enum: ['hiring', 'procurement', 'partnership', 'investment'],
+          description: 'Type of negotiation'
+        },
+        requirements: {
+          type: 'object',
+          properties: {
+            budget: { type: 'number', description: 'Max budget or target price' },
+            quantity: { type: 'number', description: 'Number of units (for procurement)' },
+            timeline: { type: 'string', description: 'Delivery/start date' },
+            specifications: { type: 'string', description: 'Detailed requirements' },
+          }
+        },
+      },
+      required: ['summary', 'negotiationType']
+    }
+  },
+  {
     name: 'start_negotiation',
-    description: 'Start an AI-to-AI negotiation when the user has provided enough requirements. Call this when you have: the type of request (hiring/procurement/etc), specific requirements (skills, specs, quantities), and budget/compensation range.',
+    description: 'Start an AI-to-AI negotiation ONLY after the user has explicitly approved via request_approval_to_negotiate. Look for user confirmation like "yes", "go ahead", "approved", "looks good" before calling this.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -265,7 +293,16 @@ export async function POST(request: NextRequest) {
       enhancedSystemPrompt += `\n\nThe user is not logged in yet. You can still help them understand what Wells can do, but let them know they'll need to sign up to take actions.`
     }
 
-    enhancedSystemPrompt += `\n\nWhen you have gathered enough requirements (budget, specs, timeline), use the start_negotiation tool to trigger AI-to-AI negotiation.`
+    enhancedSystemPrompt += `
+
+CRITICAL APPROVAL FLOW:
+1. First, gather requirements through conversation
+2. When you have enough info, use request_approval_to_negotiate to summarize and ASK FOR CONFIRMATION
+3. Wait for explicit user approval ("yes", "go ahead", "approved", etc.)
+4. ONLY THEN use start_negotiation to begin AI-to-AI negotiation
+5. After negotiation, user must say "Yes, proceed" to fund escrow
+
+NEVER skip the approval step. Real money is involved.`
 
     // Call Claude with tools
     const response = await anthropic.messages.create({
@@ -281,6 +318,36 @@ export async function POST(request: NextRequest) {
 
     // Check if Claude wants to use a tool
     const toolUse = response.content.find(block => block.type === 'tool_use')
+
+    // Handle approval request (checkpoint before negotiation)
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'request_approval_to_negotiate') {
+      const toolInput = toolUse.input as {
+        summary: string
+        negotiationType: string
+        requirements?: { budget?: number; quantity?: number; timeline?: string; specifications?: string }
+      }
+
+      return NextResponse.json({
+        message: `Before I start negotiating on your behalf, let me confirm I have this right:
+
+**${toolInput.summary}**
+
+${toolInput.requirements?.budget ? `• Budget: $${toolInput.requirements.budget.toLocaleString()}` : ''}
+${toolInput.requirements?.quantity ? `• Quantity: ${toolInput.requirements.quantity} units` : ''}
+${toolInput.requirements?.timeline ? `• Timeline: ${toolInput.requirements.timeline}` : ''}
+${toolInput.requirements?.specifications ? `• Specs: ${toolInput.requirements.specifications}` : ''}
+
+**Should I start negotiating with suppliers/candidates on your behalf?**
+
+Reply "Yes, go ahead" to approve, or let me know what to change.`,
+        negotiation: null,
+        awaitingApproval: {
+          type: toolInput.negotiationType,
+          summary: toolInput.summary,
+          requirements: toolInput.requirements,
+        },
+      })
+    }
 
     if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'start_negotiation') {
       // AI wants to start negotiation!

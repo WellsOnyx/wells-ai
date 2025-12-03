@@ -31,10 +31,17 @@ interface NegotiationResult {
   allMatches?: Array<{ name: string; compatibility: number }>
 }
 
+interface ApprovalRequest {
+  type: string
+  summary: string
+  requirements?: Record<string, unknown>
+}
+
 interface Message {
   role: 'user' | 'assistant'
   content: string
   negotiation?: NegotiationResult
+  awaitingApproval?: ApprovalRequest
 }
 
 interface ChatInterfaceProps {
@@ -104,6 +111,7 @@ export default function ChatInterface({
           role: 'assistant',
           content: data.message,
           negotiation: data.negotiation || undefined,
+          awaitingApproval: data.awaitingApproval || undefined,
         },
       ])
     } catch {
@@ -222,6 +230,36 @@ export default function ChatInterface({
                       <p className="whitespace-pre-wrap">{message.content}</p>
                     </div>
                   </div>
+
+                  {/* Approval Request Display */}
+                  {message.awaitingApproval && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-amber-500" />
+                        <span className="font-semibold text-amber-400">Confirm Before Negotiating</span>
+                      </div>
+                      <p className="text-sm text-gray-300">
+                        Your AI will negotiate on your behalf. Please confirm these requirements are correct:
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setInput('Yes, go ahead')
+                            setTimeout(() => sendMessage(), 100)
+                          }}
+                          className={`flex-1 ${colors.accent} ${colors.accentHover} text-black py-2 rounded-lg font-semibold transition-colors`}
+                        >
+                          Approve & Start Negotiating
+                        </button>
+                        <button
+                          onClick={() => setInput('Wait, I want to change ')}
+                          className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* AI-to-AI Negotiation Display */}
                   {message.negotiation?.triggered && (
