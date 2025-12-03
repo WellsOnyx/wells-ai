@@ -633,14 +633,14 @@ export default function GrainVaultLanding() {
 
           {/* CTA */}
           <div className="text-center">
-            <Link
-              href="https://docs.grainandvault.com/treasury-sdk"
+            <a
+              href="mailto:sdk@grainandvault.com?subject=Treasury SDK Access Request&body=I'm interested in getting SDK access for my organization.%0A%0ACompany:%0AUse Case:%0AExpected Monthly Volume:"
               className="group inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50"
             >
               <Code className="w-5 h-5" />
               Get SDK Access
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
+            </a>
             <p className="mt-4 text-sm text-gray-500">
               Production-ready in minutes. Full documentation included.
             </p>
@@ -668,11 +668,11 @@ export default function GrainVaultLanding() {
                 RESTful APIs with real-time webhooks. Built for scale, designed for simplicity.
               </p>
               <Link
-                href="https://docs.grainandvault.com/api"
+                href="/grain-vault/demo"
                 className="text-green-400 hover:text-green-300 text-sm font-medium inline-flex items-center gap-1"
               >
                 API Reference
-                <ExternalLink className="w-3 h-3" />
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
@@ -685,11 +685,11 @@ export default function GrainVaultLanding() {
                 TypeScript, Python, Go, and Ruby SDKs with full IntelliSense support.
               </p>
               <Link
-                href="https://docs.grainandvault.com/sdks"
+                href="/grain-vault/demo"
                 className="text-blue-400 hover:text-blue-300 text-sm font-medium inline-flex items-center gap-1"
               >
                 View SDKs
-                <ExternalLink className="w-3 h-3" />
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
