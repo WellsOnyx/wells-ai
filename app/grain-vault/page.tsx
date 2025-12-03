@@ -8,6 +8,7 @@
  * Zero friction payments. Protected reserves. Native ERP integration.
  */
 
+import { useState } from 'react'
 import Link from 'next/link'
 import {
   Zap,
@@ -33,7 +34,174 @@ import {
   ExternalLink
 } from 'lucide-react'
 
+// ERP-specific SDK code examples
+const erpCodeExamples: Record<string, { filename: string; code: React.ReactNode }> = {
+  'SAP': {
+    filename: 'sap-treasury.ts',
+    code: (
+      <>
+        <span className="text-purple-400">import</span> {'{'} createSAPAdapter {'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/treasury-sdk/sap'</span>
+        {'\n\n'}
+        <span className="text-gray-500">// Connect to SAP S/4HANA via OData</span>
+        {'\n'}<span className="text-blue-400">const</span> sap = <span className="text-yellow-400">createSAPAdapter</span>({'{'}
+        {'\n  '}host: <span className="text-green-400">'your-tenant.s4hana.ondemand.com'</span>,
+        {'\n  '}client: <span className="text-green-400">'100'</span>,
+        {'\n  '}variant: <span className="text-green-400">'s4hana'</span>,
+        {'\n  '}auth: {'{'} type: <span className="text-green-400">'oauth2'</span>, clientId, clientSecret {'}'}
+        {'\n'}{'}'})
+        {'\n\n'}
+        <span className="text-purple-400">await</span> sap.<span className="text-yellow-400">connect</span>()
+        {'\n\n'}
+        <span className="text-gray-500">// Pay vendor instantly via SAP</span>
+        {'\n'}<span className="text-purple-400">await</span> sap.<span className="text-yellow-400">createPayment</span>({'{'}
+        {'\n  '}vendorId: <span className="text-green-400">'VEND-00234'</span>,
+        {'\n  '}amount: <span className="text-blue-300">25000</span>,
+        {'\n  '}currency: <span className="text-green-400">'GRAIN'</span>,
+        {'\n  '}companyCode: <span className="text-green-400">'1000'</span>
+        {'\n'}{'}'})
+      </>
+    )
+  },
+  'Oracle': {
+    filename: 'oracle-treasury.ts',
+    code: (
+      <>
+        <span className="text-purple-400">import</span> {'{'} createOracleAdapter {'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/treasury-sdk/oracle'</span>
+        {'\n\n'}
+        <span className="text-gray-500">// Connect to Oracle Fusion Cloud</span>
+        {'\n'}<span className="text-blue-400">const</span> oracle = <span className="text-yellow-400">createOracleAdapter</span>({'{'}
+        {'\n  '}host: <span className="text-green-400">'your-instance.oraclecloud.com'</span>,
+        {'\n  '}variant: <span className="text-green-400">'fusion'</span>,
+        {'\n  '}auth: {'{'} type: <span className="text-green-400">'oauth2'</span>, clientId, clientSecret {'}'}
+        {'\n'}{'}'})
+        {'\n\n'}
+        <span className="text-purple-400">await</span> oracle.<span className="text-yellow-400">connect</span>()
+        {'\n\n'}
+        <span className="text-gray-500">// Pay vendor with Oracle sync</span>
+        {'\n'}<span className="text-purple-400">await</span> oracle.<span className="text-yellow-400">createPayment</span>({'{'}
+        {'\n  '}vendorId: <span className="text-green-400">'100000001234567'</span>,
+        {'\n  '}amount: <span className="text-blue-300">50000</span>,
+        {'\n  '}currency: <span className="text-green-400">'GRAIN'</span>,
+        {'\n  '}businessUnit: <span className="text-green-400">'US Operations'</span>
+        {'\n'}{'}'})
+      </>
+    )
+  },
+  'NetSuite': {
+    filename: 'netsuite-treasury.ts',
+    code: (
+      <>
+        <span className="text-purple-400">import</span> {'{'} createNetSuiteAdapter {'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/treasury-sdk/netsuite'</span>
+        {'\n\n'}
+        <span className="text-gray-500">// Connect via OAuth 1.0 TBA</span>
+        {'\n'}<span className="text-blue-400">const</span> netsuite = <span className="text-yellow-400">createNetSuiteAdapter</span>({'{'}
+        {'\n  '}accountId: <span className="text-green-400">'1234567'</span>,
+        {'\n  '}auth: {'{'}
+        {'\n    '}type: <span className="text-green-400">'tba'</span>,
+        {'\n    '}consumerKey, consumerSecret, tokenId, tokenSecret
+        {'\n  '}
+        {'\n'}{'}'})
+        {'\n\n'}
+        <span className="text-purple-400">await</span> netsuite.<span className="text-yellow-400">connect</span>()
+        {'\n\n'}
+        <span className="text-gray-500">// Pay vendor - auto-syncs to NetSuite</span>
+        {'\n'}<span className="text-purple-400">await</span> netsuite.<span className="text-yellow-400">createPayment</span>({'{'}
+        {'\n  '}vendorId: <span className="text-green-400">'1234'</span>,
+        {'\n  '}amount: <span className="text-blue-300">25000</span>,
+        {'\n  '}currency: <span className="text-green-400">'GRAIN'</span>,
+        {'\n  '}subsidiary: <span className="text-green-400">'1'</span>
+        {'\n'}{'}'})
+      </>
+    )
+  },
+  'Dynamics 365': {
+    filename: 'dynamics-treasury.ts',
+    code: (
+      <>
+        <span className="text-purple-400">import</span> {'{'} createDynamics365Adapter {'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/treasury-sdk/dynamics365'</span>
+        {'\n\n'}
+        <span className="text-gray-500">// Connect to D365 Finance & Operations</span>
+        {'\n'}<span className="text-blue-400">const</span> dynamics = <span className="text-yellow-400">createDynamics365Adapter</span>({'{'}
+        {'\n  '}host: <span className="text-green-400">'your-org.operations.dynamics.com'</span>,
+        {'\n  '}tenant: <span className="text-green-400">'your-tenant-id'</span>,
+        {'\n  '}variant: <span className="text-green-400">'finance-operations'</span>,
+        {'\n  '}auth: {'{'} type: <span className="text-green-400">'oauth2'</span>, clientId, clientSecret {'}'}
+        {'\n'}{'}'})
+        {'\n\n'}
+        <span className="text-purple-400">await</span> dynamics.<span className="text-yellow-400">connect</span>()
+        {'\n\n'}
+        <span className="text-gray-500">// Instant vendor payment</span>
+        {'\n'}<span className="text-purple-400">await</span> dynamics.<span className="text-yellow-400">createPayment</span>({'{'}
+        {'\n  '}vendorId: <span className="text-green-400">'V-000123'</span>,
+        {'\n  '}amount: <span className="text-blue-300">35000</span>,
+        {'\n  '}currency: <span className="text-green-400">'GRAIN'</span>,
+        {'\n  '}legalEntity: <span className="text-green-400">'USMF'</span>
+        {'\n'}{'}'})
+      </>
+    )
+  },
+  'Workday': {
+    filename: 'workday-treasury.ts',
+    code: (
+      <>
+        <span className="text-purple-400">import</span> {'{'} createWorkdayAdapter {'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/treasury-sdk/workday'</span>
+        {'\n\n'}
+        <span className="text-gray-500">// Connect to Workday Financial Management</span>
+        {'\n'}<span className="text-blue-400">const</span> workday = <span className="text-yellow-400">createWorkdayAdapter</span>({'{'}
+        {'\n  '}host: <span className="text-green-400">'wd2-impl-services1.workday.com'</span>,
+        {'\n  '}tenant: <span className="text-green-400">'your-tenant'</span>,
+        {'\n  '}auth: {'{'}
+        {'\n    '}type: <span className="text-green-400">'oauth2'</span>,
+        {'\n    '}clientId, clientSecret, refreshToken
+        {'\n  '}
+        {'\n'}{'}'})
+        {'\n\n'}
+        <span className="text-purple-400">await</span> workday.<span className="text-yellow-400">connect</span>()
+        {'\n\n'}
+        <span className="text-gray-500">// Pay supplier via Workday</span>
+        {'\n'}<span className="text-purple-400">await</span> workday.<span className="text-yellow-400">createPayment</span>({'{'}
+        {'\n  '}vendorId: <span className="text-green-400">'SUPP-00234'</span>,
+        {'\n  '}amount: <span className="text-blue-300">18000</span>,
+        {'\n  '}currency: <span className="text-green-400">'GRAIN'</span>,
+        {'\n  '}company: <span className="text-green-400">'Global Modern Services'</span>
+        {'\n'}{'}'})
+      </>
+    )
+  },
+  'Coupa': {
+    filename: 'coupa-treasury.ts',
+    code: (
+      <>
+        <span className="text-purple-400">import</span> {'{'} createCoupaAdapter {'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/treasury-sdk/coupa'</span>
+        {'\n\n'}
+        <span className="text-gray-500">// Connect to Coupa Treasury</span>
+        {'\n'}<span className="text-blue-400">const</span> coupa = <span className="text-yellow-400">createCoupaAdapter</span>({'{'}
+        {'\n  '}host: <span className="text-green-400">'your-company.coupahost.com'</span>,
+        {'\n  '}auth: {'{'}
+        {'\n    '}type: <span className="text-green-400">'oauth2'</span>,
+        {'\n    '}clientId, clientSecret, scope: <span className="text-green-400">'core.invoice.read'</span>
+        {'\n  '}
+        {'\n'}{'}'})
+        {'\n\n'}
+        <span className="text-purple-400">await</span> coupa.<span className="text-yellow-400">connect</span>()
+        {'\n\n'}
+        <span className="text-gray-500">// Pay via Coupa Pay</span>
+        {'\n'}<span className="text-purple-400">await</span> coupa.<span className="text-yellow-400">createPayment</span>({'{'}
+        {'\n  '}vendorId: <span className="text-green-400">'45678'</span>,
+        {'\n  '}amount: <span className="text-blue-300">42000</span>,
+        {'\n  '}currency: <span className="text-green-400">'GRAIN'</span>,
+        {'\n  '}invoiceNumber: <span className="text-green-400">'INV-2024-0123'</span>
+        {'\n'}{'}'})
+      </>
+    )
+  }
+}
+
+const erpList = ['SAP', 'Oracle', 'NetSuite', 'Dynamics 365', 'Workday', 'Coupa'] as const
+
 export default function GrainVaultLanding() {
+  const [selectedERP, setSelectedERP] = useState<string>('NetSuite')
+
   return (
     <div className="min-h-screen bg-black text-white antialiased">
       {/* Navigation */}
@@ -446,61 +614,63 @@ export default function GrainVaultLanding() {
                 No data migration. Just add one SDK and unlock zero-friction treasury operations.
               </p>
 
-              {/* ERP Logos Grid */}
+              {/* ERP Logos Grid - Interactive */}
               <div className="grid grid-cols-3 md:grid-cols-6 gap-4 mb-8">
-                {['SAP', 'Oracle', 'NetSuite', 'Dynamics 365', 'Workday', 'Coupa'].map((erp) => (
-                  <div
+                {erpList.map((erp) => (
+                  <button
                     key={erp}
-                    className="bg-black/50 border border-white/10 rounded-lg p-4 text-center hover:border-purple-500/30 transition-all"
+                    onClick={() => setSelectedERP(erp)}
+                    className={`relative p-4 text-center rounded-lg transition-all duration-300 cursor-pointer ${
+                      selectedERP === erp
+                        ? 'bg-purple-500/20 border-2 border-purple-500 shadow-lg shadow-purple-500/20 scale-105'
+                        : 'bg-black/50 border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/5'
+                    }`}
                   >
-                    <div className="text-sm font-semibold text-gray-300">{erp}</div>
-                  </div>
+                    {selectedERP === erp && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-purple-500 rounded-full animate-pulse" />
+                    )}
+                    <div className={`text-sm font-semibold ${
+                      selectedERP === erp ? 'text-purple-300' : 'text-gray-300'
+                    }`}>
+                      {erp}
+                    </div>
+                  </button>
                 ))}
               </div>
 
-              {/* Code Example */}
+              {/* Selected ERP indicator */}
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <span className="text-sm text-gray-500">Showing SDK for:</span>
+                <span className="text-sm font-semibold text-purple-400">{selectedERP}</span>
+              </div>
+
+              {/* Code Example - Dynamic based on selected ERP */}
               <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl blur opacity-10" />
+                <div className={`absolute -inset-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl blur transition-opacity duration-300 ${
+                  selectedERP ? 'opacity-20' : 'opacity-10'
+                }`} />
                 <div className="relative bg-[#0d1117] border border-white/10 rounded-xl overflow-hidden">
                   <div className="flex items-center justify-between px-6 py-3 border-b border-white/10 bg-white/5">
                     <div className="flex items-center gap-2">
-                      <Code className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-400">Quick Start Example</span>
+                      <Code className="w-4 h-4 text-purple-400" />
+                      <span className="text-sm text-gray-400 transition-all duration-300">
+                        {erpCodeExamples[selectedERP]?.filename || 'treasury-sdk.ts'}
+                      </span>
                     </div>
-                    <button className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1">
-                      <Download className="w-3 h-3" />
-                      Copy
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-purple-400 bg-purple-500/20 px-2 py-1 rounded">
+                        {selectedERP} SDK
+                      </span>
+                      <button className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
+                        <Download className="w-3 h-3" />
+                        Copy
+                      </button>
+                    </div>
                   </div>
-                  <div className="p-6 overflow-x-auto">
+                  <div className="p-6 overflow-x-auto min-h-[320px]">
                     <pre className="text-sm">
                       <code className="text-gray-300">
-                        <span className="text-purple-400">import</span> {'{'} createTreasurySDK {'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/treasury-sdk'</span>
-                        {'\n\n'}
-                        <span className="text-gray-500">// Initialize with your ERP</span>
-                        {'\n'}<span className="text-blue-400">const</span> treasury = <span className="text-yellow-400">createTreasurySDK</span>({'{'}
-                        {'\n  '}apiKey: process.env.<span className="text-green-400">GRAIN_VAULT_API_KEY</span>,
-                        {'\n  '}organization: <span className="text-green-400">'acme-corp'</span>,
-                        {'\n  '}erp: {'{'} type: <span className="text-green-400">'netsuite'</span>, version: <span className="text-green-400">'2024.1'</span> {'}'},
-                        {'\n'}{'}'})
-                        {'\n\n'}
-                        <span className="text-purple-400">await</span> treasury.<span className="text-yellow-400">initialize</span>()
-                        {'\n\n'}
-                        <span className="text-gray-500">// Pay a vendor - instant, zero friction</span>
-                        {'\n'}<span className="text-blue-400">const</span> payment = <span className="text-purple-400">await</span> treasury.<span className="text-yellow-400">payVendor</span>({'{'}
-                        {'\n  '}vendorId: <span className="text-green-400">'vendor-00234'</span>,
-                        {'\n  '}amount: <span className="text-blue-300">25000</span>,
-                        {'\n  '}reference: <span className="text-green-400">'PO-2024-001234'</span>,
-                        {'\n  '}memo: <span className="text-green-400">'Q4 inventory shipment'</span>
-                        {'\n'}{'}'})
-                        {'\n\n'}
-                        <span className="text-gray-500">// Check available credit (1:1 with balance)</span>
-                        {'\n'}<span className="text-blue-400">const</span> credit = <span className="text-purple-400">await</span> treasury.<span className="text-yellow-400">getCreditLine</span>()
-                        {'\n'}<span className="text-blue-400">console</span>.<span className="text-yellow-400">log</span>(credit.available) <span className="text-gray-500">// Same as your GRAIN balance</span>
-                        {'\n\n'}
-                        <span className="text-gray-500">// Real-time treasury visibility</span>
-                        {'\n'}<span className="text-blue-400">const</span> dashboard = <span className="text-purple-400">await</span> treasury.<span className="text-yellow-400">getDashboard</span>()
-                        {'\n'}<span className="text-gray-500">// {'{'} balance, credit, failed_payments: 0, avg_settlement: "0.8s" {'}'}</span>
+                        {erpCodeExamples[selectedERP]?.code}
                       </code>
                     </pre>
                   </div>
