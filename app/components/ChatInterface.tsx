@@ -11,7 +11,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, ArrowLeft, Zap, CheckCircle, Users } from 'lucide-react'
+import { Send, Loader2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 interface AIConversationMessage {
@@ -31,17 +31,10 @@ interface NegotiationResult {
   allMatches?: Array<{ name: string; compatibility: number }>
 }
 
-interface ApprovalRequest {
-  type: string
-  summary: string
-  requirements?: Record<string, unknown>
-}
-
 interface Message {
   role: 'user' | 'assistant'
   content: string
   negotiation?: NegotiationResult
-  awaitingApproval?: ApprovalRequest
 }
 
 interface ChatInterfaceProps {
@@ -111,7 +104,6 @@ export default function ChatInterface({
           role: 'assistant',
           content: data.message,
           negotiation: data.negotiation || undefined,
-          awaitingApproval: data.awaitingApproval || undefined,
         },
       ])
     } catch {
@@ -231,114 +223,17 @@ export default function ChatInterface({
                     </div>
                   </div>
 
-                  {/* Approval Request Display */}
-                  {message.awaitingApproval && (
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-4">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-amber-500" />
-                        <span className="font-semibold text-amber-400">Confirm Before Negotiating</span>
+                  {/* AI-to-AI Negotiation - shown inline as conversation */}
+                  {message.negotiation?.triggered && message.negotiation.aiConversation && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[80%] bg-gray-900 border border-gray-800 rounded-2xl px-4 py-3 space-y-2">
+                        <p className="text-xs text-gray-500 italic">Your AI negotiated with {message.negotiation.counterparty || 'suppliers'}:</p>
+                        {message.negotiation.aiConversation.map((msg, i) => (
+                          <p key={i} className="text-sm text-gray-300">
+                            <span className={msg.from === 'Your AI' ? colors.accentText : 'text-blue-400'}>{msg.from}:</span> {msg.message}
+                          </p>
+                        ))}
                       </div>
-                      <p className="text-sm text-gray-300">
-                        Your AI will negotiate on your behalf. Please confirm these requirements are correct:
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setInput('Yes, go ahead')
-                            setTimeout(() => sendMessage(), 100)
-                          }}
-                          className={`flex-1 ${colors.accent} ${colors.accentHover} text-black py-2 rounded-lg font-semibold transition-colors`}
-                        >
-                          Approve & Start Negotiating
-                        </button>
-                        <button
-                          onClick={() => setInput('Wait, I want to change ')}
-                          className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* AI-to-AI Negotiation Display */}
-                  {message.negotiation?.triggered && (
-                    <div className="bg-gray-900/50 border border-gray-700 rounded-xl p-4 space-y-4">
-                      {/* Header */}
-                      <div className="flex items-center gap-2">
-                        <Zap className={`w-5 h-5 ${colors.accentText}`} />
-                        <span className="font-semibold">AI-to-AI Negotiation</span>
-                        {message.negotiation.status === 'agreed' && (
-                          <span className="ml-auto flex items-center gap-1 text-green-400 text-sm">
-                            <CheckCircle className="w-4 h-4" />
-                            Agreement Reached
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Subject */}
-                      <div className="text-sm text-gray-400">
-                        Negotiating: <span className="text-white">{message.negotiation.subject}</span>
-                        {message.negotiation.counterparty && (
-                          <span> with <span className="text-white">{message.negotiation.counterparty}</span></span>
-                        )}
-                      </div>
-
-                      {/* AI Conversation */}
-                      {message.negotiation.aiConversation && message.negotiation.aiConversation.length > 0 && (
-                        <div className="space-y-2 border-l-2 border-gray-700 pl-4">
-                          <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                            <Users className="w-3 h-3" />
-                            AI Conversation
-                          </div>
-                          {message.negotiation.aiConversation.map((msg, i) => (
-                            <div key={i} className="text-sm">
-                              <span className={msg.from === 'Your AI' ? colors.accentText : 'text-blue-400'}>
-                                {msg.from}:
-                              </span>
-                              <span className="text-gray-300 ml-2">{msg.message}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Final Terms */}
-                      {message.negotiation.finalTerms && Object.keys(message.negotiation.finalTerms).length > 0 && (
-                        <div className="bg-black/30 rounded-lg p-3">
-                          <div className="text-xs text-gray-500 mb-2">Agreed Terms</div>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            {Object.entries(message.negotiation.finalTerms).map(([key, value]) => (
-                              value && (
-                                <div key={key}>
-                                  <span className="text-gray-400 capitalize">{key}:</span>
-                                  <span className="text-white ml-1">
-                                    {typeof value === 'number' && key.includes('price')
-                                      ? `$${value.toLocaleString()}`
-                                      : String(value)}
-                                  </span>
-                                </div>
-                              )
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Summary */}
-                      {message.negotiation.summary && (
-                        <p className="text-sm text-gray-300 italic">
-                          {message.negotiation.summary}
-                        </p>
-                      )}
-
-                      {/* Action Button for Agreed Deals */}
-                      {message.negotiation.status === 'agreed' && (
-                        <button
-                          onClick={() => setInput('Yes, proceed')}
-                          className={`w-full ${colors.accent} ${colors.accentHover} text-black py-2 rounded-lg font-semibold transition-colors`}
-                        >
-                          Approve Deal
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
