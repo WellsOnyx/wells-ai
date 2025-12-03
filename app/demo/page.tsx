@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
   ArrowRight,
@@ -21,7 +21,9 @@ import {
   Send,
   Bot,
   User,
-  TrendingUp
+  TrendingUp,
+  FastForward,
+  Loader2
 } from 'lucide-react'
 
 type Journey = 'founder' | 'buyer' | 'seller' | 'jobs' | null
@@ -112,29 +114,91 @@ export default function WellsDemo() {
   const [currentMessage, setCurrentMessage] = useState(0)
   const [displayedMessages, setDisplayedMessages] = useState<typeof JOURNEYS.founder.demoSteps>([])
   const [isTyping, setIsTyping] = useState(false)
+  const [statusText, setStatusText] = useState('')
+  const [showSkipButton, setShowSkipButton] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
 
-  // Auto-advance messages in demo
+  // Smooth scroll to latest message
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    }
+  }, [displayedMessages, isTyping])
+
+  // Show skip button after first message
+  useEffect(() => {
+    if (currentMessage > 0 && step === 'demo') {
+      setShowSkipButton(true)
+    } else {
+      setShowSkipButton(false)
+    }
+  }, [currentMessage, step])
+
+  // Auto-advance messages in demo with enhanced timing
   useEffect(() => {
     if (step === 'demo' && selectedJourney) {
       const journey = JOURNEYS[selectedJourney]
       if (currentMessage < journey.demoSteps.length) {
-        setIsTyping(true)
-        const delay = journey.demoSteps[currentMessage].role === 'wells' ? 2000 : 1000
-        const timer = setTimeout(() => {
+        const currentMsg = journey.demoSteps[currentMessage]
+        const isWells = currentMsg.role === 'wells'
+
+        // Calculate delays based on message length and role
+        const messageLength = currentMsg.message.length
+        const baseDelay = isWells ? 1200 : 800 // Delay before typing starts
+        const typingDuration = isWells
+          ? Math.min(3500, messageLength * 25) // Wells types slower (up to 3.5s)
+          : Math.min(2000, messageLength * 15) // User types faster (up to 2s)
+
+        // Set status text for Wells messages
+        if (isWells) {
+          const statusMessages = [
+            'Wells is analyzing...',
+            'Wells is thinking...',
+            'Wells is negotiating...',
+            'Wells is working...'
+          ]
+          setStatusText(statusMessages[Math.floor(Math.random() * statusMessages.length)])
+        }
+
+        // Show typing indicator after base delay
+        const typingTimer = setTimeout(() => {
+          setIsTyping(true)
+        }, baseDelay)
+
+        // Show message after typing duration
+        const messageTimer = setTimeout(() => {
           setDisplayedMessages(prev => [...prev, journey.demoSteps[currentMessage]])
           setCurrentMessage(prev => prev + 1)
           setIsTyping(false)
-        }, delay)
-        return () => clearTimeout(timer)
+          setStatusText('')
+        }, baseDelay + typingDuration)
+
+        return () => {
+          clearTimeout(typingTimer)
+          clearTimeout(messageTimer)
+        }
       } else if (currentMessage === journey.demoSteps.length) {
-        // Auto-advance to result after a delay
+        // Longer delay before showing results
+        setStatusText('Preparing your results...')
         const timer = setTimeout(() => {
           setStep('result')
-        }, 1500)
+          setStatusText('')
+        }, 2500)
         return () => clearTimeout(timer)
       }
     }
   }, [step, selectedJourney, currentMessage])
+
+  const skipToResults = () => {
+    if (selectedJourney) {
+      const journey = JOURNEYS[selectedJourney]
+      setDisplayedMessages(journey.demoSteps)
+      setCurrentMessage(journey.demoSteps.length)
+      setIsTyping(false)
+      setTimeout(() => setStep('result'), 500)
+    }
+  }
 
   const handleSelectJourney = (journey: Journey) => {
     setSelectedJourney(journey)
@@ -148,6 +212,8 @@ export default function WellsDemo() {
     setSelectedJourney(null)
     setCurrentMessage(0)
     setDisplayedMessages([])
+    setStatusText('')
+    setShowSkipButton(false)
   }
 
   const getColorClasses = (color: string) => {
@@ -162,6 +228,74 @@ export default function WellsDemo() {
 
   return (
     <div className="min-h-screen bg-black text-white">
+      <style jsx global>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes scaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes slideInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        .animate-fadeInUp {
+          animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .animate-scaleIn {
+          animation: scaleIn 0.5s ease-out forwards;
+        }
+
+        .animate-slideInLeft {
+          animation: slideInLeft 0.5s ease-out forwards;
+        }
+
+        .animate-slideInRight {
+          animation: slideInRight 0.5s ease-out forwards;
+        }
+
+        .stagger-1 { animation-delay: 0.1s; opacity: 0; }
+        .stagger-2 { animation-delay: 0.2s; opacity: 0; }
+        .stagger-3 { animation-delay: 0.3s; opacity: 0; }
+        .stagger-4 { animation-delay: 0.4s; opacity: 0; }
+        .stagger-5 { animation-delay: 0.5s; opacity: 0; }
+      `}</style>
+
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -258,13 +392,25 @@ export default function WellsDemo() {
           {/* Demo Step - Chat Interface */}
           {step === 'demo' && selectedJourney && (
             <div className="min-h-[80vh] flex flex-col">
-              <button
-                onClick={() => setStep('select')}
-                className="self-start flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Choose Different Journey
-              </button>
+              <div className="flex items-center justify-between mb-8">
+                <button
+                  onClick={() => setStep('select')}
+                  className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Choose Different Journey
+                </button>
+
+                {showSkipButton && (
+                  <button
+                    onClick={skipToResults}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all text-sm animate-fadeInUp"
+                  >
+                    <FastForward className="w-4 h-4" />
+                    Skip to Results
+                  </button>
+                )}
+              </div>
 
               <div className="flex-1 flex flex-col">
                 {/* Journey Header */}
@@ -279,12 +425,39 @@ export default function WellsDemo() {
                   <h2 className="text-2xl font-bold">Watch Wells Work</h2>
                 </div>
 
+                {/* Status Text */}
+                {statusText && (
+                  <div className="flex items-center justify-center gap-2 mb-4 text-amber-400 text-sm animate-fadeInUp">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {statusText}
+                  </div>
+                )}
+
+                {/* Progress Bar */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
+                    <span>Step {currentMessage} of {JOURNEYS[selectedJourney].demoSteps.length}</span>
+                    <span>{Math.round((currentMessage / JOURNEYS[selectedJourney].demoSteps.length) * 100)}%</span>
+                  </div>
+                  <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-500 to-orange-600 transition-all duration-700 ease-out"
+                      style={{ width: `${(currentMessage / JOURNEYS[selectedJourney].demoSteps.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
                 {/* Chat Messages */}
-                <div className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4 max-h-[500px] overflow-y-auto">
+                <div
+                  ref={chatContainerRef}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4 max-h-[500px] overflow-y-auto"
+                >
                   {displayedMessages.map((msg, idx) => (
                     <div
                       key={idx}
-                      className={`flex items-start gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                      className={`flex items-start gap-3 ${
+                        msg.role === 'user' ? 'flex-row-reverse animate-slideInRight' : 'animate-slideInLeft'
+                      }`}
                     >
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                         msg.role === 'user'
@@ -302,35 +475,41 @@ export default function WellsDemo() {
                           ? 'bg-amber-500/20 text-white'
                           : 'bg-white/10 text-gray-200'
                       }`}>
-                        <p className="text-sm md:text-base">{msg.message}</p>
+                        <p className="text-sm md:text-base leading-relaxed">{msg.message}</p>
                       </div>
                     </div>
                   ))}
 
                   {/* Typing Indicator */}
                   {isTyping && (
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3 animate-fadeInUp">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0">
                         <Bot className="w-5 h-5 text-black" />
                       </div>
                       <div className="bg-white/10 p-4 rounded-2xl">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <div className="flex gap-1.5">
+                          <div className="w-2.5 h-2.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }} />
+                          <div className="w-2.5 h-2.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1s' }} />
+                          <div className="w-2.5 h-2.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1s' }} />
                         </div>
                       </div>
                     </div>
                   )}
+
+                  <div ref={messagesEndRef} />
                 </div>
 
-                {/* Progress */}
+                {/* Progress Dots */}
                 <div className="mt-6 flex items-center justify-center gap-2">
                   {JOURNEYS[selectedJourney].demoSteps.map((_, idx) => (
                     <div
                       key={idx}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        idx < currentMessage ? 'bg-amber-500' : 'bg-white/20'
+                      className={`rounded-full transition-all duration-500 ${
+                        idx < currentMessage
+                          ? 'w-2 h-2 bg-amber-500'
+                          : idx === currentMessage
+                          ? 'w-3 h-3 bg-amber-400 animate-pulse'
+                          : 'w-2 h-2 bg-white/20'
                       }`}
                     />
                   ))}
@@ -342,24 +521,44 @@ export default function WellsDemo() {
           {/* Result Step */}
           {step === 'result' && selectedJourney && (
             <div className="min-h-[80vh] flex flex-col items-center justify-center text-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mb-8 animate-pulse">
+              {/* Celebration Effect */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                {[...Array(30)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="absolute w-2 h-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full animate-fadeInUp"
+                    style={{
+                      left: `${Math.random() * 100}%`,
+                      top: `-10px`,
+                      animationDelay: `${Math.random() * 0.5}s`,
+                      animationDuration: `${2 + Math.random() * 2}s`,
+                      transform: `translateY(${100 + Math.random() * 200}vh) rotate(${Math.random() * 360}deg)`
+                    }}
+                  />
+                ))}
+              </div>
+
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mb-8 animate-scaleIn">
                 <CheckCircle className="w-10 h-10 text-white" />
               </div>
 
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 animate-fadeInUp">
                 {selectedJourney === 'seller' ? 'Profile Active!' : 'Deal Ready!'}
               </h2>
-              <p className="text-gray-400 mb-12 max-w-xl">
+              <p className="text-gray-400 mb-12 max-w-xl animate-fadeInUp" style={{ animationDelay: '0.1s', opacity: 0 }}>
                 {selectedJourney === 'founder' && "Wells negotiated with suppliers, secured the best pricing, and has your deal ready to close."}
                 {selectedJourney === 'buyer' && "Wells sourced vendors, ran parallel negotiations, and found you the best deal."}
                 {selectedJourney === 'seller' && "Your supplier profile is live. Wells is already matching you with buyer opportunities."}
                 {selectedJourney === 'jobs' && "Wells screened candidates, identified top matches, and they're ready for interviews."}
               </p>
 
-              {/* Results Grid */}
+              {/* Results Grid with Staggered Animation */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-2xl mb-12">
-                {Object.entries(JOURNEYS[selectedJourney].result).map(([key, value]) => (
-                  <div key={key} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                {Object.entries(JOURNEYS[selectedJourney].result).map(([key, value], idx) => (
+                  <div
+                    key={key}
+                    className={`bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 hover:border-amber-500/30 transition-all hover:scale-105 animate-scaleIn stagger-${idx + 1}`}
+                  >
                     <div className="text-2xl font-bold text-amber-500 mb-1">{value}</div>
                     <div className="text-xs text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
                   </div>
@@ -367,7 +566,7 @@ export default function WellsDemo() {
               </div>
 
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-4 animate-fadeInUp stagger-5">
                 <Link
                   href={selectedJourney === 'seller' ? '/suppliers/join' : `/${selectedJourney}/chat`}
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-black font-semibold rounded-xl hover:from-amber-400 hover:to-orange-500 transition-all hover:scale-105"
