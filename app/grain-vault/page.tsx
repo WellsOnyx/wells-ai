@@ -162,7 +162,7 @@ export default function GrainVaultLanding() {
                 </div>
                 <pre className="text-sm overflow-x-auto">
                   <code className="text-gray-300">
-                    <span className="text-purple-400">import</span> {'{'}' createTreasurySDK '}{'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/sdk'</span>
+                    <span className="text-purple-400">import</span> {'{'} createTreasurySDK {'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/sdk'</span>
                     {'\n\n'}
                     <span className="text-blue-400">const</span> treasury = <span className="text-yellow-400">createTreasurySDK</span>({'{'}
                     {'\n  '}apiKey: process.env.<span className="text-green-400">GRAIN_VAULT_KEY</span>,
@@ -475,13 +475,13 @@ export default function GrainVaultLanding() {
                   <div className="p-6 overflow-x-auto">
                     <pre className="text-sm">
                       <code className="text-gray-300">
-                        <span className="text-purple-400">import</span> {'{'}' createTreasurySDK '}{'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/treasury-sdk'</span>
+                        <span className="text-purple-400">import</span> {'{'} createTreasurySDK {'}'} <span className="text-purple-400">from</span> <span className="text-green-400">'@grainandvault/treasury-sdk'</span>
                         {'\n\n'}
                         <span className="text-gray-500">// Initialize with your ERP</span>
                         {'\n'}<span className="text-blue-400">const</span> treasury = <span className="text-yellow-400">createTreasurySDK</span>({'{'}
                         {'\n  '}apiKey: process.env.<span className="text-green-400">GRAIN_VAULT_API_KEY</span>,
                         {'\n  '}organization: <span className="text-green-400">'acme-corp'</span>,
-                        {'\n  '}erp: {'{'}' type: <span className="text-green-400">'netsuite'</span>, version: <span className="text-green-400">'2024.1'</span> {'}'},
+                        {'\n  '}erp: {'{'} type: <span className="text-green-400">'netsuite'</span>, version: <span className="text-green-400">'2024.1'</span> {'}'},
                         {'\n'}{'}'})
                         {'\n\n'}
                         <span className="text-purple-400">await</span> treasury.<span className="text-yellow-400">initialize</span>()
@@ -500,7 +500,7 @@ export default function GrainVaultLanding() {
                         {'\n\n'}
                         <span className="text-gray-500">// Real-time treasury visibility</span>
                         {'\n'}<span className="text-blue-400">const</span> dashboard = <span className="text-purple-400">await</span> treasury.<span className="text-yellow-400">getDashboard</span>()
-                        {'\n'}<span className="text-gray-500">// {'{'}' balance, credit, failed_payments: 0, avg_settlement: "0.8s" {'}'}</span>
+                        {'\n'}<span className="text-gray-500">// {'{'} balance, credit, failed_payments: 0, avg_settlement: "0.8s" {'}'}</span>
                       </code>
                     </pre>
                   </div>
