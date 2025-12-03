@@ -31,7 +31,7 @@
   }
 
   * {
-    @apply border-border;
+    border-color: var(--border);
   }
 
   html {
