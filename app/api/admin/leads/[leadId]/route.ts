@@ -20,7 +20,7 @@ const isAdmin = (userId: string | null) => {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { leadId: string } }
+  { params }: { params: Promise<{ leadId: string }> }
 ) {
   try {
     const { userId } = await auth()
@@ -32,7 +32,7 @@ export async function GET(
       )
     }
 
-    const { leadId } = params
+    const { leadId } = await params
 
     const client = await pool.connect()
     try {

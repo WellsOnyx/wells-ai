@@ -15,7 +15,7 @@ import { getLead, updateLead, getLeadNotes, getLeadActivities, addLeadNote } fro
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { leadId: string } }
+  { params }: { params: Promise<{ leadId: string }> }
 ) {
   try {
     const { userId } = await auth()
@@ -24,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const leadId = params.leadId
+    const { leadId } = await params
 
     // Get the lead
     const lead = await getLead(leadId)
@@ -66,7 +66,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { leadId: string } }
+  { params }: { params: Promise<{ leadId: string }> }
 ) {
   try {
     const { userId } = await auth()
@@ -75,7 +75,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const leadId = params.leadId
+    const { leadId } = await params
 
     // Get the lead
     const lead = await getLead(leadId)
