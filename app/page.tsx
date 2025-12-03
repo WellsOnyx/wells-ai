@@ -24,7 +24,14 @@ import {
   Users,
   Clock,
   DollarSign,
-  ChevronRight
+  ChevronRight,
+  Target,
+  Lock,
+  Handshake,
+  Percent,
+  Search,
+  FileCheck,
+  BadgeCheck
 } from 'lucide-react'
 
 const JOURNEYS = [
@@ -67,7 +74,7 @@ const JOURNEYS = [
       'Get paid instantly via secure escrow'
     ],
     cta: 'Join as Seller',
-    href: '/suppliers/onboard',
+    href: '/suppliers/join',
     gradient: 'from-green-500 via-emerald-500 to-teal-500'
   },
   {
@@ -95,24 +102,52 @@ const TRUST_METRICS = [
 
 const FEATURES = [
   {
-    icon: MessageSquare,
-    title: 'Natural Language',
-    description: 'Talk to Wells like you would a colleague. No forms, no templates, no complexity.'
+    icon: Target,
+    title: 'AI-Powered Matching',
+    description: 'Advanced algorithms analyze your needs and match you with the perfect suppliers, candidates, or customers in seconds.',
+    gradient: 'from-blue-500 to-cyan-500'
   },
   {
-    icon: Sparkles,
-    title: 'AI-Powered Matching',
-    description: 'Advanced algorithms find the perfect suppliers, candidates, or customers for your needs.'
+    icon: Lock,
+    title: 'Escrow Protection',
+    description: 'Built-in secure escrow ensures safe payments for both buyers and sellers. Money released only when you\'re satisfied.',
+    gradient: 'from-green-500 to-emerald-500'
+  },
+  {
+    icon: Handshake,
+    title: 'Real-Time Negotiation',
+    description: 'Negotiate terms, pricing, and delivery in real-time with AI assistance. Close deals faster with smart suggestions.',
+    gradient: 'from-purple-500 to-pink-500'
+  },
+  {
+    icon: Percent,
+    title: 'Only 1% on Success',
+    description: 'No upfront costs, no subscriptions. Pay only 1% when you successfully close a deal. Free to browse and quote.',
+    gradient: 'from-amber-500 to-orange-500'
+  },
+  {
+    icon: MessageSquare,
+    title: 'Natural Language',
+    description: 'Talk to Wells like you would a colleague. No forms, no templates, no complexity. Just conversation.',
+    gradient: 'from-teal-500 to-cyan-500'
   },
   {
     icon: Zap,
     title: 'Lightning Fast',
-    description: 'Get matched and receive quotes within 24-48 hours. Close deals in days, not months.'
+    description: 'Get matched and receive quotes within 24-48 hours. Close deals in days, not months with automated workflows.',
+    gradient: 'from-yellow-500 to-amber-500'
   },
   {
-    icon: Shield,
-    title: 'Secure Escrow',
-    description: 'Built-in escrow protection ensures safe payments for both buyers and sellers.'
+    icon: BadgeCheck,
+    title: 'Verified Network',
+    description: 'Every supplier and professional is verified. Access a trusted network of quality partners and talent.',
+    gradient: 'from-indigo-500 to-purple-500'
+  },
+  {
+    icon: FileCheck,
+    title: 'Automated Compliance',
+    description: 'Legal docs, contracts, and compliance handled automatically. Focus on your business, not paperwork.',
+    gradient: 'from-rose-500 to-red-500'
   }
 ]
 
@@ -183,62 +218,260 @@ export default function WellsOnyxHome() {
         </header>
 
         {/* Hero Section */}
-        <section className="container mx-auto px-4 lg:px-8 pt-20 pb-32 md:pt-32 md:pb-40">
-          <div className="max-w-5xl mx-auto text-center">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm font-semibold mb-8 backdrop-blur-sm">
-              <Sparkles className="w-4 h-4" />
-              AI That Actually Does Things
+        <section className="container mx-auto px-4 lg:px-8 pt-20 pb-32 md:pt-32 md:pb-40 relative overflow-hidden">
+          {/* Dramatic ambient lighting effects */}
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Primary glow - top center */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-amber-500/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
+            {/* Secondary glow - bottom left */}
+            <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-orange-500/10 rounded-full blur-[100px]" />
+            {/* Accent glow - right */}
+            <div className="absolute top-1/2 right-0 w-[500px] h-[500px] bg-amber-400/10 rounded-full blur-[80px]" />
+            {/* Radial gradient overlay */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.3)_100%)]" />
+          </div>
+
+          <div className="max-w-5xl mx-auto text-center relative">
+            {/* Floating particles effect */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1 h-1 bg-amber-400/30 rounded-full"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animation: `float ${5 + Math.random() * 10}s ease-in-out infinite`,
+                    animationDelay: `${Math.random() * 5}s`,
+                  }}
+                />
+              ))}
             </div>
 
-            {/* Headline */}
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight">
-              <span className="block bg-gradient-to-r from-white via-white to-gray-500 bg-clip-text text-transparent">
+            {/* Badge with pulse effect */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm font-semibold mb-8 backdrop-blur-sm shadow-lg shadow-amber-500/10 relative group animate-pulse" style={{ animationDuration: '3s' }}>
+              <div className="absolute inset-0 rounded-full bg-amber-500/5 blur-xl group-hover:bg-amber-500/10 transition-colors" />
+              <Sparkles className="w-4 h-4 relative z-10" />
+              <span className="relative z-10">AI That Actually Does Things</span>
+            </div>
+
+            {/* Headline with enhanced gradient and glow */}
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight relative">
+              <span className="block bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent drop-shadow-2xl">
                 Talk to Wells.
               </span>
-              <span className="block bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 bg-clip-text text-transparent">
-                Get It Done.
+              <span className="block relative">
+                <span className="absolute inset-0 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 bg-clip-text text-transparent blur-2xl opacity-50" aria-hidden="true">
+                  Get It Done.
+                </span>
+                <span className="relative bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 bg-clip-text text-transparent">
+                  Get It Done.
+                </span>
               </span>
             </h1>
 
-            {/* Subheadline */}
-            <p className="text-xl md:text-2xl text-gray-400 mb-4 max-w-3xl mx-auto leading-relaxed">
+            {/* Compelling subheadline */}
+            <p className="text-xl md:text-2xl text-gray-400 mb-3 max-w-3xl mx-auto leading-relaxed">
               Need to hire? Source suppliers? Find customers? Close deals?
             </p>
-            <p className="text-2xl md:text-3xl text-white font-semibold mb-12">
+            <p className="text-2xl md:text-3xl text-white font-semibold mb-4 bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
               Just tell Wells what you need.
             </p>
+            <p className="text-lg text-gray-500 mb-12 max-w-2xl mx-auto">
+              AI-powered B2B commerce that turns conversations into closed deals.
+            </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+            {/* Premium CTA Buttons with gradients and shadows */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
               <Link
                 href="/founder/chat"
-                className="group px-8 py-4 bg-amber-500 text-black rounded-xl font-bold text-lg hover:bg-amber-400 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/50 flex items-center gap-2"
+                className="group relative px-8 py-4 bg-gradient-to-r from-amber-500 via-amber-500 to-amber-600 text-black rounded-xl font-bold text-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 overflow-hidden"
               >
-                Talk to Wells Now
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                {/* Shimmer effect on hover */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                <span className="relative z-10">Talk to Wells Now</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform relative z-10" />
               </Link>
               <Link
                 href="/demo"
-                className="px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-semibold text-lg hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-sm"
+                className="group relative px-8 py-4 bg-white/5 border border-white/10 rounded-xl font-semibold text-lg hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-sm hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl overflow-hidden"
               >
-                See What Wells Can Do
+                {/* Subtle gradient on hover */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="relative z-10">See What Wells Can Do</span>
               </Link>
             </div>
 
-            {/* Trust Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            {/* Social proof indicator */}
+            <div className="flex items-center justify-center gap-6 mb-16 text-sm text-gray-400">
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-2">
+                  {[...Array(4)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 border-2 border-black flex items-center justify-center text-xs font-bold text-black"
+                    >
+                      {String.fromCharCode(65 + i)}
+                    </div>
+                  ))}
+                </div>
+                <span className="ml-2">Trusted by 100+ companies</span>
+              </div>
+              <div className="hidden sm:block w-px h-4 bg-white/10" />
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 shadow-lg shadow-green-500/50 animate-pulse" style={{ animationDuration: '2s' }} />
+                <span>Live support 24/7</span>
+              </div>
+            </div>
+
+            {/* Enhanced Trust Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-4xl mx-auto">
               {TRUST_METRICS.map((metric, index) => (
-                <div key={index} className="card-premium p-6 hover:scale-105 cursor-pointer group">
-                  <metric.icon className="w-6 h-6 text-amber-500 mb-3 mx-auto group-hover:scale-110 transition-transform" />
-                  <div className="text-2xl md:text-3xl font-bold text-white mb-1 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">{metric.value}</div>
-                  <div className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">{metric.label}</div>
+                <div key={index} className="relative group cursor-pointer">
+                  {/* Glow effect on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/0 to-amber-500/0 group-hover:from-amber-500/10 group-hover:to-orange-500/10 rounded-xl blur-xl transition-all duration-500" />
+                  {/* Card */}
+                  <div className="relative card-premium p-6 group-hover:scale-105 transition-all duration-300">
+                    {/* Animated border on hover */}
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-500/0 via-amber-500/50 to-amber-500/0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ padding: '1px', WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' }} />
+                    <metric.icon className="w-6 h-6 text-amber-500 mb-3 mx-auto group-hover:scale-110 group-hover:text-amber-400 transition-all drop-shadow-lg" />
+                    <div className="text-2xl md:text-3xl font-bold text-white mb-1 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent group-hover:from-amber-400 group-hover:to-amber-500 transition-all">{metric.value}</div>
+                    <div className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">{metric.label}</div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
+
+        {/* Trusted By / Social Proof Section */}
+        <section className="container mx-auto px-4 lg:px-8 py-16 md:py-24">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-12">
+              <p className="text-sm font-semibold text-amber-400 mb-3 tracking-wider uppercase">Trusted by Industry Leaders</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white/90">
+                Powering Commerce for Enterprise
+              </h2>
+            </div>
+
+            {/* Partner Logos Grid */}
+            <div className="mb-20">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+                {[
+                  { name: 'TechCorp Global', abbr: 'TCG' },
+                  { name: 'Innovate Industries', abbr: 'II' },
+                  { name: 'FutureScale', abbr: 'FS' },
+                  { name: 'Quantum Systems', abbr: 'QS' },
+                  { name: 'Apex Manufacturing', abbr: 'AM' },
+                  { name: 'Velocity Partners', abbr: 'VP' },
+                  { name: 'Nexus Group', abbr: 'NG' },
+                  { name: 'Horizon Enterprises', abbr: 'HE' }
+                ].map((partner, index) => (
+                  <div
+                    key={index}
+                    className="group relative bg-white/[0.02] border border-white/10 rounded-xl p-8 hover:bg-white/[0.05] hover:border-amber-500/30 transition-all duration-300 backdrop-blur-sm flex items-center justify-center min-h-[120px]"
+                  >
+                    {/* Subtle gradient glow on hover */}
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-500/0 to-amber-600/0 group-hover:from-amber-500/5 group-hover:to-amber-600/5 transition-all duration-300 pointer-events-none" />
+
+                    {/* Logo placeholder - styled as premium brand mark */}
+                    <div className="relative text-center">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-lg bg-gradient-to-br from-white/10 to-white/5 border border-white/20 flex items-center justify-center group-hover:scale-110 group-hover:border-amber-500/40 transition-all duration-300">
+                        <span className="text-xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
+                          {partner.abbr}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors font-medium">
+                        {partner.name}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Stats Section with Glass Effect */}
+            <div className="relative">
+              {/* Background glow */}
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 blur-3xl -z-10" />
+
+              <div className="relative bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-2xl p-8 md:p-12 backdrop-blur-xl">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+                  {[
+                    {
+                      icon: DollarSign,
+                      stat: '$50M+',
+                      label: 'In Deals Facilitated',
+                      description: 'Total transaction volume'
+                    },
+                    {
+                      icon: Users,
+                      stat: '500+',
+                      label: 'Verified Suppliers',
+                      description: 'Ready to quote today'
+                    },
+                    {
+                      icon: TrendingUp,
+                      stat: '1%',
+                      label: 'Success Fee Only',
+                      description: 'No hidden charges'
+                    },
+                    {
+                      icon: Clock,
+                      stat: '24/7',
+                      label: 'AI Negotiation',
+                      description: 'Never miss a deal'
+                    }
+                  ].map((item, index) => (
+                    <div key={index} className="text-center group cursor-default">
+                      {/* Icon */}
+                      <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/30 flex items-center justify-center group-hover:scale-110 group-hover:from-amber-500/30 group-hover:to-amber-600/30 transition-all duration-300">
+                        <item.icon className="w-7 h-7 text-amber-400 group-hover:text-amber-300 transition-colors" />
+                      </div>
+
+                      {/* Stat */}
+                      <div className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-br from-white via-white to-gray-400 bg-clip-text text-transparent group-hover:from-amber-400 group-hover:via-amber-300 group-hover:to-amber-500 transition-all duration-300">
+                        {item.stat}
+                      </div>
+
+                      {/* Label */}
+                      <div className="text-sm md:text-base font-semibold text-white mb-1 group-hover:text-amber-400 transition-colors">
+                        {item.label}
+                      </div>
+
+                      {/* Description */}
+                      <div className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors">
+                        {item.description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Divider with additional trust signals */}
+                <div className="mt-10 pt-8 border-t border-white/10">
+                  <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 text-gray-400 text-sm md:text-base">
+                    <span className="inline-flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-amber-500" />
+                      <span>Enterprise-grade security</span>
+                    </span>
+                    <span className="hidden md:inline text-gray-600">•</span>
+                    <span className="inline-flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-500" />
+                      <span>Sub-48hr response time</span>
+                    </span>
+                    <span className="hidden md:inline text-gray-600">•</span>
+                    <span className="inline-flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-amber-500" />
+                      <span>99.9% platform uptime</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
         {/* Journeys Section */}
         <section id="journeys" className="container mx-auto px-4 lg:px-8 py-24">
           <div className="text-center mb-16">
@@ -295,76 +528,174 @@ export default function WellsOnyxHome() {
           </div>
         </section>
 
-        {/* Features Section */}
-        <section className="container mx-auto px-4 lg:px-8 py-24">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight">
-              Built for Speed
-            </h2>
-            <p className="text-xl text-gray-400">No forms. No complexity. Just results.</p>
-          </div>
+        {/* Features Section - Premium */}
+        <section className="container mx-auto px-4 lg:px-8 py-24 relative overflow-hidden">
+          {/* Background Accent */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-            {FEATURES.map((feature, index) => (
-              <div
-                key={index}
-                className="card-premium p-8 hover:scale-105 cursor-pointer group"
-              >
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center mb-4 shadow-lg group-hover:shadow-xl group-hover:shadow-amber-500/30 group-hover:scale-110 transition-all">
-                  <feature.icon className="w-6 h-6 text-black" />
-                </div>
-                <h3 className="text-xl font-bold mb-3 group-hover:text-amber-400 transition-colors">{feature.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed group-hover:text-gray-300 transition-colors">{feature.description}</p>
+          <div className="relative">
+            <div className="text-center mb-20">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm font-semibold mb-6 backdrop-blur-sm">
+                <Sparkles className="w-4 h-4" />
+                Platform Features
               </div>
-            ))}
+              <h2 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
+                <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  Everything You Need
+                </span>
+              </h2>
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+                Powerful AI-driven tools to streamline your entire business workflow
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+              {FEATURES.map((feature, index) => (
+                <div
+                  key={index}
+                  className="group relative bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-2xl p-8 hover:border-white/20 hover:from-white/10 hover:to-white/5 transition-all duration-500 cursor-pointer overflow-hidden"
+                  style={{
+                    animation: `fadeInUp 0.6s ease-out ${index * 0.1}s both`
+                  }}
+                >
+                  {/* Gradient Glow on Hover */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 blur-2xl transition-all duration-500 pointer-events-none`} />
+
+                  {/* Shimmer Effect */}
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
+
+                  <div className="relative">
+                    {/* Icon */}
+                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 shadow-lg group-hover:shadow-2xl group-hover:scale-110 transition-all duration-500 relative overflow-hidden`}>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                      <feature.icon className="w-7 h-7 text-white relative z-10" />
+                    </div>
+
+                    {/* Content */}
+                    <h3 className="text-xl font-bold mb-3 group-hover:text-amber-400 transition-colors duration-300">
+                      {feature.title}
+                    </h3>
+                    <p className="text-gray-400 text-sm leading-relaxed group-hover:text-gray-300 transition-colors duration-300">
+                      {feature.description}
+                    </p>
+                  </div>
+
+                  {/* Bottom Border Accent */}
+                  <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* How It Works */}
-        <section id="how-it-works" className="container mx-auto px-4 lg:px-8 py-24">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight">
-                How Wells Works
+        {/* How It Works - Enhanced */}
+        <section id="how-it-works" className="container mx-auto px-4 lg:px-8 py-24 relative">
+          {/* Background Gradient Orbs */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
+          </div>
+
+          <div className="max-w-6xl mx-auto relative">
+            <div className="text-center mb-20">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm font-semibold mb-6 backdrop-blur-sm">
+                <Zap className="w-4 h-4" />
+                Simple Process
+              </div>
+              <h2 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
+                <span className="bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                  How Wells Works
+                </span>
               </h2>
-              <p className="text-xl text-gray-400">Three steps. No forms. No complexity.</p>
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+                Three simple steps. No forms. No complexity. Just results.
+              </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-8 md:gap-12">
               {[
                 {
                   step: '01',
+                  icon: MessageSquare,
                   title: 'Talk to Wells',
-                  description: 'Tell Wells what you need in plain English. No forms, no templates, just conversation.'
+                  description: 'Tell Wells what you need in plain English. No forms, no templates, just natural conversation.',
+                  details: 'Wells understands context and asks clarifying questions to ensure perfect matches.'
                 },
                 {
                   step: '02',
+                  icon: Search,
                   title: 'Wells Gets to Work',
-                  description: 'AI finds matches, sends outreach, coordinates responses automatically in the background.'
+                  description: 'AI finds matches, sends outreach, and coordinates responses automatically in the background.',
+                  details: 'Machine learning algorithms screen thousands of options to find your perfect match.'
                 },
                 {
                   step: '03',
+                  icon: CheckCircle,
                   title: 'You Close Deals',
-                  description: 'Review results, make decisions, close deals with built-in escrow protection.'
+                  description: 'Review results, negotiate terms, and close deals with built-in escrow protection.',
+                  details: 'Secure payments, automated contracts, and compliance handled for you.'
                 }
               ].map((step, index) => (
-                <div key={index} className="relative group">
+                <div
+                  key={index}
+                  className="relative group"
+                  style={{
+                    animation: `fadeInUp 0.6s ease-out ${index * 0.2}s both`
+                  }}
+                >
                   {/* Connector Line */}
                   {index < 2 && (
-                    <div className="hidden md:block absolute top-16 left-1/2 w-full h-0.5 bg-gradient-to-r from-amber-500/50 to-transparent z-0" />
+                    <div className="hidden md:block absolute top-20 left-[60%] w-[80%] h-0.5 z-0">
+                      <div className="h-full bg-gradient-to-r from-amber-500/50 via-amber-500/30 to-transparent" />
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                    </div>
                   )}
 
                   <div className="text-center relative z-10">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-3xl font-bold mx-auto mb-6 shadow-2xl shadow-amber-500/50 group-hover:scale-110 group-hover:shadow-amber-500/70 transition-all relative overflow-hidden">
-                      {/* Shimmer effect */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                      <span className="relative z-10">{step.step}</span>
+                    {/* Step Number Badge */}
+                    <div className="relative inline-flex mb-6">
+                      <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-4xl font-bold shadow-2xl shadow-amber-500/50 group-hover:scale-110 group-hover:shadow-amber-500/70 transition-all duration-500 relative overflow-hidden">
+                        {/* Animated Background */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+                        {/* Pulse Ring */}
+                        <div className="absolute inset-0 rounded-2xl border-4 border-amber-400 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500" />
+
+                        <span className="relative z-10 text-black">{step.step}</span>
+                      </div>
                     </div>
-                    <h3 className="text-2xl font-bold mb-4 group-hover:text-amber-400 transition-colors">{step.title}</h3>
-                    <p className="text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors">{step.description}</p>
+
+                    {/* Icon */}
+                    <div className="flex justify-center mb-4">
+                      <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:border-amber-500/30 transition-all duration-300">
+                        <step.icon className="w-6 h-6 text-amber-400 group-hover:scale-110 transition-transform duration-300" />
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <h3 className="text-2xl font-bold mb-4 group-hover:text-amber-400 transition-colors duration-300">
+                      {step.title}
+                    </h3>
+                    <p className="text-gray-300 leading-relaxed mb-3 group-hover:text-white transition-colors duration-300">
+                      {step.description}
+                    </p>
+                    <p className="text-sm text-gray-500 leading-relaxed group-hover:text-gray-400 transition-colors duration-300">
+                      {step.details}
+                    </p>
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Bottom CTA */}
+            <div className="text-center mt-16">
+              <Link
+                href="/founder/chat"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-xl font-bold text-lg hover:from-amber-400 hover:to-amber-500 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/50 group"
+              >
+                Get Started Now
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
           </div>
         </section>
@@ -482,7 +813,7 @@ export default function WellsOnyxHome() {
                 <ul className="space-y-3 text-sm text-gray-400">
                   <li><Link href="/founder/chat" className="hover:text-white transition-colors">Founder</Link></li>
                   <li><Link href="/buyer/chat" className="hover:text-white transition-colors">Buyer</Link></li>
-                  <li><Link href="/suppliers/onboard" className="hover:text-white transition-colors">Seller</Link></li>
+                  <li><Link href="/suppliers/join" className="hover:text-white transition-colors">Seller</Link></li>
                   <li><Link href="/jobs/chat" className="hover:text-white transition-colors">Jobs</Link></li>
                 </ul>
               </div>
@@ -492,15 +823,15 @@ export default function WellsOnyxHome() {
                 <ul className="space-y-3 text-sm text-gray-400">
                   <li><Link href="#how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
                   <li><Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                  <li><Link href="/partnerships" className="hover:text-white transition-colors">Partnerships</Link></li>
+                  <li><Link href="/demo" className="hover:text-white transition-colors">See Demo</Link></li>
                 </ul>
               </div>
 
               <div>
-                <h4 className="font-semibold mb-4 text-sm">Company</h4>
+                <h4 className="font-semibold mb-4 text-sm">Get Started</h4>
                 <ul className="space-y-3 text-sm text-gray-400">
-                  <li><Link href="/about" className="hover:text-white transition-colors">About</Link></li>
-                  <li><Link href="/support" className="hover:text-white transition-colors">Support</Link></li>
+                  <li><Link href="/sign-up" className="hover:text-white transition-colors">Sign Up</Link></li>
+                  <li><Link href="/sign-in" className="hover:text-white transition-colors">Sign In</Link></li>
                 </ul>
               </div>
             </div>
