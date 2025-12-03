@@ -818,64 +818,68 @@ export default function GrainVaultLanding() {
         </div>
       </section>
 
-      {/* Developers Section */}
+      {/* Built for Everyone Section */}
       <section id="developers" className="py-24 px-6 lg:px-8 bg-white/[0.02]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">Built for developers</h2>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Built for everyone</h2>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              Modern APIs, comprehensive docs, and SDKs for every platform.
+              Whether you're a CFO, treasury manager, or developer,
+              getting started takes minutes, not months.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-black/50 border border-white/10 rounded-xl p-8 hover:border-green-500/30 transition-all">
               <div className="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center mb-6">
-                <Code className="w-6 h-6 text-green-400" />
+                <DollarSign className="w-6 h-6 text-green-400" />
               </div>
-              <h3 className="text-xl font-bold mb-3">API-First Design</h3>
+              <h3 className="text-xl font-bold mb-3">For CFOs</h3>
               <p className="text-gray-400 text-sm mb-6">
-                RESTful APIs with real-time webhooks. Built for scale, designed for simplicity.
+                No technical expertise required. Our dashboard shows your treasury health,
+                credit lines, and payment status in plain English.
               </p>
               <Link
                 href="/grain-vault/demo"
                 className="text-green-400 hover:text-green-300 text-sm font-medium inline-flex items-center gap-1"
               >
-                API Reference
+                View Dashboard
                 <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
             <div className="bg-black/50 border border-white/10 rounded-xl p-8 hover:border-blue-500/30 transition-all">
               <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center mb-6">
-                <FileCheck className="w-6 h-6 text-blue-400" />
+                <Building2 className="w-6 h-6 text-blue-400" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Type-Safe SDKs</h3>
+              <h3 className="text-xl font-bold mb-3">For Treasury Teams</h3>
               <p className="text-gray-400 text-sm mb-6">
-                TypeScript, Python, Go, and Ruby SDKs with full IntelliSense support.
+                One-click ERP integration. Automated reconciliation.
+                No more spreadsheet gymnastics or manual entry.
               </p>
               <Link
                 href="/grain-vault/demo"
                 className="text-blue-400 hover:text-blue-300 text-sm font-medium inline-flex items-center gap-1"
               >
-                View SDKs
+                See Integration
                 <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
             <div className="bg-black/50 border border-white/10 rounded-xl p-8 hover:border-purple-500/30 transition-all">
               <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center mb-6">
-                <Activity className="w-6 h-6 text-purple-400" />
+                <Code className="w-6 h-6 text-purple-400" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Live Sandbox</h3>
+              <h3 className="text-xl font-bold mb-3">For Developers</h3>
               <p className="text-gray-400 text-sm mb-6">
-                Test in production-like environment. No credit card required.
+                Modern APIs, type-safe SDKs, and a sandbox environment.
+                Ship treasury features in hours, not quarters.
               </p>
               <Link
                 href="/grain-vault/demo"
                 className="text-purple-400 hover:text-purple-300 text-sm font-medium inline-flex items-center gap-1"
               >
-                Try Sandbox
+                API Docs
                 <ExternalLink className="w-3 h-3" />
               </Link>
             </div>
@@ -883,23 +887,91 @@ export default function GrainVaultLanding() {
         </div>
       </section>
 
-      {/* Security & Trust Section */}
+      {/* Next-Generation Stability Section */}
       <section className="py-24 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">Enterprise-grade security</h2>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Next-generation stability</h2>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              Built for financial institutions. Audited by industry leaders.
+              VAULT protects your value with automatic manipulation detection
+              and the industry's most rigorous stability guarantee.
             </p>
           </div>
 
+          {/* Main Stability Feature */}
+          <div className="mb-16">
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur opacity-20" />
+              <div className="relative bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-2xl p-8 md:p-12">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl md:text-3xl font-bold mb-2">Automatic Price Protection</h3>
+                    <p className="text-gray-400">When VAULT detects currency manipulation, it acts instantly.</p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="bg-black/30 border border-white/10 rounded-xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                        <AlertCircle className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <span className="text-sm font-semibold text-blue-400">Step 1</span>
+                    </div>
+                    <h4 className="font-bold mb-2">Manipulation Detected</h4>
+                    <p className="text-sm text-gray-400">
+                      AI monitors market conditions 24/7. Any abnormal activity triggers immediate review.
+                    </p>
+                  </div>
+
+                  <div className="bg-black/30 border border-white/10 rounded-xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                        <Lock className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <span className="text-sm font-semibold text-purple-400">Step 2</span>
+                    </div>
+                    <h4 className="font-bold mb-2">Price Freeze</h4>
+                    <p className="text-sm text-gray-400">
+                      GRAIN price automatically locks to the previous day's high. Your value is protected.
+                    </p>
+                  </div>
+
+                  <div className="bg-black/30 border border-white/10 rounded-xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                        <FileCheck className="w-5 h-5 text-green-400" />
+                      </div>
+                      <span className="text-sm font-semibold text-green-400">Step 3</span>
+                    </div>
+                    <h4 className="font-bold mb-2">7-Day Audit</h4>
+                    <p className="text-sm text-gray-400">
+                      Full blockchain audit of float and asset reserves. Price resets higher after verification.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-8 border-t border-white/10 text-center">
+                  <p className="text-lg text-gray-300 mb-2">The result?</p>
+                  <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                    The most stable stablecoin in existence.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stability Metrics */}
           <div className="grid md:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 rounded-xl bg-green-500/20 flex items-center justify-center mx-auto mb-4">
                 <Lock className="w-8 h-8 text-green-400" />
               </div>
-              <h3 className="font-semibold mb-2">SOC 2 Type II</h3>
-              <p className="text-sm text-gray-400">Certified security controls</p>
+              <h3 className="font-semibold mb-2">Price Protection</h3>
+              <p className="text-sm text-gray-400">Auto-freeze on manipulation</p>
             </div>
 
             <div className="text-center">
@@ -907,23 +979,23 @@ export default function GrainVaultLanding() {
                 <Shield className="w-8 h-8 text-blue-400" />
               </div>
               <h3 className="font-semibold mb-2">110% Collateral</h3>
-              <p className="text-sm text-gray-400">Over-collateralized reserves</p>
+              <p className="text-sm text-gray-400">Plus asset reserves in float</p>
             </div>
 
             <div className="text-center">
               <div className="w-16 h-16 rounded-xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
                 <Activity className="w-8 h-8 text-purple-400" />
               </div>
-              <h3 className="font-semibold mb-2">Real-Time Audits</h3>
-              <p className="text-sm text-gray-400">Every block, verifiable</p>
+              <h3 className="font-semibold mb-2">7-Day Deep Audit</h3>
+              <p className="text-sm text-gray-400">Full transparency on-chain</p>
             </div>
 
             <div className="text-center">
               <div className="w-16 h-16 rounded-xl bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
-                <Globe className="w-8 h-8 text-amber-400" />
+                <TrendingUp className="w-8 h-8 text-amber-400" />
               </div>
-              <h3 className="font-semibold mb-2">Global Coverage</h3>
-              <p className="text-sm text-gray-400">24/7/365 uptime SLA</p>
+              <h3 className="font-semibold mb-2">Value Only Goes Up</h3>
+              <p className="text-sm text-gray-400">Reset higher after audits</p>
             </div>
           </div>
         </div>
