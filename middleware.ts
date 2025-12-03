@@ -107,7 +107,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 }, {
   signInUrl: '/sign-in',
   signUpUrl: '/sign-up',
-  afterSignInUrl: '/onboarding',
+  afterSignInUrl: '/dashboard',
   afterSignUpUrl: '/onboarding',
 })
 

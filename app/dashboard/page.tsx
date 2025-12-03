@@ -1,54 +1,211 @@
-import { currentUser } from '@clerk/nextjs/server'
+'use client'
+
+/**
+ * Personalized Dashboard with Embedded Wells AI
+ *
+ * This is the main workspace after login. Wells is ready to work immediately.
+ * Shows:
+ * - Personalized greeting and context
+ * - Embedded chat interface
+ * - Quick actions based on journey
+ * - Activity feed
+ */
+
+import { useUser } from '@clerk/nextjs'
 import { UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
+import { useState, useRef, useEffect } from 'react'
 import {
+  Send,
+  Loader2,
   Rocket,
   ShoppingCart,
   Store,
   Briefcase,
-  ArrowRight,
-  MessageSquare,
   TrendingUp,
   CheckCircle,
-  Clock
+  Clock,
+  Sparkles,
+  Settings,
+  Bell,
+  ChevronRight
 } from 'lucide-react'
-import { redirect } from 'next/navigation'
 
-export default async function DashboardPage() {
-  const user = await currentUser()
+type Journey = 'founder' | 'buyer' | 'seller' | 'jobs' | undefined
 
-  if (!user) {
-    redirect('/sign-in')
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+const JOURNEY_CONFIG = {
+  founder: {
+    title: 'Founder Mode',
+    icon: Rocket,
+    color: 'amber',
+    gradient: 'from-amber-500 to-orange-600',
+    placeholder: "I need to hire a CTO...",
+    greeting: "I'm ready to help you build. Need talent, customers, or funding?",
+    quickActions: [
+      { label: 'Hire Talent', prompt: 'I need to hire for my startup' },
+      { label: 'Find Customers', prompt: 'I need to find customers for my product' },
+      { label: 'Source Suppliers', prompt: 'I need to source suppliers' },
+    ]
+  },
+  buyer: {
+    title: 'Buyer Mode',
+    icon: ShoppingCart,
+    color: 'blue',
+    gradient: 'from-blue-500 to-cyan-600',
+    placeholder: "I need to source 10,000 units of...",
+    greeting: "I'm ready to source. What products or services do you need?",
+    quickActions: [
+      { label: 'Get Quotes', prompt: 'I need quotes for bulk materials' },
+      { label: 'Find Suppliers', prompt: 'Help me find verified suppliers' },
+      { label: 'Compare Options', prompt: 'Compare suppliers for me' },
+    ]
+  },
+  seller: {
+    title: 'Seller Mode',
+    icon: Store,
+    color: 'green',
+    gradient: 'from-green-500 to-emerald-600',
+    placeholder: "I want to sell to companies looking for...",
+    greeting: "I'm ready to find you customers. What do you sell?",
+    quickActions: [
+      { label: 'Find Leads', prompt: 'Find me qualified buyers' },
+      { label: 'List Products', prompt: 'List my products to buyers' },
+      { label: 'View Opportunities', prompt: 'Show me RFQs I can respond to' },
+    ]
+  },
+  jobs: {
+    title: 'Jobs Mode',
+    icon: Briefcase,
+    color: 'purple',
+    gradient: 'from-purple-500 to-pink-600',
+    placeholder: "I'm looking for a role as...",
+    greeting: "I'm ready to help your job search. What role are you seeking?",
+    quickActions: [
+      { label: 'Find Roles', prompt: 'Find me relevant job opportunities' },
+      { label: 'Update Profile', prompt: 'Help me update my profile' },
+      { label: 'Prep Interview', prompt: 'Help me prepare for interviews' },
+    ]
+  },
+}
+
+export default function DashboardPage() {
+  const { user, isLoaded } = useUser()
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Get journey from Clerk metadata
+  const journey = (user?.publicMetadata?.selectedJourney as Journey) || 'founder'
+  const config = JOURNEY_CONFIG[journey] || JOURNEY_CONFIG.founder
+  const firstName = user?.firstName || 'there'
+
+  // Auto-scroll and initial greeting
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  useEffect(() => {
+    if (isLoaded && user && messages.length === 0) {
+      setMessages([{
+        role: 'assistant',
+        content: `Hey ${firstName}! ${config.greeting}`
+      }])
+    }
+  }, [isLoaded, user, firstName, config.greeting, messages.length])
+
+  const sendMessage = async (text?: string) => {
+    const messageText = text || input.trim()
+    if (!messageText || isLoading) return
+
+    setInput('')
+    setIsLoading(true)
+
+    const updatedMessages: Message[] = [
+      ...messages,
+      { role: 'user', content: messageText },
+    ]
+    setMessages(updatedMessages)
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: updatedMessages,
+          journey,
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to send message')
+
+      const data = await response.json()
+      setMessages([
+        ...updatedMessages,
+        { role: 'assistant', content: data.message },
+      ])
+    } catch {
+      setMessages([
+        ...updatedMessages,
+        { role: 'assistant', content: "I'm having trouble connecting. Please try again." },
+      ])
+    } finally {
+      setIsLoading(false)
+      inputRef.current?.focus()
+    }
   }
 
-  const firstName = user.firstName || 'there'
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+      </div>
+    )
+  }
+
+  const Icon = config.icon
 
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
       <header className="border-b border-gray-800 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600" />
               <span className="text-xl font-bold">Wells Onyx</span>
             </Link>
-            <div className="flex items-center gap-4">
-              <nav className="hidden md:flex items-center gap-6">
-                <Link href="/dashboard" className="text-white font-semibold">
-                  Dashboard
-                </Link>
-                <Link href="/deals" className="text-gray-300 hover:text-white transition-colors">
-                  Deals
-                </Link>
-                <Link href="/settings" className="text-gray-300 hover:text-white transition-colors">
-                  Settings
-                </Link>
-              </nav>
+
+            <div className="flex items-center gap-3">
+              {/* Journey Indicator */}
+              <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r ${config.gradient} bg-opacity-20 border border-${config.color}-500/30`}>
+                <Icon className="w-4 h-4" />
+                <span className="text-sm font-medium">{config.title}</span>
+              </div>
+
+              <button className="p-2 text-gray-400 hover:text-white transition-colors">
+                <Bell className="w-5 h-5" />
+              </button>
+              <Link href="/settings" className="p-2 text-gray-400 hover:text-white transition-colors">
+                <Settings className="w-5 h-5" />
+              </Link>
               <UserButton
                 appearance={{
                   elements: {
-                    avatarBox: "w-10 h-10",
+                    avatarBox: "w-9 h-9",
                   }
                 }}
               />
@@ -57,154 +214,176 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
-        {/* Welcome Section */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold mb-2">
-            Welcome back, {firstName}!
-          </h1>
-          <p className="text-xl text-gray-400">What would you like to accomplish today?</p>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-400 text-sm font-semibold">Active Deals</h3>
-              <TrendingUp className="w-5 h-5 text-amber-500" />
+      <div className="flex h-[calc(100vh-57px)]">
+        {/* Sidebar - Quick Stats & Actions */}
+        <aside className="hidden lg:flex flex-col w-72 border-r border-gray-800 bg-gray-950/50">
+          {/* User Profile Summary */}
+          <div className="p-4 border-b border-gray-800">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center`}>
+                <Icon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold">{firstName}</h3>
+                <p className="text-sm text-gray-400">{config.title}</p>
+              </div>
             </div>
-            <div className="text-3xl font-bold mb-2">0</div>
-            <p className="text-sm text-gray-500">No active deals yet</p>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-400 text-sm font-semibold">Completed</h3>
-              <CheckCircle className="w-5 h-5 text-green-500" />
+          {/* Quick Stats */}
+          <div className="p-4 border-b border-gray-800">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Activity</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <TrendingUp className="w-4 h-4 text-amber-500" />
+                  <span>Active Deals</span>
+                </div>
+                <span className="font-semibold">0</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span>Completed</span>
+                </div>
+                <span className="font-semibold">0</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <span>Pending</span>
+                </div>
+                <span className="font-semibold">0</span>
+              </div>
             </div>
-            <div className="text-3xl font-bold mb-2">0</div>
-            <p className="text-sm text-gray-500">Start your first deal</p>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-400 text-sm font-semibold">Pending</h3>
-              <Clock className="w-5 h-5 text-blue-500" />
+          {/* Quick Actions */}
+          <div className="p-4 flex-1">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Quick Actions</h4>
+            <div className="space-y-2">
+              {config.quickActions.map((action, i) => (
+                <button
+                  key={i}
+                  onClick={() => sendMessage(action.prompt)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 transition-all text-sm text-left"
+                >
+                  <span>{action.label}</span>
+                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                </button>
+              ))}
             </div>
-            <div className="text-3xl font-bold mb-2">0</div>
-            <p className="text-sm text-gray-500">No pending actions</p>
           </div>
-        </div>
 
-        {/* Quick Actions */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Switch Journey */}
+          <div className="p-4 border-t border-gray-800">
             <Link
-              href="/founder/chat"
-              className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-amber-500 transition-all group"
+              href="/onboarding"
+              className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
             >
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Rocket className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Founder Tools</h3>
-              <p className="text-sm text-gray-400 mb-4">Hire talent, find customers, raise capital</p>
-              <div className="flex items-center gap-2 text-amber-500 text-sm font-semibold">
-                Start now <ArrowRight className="w-4 h-4" />
-              </div>
-            </Link>
-
-            <Link
-              href="/buyer/chat"
-              className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-amber-500 transition-all group"
-            >
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <ShoppingCart className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Source Products</h3>
-              <p className="text-sm text-gray-400 mb-4">Get quotes from verified suppliers</p>
-              <div className="flex items-center gap-2 text-amber-500 text-sm font-semibold">
-                Start now <ArrowRight className="w-4 h-4" />
-              </div>
-            </Link>
-
-            <Link
-              href="/suppliers/onboard"
-              className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-amber-500 transition-all group"
-            >
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Store className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Sell Products</h3>
-              <p className="text-sm text-gray-400 mb-4">Get matched with qualified buyers</p>
-              <div className="flex items-center gap-2 text-amber-500 text-sm font-semibold">
-                Start now <ArrowRight className="w-4 h-4" />
-              </div>
-            </Link>
-
-            <Link
-              href="/jobs/chat"
-              className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-amber-500 transition-all group"
-            >
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Briefcase className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Find Jobs</h3>
-              <p className="text-sm text-gray-400 mb-4">Get matched with your ideal role</p>
-              <div className="flex items-center gap-2 text-amber-500 text-sm font-semibold">
-                Start now <ArrowRight className="w-4 h-4" />
-              </div>
+              <Sparkles className="w-4 h-4" />
+              <span>Switch Journey</span>
             </Link>
           </div>
-        </div>
+        </aside>
 
-        {/* Get Started Guide */}
-        <div className="bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/30 rounded-2xl p-8">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
-              <MessageSquare className="w-6 h-6 text-black" />
+        {/* Main Chat Area */}
+        <main className="flex-1 flex flex-col">
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="max-w-3xl mx-auto space-y-4">
+              {/* Welcome Banner - Only show when no messages */}
+              {messages.length <= 1 && (
+                <div className={`rounded-2xl p-6 bg-gradient-to-br ${config.gradient}/10 border border-${config.color}-500/20 mb-6`}>
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center flex-shrink-0`}>
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold mb-1">Wells is ready to work</h2>
+                      <p className="text-gray-400">
+                        Just type what you need. I'll find matches, negotiate deals, and only charge 1% when something closes.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Mobile Quick Actions */}
+                  <div className="lg:hidden flex flex-wrap gap-2 mt-4">
+                    {config.quickActions.map((action, i) => (
+                      <button
+                        key={i}
+                        onClick={() => sendMessage(action.prompt)}
+                        className={`px-3 py-1.5 rounded-full bg-${config.color}-500/20 border border-${config.color}-500/30 text-sm hover:bg-${config.color}-500/30 transition-colors`}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Messages */}
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                      message.role === 'user'
+                        ? `bg-gradient-to-r ${config.gradient} text-white`
+                        : 'bg-gray-900 border border-gray-800'
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  </div>
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className={`w-4 h-4 text-${config.color}-500 animate-spin`} />
+                      <span className="text-sm text-gray-400">Wells is working...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
-            <div className="flex-1">
-              <h3 className="text-2xl font-bold mb-2">Ready to get started?</h3>
-              <p className="text-gray-300 mb-6">
-                Just tell Wells what you need. Whether you're looking to hire, source products, find customers, or discover opportunities - Wells will handle the rest.
+          </div>
+
+          {/* Input Area */}
+          <div className="border-t border-gray-800 bg-black/50 backdrop-blur-xl p-4">
+            <div className="max-w-3xl mx-auto">
+              <div className="flex gap-3">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder={config.placeholder}
+                  disabled={isLoading}
+                  className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-50 transition-all"
+                />
+                <button
+                  onClick={() => sendMessage()}
+                  disabled={!input.trim() || isLoading}
+                  className={`bg-gradient-to-r ${config.gradient} text-white px-5 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-${config.color}-500/20`}
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-center text-xs text-gray-500 mt-2">
+                Your AI negotiates. You approve. 1% on closed deals.
               </p>
-              <Link
-                href="/founder/chat"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-amber-500 text-black rounded-lg font-semibold hover:bg-amber-600 transition-colors"
-              >
-                Talk to Wells
-                <ArrowRight className="w-5 h-5" />
-              </Link>
             </div>
           </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-6">Recent Activity</h2>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-            <MessageSquare className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No activity yet</h3>
-            <p className="text-gray-400 mb-6">Start a conversation with Wells to see your activity here</p>
-            <Link
-              href="/founder/chat"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-amber-500 text-black rounded-lg font-semibold hover:bg-amber-600 transition-colors"
-            >
-              Get Started
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-800 mt-12">
-        <div className="container mx-auto px-4 py-8 text-center text-sm text-gray-400">
-          <p>© 2025 Wells Onyx. All rights reserved.</p>
-        </div>
-      </footer>
+        </main>
+      </div>
     </div>
   )
 }
