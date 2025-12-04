@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
 
     // Build response based on type
     const response: PaginatedResponse<ErpPurchaseOrder | ErpInvoice | ErpVendor | ErpLedgerEntry> = {
-      data: paginatedObjects as (ErpPurchaseOrder | ErpInvoice | ErpVendor | ErpLedgerEntry)[],
+      data: paginatedObjects as unknown as (ErpPurchaseOrder | ErpInvoice | ErpVendor | ErpLedgerEntry)[],
       pagination: {
         page: params.page!,
         limit: params.limit!,
