@@ -29,7 +29,7 @@ export {
 export { GET as getProviders, POST as createProvider } from './api/route-providers'
 export { POST as initiateConnection, GET as getConnections } from './api/route-connect'
 export { POST as triggerSync, GET as getSyncStatus } from './api/route-sync'
-export { GET as getObjects, POST as queryObjects } from './api/route-objects'
+export { GET as getObjects } from './api/route-objects'
 
 // Re-export key types for convenience
 export type {
