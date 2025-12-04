@@ -234,7 +234,7 @@ async function processSyncInBackground(
     // Mark sync complete
     syncLog.status = 'completed'
     syncLog.completedAt = new Date().toISOString()
-    syncLog.duration_ms = Date.now() - new Date(syncLog.startedAt).getTime()
+    syncLog.duration = Date.now() - new Date(syncLog.startedAt).getTime()
 
   } catch (error) {
     syncLog.status = 'failed'
@@ -244,7 +244,7 @@ async function processSyncInBackground(
       error: error instanceof Error ? error.message : 'Sync failed',
     })
     syncLog.completedAt = new Date().toISOString()
-    syncLog.duration_ms = Date.now() - new Date(syncLog.startedAt).getTime()
+    syncLog.duration = Date.now() - new Date(syncLog.startedAt).getTime()
 
     connection.lastSyncStatus = 'failed'
     connection.lastSyncError = error instanceof Error ? error.message : 'Unknown error'
