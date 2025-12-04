@@ -31,16 +31,4 @@ export { POST as initiateConnection, GET as getConnections } from './api/route-c
 export { POST as triggerSync, GET as getSyncStatus } from './api/route-sync'
 export { GET as getObjects } from './api/route-objects'
 
-// Re-export key types for convenience
-export type {
-  IntegrationProviderConfig,
-  IntegrationConnection,
-  NormalizedErpObject,
-  ErpPurchaseOrder,
-  ErpInvoice,
-  ErpVendor,
-  ErpLedgerEntry,
-  ObjectMapping,
-  SyncLog,
-  WebhookEvent,
-} from './types'
+// Key types are already exported via `export * from './types'` above
