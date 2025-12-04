@@ -17,36 +17,7 @@
 // Types and interfaces
 export * from './types'
 
-// Services - Intent Classification
-export {
-  classifyIntent,
-  extractEntities,
-  getMissingFields,
-  generateQuickReplies,
-  getFieldPrompt,
-} from './services/intent-classifier'
-
-// Services - State Machine
-export {
-  createConversation,
-  ConversationStateMachine,
-} from './services/state-machine'
-
 // API route handlers
-export { POST as createPO, suggestFields, validateLineItem } from './api/route-create-po'
+export { POST as createPO } from './api/route-create-po'
 export { POST as updateVendor } from './api/route-update-vendor'
 export { GET as getSummary } from './api/route-summary'
-
-// Re-export key types for convenience
-export type {
-  ErpIntent,
-  IntentDefinition,
-  ExtractedEntities,
-  ConversationState,
-  ConversationContext,
-  StateTransition,
-  ActionResult,
-  ConversationalRequest,
-  ConversationalResponse,
-  SuggestedAction,
-} from './types'
