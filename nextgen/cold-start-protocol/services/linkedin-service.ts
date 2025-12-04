@@ -754,7 +754,7 @@ export async function executeLinkedInSearch(
   }
 }
 
-export async function executeLinkedInConnect(
+export async function executeLinkedInConnection(
   service: LinkedInService,
   action: CampaignAction
 ): Promise<ActionResult> {

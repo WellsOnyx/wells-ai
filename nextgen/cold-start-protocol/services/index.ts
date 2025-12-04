@@ -18,7 +18,7 @@ export {
   LinkedInService,
   createLinkedInService,
   executeLinkedInSearch,
-  executeLinkedInConnection,
+  executeLinkedInConnection,  // renamed from executeLinkedInConnect
   executeLinkedInMessage,
 } from './linkedin-service'
 
