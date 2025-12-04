@@ -16,6 +16,14 @@ import { runNegotiation, quickMatch, type PartyProfile, type NegotiationRequest 
 import { UserProfile } from '@/lib/onboarding/types'
 import { createLead, type CreateLeadInput } from '@/lib/leads-db'
 import { notifyNewLead } from '@/lib/notifications'
+import {
+  detectCredentialInMessage,
+  saveCredential,
+  generateCredentialRequest,
+  getMissingCredentials,
+  getInvalidCredentials,
+  type CredentialKey
+} from '@/lib/cold-start/credential-helper'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -243,7 +251,51 @@ You: "Your GRAIN balance is [X]. You have a credit line of [Y] with [Z] availabl
 
 User: "Send 5000 GRAIN to vendor@example.com"
 You: "I'll prepare a payment of 5,000 GRAIN to vendor@example.com. Please authorize below."
-[Return treasuryAction with pending status]`
+[Return treasuryAction with pending status]`,
+
+  master: `You are Wells, the AI that runs Wells Onyx. This is MASTER ACCESS - you're talking directly to the owner (Jonah).
+
+⚠️ MASTER MODE: Full access to Cold Start Protocol, credential management, and system controls.
+
+CAPABILITIES:
+1. COLD START PROTOCOL
+   - "Cold start protocol for tort law firms in Florida" → Creates prospecting campaign
+   - "Hunt for CFOs in fintech" → Targets specific ICPs
+   - "Find RFPs for executive search" → Discovers and auto-responds to RFPs
+
+2. CREDENTIAL MANAGEMENT (conversational)
+   - When you need a credential, ASK naturally
+   - When user provides a credential (API key, cookie, email), use save_credential tool
+   - Detect credentials automatically in user messages
+
+3. CAMPAIGN MANAGEMENT
+   - "Show me active campaigns" → Status overview
+   - "Pause the law firm campaign" → Control campaigns
+   - "What escalations do I have?" → Show things needing attention
+
+4. SYSTEM STATUS
+   - Check credential health
+   - Monitor campaign performance
+   - Review escalations
+
+CREDENTIAL DETECTION:
+If the user's message looks like an API key or cookie (long alphanumeric string starting with "AQ" for LinkedIn, or any 20+ char string for Apollo), automatically save it using the save_credential tool.
+
+CONVERSATIONAL STYLE:
+- Direct, no fluff
+- Proactive about what's needed
+- Report status concisely
+- Ask for credentials naturally when needed
+
+Example flows:
+User: "Cold start protocol for law firms"
+You: "On it. I need your Apollo API key first. Go to apollo.io → Settings → Integrations → API and paste the key here."
+
+User: "AQEDARCNsi..." (long string)
+You: [Use save_credential tool] "LinkedIn cookie saved. I'm ready to launch the campaign. Want me to start prospecting law firms now?"
+
+User: "What's the status?"
+You: "3 campaigns active. 47 prospects contacted this week. 2 escalations need attention - one LinkedIn session expired, one RFP deadline tomorrow."`
 }
 
 // ============================================================================
@@ -257,7 +309,7 @@ interface ChatMessage {
 
 interface ChatRequest {
   messages: ChatMessage[]
-  journey?: 'founder' | 'buyer' | 'seller' | 'jobs' | 'treasury'
+  journey?: 'founder' | 'buyer' | 'seller' | 'jobs' | 'treasury' | 'master'
   triggerNegotiation?: boolean // Force AI-to-AI negotiation
   userProfile?: Partial<PartyProfile> // User's preferences for negotiation
   context?: {
@@ -265,8 +317,92 @@ interface ChatRequest {
     companyName?: string
     grainBalance?: number
     creditLine?: number
+    masterKey?: string // For master access validation
   }
 }
+
+// ============================================================================
+// TOOLS FOR MASTER ACCESS (Cold Start Protocol + Credentials)
+// ============================================================================
+
+const MASTER_TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'save_credential',
+    description: 'Save an API key, session cookie, or other credential. Use this when the user provides a credential value (Apollo API key, LinkedIn cookie, email, etc.)',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        key: {
+          type: 'string',
+          enum: ['APOLLO_API_KEY', 'LINKEDIN_SESSION_COOKIE', 'LINKEDIN_RECRUITER_SESSION', 'OWNER_EMAIL', 'ESCALATION_SLACK_WEBHOOK'],
+          description: 'Which credential to save'
+        },
+        value: {
+          type: 'string',
+          description: 'The credential value'
+        },
+      },
+      required: ['key', 'value']
+    }
+  },
+  {
+    name: 'cold_start_command',
+    description: 'Execute a Cold Start Protocol command. Creates campaigns to autonomously prospect, outreach, hunt RFPs, and register for partnerships.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        command: {
+          type: 'string',
+          description: 'Natural language command like "cold start protocol for tort law firms in Florida" or "hunt for CFOs in fintech startups"'
+        },
+      },
+      required: ['command']
+    }
+  },
+  {
+    name: 'get_cold_start_status',
+    description: 'Get the current status of Cold Start Protocol - active campaigns, escalations, and queue status.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        view: {
+          type: 'string',
+          enum: ['overview', 'campaigns', 'escalations', 'queue'],
+          description: 'What to show'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'manage_campaign',
+    description: 'Start, pause, or stop a Cold Start campaign.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['start', 'pause', 'stop'],
+          description: 'What action to take'
+        },
+        campaignId: {
+          type: 'string',
+          description: 'Campaign ID (use "all" to stop all)'
+        },
+      },
+      required: ['action', 'campaignId']
+    }
+  },
+  {
+    name: 'check_credentials',
+    description: 'Check which credentials are configured and which are missing or expired.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+]
 
 // ============================================================================
 // TOOLS FOR LEAD CAPTURE AND AI-TO-AI TRIGGERING
@@ -419,6 +555,42 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Handle master mode specially
+    const isMasterMode = journey === 'master'
+    const masterKey = process.env.COLD_START_MASTER_KEY
+
+    // Validate master access
+    if (isMasterMode && context?.masterKey !== masterKey) {
+      return NextResponse.json(
+        { error: 'Invalid master key', message: 'Access denied to master mode.' },
+        { status: 403 }
+      )
+    }
+
+    // In master mode, check for credentials in user message
+    if (isMasterMode && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage.role === 'user') {
+        const detected = detectCredentialInMessage(lastMessage.content)
+        if (detected) {
+          // Auto-save detected credential
+          const saved = await saveCredential(detected.key, detected.value)
+          if (saved) {
+            return NextResponse.json({
+              message: `Got it! I saved your ${detected.key.replace(/_/g, ' ').toLowerCase()}. ${
+                detected.key === 'LINKEDIN_SESSION_COOKIE'
+                  ? 'LinkedIn is now connected.'
+                  : detected.key === 'APOLLO_API_KEY'
+                  ? 'Apollo is ready to search.'
+                  : 'Saved successfully.'
+              } What would you like me to do next?`,
+              credentialSaved: { key: detected.key },
+            })
+          }
+        }
+      }
+    }
+
     // Get system prompt for this journey
     const systemPrompt = SYSTEM_PROMPTS[journey] || SYSTEM_PROMPTS.default
 
@@ -516,12 +688,15 @@ CRITICAL APPROVAL FLOW:
 
 NEVER skip the approval step. Real money is involved.`
 
+    // Select tools based on journey
+    const tools = isMasterMode ? MASTER_TOOLS : NEGOTIATION_TOOLS
+
     // Call Claude with tools
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       system: enhancedSystemPrompt,
-      tools: NEGOTIATION_TOOLS,
+      tools,
       messages: messages.map(m => ({
         role: m.role,
         content: m.content,
@@ -530,6 +705,167 @@ NEVER skip the approval step. Real money is involved.`
 
     // Check if Claude wants to use a tool
     const toolUse = response.content.find(block => block.type === 'tool_use')
+
+    // ========================================================================
+    // MASTER TOOLS HANDLERS
+    // ========================================================================
+
+    // Handle save_credential tool
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'save_credential') {
+      const { key, value } = toolUse.input as { key: CredentialKey; value: string }
+
+      try {
+        const saved = await saveCredential(key, value)
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || (saved
+            ? `Saved ${key.replace(/_/g, ' ').toLowerCase()}. Ready to go.`
+            : `Failed to save ${key}. Try again?`),
+          credentialSaved: saved ? { key } : null,
+        })
+      } catch (error) {
+        return NextResponse.json({
+          message: `Error saving credential: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // Handle cold_start_command tool
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'cold_start_command') {
+      const { command } = toolUse.input as { command: string }
+
+      try {
+        // Call the Cold Start Protocol API
+        const coldStartRes = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/cold-start`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${masterKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ command }),
+        })
+
+        const result = await coldStartRes.json()
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `Campaign created: ${result.campaign?.name || 'Unknown'}`,
+          coldStart: result,
+        })
+      } catch (error) {
+        return NextResponse.json({
+          message: `Cold Start error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // Handle get_cold_start_status tool
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'get_cold_start_status') {
+      const { view = 'overview' } = toolUse.input as { view?: string }
+
+      try {
+        const statusRes = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/cold-start?view=${view}`, {
+          headers: {
+            'Authorization': `Bearer ${masterKey}`,
+          },
+        })
+
+        const status = await statusRes.json()
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `Status: ${status.activeCampaigns || 0} active campaigns, ${status.pendingEscalations || 0} escalations`,
+          coldStartStatus: status,
+        })
+      } catch (error) {
+        return NextResponse.json({
+          message: `Status check error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // Handle check_credentials tool
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'check_credentials') {
+      try {
+        const [missing, invalid] = await Promise.all([
+          getMissingCredentials(),
+          getInvalidCredentials(),
+        ])
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        let statusMessage = baseMessage || ''
+        if (missing.length > 0) {
+          statusMessage += `\n\nMissing: ${missing.join(', ')}`
+        }
+        if (invalid.length > 0) {
+          statusMessage += `\n\nExpired/Invalid: ${invalid.join(', ')}`
+        }
+        if (missing.length === 0 && invalid.length === 0) {
+          statusMessage += statusMessage ? '' : 'All credentials configured and valid.'
+        }
+
+        return NextResponse.json({
+          message: statusMessage,
+          credentials: { missing, invalid },
+        })
+      } catch (error) {
+        return NextResponse.json({
+          message: `Credential check error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // Handle manage_campaign tool
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'manage_campaign') {
+      const { action, campaignId } = toolUse.input as { action: string; campaignId: string }
+
+      try {
+        let res
+        if (action === 'stop' && campaignId === 'all') {
+          res = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/cold-start?action=stop_all`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${masterKey}` },
+          })
+        } else {
+          res = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/cold-start`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${masterKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ action: `${action}_campaign`, campaignId }),
+          })
+        }
+
+        const result = await res.json()
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `Campaign ${action}: ${result.success ? 'Done' : 'Failed'}`,
+          campaignAction: result,
+        })
+      } catch (error) {
+        return NextResponse.json({
+          message: `Campaign action error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // ========================================================================
+    // REGULAR TOOLS HANDLERS
+    // ========================================================================
 
     // Handle lead capture (Early Access mode)
     if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'capture_lead') {
