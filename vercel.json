@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cold-start/check-replies",
+      "schedule": "0 9 * * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/:path*",

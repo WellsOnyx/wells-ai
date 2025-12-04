@@ -50,6 +50,13 @@ const CREDENTIAL_FIELDS: CredentialField[] = [
     placeholder: 'you@company.com',
   },
   {
+    key: 'OWNER_PHONE',
+    label: 'Owner Phone (SMS)',
+    type: 'text',
+    description: 'Phone number for SMS notifications when prospects reply',
+    placeholder: '+1 (555) 123-4567',
+  },
+  {
     key: 'ESCALATION_SLACK_WEBHOOK',
     label: 'Slack Webhook URL (optional)',
     type: 'password',

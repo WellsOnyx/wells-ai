@@ -3,10 +3,8 @@
  * Cold Start Credential Helper
  *
  * Conversational credential management for Wells AI.
- * Allows the chat to detect, request, and update credentials naturally.
+ * Uses environment variables (set via Vercel dashboard) for storage.
  */
-
-import { sql } from '@/lib/db'
 
 // Credential types we track
 export type CredentialKey =
@@ -14,43 +12,30 @@ export type CredentialKey =
   | 'LINKEDIN_SESSION_COOKIE'
   | 'LINKEDIN_RECRUITER_SESSION'
   | 'OWNER_EMAIL'
+  | 'OWNER_PHONE'
   | 'ESCALATION_SLACK_WEBHOOK'
 
-// Get a credential (DB first, then env var fallback)
+// In-memory cache for runtime updates (resets on cold start)
+const runtimeCredentials: Map<CredentialKey, string> = new Map()
+
+// Get a credential (runtime cache first, then env var fallback)
 export async function getCredential(key: CredentialKey): Promise<string | null> {
-  try {
-    const result = await sql`
-      SELECT value FROM cold_start_credentials WHERE key = ${key}
-    `
-    if (result.length > 0) {
-      return result[0].value as string
-    }
-  } catch (error) {
-    // DB not available, fall through to env
+  // Check runtime cache first
+  const cached = runtimeCredentials.get(key)
+  if (cached) {
+    return cached
   }
 
   // Fallback to environment variable
   return process.env[key] || null
 }
 
-// Save a credential to DB
+// Save a credential to runtime cache
+// Note: For persistent storage, update Vercel env vars
 export async function saveCredential(key: CredentialKey, value: string): Promise<boolean> {
   try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS cold_start_credentials (
-        key VARCHAR(100) PRIMARY KEY,
-        value TEXT NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `
-
-    await sql`
-      INSERT INTO cold_start_credentials (key, value, updated_at)
-      VALUES (${key}, ${value}, CURRENT_TIMESTAMP)
-      ON CONFLICT (key) DO UPDATE SET
-        value = ${value},
-        updated_at = CURRENT_TIMESTAMP
-    `
+    runtimeCredentials.set(key, value)
+    console.log(`[Credential] Saved ${key} to runtime cache`)
     return true
   } catch (error) {
     console.error('Failed to save credential:', error)
@@ -116,7 +101,7 @@ export function detectCredentialInMessage(message: string): { key: CredentialKey
   const trimmed = message.trim()
 
   // LinkedIn cookie detection (li_at cookies are specific format)
-  // They're usually long alphanumeric strings
+  // They're usually long alphanumeric strings starting with AQ
   if (trimmed.match(/^AQ[A-Za-z0-9_-]{100,}$/)) {
     return { key: 'LINKEDIN_SESSION_COOKIE', value: trimmed }
   }
@@ -135,6 +120,14 @@ export function detectCredentialInMessage(message: string): { key: CredentialKey
   // Slack webhook detection
   if (trimmed.startsWith('https://hooks.slack.com/')) {
     return { key: 'ESCALATION_SLACK_WEBHOOK', value: trimmed }
+  }
+
+  // Phone number detection (US format)
+  if (trimmed.match(/^\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$/)) {
+    // Normalize to E.164 format
+    const digits = trimmed.replace(/\D/g, '')
+    const normalized = digits.length === 10 ? `+1${digits}` : `+${digits}`
+    return { key: 'OWNER_PHONE', value: normalized }
   }
 
   return null
@@ -157,6 +150,8 @@ Just paste that value here and I'll update it immediately.`,
     LINKEDIN_RECRUITER_SESSION: `If you have LinkedIn Recruiter access, I can use it for enhanced search. Get the session cookie the same way as the regular LinkedIn cookie. Paste it here if you have it, or say "skip" to continue without it.`,
 
     OWNER_EMAIL: `What email should I send escalations and notifications to? Just type your email address.`,
+
+    OWNER_PHONE: `What's your phone number for SMS notifications when prospects reply? I'll text you immediately when someone responds. Just type your number (e.g., 555-123-4567).`,
 
     ESCALATION_SLACK_WEBHOOK: `If you want escalation alerts in Slack, paste your Slack webhook URL here. You can create one at api.slack.com/apps → Incoming Webhooks. Or say "skip" if you don't need Slack notifications.`,
   }
