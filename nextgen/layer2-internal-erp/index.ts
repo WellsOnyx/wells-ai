@@ -23,58 +23,27 @@ export * from './types'
 export {
   GET as getVendors,
   POST as createVendor,
-  vendorById,
 } from './api/route-vendors'
 
 // API route handlers - Purchase Orders
 export {
   GET as getPurchaseOrders,
   POST as createPurchaseOrder,
-  purchaseOrderById,
-  approvePurchaseOrder,
-  receivePurchaseOrder,
 } from './api/route-purchase-orders'
 
 // API route handlers - Invoices
 export {
   GET as getInvoices,
   POST as createInvoice,
-  invoiceById,
-  matchInvoice,
-  approveInvoice,
 } from './api/route-invoices'
 
 // API route handlers - Payments
 export {
   GET as getPayments,
   POST as createPayment,
-  paymentById,
-  authorizePayment,
-  executePayment,
 } from './api/route-payments'
 
 // API route handlers - Ledger
 export {
   GET as getGlEntries,
-  getFloatLedger,
-  getYieldLedger,
-  getEscrowAccounts,
-  getTrialBalance,
 } from './api/route-ledger'
-
-// Re-export key types for convenience
-export type {
-  GvChartOfAccount,
-  GvVendor,
-  GvPurchaseOrder,
-  GvPurchaseOrderLineItem,
-  GvInvoice,
-  GvInvoiceLineItem,
-  GvGlEntry,
-  GvPaymentInstruction,
-  GvReconciliation,
-  GvFloatLedger,
-  GvYieldLedger,
-  GvEscrowAccount,
-  GvEscrowTransaction,
-} from './types'
