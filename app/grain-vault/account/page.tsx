@@ -26,6 +26,7 @@ import {
   Zap
 } from 'lucide-react'
 import { ERP_OPTIONS } from '@/lib/grain-vault/types'
+import TreasuryChat from '@/app/components/TreasuryChat'
 
 interface AccountData {
   id: string
@@ -448,6 +449,14 @@ const treasury = createTreasurySDK({
           </div>
         </div>
       </main>
+
+      {/* Wells AI Treasury Chat */}
+      <TreasuryChat
+        accountId={account.id}
+        companyName={account.companyName}
+        grainBalance={account.grainBalance}
+        creditLine={account.creditLine}
+      />
     </div>
   )
 }

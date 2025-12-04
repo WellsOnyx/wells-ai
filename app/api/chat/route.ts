@@ -203,7 +203,47 @@ Ask what they need, then guide them to the right journey:
 
 Once you understand their needs, capture their requirements and let them know our team will reach out within 24 hours.
 
-Be conversational, helpful, and transparent about the Early Access process.`
+Be conversational, helpful, and transparent about the Early Access process.`,
+
+  treasury: `You are Wells, an AI treasury assistant for Grain & Vault.
+
+You help users manage their GRAIN balances, execute payments, and use the Treasury SDK.
+
+CONTEXT (provided in each request):
+- Account ID, Company Name
+- GRAIN Balance
+- Credit Line
+
+CAPABILITIES:
+1. BALANCE CHECK: Tell users their GRAIN balance, credit line, and available credit
+2. SEND PAYMENT: Help users send GRAIN payments to vendors
+   - Ask for recipient address or vendor name
+   - Ask for amount
+   - Confirm before executing (return treasuryAction with type: 'payment', status: 'pending')
+3. DEPOSIT: Help users deposit into their GRAIN wallet
+4. SDK HELP: Explain how to integrate the Treasury SDK for their ERP
+
+PAYMENT FLOW:
+When user wants to send a payment:
+1. Confirm recipient and amount
+2. Return a message AND a treasuryAction object like:
+   { type: 'payment', status: 'pending', details: { recipient, amount } }
+3. User will authorize in the UI
+4. Once authorized, confirm success
+
+IMPORTANT:
+- Be concise and helpful
+- Use the provided context for balance info
+- For SDK questions, reference @grainandvault/treasury-sdk
+- Payments require user authorization - never auto-complete
+
+Example:
+User: "What's my balance?"
+You: "Your GRAIN balance is [X]. You have a credit line of [Y] with [Z] available."
+
+User: "Send 5000 GRAIN to vendor@example.com"
+You: "I'll prepare a payment of 5,000 GRAIN to vendor@example.com. Please authorize below."
+[Return treasuryAction with pending status]`
 }
 
 // ============================================================================
@@ -217,9 +257,15 @@ interface ChatMessage {
 
 interface ChatRequest {
   messages: ChatMessage[]
-  journey?: 'founder' | 'buyer' | 'seller' | 'jobs'
+  journey?: 'founder' | 'buyer' | 'seller' | 'jobs' | 'treasury'
   triggerNegotiation?: boolean // Force AI-to-AI negotiation
   userProfile?: Partial<PartyProfile> // User's preferences for negotiation
+  context?: {
+    accountId?: string
+    companyName?: string
+    grainBalance?: number
+    creditLine?: number
+  }
 }
 
 // ============================================================================
@@ -335,7 +381,7 @@ export async function POST(request: NextRequest) {
     const { userId } = await auth().catch(() => ({ userId: null }))
 
     const body = await request.json() as ChatRequest
-    const { messages, journey = 'default', userProfile } = body
+    const { messages, journey = 'default', userProfile, context } = body
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -378,6 +424,16 @@ export async function POST(request: NextRequest) {
 
     // Add user context if authenticated
     let enhancedSystemPrompt = systemPrompt
+
+    // Add treasury context for Grain & Vault
+    if (journey === 'treasury' && context) {
+      enhancedSystemPrompt += `\n\nCURRENT ACCOUNT CONTEXT:
+- Account ID: ${context.accountId || 'Unknown'}
+- Company: ${context.companyName || 'Unknown'}
+- GRAIN Balance: ${context.grainBalance?.toLocaleString() || 0}
+- Credit Line: ${context.creditLine?.toLocaleString() || 0}
+- Available Credit: ${((context.creditLine || 0) - 0).toLocaleString()}`
+    }
     if (userId && profile) {
       const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ')
       const userContext = []
