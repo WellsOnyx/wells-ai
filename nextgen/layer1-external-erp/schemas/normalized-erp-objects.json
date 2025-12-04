@@ -1,0 +1,724 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ErpPurchaseOrder": {
+      "type": "object",
+      "description": "Normalized purchase order from any ERP system",
+      "required": ["id", "sourceSystem", "poNumber", "vendorId", "status", "totalAmount", "currency"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Internal Grain & Vault ID"
+        },
+        "sourceSystem": {
+          "type": "string",
+          "enum": ["sap", "netsuite", "oracle", "dynamics", "workday", "sage", "quickbooks", "xero", "zoho", "odoo", "coupa", "ivalua", "ariba", "other"],
+          "description": "Origin ERP system"
+        },
+        "externalId": {
+          "type": "string",
+          "description": "Original ID in source system"
+        },
+        "poNumber": {
+          "type": "string",
+          "description": "Human-readable PO number"
+        },
+        "vendorId": {
+          "type": "string",
+          "description": "Reference to normalized vendor"
+        },
+        "vendorName": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "pending_approval", "approved", "sent", "acknowledged", "partially_received", "received", "invoiced", "closed", "cancelled"]
+        },
+        "lineItems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ErpLineItem"
+          }
+        },
+        "subtotalAmount": {
+          "type": "number",
+          "description": "Sum of line items before tax"
+        },
+        "taxAmount": {
+          "type": "number"
+        },
+        "shippingAmount": {
+          "type": "number"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Final total including all charges"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "ISO 4217 currency code"
+        },
+        "exchangeRate": {
+          "type": "number",
+          "description": "Exchange rate to base currency at time of creation"
+        },
+        "requestedDeliveryDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "actualDeliveryDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "shippingAddress": {
+          "$ref": "#/definitions/Address"
+        },
+        "billingAddress": {
+          "$ref": "#/definitions/Address"
+        },
+        "paymentTerms": {
+          "type": "string",
+          "description": "e.g., Net30, Net60, 2/10 Net30"
+        },
+        "costCenter": {
+          "type": "string"
+        },
+        "projectCode": {
+          "type": "string"
+        },
+        "department": {
+          "type": "string"
+        },
+        "approvedBy": {
+          "type": "string"
+        },
+        "approvalDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Attachment"
+          }
+        },
+        "customFields": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "ERP-specific fields that don't map to standard schema"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "syncedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last sync from source system"
+        },
+        "rawData": {
+          "type": "object",
+          "description": "Original payload from source ERP"
+        }
+      }
+    },
+    "ErpInvoice": {
+      "type": "object",
+      "description": "Normalized invoice from any ERP system",
+      "required": ["id", "sourceSystem", "invoiceNumber", "vendorId", "status", "totalAmount", "currency"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sourceSystem": {
+          "type": "string",
+          "enum": ["sap", "netsuite", "oracle", "dynamics", "workday", "sage", "quickbooks", "xero", "zoho", "odoo", "coupa", "ivalua", "ariba", "other"]
+        },
+        "externalId": {
+          "type": "string"
+        },
+        "invoiceNumber": {
+          "type": "string"
+        },
+        "vendorId": {
+          "type": "string"
+        },
+        "vendorName": {
+          "type": "string"
+        },
+        "purchaseOrderId": {
+          "type": "string",
+          "description": "Reference to associated PO if applicable"
+        },
+        "purchaseOrderNumber": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "pending_approval", "approved", "disputed", "partially_paid", "paid", "overdue", "cancelled", "written_off"]
+        },
+        "invoiceDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "lineItems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ErpLineItem"
+          }
+        },
+        "subtotalAmount": {
+          "type": "number"
+        },
+        "taxAmount": {
+          "type": "number"
+        },
+        "discountAmount": {
+          "type": "number"
+        },
+        "totalAmount": {
+          "type": "number"
+        },
+        "amountPaid": {
+          "type": "number"
+        },
+        "amountDue": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "exchangeRate": {
+          "type": "number"
+        },
+        "paymentTerms": {
+          "type": "string"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["ach", "wire", "check", "grain", "card", "other"]
+        },
+        "bankAccount": {
+          "$ref": "#/definitions/BankAccount"
+        },
+        "threeWayMatch": {
+          "type": "object",
+          "properties": {
+            "poMatched": { "type": "boolean" },
+            "receiptMatched": { "type": "boolean" },
+            "priceVariance": { "type": "number" },
+            "quantityVariance": { "type": "number" }
+          }
+        },
+        "approvedBy": {
+          "type": "string"
+        },
+        "approvalDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "paidDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Attachment"
+          }
+        },
+        "customFields": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "syncedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rawData": {
+          "type": "object"
+        }
+      }
+    },
+    "ErpVendor": {
+      "type": "object",
+      "description": "Normalized vendor/supplier from any ERP system",
+      "required": ["id", "sourceSystem", "name", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sourceSystem": {
+          "type": "string",
+          "enum": ["sap", "netsuite", "oracle", "dynamics", "workday", "sage", "quickbooks", "xero", "zoho", "odoo", "coupa", "ivalua", "ariba", "other"]
+        },
+        "externalId": {
+          "type": "string"
+        },
+        "vendorCode": {
+          "type": "string",
+          "description": "Internal vendor code in source system"
+        },
+        "name": {
+          "type": "string"
+        },
+        "legalName": {
+          "type": "string"
+        },
+        "dba": {
+          "type": "string",
+          "description": "Doing Business As name"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "pending_approval", "blocked", "archived"]
+        },
+        "vendorType": {
+          "type": "string",
+          "enum": ["supplier", "contractor", "consultant", "service_provider", "manufacturer", "distributor", "other"]
+        },
+        "taxId": {
+          "type": "string",
+          "description": "EIN, VAT number, etc."
+        },
+        "taxIdType": {
+          "type": "string",
+          "enum": ["ein", "ssn", "vat", "gst", "other"]
+        },
+        "dunsNumber": {
+          "type": "string"
+        },
+        "primaryContact": {
+          "$ref": "#/definitions/Contact"
+        },
+        "contacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Contact"
+          }
+        },
+        "addresses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Address"
+          }
+        },
+        "defaultPaymentTerms": {
+          "type": "string"
+        },
+        "defaultCurrency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "bankAccounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BankAccount"
+          }
+        },
+        "grainWalletAddress": {
+          "type": "string",
+          "description": "GRAIN stablecoin wallet for instant payments"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Procurement categories this vendor serves"
+        },
+        "certifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "number": { "type": "string" },
+              "expirationDate": { "type": "string", "format": "date" }
+            }
+          }
+        },
+        "insuranceInfo": {
+          "type": "object",
+          "properties": {
+            "generalLiability": { "type": "number" },
+            "workersComp": { "type": "number" },
+            "expirationDate": { "type": "string", "format": "date" }
+          }
+        },
+        "w9OnFile": {
+          "type": "boolean"
+        },
+        "creditLimit": {
+          "type": "number"
+        },
+        "paymentRating": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "notes": {
+          "type": "string"
+        },
+        "customFields": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "syncedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rawData": {
+          "type": "object"
+        }
+      }
+    },
+    "ErpLedgerEntry": {
+      "type": "object",
+      "description": "Normalized general ledger entry from any ERP system",
+      "required": ["id", "sourceSystem", "entryDate", "accountCode", "amount", "currency"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sourceSystem": {
+          "type": "string",
+          "enum": ["sap", "netsuite", "oracle", "dynamics", "workday", "sage", "quickbooks", "xero", "zoho", "odoo", "coupa", "ivalua", "ariba", "other"]
+        },
+        "externalId": {
+          "type": "string"
+        },
+        "journalId": {
+          "type": "string",
+          "description": "Parent journal entry ID"
+        },
+        "journalNumber": {
+          "type": "string"
+        },
+        "entryDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "postingDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "period": {
+          "type": "string",
+          "description": "Accounting period (e.g., 2024-01)"
+        },
+        "fiscalYear": {
+          "type": "integer"
+        },
+        "accountCode": {
+          "type": "string"
+        },
+        "accountName": {
+          "type": "string"
+        },
+        "accountType": {
+          "type": "string",
+          "enum": ["asset", "liability", "equity", "revenue", "expense"]
+        },
+        "debit": {
+          "type": "number",
+          "minimum": 0
+        },
+        "credit": {
+          "type": "number",
+          "minimum": 0
+        },
+        "amount": {
+          "type": "number",
+          "description": "Signed amount (positive = debit, negative = credit)"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "exchangeRate": {
+          "type": "number"
+        },
+        "baseAmount": {
+          "type": "number",
+          "description": "Amount in base/functional currency"
+        },
+        "description": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string",
+          "description": "Invoice number, PO number, etc."
+        },
+        "referenceType": {
+          "type": "string",
+          "enum": ["invoice", "purchase_order", "payment", "receipt", "adjustment", "other"]
+        },
+        "referenceId": {
+          "type": "string"
+        },
+        "costCenter": {
+          "type": "string"
+        },
+        "department": {
+          "type": "string"
+        },
+        "project": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Additional tracking dimensions"
+        },
+        "isReconciled": {
+          "type": "boolean"
+        },
+        "reconciledDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "isReversing": {
+          "type": "boolean"
+        },
+        "reversedBy": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "approvedBy": {
+          "type": "string"
+        },
+        "customFields": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "syncedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rawData": {
+          "type": "object"
+        }
+      }
+    },
+    "ErpLineItem": {
+      "type": "object",
+      "properties": {
+        "lineNumber": {
+          "type": "integer"
+        },
+        "productCode": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "unitOfMeasure": {
+          "type": "string"
+        },
+        "unitPrice": {
+          "type": "number"
+        },
+        "discount": {
+          "type": "number"
+        },
+        "discountPercent": {
+          "type": "number"
+        },
+        "taxRate": {
+          "type": "number"
+        },
+        "taxAmount": {
+          "type": "number"
+        },
+        "lineTotal": {
+          "type": "number"
+        },
+        "accountCode": {
+          "type": "string"
+        },
+        "costCenter": {
+          "type": "string"
+        },
+        "project": {
+          "type": "string"
+        }
+      }
+    },
+    "Address": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["billing", "shipping", "headquarters", "branch", "other"]
+        },
+        "street1": {
+          "type": "string"
+        },
+        "street2": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "postalCode": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        },
+        "isPrimary": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Contact": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "mobile": {
+          "type": "string"
+        },
+        "isPrimary": {
+          "type": "boolean"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["sales", "accounts_receivable", "accounts_payable", "technical", "executive", "other"]
+        }
+      }
+    },
+    "BankAccount": {
+      "type": "object",
+      "properties": {
+        "bankName": {
+          "type": "string"
+        },
+        "accountName": {
+          "type": "string"
+        },
+        "accountNumber": {
+          "type": "string"
+        },
+        "routingNumber": {
+          "type": "string"
+        },
+        "swiftCode": {
+          "type": "string"
+        },
+        "iban": {
+          "type": "string"
+        },
+        "accountType": {
+          "type": "string",
+          "enum": ["checking", "savings", "other"]
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "isPrimary": {
+          "type": "boolean"
+        },
+        "isVerified": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Attachment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "fileName": {
+          "type": "string"
+        },
+        "fileType": {
+          "type": "string"
+        },
+        "fileSize": {
+          "type": "integer"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "uploadedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

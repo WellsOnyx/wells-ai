@@ -1,0 +1,264 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Grain & Vault Internal ERP Schemas",
+  "description": "JSON schemas for the Grain & Vault side-car ERP system",
+  "definitions": {
+    "GvChartOfAccount": {
+      "type": "object",
+      "required": ["id", "accountCode", "accountName", "accountType", "currency", "isActive", "normalBalance"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "accountCode": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)*$" },
+        "accountName": { "type": "string", "maxLength": 255 },
+        "accountType": {
+          "type": "string",
+          "enum": ["asset", "liability", "equity", "revenue", "expense", "contra_asset", "contra_liability", "contra_equity"]
+        },
+        "accountSubtype": {
+          "type": "string",
+          "enum": ["cash", "accounts_receivable", "inventory", "prepaid", "fixed_asset", "accounts_payable", "accrued_liability", "long_term_debt", "retained_earnings", "common_stock", "service_revenue", "product_revenue", "cost_of_goods", "operating_expense", "grain_treasury", "float_balance", "yield_accrual", "escrow_holding"]
+        },
+        "parentAccountId": { "type": "string", "format": "uuid" },
+        "description": { "type": "string" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "isActive": { "type": "boolean" },
+        "isSystemAccount": { "type": "boolean" },
+        "normalBalance": { "type": "string", "enum": ["debit", "credit"] },
+        "isTreasuryAccount": { "type": "boolean" },
+        "grainLinked": { "type": "boolean" },
+        "openingBalance": { "type": "number" },
+        "currentBalance": { "type": "number" },
+        "lastActivityAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      }
+    },
+    "GvVendor": {
+      "type": "object",
+      "required": ["id", "vendorCode", "companyName", "status", "paymentPreference", "paymentTerms", "defaultCurrency"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "vendorCode": { "type": "string", "maxLength": 50 },
+        "companyName": { "type": "string", "maxLength": 255 },
+        "legalName": { "type": "string", "maxLength": 255 },
+        "dba": { "type": "string", "maxLength": 255 },
+        "status": {
+          "type": "string",
+          "enum": ["pending_verification", "active", "suspended", "blocked", "archived"]
+        },
+        "taxId": { "type": "string" },
+        "taxIdType": { "type": "string", "enum": ["ein", "ssn", "vat", "gst", "other"] },
+        "taxIdVerified": { "type": "boolean" },
+        "w9OnFile": { "type": "boolean" },
+        "w8OnFile": { "type": "boolean" },
+        "primaryContactName": { "type": "string" },
+        "primaryContactEmail": { "type": "string", "format": "email" },
+        "primaryContactPhone": { "type": "string" },
+        "billingStreet1": { "type": "string" },
+        "billingStreet2": { "type": "string" },
+        "billingCity": { "type": "string" },
+        "billingState": { "type": "string" },
+        "billingPostalCode": { "type": "string" },
+        "billingCountry": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "paymentPreference": {
+          "type": "string",
+          "enum": ["grain", "ach", "wire", "check", "card"]
+        },
+        "paymentTerms": { "type": "string" },
+        "defaultCurrency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "grainWalletAddress": { "type": "string" },
+        "grainWalletVerified": { "type": "boolean" },
+        "bankName": { "type": "string" },
+        "bankAccountNumber": { "type": "string" },
+        "bankRoutingNumber": { "type": "string" },
+        "bankAccountType": { "type": "string", "enum": ["checking", "savings"] },
+        "bankAccountVerified": { "type": "boolean" },
+        "categories": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "creditLimit": { "type": "number", "minimum": 0 },
+        "creditUsed": { "type": "number", "minimum": 0 },
+        "riskScore": { "type": "number", "minimum": 0, "maximum": 100 },
+        "paymentRating": { "type": "number", "minimum": 0, "maximum": 100 },
+        "externalErpId": { "type": "string" },
+        "externalErpSystem": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "approvedBy": { "type": "string" },
+        "approvedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "GvPurchaseOrder": {
+      "type": "object",
+      "required": ["id", "poNumber", "vendorId", "status", "orderDate", "lineItems", "totalAmount", "currency"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "poNumber": { "type": "string" },
+        "vendorId": { "type": "string", "format": "uuid" },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "pending_approval", "approved", "sent_to_vendor", "acknowledged", "partially_fulfilled", "fulfilled", "invoiced", "closed", "cancelled"]
+        },
+        "requisitionId": { "type": "string" },
+        "contractId": { "type": "string" },
+        "externalErpId": { "type": "string" },
+        "orderDate": { "type": "string", "format": "date" },
+        "expectedDeliveryDate": { "type": "string", "format": "date" },
+        "actualDeliveryDate": { "type": "string", "format": "date" },
+        "lineItems": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/GvPOLineItem" }
+        },
+        "subtotal": { "type": "number" },
+        "taxAmount": { "type": "number" },
+        "shippingAmount": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "paymentTerms": { "type": "string" },
+        "costCenter": { "type": "string" },
+        "department": { "type": "string" },
+        "project": { "type": "string" },
+        "budgetCode": { "type": "string" },
+        "requestedBy": { "type": "string" },
+        "approvedBy": { "type": "string" },
+        "approvalDate": { "type": "string", "format": "date-time" },
+        "internalNotes": { "type": "string" },
+        "vendorNotes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "GvPOLineItem": {
+      "type": "object",
+      "required": ["lineNumber", "description", "quantity", "unitOfMeasure", "unitPrice", "lineTotal"],
+      "properties": {
+        "lineNumber": { "type": "integer", "minimum": 1 },
+        "itemCode": { "type": "string" },
+        "description": { "type": "string" },
+        "quantity": { "type": "number", "minimum": 0 },
+        "quantityReceived": { "type": "number", "minimum": 0 },
+        "unitOfMeasure": { "type": "string" },
+        "unitPrice": { "type": "number", "minimum": 0 },
+        "discount": { "type": "number" },
+        "taxRate": { "type": "number" },
+        "lineTotal": { "type": "number" },
+        "accountCode": { "type": "string" },
+        "costCenter": { "type": "string" },
+        "project": { "type": "string" }
+      }
+    },
+    "GvInvoice": {
+      "type": "object",
+      "required": ["id", "invoiceNumber", "vendorId", "vendorInvoiceNumber", "status", "invoiceDate", "dueDate", "lineItems", "totalAmount", "currency"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "invoiceNumber": { "type": "string" },
+        "vendorId": { "type": "string", "format": "uuid" },
+        "vendorInvoiceNumber": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["received", "pending_review", "pending_approval", "approved", "disputed", "scheduled", "partially_paid", "paid", "overdue", "cancelled", "written_off"]
+        },
+        "purchaseOrderId": { "type": "string" },
+        "invoiceDate": { "type": "string", "format": "date" },
+        "receivedDate": { "type": "string", "format": "date" },
+        "dueDate": { "type": "string", "format": "date" },
+        "lineItems": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/GvInvoiceLineItem" }
+        },
+        "subtotal": { "type": "number" },
+        "taxAmount": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "amountPaid": { "type": "number" },
+        "amountDue": { "type": "number" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "poMatched": { "type": "boolean" },
+        "receiptMatched": { "type": "boolean" },
+        "isDisputed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "GvInvoiceLineItem": {
+      "type": "object",
+      "required": ["lineNumber", "description", "quantity", "unitPrice", "lineTotal"],
+      "properties": {
+        "lineNumber": { "type": "integer", "minimum": 1 },
+        "poLineNumber": { "type": "integer" },
+        "itemCode": { "type": "string" },
+        "description": { "type": "string" },
+        "quantity": { "type": "number", "minimum": 0 },
+        "unitPrice": { "type": "number", "minimum": 0 },
+        "discount": { "type": "number" },
+        "taxRate": { "type": "number" },
+        "taxAmount": { "type": "number" },
+        "lineTotal": { "type": "number" },
+        "accountCode": { "type": "string" },
+        "costCenter": { "type": "string" },
+        "project": { "type": "string" }
+      }
+    },
+    "GvPaymentInstruction": {
+      "type": "object",
+      "required": ["id", "paymentNumber", "status", "vendorId", "paymentMethod", "amount", "currency", "requestedDate", "invoiceIds"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "paymentNumber": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "pending_authorization", "authorized", "processing", "completed", "failed", "reversed", "cancelled"]
+        },
+        "vendorId": { "type": "string", "format": "uuid" },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["grain", "ach", "wire", "check", "virtual_card"]
+        },
+        "amount": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "grainWalletFrom": { "type": "string" },
+        "grainWalletTo": { "type": "string" },
+        "grainTxHash": { "type": "string" },
+        "requestedDate": { "type": "string", "format": "date" },
+        "scheduledDate": { "type": "string", "format": "date" },
+        "executedDate": { "type": "string", "format": "date-time" },
+        "invoiceIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "GvEscrowAccount": {
+      "type": "object",
+      "required": ["id", "escrowCode", "escrowType", "accountId", "status", "currentBalance", "currency"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "escrowCode": { "type": "string" },
+        "escrowType": {
+          "type": "string",
+          "enum": ["trade_escrow", "milestone_escrow", "dispute_hold", "compliance_hold", "reserve"]
+        },
+        "accountId": { "type": "string", "format": "uuid" },
+        "status": {
+          "type": "string",
+          "enum": ["active", "released", "cancelled", "disputed"]
+        },
+        "depositorId": { "type": "string" },
+        "depositorName": { "type": "string" },
+        "beneficiaryId": { "type": "string" },
+        "beneficiaryName": { "type": "string" },
+        "totalDeposited": { "type": "number", "minimum": 0 },
+        "totalReleased": { "type": "number", "minimum": 0 },
+        "totalRefunded": { "type": "number", "minimum": 0 },
+        "currentBalance": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "releaseConditions": { "type": "string" },
+        "expirationDate": { "type": "string", "format": "date" },
+        "dealId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
