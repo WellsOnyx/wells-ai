@@ -1,5 +1,18 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://grainandvault.com/:path*",
+      "permanent": true,
+      "has": [
+        {
+          "type": "host",
+          "value": "www.grainandvault.com"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/",
@@ -12,12 +25,12 @@
       ]
     },
     {
-      "source": "/",
-      "destination": "/grain-vault",
+      "source": "/:path*",
+      "destination": "/grain-vault/:path*",
       "has": [
         {
           "type": "host",
-          "value": "www.grainandvault.com"
+          "value": "grainandvault.com"
         }
       ]
     }
