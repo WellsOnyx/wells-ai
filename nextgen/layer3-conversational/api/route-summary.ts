@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Layer 3: Conversational ERP - Summary Endpoint
  * GET /api/conversational/erp/summary

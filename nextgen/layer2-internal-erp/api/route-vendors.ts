@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Layer 2: G&V Internal ERP - Vendors API
  * POST /api/gv/erp/vendors

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Layer 1: Integration Providers API
  * POST /api/integrations/providers

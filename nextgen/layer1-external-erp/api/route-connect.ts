@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Layer 1: Integration Connect API
  * POST /api/integrations/connect

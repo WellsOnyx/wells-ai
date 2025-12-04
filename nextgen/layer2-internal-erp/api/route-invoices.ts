@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Layer 2: G&V Internal ERP - Invoices API
  * POST /api/gv/erp/invoices

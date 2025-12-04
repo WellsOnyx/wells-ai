@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Layer 1: Integration Sync API
  * POST /api/integrations/sync

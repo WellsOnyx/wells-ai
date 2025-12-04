@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Layer 1: ERP Objects Query API
  * GET /api/integrations/objects

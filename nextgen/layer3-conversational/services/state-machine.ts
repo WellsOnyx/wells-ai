@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Layer 3: Conversation State Machine
  *

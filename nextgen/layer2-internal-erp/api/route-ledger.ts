@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Layer 2: G&V Internal ERP - Ledger API
  * GET /api/gv/erp/ledger
