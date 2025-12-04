@@ -133,8 +133,10 @@ export async function GET(request: NextRequest) {
 
     // Sort
     objects.sort((a, b) => {
-      const aVal = a[params.sortBy!] || a.createdAt
-      const bVal = b[params.sortBy!] || b.createdAt
+      const aRecord = a as Record<string, unknown>
+      const bRecord = b as Record<string, unknown>
+      const aVal = String(aRecord[params.sortBy!] || a.createdAt)
+      const bVal = String(bRecord[params.sortBy!] || b.createdAt)
 
       let comparison = 0
       if (aVal < bVal) comparison = -1
