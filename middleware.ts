@@ -34,6 +34,9 @@ const isPublicRoute = createRouteMatcher([
   '/wells-ai',
   '/grain-vault',
   '/grain-vault/demo',
+  '/grain-vault/signup(.*)',
+  '/grain-vault/signin(.*)',
+  '/grain-vault/onboarding',
   '/demo',
   '/onboarding',
   '/suppliers/join',
@@ -44,6 +47,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks/(.*)',
   '/api/widget/(.*)',
   '/api/onboarding/(.*)',
+  '/api/grain-vault/(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
 ])
@@ -54,6 +58,7 @@ const isPublicApiRoute = createRouteMatcher([
   '/api/suppliers/cached',
   '/api/chat',
   '/api/webhooks/(.*)',
+  '/api/webhooks/circle',
 ])
 
 // Protected routes that require authentication
@@ -73,6 +78,15 @@ const isProtectedRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, request: NextRequest) => {
   const host = request.headers.get('host') || ''
   const pathname = request.nextUrl.pathname
+
+  // ========================================
+  // WIDGET API - BYPASS ALL AUTH (CORS-SAFE)
+  // ========================================
+
+  // Widget routes need to work cross-origin without any redirects
+  if (pathname.startsWith('/api/widget')) {
+    return NextResponse.next()
+  }
 
   // ========================================
   // DOMAIN-BASED ROUTING

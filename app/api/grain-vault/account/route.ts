@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { GrainVaultAccount, CompanyData, ERPData, TreasuryData } from '@/lib/grain-vault/types'
+import { createAccount, getAccountByClerkId, createWallet } from '@/lib/treasury-db'
 
-// In-memory storage (replace with database in production)
-const accounts = new Map<string, GrainVaultAccount>()
+// Generate a wallet ID and address (in production, this would integrate with Circle SDK)
+function generateWalletCredentials() {
+  const chars = 'abcdef0123456789'
+  const walletId = `wallet_${Date.now()}_${Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')}`
+  const address = '0x' + Array.from({ length: 40 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  return { walletId, address }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +22,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if account already exists
+    const existingAccount = await getAccountByClerkId(userId)
+    if (existingAccount) {
+      return NextResponse.json({
+        success: true,
+        account: {
+          id: existingAccount.id,
+          companyName: existingAccount.companyName,
+          tier: existingAccount.tier,
+          status: existingAccount.status,
+          walletAddress: null, // Would need to fetch from treasury_wallets
+          sdkEnabled: existingAccount.sdkEnabled,
+          apiKey: existingAccount.apiKey
+        },
+        message: 'Account already exists'
+      })
+    }
+
     const user = await currentUser()
     const body = await request.json()
     const { companyData, erpData, treasuryData } = body as {
@@ -24,37 +48,55 @@ export async function POST(request: NextRequest) {
       treasuryData: Partial<TreasuryData>
     }
 
-    // Generate API key
-    const apiKey = `gv_live_${Array.from({ length: 32 }, () =>
-      'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]
-    ).join('')}`
-
-    // Create account
-    const account: GrainVaultAccount = {
-      id: `gv_${Date.now()}`,
-      userId,
+    // Create account in database
+    const dbAccount = await createAccount({
+      clerkUserId: userId,
       companyName: companyData.companyName || 'Unnamed Company',
       companySize: companyData.companySize || 'startup',
       industry: companyData.industry || 'Technology',
       country: companyData.country || 'US',
       erpSystem: erpData.erpSystem || 'none',
       erpVersion: erpData.erpVersion,
-      erpConnected: false,
-      walletAddress: treasuryData.walletAddress,
-      grainBalance: 0,
-      creditLine: 0,
-      usedCredit: 0,
       tier: 'starter',
-      status: 'active',
-      apiKey,
-      sdkEnabled: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      onboardingCompletedAt: new Date()
-    }
+    })
 
-    // Store account
-    accounts.set(userId, account)
+    // Create wallet in database
+    // Use provided wallet address or generate new one
+    const walletCredentials = treasuryData.walletAddress
+      ? { walletId: `wallet_${Date.now()}`, address: treasuryData.walletAddress }
+      : generateWalletCredentials()
+
+    const wallet = await createWallet({
+      accountId: dbAccount.id,
+      walletId: walletCredentials.walletId,
+      address: walletCredentials.address,
+      blockchain: 'BASE',
+      currency: 'GRAIN'
+    })
+
+    // Map to GrainVaultAccount format
+    const account: GrainVaultAccount = {
+      id: dbAccount.id,
+      userId: dbAccount.clerkUserId,
+      companyName: dbAccount.companyName,
+      companySize: dbAccount.companySize,
+      industry: dbAccount.industry,
+      country: dbAccount.country,
+      erpSystem: dbAccount.erpSystem,
+      erpVersion: dbAccount.erpVersion,
+      erpConnected: dbAccount.erpConnected,
+      walletAddress: wallet.address,
+      grainBalance: dbAccount.grainBalance,
+      creditLine: dbAccount.creditLine,
+      usedCredit: dbAccount.usedCredit,
+      tier: dbAccount.tier,
+      status: dbAccount.status,
+      apiKey: dbAccount.apiKey,
+      sdkEnabled: dbAccount.sdkEnabled,
+      createdAt: dbAccount.createdAt,
+      updatedAt: dbAccount.updatedAt,
+      onboardingCompletedAt: dbAccount.onboardingCompletedAt,
+    }
 
     // Update Clerk metadata
     if (user) {
@@ -82,7 +124,8 @@ export async function POST(request: NextRequest) {
         tier: account.tier,
         status: account.status,
         walletAddress: account.walletAddress,
-        sdkEnabled: account.sdkEnabled
+        sdkEnabled: account.sdkEnabled,
+        apiKey: account.apiKey
       }
     })
   } catch (error) {
@@ -105,32 +148,39 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const account = accounts.get(userId)
+    // Fetch account from database
+    const dbAccount = await getAccountByClerkId(userId)
 
-    if (!account) {
+    if (!dbAccount) {
       return NextResponse.json(
         { error: 'Account not found', needsOnboarding: true },
         { status: 404 }
       )
     }
 
+    // Fetch wallet from database
+    const { getWallets } = await import('@/lib/treasury-db')
+    const wallets = await getWallets(dbAccount.id)
+    const primaryWallet = wallets[0] // Get the first (primary) wallet
+
     return NextResponse.json({
       account: {
-        id: account.id,
-        companyName: account.companyName,
-        companySize: account.companySize,
-        industry: account.industry,
-        erpSystem: account.erpSystem,
-        erpConnected: account.erpConnected,
-        walletAddress: account.walletAddress,
-        grainBalance: account.grainBalance,
-        creditLine: account.creditLine,
-        usedCredit: account.usedCredit,
-        tier: account.tier,
-        status: account.status,
-        apiKey: account.apiKey,
-        sdkEnabled: account.sdkEnabled,
-        createdAt: account.createdAt
+        id: dbAccount.id,
+        companyName: dbAccount.companyName,
+        companySize: dbAccount.companySize,
+        industry: dbAccount.industry,
+        erpSystem: dbAccount.erpSystem,
+        erpConnected: dbAccount.erpConnected,
+        walletAddress: primaryWallet?.address || null,
+        walletId: primaryWallet?.walletId || null,
+        grainBalance: primaryWallet?.balance || dbAccount.grainBalance,
+        creditLine: dbAccount.creditLine,
+        usedCredit: dbAccount.usedCredit,
+        tier: dbAccount.tier,
+        status: dbAccount.status,
+        apiKey: dbAccount.apiKey,
+        sdkEnabled: dbAccount.sdkEnabled,
+        createdAt: dbAccount.createdAt
       }
     })
   } catch (error) {
