@@ -218,7 +218,7 @@ export default function WellsDemo() {
 
   const getColorClasses = (color: string) => {
     const colors: Record<string, { bg: string; text: string; border: string; gradient: string }> = {
-      amber: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', gradient: 'from-amber-500 to-orange-600' },
+      amber: { bg: 'bg-gold-500/20', text: 'text-gold-400', border: 'border-gold-500/30', gradient: 'from-gold-400 to-gold-600' },
       blue: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30', gradient: 'from-blue-500 to-cyan-600' },
       green: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30', gradient: 'from-green-500 to-emerald-600' },
       purple: { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/30', gradient: 'from-purple-500 to-pink-600' },
@@ -227,7 +227,7 @@ export default function WellsDemo() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen text-white">
       <style jsx global>{`
         @keyframes fadeInUp {
           from {
@@ -297,11 +297,11 @@ export default function WellsDemo() {
       `}</style>
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-navy-900/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-black" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-navy-900" />
             </div>
             <span className="font-bold text-xl">WellsAI</span>
           </Link>
@@ -320,13 +320,13 @@ export default function WellsDemo() {
           {/* Intro Step */}
           {step === 'intro' && (
             <div className="min-h-[80vh] flex flex-col items-center justify-center text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500/10 border border-gold-500/20 rounded-full text-gold-400 text-sm mb-8">
                 <Zap className="w-4 h-4" />
                 Interactive Demo
               </div>
 
               <h1 className="text-4xl md:text-6xl font-bold mb-6">
-                See What <span className="text-amber-500">Wells</span> Can Do
+                See What <span className="text-gold-500">Wells</span> Can Do
               </h1>
 
               <p className="text-xl text-gray-400 max-w-2xl mb-12">
@@ -336,7 +336,7 @@ export default function WellsDemo() {
 
               <button
                 onClick={() => setStep('select')}
-                className="group inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-black font-semibold rounded-xl hover:from-amber-400 hover:to-orange-500 transition-all hover:scale-105"
+                className="group inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-gold-400 to-gold-600 text-black font-semibold rounded-xl hover:from-gold-300 hover:to-gold-500 transition-all hover:scale-105"
               >
                 Start Demo
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -427,7 +427,7 @@ export default function WellsDemo() {
 
                 {/* Status Text */}
                 {statusText && (
-                  <div className="flex items-center justify-center gap-2 mb-4 text-amber-400 text-sm animate-fadeInUp">
+                  <div className="flex items-center justify-center gap-2 mb-4 text-gold-400 text-sm animate-fadeInUp">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     {statusText}
                   </div>
@@ -441,7 +441,7 @@ export default function WellsDemo() {
                   </div>
                   <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-amber-500 to-orange-600 transition-all duration-700 ease-out"
+                      className="h-full bg-gradient-to-r from-gold-400 to-gold-600 transition-all duration-700 ease-out"
                       style={{ width: `${(currentMessage / JOURNEYS[selectedJourney].demoSteps.length) * 100}%` }}
                     />
                   </div>
@@ -462,7 +462,7 @@ export default function WellsDemo() {
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                         msg.role === 'user'
                           ? 'bg-white/10'
-                          : 'bg-gradient-to-br from-amber-500 to-orange-600'
+                          : 'bg-gradient-to-br from-gold-400 to-gold-600'
                       }`}>
                         {msg.role === 'user' ? (
                           <User className="w-5 h-5 text-white" />
@@ -472,7 +472,7 @@ export default function WellsDemo() {
                       </div>
                       <div className={`max-w-[80%] p-4 rounded-2xl ${
                         msg.role === 'user'
-                          ? 'bg-amber-500/20 text-white'
+                          ? 'bg-gold-500/20 text-white'
                           : 'bg-white/10 text-gray-200'
                       }`}>
                         <p className="text-sm md:text-base leading-relaxed">{msg.message}</p>
@@ -483,14 +483,14 @@ export default function WellsDemo() {
                   {/* Typing Indicator */}
                   {isTyping && (
                     <div className="flex items-start gap-3 animate-fadeInUp">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center flex-shrink-0">
                         <Bot className="w-5 h-5 text-black" />
                       </div>
                       <div className="bg-white/10 p-4 rounded-2xl">
                         <div className="flex gap-1.5">
-                          <div className="w-2.5 h-2.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }} />
-                          <div className="w-2.5 h-2.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1s' }} />
-                          <div className="w-2.5 h-2.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1s' }} />
+                          <div className="w-2.5 h-2.5 bg-gold-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }} />
+                          <div className="w-2.5 h-2.5 bg-gold-400 rounded-full animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1s' }} />
+                          <div className="w-2.5 h-2.5 bg-gold-400 rounded-full animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1s' }} />
                         </div>
                       </div>
                     </div>
@@ -506,9 +506,9 @@ export default function WellsDemo() {
                       key={idx}
                       className={`rounded-full transition-all duration-500 ${
                         idx < currentMessage
-                          ? 'w-2 h-2 bg-amber-500'
+                          ? 'w-2 h-2 bg-gold-500'
                           : idx === currentMessage
-                          ? 'w-3 h-3 bg-amber-400 animate-pulse'
+                          ? 'w-3 h-3 bg-gold-400 animate-pulse'
                           : 'w-2 h-2 bg-white/20'
                       }`}
                     />
@@ -526,7 +526,7 @@ export default function WellsDemo() {
                 {[...Array(30)].map((_, i) => (
                   <div
                     key={i}
-                    className="absolute w-2 h-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full animate-fadeInUp"
+                    className="absolute w-2 h-2 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full animate-fadeInUp"
                     style={{
                       left: `${Math.random() * 100}%`,
                       top: `-10px`,
@@ -557,9 +557,9 @@ export default function WellsDemo() {
                 {Object.entries(JOURNEYS[selectedJourney].result).map(([key, value], idx) => (
                   <div
                     key={key}
-                    className={`bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 hover:border-amber-500/30 transition-all hover:scale-105 animate-scaleIn stagger-${idx + 1}`}
+                    className={`bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 hover:border-gold-500/30 transition-all hover:scale-105 animate-scaleIn stagger-${idx + 1}`}
                   >
-                    <div className="text-2xl font-bold text-amber-500 mb-1">{value}</div>
+                    <div className="text-2xl font-bold text-gold-500 mb-1">{value}</div>
                     <div className="text-xs text-gray-400 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
                   </div>
                 ))}
@@ -569,7 +569,7 @@ export default function WellsDemo() {
               <div className="flex flex-col sm:flex-row items-center gap-4 animate-fadeInUp stagger-5">
                 <Link
                   href={selectedJourney === 'seller' ? '/suppliers/join' : `/${selectedJourney}/chat`}
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-black font-semibold rounded-xl hover:from-amber-400 hover:to-orange-500 transition-all hover:scale-105"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-gold-400 to-gold-600 text-black font-semibold rounded-xl hover:from-gold-300 hover:to-gold-500 transition-all hover:scale-105"
                 >
                   {selectedJourney === 'seller' ? 'Join Supplier Network' : 'Try It For Real'}
                   <ArrowRight className="w-5 h-5" />

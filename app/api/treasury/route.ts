@@ -17,31 +17,47 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createTreasurySDK, TreasurySDKConfig } from '@/lib/treasury-sdk'
+import {
+  getAccountByApiKey,
+  createTransaction,
+  updateTransactionStatus,
+  createWallet,
+  getWallets,
+  updateWalletBalance,
+  createVendor,
+  getCreditLine,
+  updateCreditLine,
+} from '@/lib/treasury-db'
 
-// Validate API key from header
-function validateApiKey(request: NextRequest): string | null {
+// Validate API key from header and return account
+async function validateApiKey(request: NextRequest): Promise<{ accountId: string; apiKey: string } | null> {
   const apiKey = request.headers.get('x-api-key')
   if (!apiKey) return null
-  // In production, validate against database
-  return apiKey
+
+  // Validate against database
+  const account = await getAccountByApiKey(apiKey)
+  if (!account || account.status !== 'active') return null
+
+  return { accountId: account.id, apiKey }
 }
 
-// Get org ID from header
+// Get org ID from header (deprecated - use account ID from API key)
 function getOrgId(request: NextRequest): string | null {
   return request.headers.get('x-organization-id')
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = validateApiKey(request)
-    const orgId = getOrgId(request)
+    const authResult = await validateApiKey(request)
 
-    if (!apiKey || !orgId) {
+    if (!authResult) {
       return NextResponse.json(
-        { error: 'Missing API key or organization ID' },
+        { error: 'Invalid or missing API key' },
         { status: 401 }
       )
     }
+
+    const { accountId } = authResult
 
     const body = await request.json()
     const { action, ...params } = body
@@ -50,7 +66,7 @@ export async function POST(request: NextRequest) {
     const config: TreasurySDKConfig = {
       apiKey: process.env.CIRCLE_API_KEY || '',
       environment: process.env.CIRCLE_ENV === 'production' ? 'production' : 'sandbox',
-      organizationId: orgId,
+      organizationId: accountId,
     }
 
     const treasury = createTreasurySDK(config)
@@ -58,6 +74,21 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'initialize': {
         const wallet = await treasury.initialize()
+
+        // Persist wallet to database
+        const dbWallet = await createWallet({
+          accountId,
+          walletId: wallet.walletId,
+          address: wallet.walletAddress,
+          blockchain: 'BASE',
+          currency: 'GRAIN',
+        })
+
+        // Update credit line (1:1 with balance)
+        await updateCreditLine(accountId, {
+          limitAmount: wallet.balance,
+        })
+
         return NextResponse.json({
           success: true,
           wallet: {
@@ -72,27 +103,55 @@ export async function POST(request: NextRequest) {
 
       case 'pay': {
         await treasury.initialize()
-        const transaction = await treasury.payVendor({
-          vendorWallet: params.vendorWallet,
+
+        // Create transaction record
+        const dbTransaction = await createTransaction({
+          accountId,
+          type: 'payment',
           amount: params.amount,
-          reference: params.reference,
+          currency: 'GRAIN',
+          toWallet: params.vendorWallet,
+          counterpartyWallet: params.vendorWallet,
+          erpReference: params.reference,
           costCenter: params.costCenter,
           glAccount: params.glAccount,
           memo: params.memo,
         })
 
-        return NextResponse.json({
-          success: true,
-          transaction: {
-            id: transaction.id,
-            type: transaction.type,
-            amount: transaction.amount,
-            currency: transaction.currency,
-            status: transaction.status,
-            reference: transaction.erpReference,
-            completedAt: transaction.completedAt,
-          },
-        })
+        try {
+          // Execute payment
+          const transaction = await treasury.payVendor({
+            vendorWallet: params.vendorWallet,
+            amount: params.amount,
+            reference: params.reference,
+            costCenter: params.costCenter,
+            glAccount: params.glAccount,
+            memo: params.memo,
+          })
+
+          // Update transaction status
+          await updateTransactionStatus(dbTransaction.id, 'completed')
+
+          return NextResponse.json({
+            success: true,
+            transaction: {
+              id: dbTransaction.id,
+              type: transaction.type,
+              amount: transaction.amount,
+              currency: transaction.currency,
+              status: 'completed',
+              reference: transaction.erpReference,
+              completedAt: transaction.completedAt,
+            },
+          })
+        } catch (error) {
+          // Mark transaction as failed
+          await updateTransactionStatus(dbTransaction.id, 'failed', {
+            code: 'PAYMENT_FAILED',
+            message: error instanceof Error ? error.message : 'Payment failed',
+          })
+          throw error
+        }
       }
 
       case 'batch': {
@@ -139,6 +198,16 @@ export async function POST(request: NextRequest) {
           paymentTerms: params.paymentTerms,
         })
 
+        // Persist vendor to database
+        const dbVendor = await createVendor({
+          accountId,
+          vendorId: params.vendorId,
+          vendorName: params.vendorName,
+          email: params.email,
+          walletAddress: vendor.walletAddress,
+          paymentTerms: vendor.paymentTerms,
+        })
+
         return NextResponse.json({
           success: true,
           vendor: {
@@ -161,34 +230,94 @@ export async function POST(request: NextRequest) {
 
       case 'drawCredit': {
         await treasury.initialize()
-        const drawTx = await treasury.drawCredit(params.amount, params.reference)
 
-        return NextResponse.json({
-          success: true,
-          transaction: {
-            id: drawTx.id,
-            type: drawTx.type,
-            amount: drawTx.amount,
-            status: drawTx.status,
-            reference: drawTx.erpReference,
-          },
+        // Create transaction record
+        const dbTransaction = await createTransaction({
+          accountId,
+          type: 'credit_draw',
+          amount: params.amount,
+          currency: 'GRAIN',
+          erpReference: params.reference,
+          description: `Credit draw: ${params.reference}`,
         })
+
+        try {
+          const drawTx = await treasury.drawCredit(params.amount, params.reference)
+
+          // Update transaction status
+          await updateTransactionStatus(dbTransaction.id, 'completed')
+
+          // Update credit line
+          const creditLine = await getCreditLine(accountId)
+          if (creditLine) {
+            await updateCreditLine(accountId, {
+              drawnAmount: creditLine.drawnAmount + params.amount,
+            })
+          }
+
+          return NextResponse.json({
+            success: true,
+            transaction: {
+              id: dbTransaction.id,
+              type: drawTx.type,
+              amount: drawTx.amount,
+              status: 'completed',
+              reference: drawTx.erpReference,
+            },
+          })
+        } catch (error) {
+          await updateTransactionStatus(dbTransaction.id, 'failed', {
+            code: 'CREDIT_DRAW_FAILED',
+            message: error instanceof Error ? error.message : 'Credit draw failed',
+          })
+          throw error
+        }
       }
 
       case 'repayCredit': {
         await treasury.initialize()
-        const repayTx = await treasury.repayCredit(params.amount, params.reference)
 
-        return NextResponse.json({
-          success: true,
-          transaction: {
-            id: repayTx.id,
-            type: repayTx.type,
-            amount: repayTx.amount,
-            status: repayTx.status,
-            reference: repayTx.erpReference,
-          },
+        // Create transaction record
+        const dbTransaction = await createTransaction({
+          accountId,
+          type: 'credit_repay',
+          amount: params.amount,
+          currency: 'GRAIN',
+          erpReference: params.reference,
+          description: `Credit repayment: ${params.reference}`,
         })
+
+        try {
+          const repayTx = await treasury.repayCredit(params.amount, params.reference)
+
+          // Update transaction status
+          await updateTransactionStatus(dbTransaction.id, 'completed')
+
+          // Update credit line
+          const creditLine = await getCreditLine(accountId)
+          if (creditLine) {
+            await updateCreditLine(accountId, {
+              drawnAmount: Math.max(0, creditLine.drawnAmount - params.amount),
+            })
+          }
+
+          return NextResponse.json({
+            success: true,
+            transaction: {
+              id: dbTransaction.id,
+              type: repayTx.type,
+              amount: repayTx.amount,
+              status: 'completed',
+              reference: repayTx.erpReference,
+            },
+          })
+        } catch (error) {
+          await updateTransactionStatus(dbTransaction.id, 'failed', {
+            code: 'CREDIT_REPAY_FAILED',
+            message: error instanceof Error ? error.message : 'Credit repayment failed',
+          })
+          throw error
+        }
       }
 
       default:
@@ -206,15 +335,16 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const apiKey = validateApiKey(request)
-    const orgId = getOrgId(request)
+    const authResult = await validateApiKey(request)
 
-    if (!apiKey || !orgId) {
+    if (!authResult) {
       return NextResponse.json(
-        { error: 'Missing API key or organization ID' },
+        { error: 'Invalid or missing API key' },
         { status: 401 }
       )
     }
+
+    const { accountId } = authResult
 
     const url = new URL(request.url)
     const action = url.searchParams.get('action') || 'balance'
@@ -222,7 +352,7 @@ export async function GET(request: NextRequest) {
     const config: TreasurySDKConfig = {
       apiKey: process.env.CIRCLE_API_KEY || '',
       environment: process.env.CIRCLE_ENV === 'production' ? 'production' : 'sandbox',
-      organizationId: orgId,
+      organizationId: accountId,
     }
 
     const treasury = createTreasurySDK(config)

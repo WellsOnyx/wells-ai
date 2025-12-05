@@ -139,8 +139,10 @@ export default function GrainVaultSignupPage() {
                 socialButtonsVariant: 'blockButton',
               },
             }}
-            redirectUrl="/grain-vault/onboarding"
+            routing="path"
+            path="/grain-vault/signup"
             signInUrl="/grain-vault/signin"
+            forceRedirectUrl="/grain-vault/onboarding"
           />
 
           <p className="mt-6 text-center text-sm text-gray-500">

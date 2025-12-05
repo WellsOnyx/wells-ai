@@ -867,6 +867,96 @@ NEVER skip the approval step. Real money is involved.`
     // REGULAR TOOLS HANDLERS
     // ========================================================================
 
+    // Handle start_negotiation - update to mention GRAIN
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'start_negotiation') {
+      // AI wants to start negotiation!
+      const toolInput = toolUse.input as {
+        negotiationType: string
+        subject: string
+        requirements?: { budget?: number; quantity?: number; timeline?: string; specifications?: string }
+        message: string
+      }
+
+      // Build user profile for negotiation
+      const userName = profile?.firstName && profile?.lastName
+        ? `${profile.firstName} ${profile.lastName}`
+        : userProfile?.name || 'You'
+
+      const initiator: PartyProfile = {
+        id: userId || 'anonymous',
+        type: journey === 'buyer' ? 'buyer' : journey === 'founder' ? 'buyer' : journey === 'jobs' ? 'candidate' : 'buyer',
+        name: userName,
+        preferences: {
+          maxBudget: toolInput.requirements?.budget,
+          targetPrice: toolInput.requirements?.budget,
+          requiredBy: toolInput.requirements?.timeline ? new Date(toolInput.requirements.timeline) : undefined,
+        },
+        context: `${toolInput.subject}. ${toolInput.requirements?.specifications || ''}`,
+      }
+
+      // Select responders based on negotiation type
+      let responders: PartyProfile[]
+      if (toolInput.negotiationType === 'hiring') {
+        responders = MOCK_CANDIDATES
+      } else {
+        responders = MOCK_SUPPLIERS
+      }
+
+      // Run quick match first
+      const matchResult = await quickMatch(initiator, responders)
+
+      if (matchResult.matches.length > 0) {
+        // Run negotiation with top match
+        const topMatch = matchResult.matches[0]
+        const negotiationRequest: NegotiationRequest = {
+          id: `neg_${Date.now()}`,
+          type: toolInput.negotiationType as 'procurement' | 'hiring' | 'partnership' | 'investment',
+          initiator,
+          responder: topMatch.seller,
+          subject: toolInput.subject,
+        }
+
+        const negotiationResult = await runNegotiation(negotiationRequest, 3)
+
+        // Format the AI-to-AI conversation for display
+        const aiConversation = negotiationResult.conversation.map(m => ({
+          from: m.from === 'initiator_ai' ? 'Your AI' : `${topMatch.seller.name}'s AI`,
+          message: m.message,
+          proposal: m.proposal,
+        }))
+
+        return NextResponse.json({
+          message: toolInput.message + `\n\nPayment will be processed via GRAIN (Grain & Vault). Funds are held in secure escrow until delivery is confirmed.`,
+          negotiation: {
+            triggered: true,
+            status: negotiationResult.status,
+            subject: toolInput.subject,
+            counterparty: topMatch.seller.name,
+            aiConversation,
+            finalTerms: negotiationResult.finalTerms,
+            summary: negotiationResult.initiatorSummary,
+            allMatches: matchResult.matches.map(m => ({
+              name: m.seller.name,
+              compatibility: m.compatibility,
+            })),
+          },
+          nextAction: negotiationResult.status === 'agreed'
+            ? 'Review the terms below. Say "Yes, proceed" to initiate GRAIN payment to escrow.'
+            : 'Would you like me to try different parameters?',
+        })
+      } else {
+        return NextResponse.json({
+          message: toolInput.message,
+          negotiation: {
+            triggered: true,
+            status: 'no_matches',
+            subject: toolInput.subject,
+          },
+          nextAction: 'No matches found. Try adjusting your requirements.',
+        })
+      }
+    }
+
     // Handle lead capture (Early Access mode)
     if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'capture_lead') {
       const toolInput = toolUse.input as {
@@ -962,94 +1052,6 @@ Reply "Yes, go ahead" to approve, or let me know what to change.`,
       })
     }
 
-    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'start_negotiation') {
-      // AI wants to start negotiation!
-      const toolInput = toolUse.input as {
-        negotiationType: string
-        subject: string
-        requirements?: { budget?: number; quantity?: number; timeline?: string; specifications?: string }
-        message: string
-      }
-
-      // Build user profile for negotiation
-      const userName = profile?.firstName && profile?.lastName
-        ? `${profile.firstName} ${profile.lastName}`
-        : userProfile?.name || 'You'
-
-      const initiator: PartyProfile = {
-        id: userId || 'anonymous',
-        type: journey === 'buyer' ? 'buyer' : journey === 'founder' ? 'buyer' : journey === 'jobs' ? 'candidate' : 'buyer',
-        name: userName,
-        preferences: {
-          maxBudget: toolInput.requirements?.budget,
-          targetPrice: toolInput.requirements?.budget,
-          requiredBy: toolInput.requirements?.timeline ? new Date(toolInput.requirements.timeline) : undefined,
-        },
-        context: `${toolInput.subject}. ${toolInput.requirements?.specifications || ''}`,
-      }
-
-      // Select responders based on negotiation type
-      let responders: PartyProfile[]
-      if (toolInput.negotiationType === 'hiring') {
-        responders = MOCK_CANDIDATES
-      } else {
-        responders = MOCK_SUPPLIERS
-      }
-
-      // Run quick match first
-      const matchResult = await quickMatch(initiator, responders)
-
-      if (matchResult.matches.length > 0) {
-        // Run negotiation with top match
-        const topMatch = matchResult.matches[0]
-        const negotiationRequest: NegotiationRequest = {
-          id: `neg_${Date.now()}`,
-          type: toolInput.negotiationType as 'procurement' | 'hiring' | 'partnership' | 'investment',
-          initiator,
-          responder: topMatch.seller,
-          subject: toolInput.subject,
-        }
-
-        const negotiationResult = await runNegotiation(negotiationRequest, 3)
-
-        // Format the AI-to-AI conversation for display
-        const aiConversation = negotiationResult.conversation.map(m => ({
-          from: m.from === 'initiator_ai' ? 'Your AI' : `${topMatch.seller.name}'s AI`,
-          message: m.message,
-          proposal: m.proposal,
-        }))
-
-        return NextResponse.json({
-          message: toolInput.message,
-          negotiation: {
-            triggered: true,
-            status: negotiationResult.status,
-            subject: toolInput.subject,
-            counterparty: topMatch.seller.name,
-            aiConversation,
-            finalTerms: negotiationResult.finalTerms,
-            summary: negotiationResult.initiatorSummary,
-            allMatches: matchResult.matches.map(m => ({
-              name: m.seller.name,
-              compatibility: m.compatibility,
-            })),
-          },
-          nextAction: negotiationResult.status === 'agreed'
-            ? 'Review the terms below. Say "Yes, proceed" to confirm.'
-            : 'Would you like me to try different parameters?',
-        })
-      } else {
-        return NextResponse.json({
-          message: toolInput.message,
-          negotiation: {
-            triggered: true,
-            status: 'no_matches',
-            subject: toolInput.subject,
-          },
-          nextAction: 'No matches found. Try adjusting your requirements.',
-        })
-      }
-    }
 
     // No tool use - just return the text response
     const textBlock = response.content.find(block => block.type === 'text')

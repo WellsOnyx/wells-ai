@@ -11,10 +11,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { TransactionEngine, proposeDeal, type Party, type DealTerms } from '@/lib/transactions'
 import { calculateTrustScore, type TrustMetrics } from '@/lib/trust'
+import { sql } from '@vercel/postgres'
 
 // Temporary in-memory store (replace with database)
 const deals = new Map<string, ReturnType<typeof proposeDeal>>()
-const users = new Map<string, { metrics: TrustMetrics; stripeAccountId?: string }>()
+const users = new Map<string, { metrics: TrustMetrics; grainWalletId?: string }>()
 
 // ============================================================================
 // GET - List deals
@@ -139,13 +140,49 @@ export async function POST(request: NextRequest) {
     // Create the deal proposal
     const deal = proposeDeal(buyer, seller, terms)
 
-    // Store the deal
+    // Store the deal in memory
     deals.set(deal.id, deal)
+
+    // Try to persist to database
+    try {
+      await sql`
+        INSERT INTO deals (
+          id,
+          buyer_id,
+          seller_id,
+          amount,
+          currency,
+          description,
+          status,
+          payment_method,
+          platform_fee,
+          platform_fee_percent,
+          created_at,
+          updated_at
+        ) VALUES (
+          ${deal.id},
+          ${deal.buyer.id},
+          ${deal.seller.id},
+          ${deal.terms.amount},
+          ${deal.terms.currency},
+          ${deal.terms.description},
+          ${deal.status},
+          'grain',
+          ${deal.platformFee},
+          ${deal.platformFeePercent},
+          ${deal.createdAt.toISOString()},
+          ${deal.updatedAt.toISOString()}
+        )
+      `
+    } catch (error) {
+      console.error('Error persisting deal to database:', error)
+      // Continue anyway - in-memory store will work for demo
+    }
 
     return NextResponse.json({
       success: true,
       deal,
-      message: 'Deal proposal created. Awaiting seller response.',
+      message: 'Deal proposal created. Awaiting seller response. Payment will be processed via GRAIN.',
     })
   } catch (error) {
     console.error('Error creating deal:', error)

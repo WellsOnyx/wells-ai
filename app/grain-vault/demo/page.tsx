@@ -142,7 +142,7 @@ export default function GrainVaultDemo() {
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link href="/grain-vault" className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-black" />
               </div>
               <span className="text-xl font-bold tracking-tight">Grain & Vault</span>
@@ -170,7 +170,7 @@ export default function GrainVaultDemo() {
               <div key={s} className="flex items-center">
                 <div className={`
                   w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors
-                  ${step === s ? 'bg-amber-500 text-black' :
+                  ${step === s ? 'bg-green-500 text-black' :
                     ['intro', 'initialize', 'payment', 'dashboard'].indexOf(step) > i ? 'bg-green-500 text-black' :
                     'bg-white/10 text-gray-500'}
                 `}>
@@ -198,13 +198,13 @@ export default function GrainVaultDemo() {
         {/* Step 1: Intro */}
         {step === 'intro' && (
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 rounded-full text-amber-400 text-sm font-medium mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 rounded-full text-green-400 text-sm font-medium mb-8">
               <Play className="w-4 h-4" />
               Interactive Demo
             </div>
 
             <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
-              Experience <span className="bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">Zero Friction</span>
+              Experience <span className="bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">Zero Friction</span>
             </h1>
 
             <p className="text-xl text-gray-400 mb-12 leading-relaxed max-w-2xl mx-auto">
@@ -219,8 +219,8 @@ export default function GrainVaultDemo() {
                 { icon: Activity, title: 'Live Dashboard', desc: 'Real-time treasury visibility' },
               ].map((item, i) => (
                 <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-6 text-left">
-                  <div className="w-12 h-12 rounded-lg bg-amber-500/20 flex items-center justify-center mb-4">
-                    <item.icon className="w-6 h-6 text-amber-400" />
+                  <div className="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center mb-4">
+                    <item.icon className="w-6 h-6 text-green-400" />
                   </div>
                   <h3 className="font-semibold mb-2">{item.title}</h3>
                   <p className="text-sm text-gray-400">{item.desc}</p>
@@ -230,7 +230,7 @@ export default function GrainVaultDemo() {
 
             <button
               onClick={() => setStep('initialize')}
-              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all shadow-2xl shadow-amber-500/25"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-black font-semibold rounded-xl hover:from-green-400 hover:to-green-500 transition-all shadow-2xl shadow-green-500/25"
             >
               Start Demo
               <ArrowRight className="w-5 h-5" />
@@ -269,7 +269,7 @@ export default function GrainVaultDemo() {
                   <button
                     onClick={handleInitialize}
                     disabled={isProcessing}
-                    className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                    className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-black font-semibold rounded-xl hover:from-green-400 hover:to-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                   >
                     {isProcessing ? (
                       <>
@@ -295,7 +295,7 @@ export default function GrainVaultDemo() {
                   <div className="bg-black/50 rounded-xl p-4 mb-6">
                     <div className="text-sm text-gray-500 mb-2">Wallet Address</div>
                     <div className="flex items-center justify-between gap-4">
-                      <code className="text-amber-400 font-mono text-sm truncate">
+                      <code className="text-green-400 font-mono text-sm truncate">
                         {DEMO_DATA.wallet.address}
                       </code>
                       <button
@@ -310,7 +310,7 @@ export default function GrainVaultDemo() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-black/50 rounded-xl p-4">
                       <div className="text-sm text-gray-500 mb-1">GRAIN Balance</div>
-                      <div className="text-2xl font-bold text-amber-400">{formatCurrency(balance)}</div>
+                      <div className="text-2xl font-bold text-green-400">{formatCurrency(balance)}</div>
                     </div>
                     <div className="bg-black/50 rounded-xl p-4">
                       <div className="text-sm text-gray-500 mb-1">Credit Line</div>
@@ -335,7 +335,7 @@ export default function GrainVaultDemo() {
               {/* Payment Form */}
               <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
                 <h3 className="font-semibold mb-6 flex items-center gap-2">
-                  <Send className="w-5 h-5 text-amber-400" />
+                  <Send className="w-5 h-5 text-green-400" />
                   Payment Details
                 </h3>
 
@@ -347,7 +347,7 @@ export default function GrainVaultDemo() {
                         <select
                           value={selectedVendor.id}
                           onChange={(e) => setSelectedVendor(DEMO_DATA.vendors.find(v => v.id === e.target.value) || DEMO_DATA.vendors[0])}
-                          className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-amber-500"
+                          className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-500"
                         >
                           {DEMO_DATA.vendors.map(v => (
                             <option key={v.id} value={v.id}>{v.name}</option>
@@ -361,7 +361,7 @@ export default function GrainVaultDemo() {
                           type="text"
                           value={paymentAmount}
                           onChange={(e) => setPaymentAmount(e.target.value.replace(/[^0-9]/g, ''))}
-                          className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-amber-500"
+                          className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-500"
                           placeholder="25000"
                         />
                       </div>
@@ -372,7 +372,7 @@ export default function GrainVaultDemo() {
                           type="text"
                           value={poReference}
                           onChange={(e) => setPOReference(e.target.value)}
-                          className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-amber-500"
+                          className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-500"
                           placeholder="PO-2024-001237"
                         />
                       </div>
@@ -381,7 +381,7 @@ export default function GrainVaultDemo() {
                     <button
                       onClick={handlePayment}
                       disabled={isProcessing || !paymentAmount}
-                      className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                      className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-black font-semibold rounded-xl hover:from-green-400 hover:to-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     >
                       {isProcessing ? (
                         <>
@@ -411,7 +411,7 @@ export default function GrainVaultDemo() {
                       </div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-500">Amount</span>
-                        <span className="text-amber-400">{formatCurrency(parseInt(paymentAmount))} GRAIN</span>
+                        <span className="text-green-400">{formatCurrency(parseInt(paymentAmount))} GRAIN</span>
                       </div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-500">Reference</span>
@@ -447,7 +447,7 @@ export default function GrainVaultDemo() {
                       <span className="text-sm text-gray-500">Current Balance</span>
                       <Wallet className="w-4 h-4 text-gray-500" />
                     </div>
-                    <div className="text-2xl font-bold">{formatCurrency(balance)} <span className="text-amber-400 text-lg">GRAIN</span></div>
+                    <div className="text-2xl font-bold">{formatCurrency(balance)} <span className="text-green-400 text-lg">GRAIN</span></div>
                     <div className="text-xs text-green-400 mt-1">+{DEMO_DATA.wallet.appreciation}% appreciation</div>
                   </div>
 
@@ -477,7 +477,7 @@ export default function GrainVaultDemo() {
                       {transactions.slice(0, 3).map((tx, i) => (
                         <div key={tx.id} className="flex items-center justify-between text-sm">
                           <span className="text-gray-400 truncate">{tx.vendor}</span>
-                          <span className="text-amber-400">-{formatCurrency(tx.amount)}</span>
+                          <span className="text-green-400">-{formatCurrency(tx.amount)}</span>
                         </div>
                       ))}
                     </div>
@@ -515,7 +515,7 @@ export default function GrainVaultDemo() {
                     <span className="text-sm text-gray-500">{stat.label}</span>
                     <stat.icon className={`w-5 h-5 text-${stat.color}-400`} />
                   </div>
-                  <div className={`text-3xl font-bold mb-1 ${stat.color === 'amber' ? 'text-amber-400' : stat.color === 'green' ? 'text-green-400' : stat.color === 'purple' ? 'text-purple-400' : 'text-blue-400'}`}>
+                  <div className={`text-3xl font-bold mb-1 ${stat.color === 'amber' ? 'text-green-400' : stat.color === 'green' ? 'text-green-400' : stat.color === 'purple' ? 'text-purple-400' : 'text-blue-400'}`}>
                     {stat.value}
                   </div>
                   <div className="text-xs text-gray-500">{stat.sub}</div>
@@ -527,7 +527,7 @@ export default function GrainVaultDemo() {
               {/* Transaction History */}
               <div className="md:col-span-2 bg-white/5 border border-white/10 rounded-xl p-6">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-amber-400" />
+                  <FileText className="w-5 h-5 text-green-400" />
                   Transaction History
                 </h3>
                 <div className="overflow-x-auto">
@@ -545,7 +545,7 @@ export default function GrainVaultDemo() {
                       {transactions.map((tx) => (
                         <tr key={tx.id} className="border-b border-white/5 text-sm">
                           <td className="py-3">{tx.vendor}</td>
-                          <td className="py-3 text-amber-400">{formatCurrency(tx.amount)} GRAIN</td>
+                          <td className="py-3 text-green-400">{formatCurrency(tx.amount)} GRAIN</td>
                           <td className="py-3 text-gray-400 font-mono text-xs">{tx.reference}</td>
                           <td className="py-3">{tx.time}</td>
                           <td className="py-3">
@@ -582,7 +582,7 @@ export default function GrainVaultDemo() {
             </div>
 
             {/* Complete CTA */}
-            <div className="bg-gradient-to-r from-amber-500/20 to-purple-500/20 border border-amber-500/20 rounded-2xl p-8 text-center">
+            <div className="bg-gradient-to-r from-green-500/20 to-purple-500/20 border border-green-500/20 rounded-2xl p-8 text-center">
               <h3 className="text-2xl font-bold mb-4">Ready to eliminate payment friction?</h3>
               <p className="text-gray-400 mb-6 max-w-xl mx-auto">
                 You've just experienced the future of B2B payments. Sub-second settlement,
@@ -591,7 +591,7 @@ export default function GrainVaultDemo() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a
                   href="mailto:sdk@grainandvault.com?subject=Treasury SDK Access Request&body=I just completed the Grain %26 Vault demo and I'm interested in getting SDK access for my organization.%0A%0ACompany:%0AUse Case:%0AExpected Monthly Volume:"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-black font-semibold rounded-xl hover:from-green-400 hover:to-green-500 transition-all"
                 >
                   Request SDK Access
                   <ArrowRight className="w-4 h-4" />
@@ -615,7 +615,7 @@ export default function GrainVaultDemo() {
             <p>© 2025 Grain & Vault. All rights reserved.</p>
             <p>
               Grain & Vault is a{' '}
-              <Link href="https://wellsonyx.io" className="text-amber-400 hover:text-amber-300 transition-colors">
+              <Link href="https://wellsonyx.io" className="text-green-400 hover:text-green-300 transition-colors">
                 Wells Onyx
               </Link>
               {' '}portfolio company.

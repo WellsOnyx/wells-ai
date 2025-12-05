@@ -42,8 +42,8 @@ const JOURNEY_CONFIG = {
   founder: {
     title: 'Founder Mode',
     icon: Rocket,
-    color: 'amber',
-    gradient: 'from-amber-500 to-orange-600',
+    color: 'gold',
+    gradient: 'from-gold-400 to-gold-600',
     placeholder: "I need to hire a CTO...",
     greeting: "I'm ready to help you build. Need talent, customers, or funding?",
     quickActions: [
@@ -170,8 +170,8 @@ export default function DashboardPage() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-gold-500 animate-spin" />
       </div>
     )
   }
@@ -179,11 +179,11 @@ export default function DashboardPage() {
   const Icon = config.icon
 
   return (
-    <div className="min-h-screen bg-black text-white relative">
+    <div className="min-h-screen text-white relative">
       {/* Ambient background glow */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-amber-500/3 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-gold-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-gold-500/3 rounded-full blur-3xl" />
       </div>
 
       {/* Header */}
@@ -191,8 +191,8 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all group-hover:scale-105">
-                <Sparkles className="w-4 h-4 text-black m-2" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 shadow-lg shadow-gold-500/20 group-hover:shadow-gold-500/40 transition-all group-hover:scale-105">
+                <Sparkles className="w-4 h-4 text-navy-900 m-2" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">Wells Onyx</span>
             </Link>
@@ -207,7 +207,7 @@ export default function DashboardPage() {
               {/* Admin Link - Only show for admin users */}
               <Link
                 href="/admin/leads"
-                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-amber-500 hover:bg-white/5 transition-all"
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gold-500 hover:bg-white/5 transition-all"
                 title="Admin Dashboard"
               >
                 <Settings className="w-4 h-4" />
@@ -223,7 +223,7 @@ export default function DashboardPage() {
               <UserButton
                 appearance={{
                   elements: {
-                    avatarBox: "w-9 h-9 ring-2 ring-white/10 hover:ring-amber-500/50 transition-all",
+                    avatarBox: "w-9 h-9 ring-2 ring-white/10 hover:ring-gold-500/50 transition-all",
                   }
                 }}
               />
@@ -250,10 +250,10 @@ export default function DashboardPage() {
               </div>
             </div>
             {/* First Mover Badge */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-gold-500/10 to-gold-600/10 border border-gold-500/20">
               <span className="text-lg">🏆</span>
               <div>
-                <p className="text-xs font-semibold text-amber-400">First Mover</p>
+                <p className="text-xs font-semibold text-gold-400">First Mover</p>
                 <p className="text-[10px] text-gray-400">Pioneer Status Unlocked</p>
               </div>
             </div>
@@ -265,8 +265,8 @@ export default function DashboardPage() {
             <div className="space-y-2">
               <div className="group flex items-center justify-between p-2.5 rounded-lg hover:bg-white/5 transition-all cursor-pointer">
                 <div className="flex items-center gap-2 text-sm text-gray-400 group-hover:text-white transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
-                    <TrendingUp className="w-4 h-4 text-amber-500" />
+                  <div className="w-8 h-8 rounded-lg bg-gold-500/10 flex items-center justify-center group-hover:bg-gold-500/20 transition-colors">
+                    <TrendingUp className="w-4 h-4 text-gold-500" />
                   </div>
                   <span>Active Deals</span>
                 </div>
@@ -304,7 +304,7 @@ export default function DashboardPage() {
                   className="group w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all text-sm text-left shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95"
                 >
                   <span className="text-gray-300 group-hover:text-white transition-colors">{action.label}</span>
-                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
+                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gold-500 group-hover:translate-x-1 transition-all" />
                 </button>
               ))}
             </div>
@@ -316,7 +316,7 @@ export default function DashboardPage() {
               href="/onboarding"
               className="group flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all"
             >
-              <Sparkles className="w-4 h-4 group-hover:text-amber-500 transition-colors" />
+              <Sparkles className="w-4 h-4 group-hover:text-gold-500 transition-colors" />
               <span>Switch Journey</span>
             </Link>
           </div>
@@ -364,8 +364,8 @@ export default function DashboardPage() {
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
                 >
                   {message.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center mr-3 flex-shrink-0 shadow-lg">
-                      <Sparkles className="w-4 h-4 text-black" />
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center mr-3 flex-shrink-0 shadow-lg">
+                      <Sparkles className="w-4 h-4 text-navy-900" />
                     </div>
                   )}
                   <div
@@ -384,12 +384,12 @@ export default function DashboardPage() {
 
               {isLoading && (
                 <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center mr-3 flex-shrink-0 shadow-lg">
-                    <Sparkles className="w-4 h-4 text-black" />
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center mr-3 flex-shrink-0 shadow-lg">
+                    <Sparkles className="w-4 h-4 text-navy-900" />
                   </div>
                   <div className="bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 backdrop-blur-sm shadow-xl">
                     <div className="flex items-center gap-3">
-                      <Loader2 className={`w-5 h-5 text-amber-500 animate-spin`} />
+                      <Loader2 className={`w-5 h-5 text-gold-500 animate-spin`} />
                       <span className="text-sm text-gray-300">Wells is working...</span>
                     </div>
                   </div>
@@ -416,12 +416,12 @@ export default function DashboardPage() {
                     className="w-full input-premium disabled:opacity-50 disabled:cursor-not-allowed text-base shadow-lg"
                   />
                   {/* Subtle glow on focus */}
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 opacity-0 group-focus-within:opacity-100 blur-xl transition-opacity pointer-events-none -z-10" />
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-gold-500/20 to-gold-600/20 opacity-0 group-focus-within:opacity-100 blur-xl transition-opacity pointer-events-none -z-10" />
                 </div>
                 <button
                   onClick={() => sendMessage()}
                   disabled={!input.trim() || isLoading}
-                  className={`bg-gradient-to-r ${config.gradient} text-white px-6 py-3.5 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl hover:shadow-amber-500/30 relative overflow-hidden group`}
+                  className={`bg-gradient-to-r ${config.gradient} text-white px-6 py-3.5 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl hover:shadow-gold-500/30 relative overflow-hidden group`}
                 >
                   {/* Shimmer effect on hover */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />

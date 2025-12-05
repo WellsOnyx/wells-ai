@@ -22,10 +22,10 @@ export function OnboardingLayout({
   const progress = Math.round((currentIndex / (ONBOARDING_STEPS.length - 1)) * 100)
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen text-white flex flex-col">
       {/* Header with Progress */}
       {showProgress && currentStep !== 'welcome' && (
-        <header className="border-b border-gray-800 bg-black/80 backdrop-blur-sm sticky top-0 z-50">
+        <header className="border-b border-white/10 bg-navy-900/80 backdrop-blur-sm sticky top-0 z-50">
           <div className="max-w-4xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between mb-3">
               {/* Back Button */}
@@ -50,9 +50,9 @@ export function OnboardingLayout({
             </div>
 
             {/* Progress Bar */}
-            <div className="relative h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500 ease-out"
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-gold-400 to-gold-600 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -78,7 +78,7 @@ export function OnboardingLayout({
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800 py-4 text-center text-sm text-gray-500">
+      <footer className="border-t border-white/10 py-4 text-center text-sm text-gray-500">
         <p>Secure onboarding powered by Wells AI</p>
       </footer>
     </div>
@@ -97,7 +97,7 @@ export function ProgressRing({ progress, size = 120 }: { progress: number; size?
       <svg className="transform -rotate-90" width={size} height={size}>
         {/* Background circle */}
         <circle
-          className="text-gray-800"
+          className="text-white/10"
           strokeWidth={strokeWidth}
           stroke="currentColor"
           fill="transparent"
@@ -107,7 +107,7 @@ export function ProgressRing({ progress, size = 120 }: { progress: number; size?
         />
         {/* Progress circle */}
         <circle
-          className="text-amber-500 transition-all duration-500 ease-out"
+          className="text-gold-500 transition-all duration-500 ease-out"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
