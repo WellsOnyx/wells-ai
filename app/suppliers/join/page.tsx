@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react'
-import { ArrowLeft, Check, Building, Mail, Phone, Tag, Award, Loader2, Star, TrendingUp, Zap, Users } from 'lucide-react'
+import { ArrowLeft, Check, Building, Mail, Phone, Tag, Award, Loader2, TrendingUp, Zap, Users } from 'lucide-react'
 import Link from 'next/link'
 
 const CATEGORIES = [
@@ -26,35 +26,7 @@ const CATEGORIES = [
   'Other'
 ]
 
-const TESTIMONIALS = [
-  {
-    name: 'Sarah Chen',
-    company: 'Sysco Meat & Seafood',
-    quote: 'In 3 months, Wells AI sent us 40+ qualified RFQs. We closed 12 deals worth $180k. The automated matching saves our sales team 15 hours per week.',
-    rating: 5
-  },
-  {
-    name: 'Michael Rodriguez',
-    company: 'Grainger Industrial Supply',
-    quote: 'We used to chase cold leads. Now buyers find us. Wells AI increased our quote volume by 3x while cutting acquisition costs in half.',
-    rating: 5
-  },
-  {
-    name: 'Jennifer Park',
-    company: 'CDW Corporation',
-    quote: 'The platform instantly matches us with buyers who need exactly what we sell. Our close rate went from 12% to 34% because leads are pre-qualified.',
-    rating: 5
-  }
-]
-
-const FEATURED_SUPPLIERS = [
-  { name: 'Sysco', category: 'Food Service' },
-  { name: 'Grainger', category: 'Industrial' },
-  { name: 'CDW', category: 'Technology' },
-  { name: 'Uline', category: 'Packaging' },
-  { name: 'Ferguson', category: 'Plumbing' },
-  { name: 'Cintas', category: 'Facilities' }
-]
+// Testimonials removed - will add real ones when we have them
 
 const FAQ_ITEMS = [
   {
@@ -225,41 +197,16 @@ export default function SupplierJoinPage() {
           </div>
         </div>
 
-        {/* Featured Suppliers */}
+        {/* Early Access Banner */}
         <div className="mb-20">
-          <h3 className="text-3xl font-bold text-white text-center mb-8">
-            Join Industry Leaders Already on Wells AI
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {FEATURED_SUPPLIERS.map((supplier, idx) => (
-              <div key={idx} className="bg-gray-900 rounded-lg p-4 border border-gray-800 text-center">
-                <div className="font-bold text-white mb-1">{supplier.name}</div>
-                <div className="text-sm text-gray-500">{supplier.category}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Testimonials */}
-        <div className="mb-20">
-          <h3 className="text-3xl font-bold text-white text-center mb-12">
-            What Suppliers Are Saying
-          </h3>
-          <div className="grid md:grid-cols-3 gap-8">
-            {TESTIMONIALS.map((testimonial, idx) => (
-              <div key={idx} className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-                <div className="flex gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-amber-500 text-amber-500" />
-                  ))}
-                </div>
-                <p className="text-gray-300 mb-4 italic">&quot;{testimonial.quote}&quot;</p>
-                <div className="border-t border-gray-800 pt-4">
-                  <div className="font-semibold text-white">{testimonial.name}</div>
-                  <div className="text-sm text-gray-500">{testimonial.company}</div>
-                </div>
-              </div>
-            ))}
+          <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-2xl p-8 text-center">
+            <h3 className="text-2xl font-bold text-white mb-4">
+              Early Access Program
+            </h3>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              Join our growing network of suppliers. Get matched with qualified buyers
+              looking for exactly what you offer. Zero upfront cost.
+            </p>
           </div>
         </div>
 
