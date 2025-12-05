@@ -133,10 +133,14 @@ export default function GrainVaultSignupPage() {
                 formFieldErrorText: 'text-red-400',
                 otpCodeFieldInput: 'bg-white/5 border-white/10 text-white',
                 formResendCodeLink: 'text-green-400 hover:text-green-300',
+                footer: 'hidden',
+                footerAction: 'hidden',
+                internal: 'hidden',
               },
               layout: {
                 socialButtonsPlacement: 'top',
                 socialButtonsVariant: 'blockButton',
+                showOptionalFields: false,
               },
             }}
             routing="path"

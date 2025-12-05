@@ -51,10 +51,14 @@ export default function GrainVaultSigninPage() {
               identityPreviewEditButton: 'text-green-400 hover:text-green-300',
               formFieldSuccessText: 'text-green-400',
               formFieldErrorText: 'text-red-400',
+              footer: 'hidden',
+              footerAction: 'hidden',
+              internal: 'hidden',
             },
             layout: {
               socialButtonsPlacement: 'top',
               socialButtonsVariant: 'blockButton',
+              showOptionalFields: false,
             },
           }}
           routing="path"
