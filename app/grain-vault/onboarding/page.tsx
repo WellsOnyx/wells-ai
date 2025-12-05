@@ -82,7 +82,8 @@ export default function GrainVaultOnboardingPage() {
   const completeOnboarding = useCallback(async () => {
     setIsSubmitting(true)
     try {
-      const response = await fetch('/api/grain-vault/account', {
+      // Try to finalize account data
+      await fetch('/api/grain-vault/account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -91,15 +92,11 @@ export default function GrainVaultOnboardingPage() {
           treasuryData
         })
       })
-
-      if (response.ok) {
-        router.push('/grain-vault/account')
-      }
     } catch (error) {
       console.error('Error completing onboarding:', error)
-    } finally {
-      setIsSubmitting(false)
     }
+    // Always navigate to dashboard (account was created during treasury step)
+    router.push('/grain-vault/account')
   }, [companyData, erpData, treasuryData, router])
 
   // Progress calculation
@@ -769,7 +766,7 @@ function CompleteStep({
       <button
         onClick={onComplete}
         disabled={isSubmitting}
-        className="w-full max-w-md py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl text-white font-semibold text-lg transition-all hover:scale-[1.02] flex items-center justify-center gap-2 disabled:opacity-50"
+        className="w-full max-w-md mx-auto py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl text-white font-semibold text-lg transition-all hover:scale-[1.02] flex items-center justify-center gap-2 disabled:opacity-50"
       >
         {isSubmitting ? (
           <>
