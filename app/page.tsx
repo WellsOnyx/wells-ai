@@ -332,6 +332,9 @@ export default function WellsOnyxHome() {
                 <Link href="#pricing" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
                   Pricing
                 </Link>
+                <Link href="/sign-in" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
+                  Sign In
+                </Link>
                 <Link
                   href="/founder/chat"
                   className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-lg font-semibold text-sm hover:from-amber-400 hover:to-amber-500 transition-all hover:scale-105 hover:shadow-xl hover:shadow-amber-500/50 active:scale-95"
@@ -342,6 +345,9 @@ export default function WellsOnyxHome() {
 
               {/* Mobile Menu Button */}
               <div className="md:hidden flex items-center gap-3">
+                <Link href="/sign-in" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
+                  Sign In
+                </Link>
                 <Link
                   href="/founder/chat"
                   className="px-4 py-2 bg-amber-500 text-black rounded-lg font-semibold text-sm"
