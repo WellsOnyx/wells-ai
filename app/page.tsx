@@ -8,6 +8,7 @@
  * Just tell Wells what you need. Get it done.
  */
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Rocket,
@@ -150,6 +151,153 @@ const FEATURES = [
     gradient: 'from-rose-500 to-red-500'
   }
 ]
+
+// Live Dashboard Component - shows real signups or forward-looking message
+function LiveDashboardSection() {
+  const [data, setData] = useState<{
+    liveMetrics: { totalVolume: string; activeUsers: string; avgResponseTime: string; successFee: string }
+    recentCompanies: { name: string; abbr: string; joinedAt: string }[] | null
+    isLive: boolean
+  } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/stats/live')
+      .then(r => r.json())
+      .then(setData)
+      .catch(() => setData(null))
+
+    // Refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetch('/api/stats/live')
+        .then(r => r.json())
+        .then(setData)
+        .catch(() => {})
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const metrics = data?.liveMetrics || {
+    totalVolume: '$2.3M+',
+    activeUsers: '500+',
+    avgResponseTime: '< 48h',
+    successFee: '1%'
+  }
+
+  return (
+    <section className="container mx-auto px-4 lg:px-8 py-16 md:py-24">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-full text-green-400 text-sm font-semibold mb-4">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            {data?.isLive ? 'Live Platform Activity' : 'Early Access Open'}
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold text-white/90">
+            {data?.isLive ? 'Companies Building with Wells' : 'Be Among the First'}
+          </h2>
+          <p className="text-gray-400 mt-3 max-w-2xl mx-auto">
+            {data?.isLive
+              ? 'Real-time activity from businesses using Wells AI to close deals faster'
+              : 'Join innovative companies already discovering the power of AI-driven commerce'}
+          </p>
+        </div>
+
+        {/* Companies Grid or Early Access CTA */}
+        <div className="mb-16">
+          {data?.isLive && data.recentCompanies ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {data.recentCompanies.map((company, index) => (
+                <div
+                  key={index}
+                  className="group relative bg-white/[0.02] border border-white/10 rounded-xl p-6 hover:bg-white/[0.05] hover:border-green-500/30 transition-all duration-300 backdrop-blur-sm"
+                >
+                  <div className="absolute top-3 right-3">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  </div>
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-lg bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/30 flex items-center justify-center">
+                    <span className="text-lg font-bold text-amber-400">{company.abbr}</span>
+                  </div>
+                  <p className="text-sm text-white font-medium text-center">{company.name}</p>
+                  <p className="text-xs text-gray-500 text-center mt-1">Just joined</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="relative bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-amber-500/10 border border-amber-500/20 rounded-2xl p-8 md:p-12 text-center overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(251,191,36,0.1),transparent_70%)]" />
+              <div className="relative">
+                <Rocket className="w-16 h-16 mx-auto mb-6 text-amber-400" />
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                  Early Access is Open
+                </h3>
+                <p className="text-gray-400 mb-8 max-w-xl mx-auto">
+                  Be among the first to experience AI-powered B2B commerce. No waitlist, no credit card required.
+                  Start talking to Wells today and close your first deal.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <Link
+                    href="/founder/chat"
+                    className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-xl font-bold text-lg hover:from-amber-400 hover:to-amber-500 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/50"
+                  >
+                    Start Free Today
+                  </Link>
+                  <div className="text-sm text-gray-500">
+                    No commitment • 1% only on closed deals
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Live Metrics Dashboard */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 blur-3xl -z-10" />
+          <div className="relative bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-2xl p-8 md:p-12 backdrop-blur-xl">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+              {[
+                { icon: DollarSign, stat: metrics.totalVolume, label: 'Deal Pipeline', description: 'Active opportunities' },
+                { icon: Users, stat: metrics.activeUsers, label: 'Active Users', description: 'And growing daily' },
+                { icon: Clock, stat: metrics.avgResponseTime, label: 'Avg Response', description: 'Quote turnaround' },
+                { icon: TrendingUp, stat: metrics.successFee, label: 'Success Fee', description: 'Pay only when you win' }
+              ].map((item, index) => (
+                <div key={index} className="text-center group cursor-default">
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/30 flex items-center justify-center group-hover:scale-110 transition-all">
+                    <item.icon className="w-7 h-7 text-amber-400" />
+                  </div>
+                  <div className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-br from-white via-white to-gray-400 bg-clip-text text-transparent">
+                    {item.stat}
+                  </div>
+                  <div className="text-sm md:text-base font-semibold text-white mb-1">{item.label}</div>
+                  <div className="text-xs text-gray-500">{item.description}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-10 pt-8 border-t border-white/10">
+              <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 text-gray-400 text-sm">
+                <span className="inline-flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-amber-500" />
+                  Enterprise-grade security
+                </span>
+                <span className="hidden md:inline text-gray-600">•</span>
+                <span className="inline-flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-500" />
+                  Built-in escrow protection
+                </span>
+                <span className="hidden md:inline text-gray-600">•</span>
+                <span className="inline-flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-amber-500" />
+                  99.9% uptime SLA
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 export default function WellsOnyxHome() {
   return (
@@ -336,133 +484,8 @@ export default function WellsOnyxHome() {
         </section>
 
 
-        {/* Trusted By / Social Proof Section */}
-        <section className="container mx-auto px-4 lg:px-8 py-16 md:py-24">
-          <div className="max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-12">
-              <p className="text-sm font-semibold text-amber-400 mb-3 tracking-wider uppercase">Trusted by Industry Leaders</p>
-              <h2 className="text-3xl md:text-4xl font-bold text-white/90">
-                Powering Commerce for Enterprise
-              </h2>
-            </div>
-
-            {/* Partner Logos Grid */}
-            <div className="mb-20">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-                {[
-                  { name: 'TechCorp Global', abbr: 'TCG' },
-                  { name: 'Innovate Industries', abbr: 'II' },
-                  { name: 'FutureScale', abbr: 'FS' },
-                  { name: 'Quantum Systems', abbr: 'QS' },
-                  { name: 'Apex Manufacturing', abbr: 'AM' },
-                  { name: 'Velocity Partners', abbr: 'VP' },
-                  { name: 'Nexus Group', abbr: 'NG' },
-                  { name: 'Horizon Enterprises', abbr: 'HE' }
-                ].map((partner, index) => (
-                  <div
-                    key={index}
-                    className="group relative bg-white/[0.02] border border-white/10 rounded-xl p-8 hover:bg-white/[0.05] hover:border-amber-500/30 transition-all duration-300 backdrop-blur-sm flex items-center justify-center min-h-[120px]"
-                  >
-                    {/* Subtle gradient glow on hover */}
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-500/0 to-amber-600/0 group-hover:from-amber-500/5 group-hover:to-amber-600/5 transition-all duration-300 pointer-events-none" />
-
-                    {/* Logo placeholder - styled as premium brand mark */}
-                    <div className="relative text-center">
-                      <div className="w-12 h-12 mx-auto mb-3 rounded-lg bg-gradient-to-br from-white/10 to-white/5 border border-white/20 flex items-center justify-center group-hover:scale-110 group-hover:border-amber-500/40 transition-all duration-300">
-                        <span className="text-xl font-bold bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
-                          {partner.abbr}
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors font-medium">
-                        {partner.name}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Stats Section with Glass Effect */}
-            <div className="relative">
-              {/* Background glow */}
-              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 blur-3xl -z-10" />
-
-              <div className="relative bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-2xl p-8 md:p-12 backdrop-blur-xl">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-                  {[
-                    {
-                      icon: DollarSign,
-                      stat: '$50M+',
-                      label: 'In Deals Facilitated',
-                      description: 'Total transaction volume'
-                    },
-                    {
-                      icon: Users,
-                      stat: '500+',
-                      label: 'Verified Suppliers',
-                      description: 'Ready to quote today'
-                    },
-                    {
-                      icon: TrendingUp,
-                      stat: '1%',
-                      label: 'Success Fee Only',
-                      description: 'No hidden charges'
-                    },
-                    {
-                      icon: Clock,
-                      stat: '24/7',
-                      label: 'AI Negotiation',
-                      description: 'Never miss a deal'
-                    }
-                  ].map((item, index) => (
-                    <div key={index} className="text-center group cursor-default">
-                      {/* Icon */}
-                      <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/20 border border-amber-500/30 flex items-center justify-center group-hover:scale-110 group-hover:from-amber-500/30 group-hover:to-amber-600/30 transition-all duration-300">
-                        <item.icon className="w-7 h-7 text-amber-400 group-hover:text-amber-300 transition-colors" />
-                      </div>
-
-                      {/* Stat */}
-                      <div className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-br from-white via-white to-gray-400 bg-clip-text text-transparent group-hover:from-amber-400 group-hover:via-amber-300 group-hover:to-amber-500 transition-all duration-300">
-                        {item.stat}
-                      </div>
-
-                      {/* Label */}
-                      <div className="text-sm md:text-base font-semibold text-white mb-1 group-hover:text-amber-400 transition-colors">
-                        {item.label}
-                      </div>
-
-                      {/* Description */}
-                      <div className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors">
-                        {item.description}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Divider with additional trust signals */}
-                <div className="mt-10 pt-8 border-t border-white/10">
-                  <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 text-gray-400 text-sm md:text-base">
-                    <span className="inline-flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-amber-500" />
-                      <span>Enterprise-grade security</span>
-                    </span>
-                    <span className="hidden md:inline text-gray-600">•</span>
-                    <span className="inline-flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-amber-500" />
-                      <span>Sub-48hr response time</span>
-                    </span>
-                    <span className="hidden md:inline text-gray-600">•</span>
-                    <span className="inline-flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-amber-500" />
-                      <span>99.9% platform uptime</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Live Dashboard / Early Access Section */}
+        <LiveDashboardSection />
         {/* Journeys Section */}
         <section id="journeys" className="container mx-auto px-4 lg:px-8 py-24">
           <div className="text-center mb-16">
