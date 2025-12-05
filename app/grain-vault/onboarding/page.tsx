@@ -262,7 +262,7 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
 
       <button
         onClick={onContinue}
-        className="w-full max-w-md py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl text-white font-semibold text-lg transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+        className="w-full max-w-md mx-auto py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl text-white font-semibold text-lg transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
       >
         Get Started
         <ArrowRight className="w-5 h-5" />
