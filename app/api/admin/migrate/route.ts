@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@vercel/postgres'
+import { createClient } from '@vercel/postgres'
 
 export const dynamic = 'force-dynamic'
+
+// Create client for direct connection (works with Prisma Postgres)
+function getClient() {
+  const connectionString = process.env.POSTGRES_URL || process.env.wellsmemory_POSTGRES_URL
+  return createClient({ connectionString })
+}
 
 // Master key for admin operations
 const MASTER_KEY = process.env.COLD_START_MASTER_KEY || 'wells-master-2024-coldstart'
 
 export async function POST(request: NextRequest) {
+  const client = getClient()
+
   try {
     // Verify master key
     const authHeader = request.headers.get('authorization')
@@ -16,6 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    await client.connect()
     console.log('🚀 Starting Treasury SDK database migration...\n')
 
     const results: { statement: string; success: boolean; error?: string }[] = []
@@ -229,7 +238,7 @@ export async function POST(request: NextRequest) {
     // Create each table
     for (const table of statements) {
       try {
-        await sql.query(table.sql)
+        await client.query(table.sql)
         results.push({ statement: `CREATE TABLE ${table.name}`, success: true })
         console.log(`✅ Created table: ${table.name}`)
       } catch (error: any) {
@@ -262,7 +271,7 @@ export async function POST(request: NextRequest) {
 
     for (const indexSql of indexes) {
       try {
-        await sql.query(indexSql)
+        await client.query(indexSql)
         results.push({ statement: indexSql.substring(0, 60) + '...', success: true })
       } catch (error: any) {
         results.push({ statement: indexSql.substring(0, 60) + '...', success: false, error: error.message })
@@ -270,15 +279,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify tables created
-    const tablesResult = await sql`
+    const tablesResult = await client.query(`
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
         AND table_name LIKE 'treasury_%'
       ORDER BY table_name
-    `
+    `)
 
-    const tables = tablesResult.rows.map(r => r.table_name)
+    const tables = tablesResult.rows.map((r: any) => r.table_name)
+
+    await client.end()
 
     return NextResponse.json({
       success: true,
@@ -290,6 +301,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Migration failed:', error)
+    try { await client.end() } catch {}
     return NextResponse.json({
       success: false,
       error: error.message || 'Migration failed'
@@ -298,28 +310,34 @@ export async function POST(request: NextRequest) {
 }
 
 // GET to check migration status
-export async function GET(request: NextRequest) {
+export async function GET() {
+  const client = getClient()
+
   try {
-    const tablesResult = await sql`
+    await client.connect()
+
+    const tablesResult = await client.query(`
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
         AND (table_name LIKE 'treasury_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
       ORDER BY table_name
-    `
+    `)
 
-    const tables = tablesResult.rows.map(r => r.table_name)
+    const tables = tablesResult.rows.map((r: any) => r.table_name)
 
     // Count records in each table
     const counts: Record<string, number> = {}
     for (const table of tables) {
       try {
-        const result = await sql.query(`SELECT COUNT(*) as count FROM ${table}`)
+        const result = await client.query(`SELECT COUNT(*) as count FROM ${table}`)
         counts[table] = Number(result.rows[0]?.count || 0)
       } catch {
         counts[table] = -1 // Error reading
       }
     }
+
+    await client.end()
 
     return NextResponse.json({
       success: true,
@@ -330,6 +348,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
+    try { await client.end() } catch {}
     return NextResponse.json({
       success: false,
       error: error.message,
