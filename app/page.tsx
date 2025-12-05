@@ -333,12 +333,6 @@ export default function WellsOnyxHome() {
                   Pricing
                 </Link>
                 <Link
-                  href="/admin/leads"
-                  className="text-sm font-medium text-gray-400 hover:text-amber-500 transition-colors"
-                >
-                  Admin
-                </Link>
-                <Link
                   href="/founder/chat"
                   className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-lg font-semibold text-sm hover:from-amber-400 hover:to-amber-500 transition-all hover:scale-105 hover:shadow-xl hover:shadow-amber-500/50 active:scale-95"
                 >
@@ -348,12 +342,6 @@ export default function WellsOnyxHome() {
 
               {/* Mobile Menu Button */}
               <div className="md:hidden flex items-center gap-3">
-                <Link
-                  href="/admin/leads"
-                  className="text-sm font-medium text-gray-400 hover:text-amber-500 transition-colors"
-                >
-                  Admin
-                </Link>
                 <Link
                   href="/founder/chat"
                   className="px-4 py-2 bg-amber-500 text-black rounded-lg font-semibold text-sm"
@@ -845,7 +833,8 @@ export default function WellsOnyxHome() {
                 <h4 className="font-semibold mb-4 text-sm">Get Started</h4>
                 <ul className="space-y-3 text-sm text-gray-400">
                   <li><Link href="/founder/chat" className="hover:text-white transition-colors">Talk to Wells</Link></li>
-                  <li><Link href="/admin/leads" className="hover:text-white transition-colors">Admin</Link></li>
+                  <li><Link href="/buyer/chat" className="hover:text-white transition-colors">Start Sourcing</Link></li>
+                  <li><Link href="/suppliers/join" className="hover:text-white transition-colors">Join as Seller</Link></li>
                 </ul>
               </div>
             </div>
