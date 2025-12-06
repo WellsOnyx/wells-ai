@@ -3,6 +3,7 @@
 
 import { sql } from '@vercel/postgres'
 import Anthropic from '@anthropic-ai/sdk'
+import { getChannelCredentials } from './integrations'
 
 // All supported communication channels
 export type Channel =
@@ -466,8 +467,8 @@ export async function approveAndSendMessage(
 
   const message = result.rows[0] as Message
 
-  // Actually send via the appropriate channel
-  await sendViaChannel(message)
+  // Actually send via the appropriate channel using user's credentials
+  await sendViaChannel(message, userId)
 
   // Update status to sent
   await sql`
@@ -477,49 +478,52 @@ export async function approveAndSendMessage(
   return message
 }
 
-// Send message via the appropriate channel
-async function sendViaChannel(message: Message): Promise<void> {
+// Send message via the appropriate channel using user's credentials
+async function sendViaChannel(message: Message, userId: string): Promise<void> {
   // Get conversation for contact info
   const convResult = await sql`
     SELECT * FROM inbox_conversations WHERE id = ${message.conversation_id}
   `
   const conversation = convResult.rows[0] as Conversation
 
+  // Get user's credentials for this channel
+  const credentials = await getChannelCredentials(userId, message.channel)
+
   switch (message.channel) {
     case 'sms':
-      await sendSMS(conversation.contact_phone!, message.content)
+      await sendSMS(conversation.contact_phone!, message.content, credentials)
       break
     case 'imessage':
-      await sendIMessage(conversation.contact_phone!, message.content)
+      await sendIMessage(conversation.contact_phone!, message.content, credentials)
       break
     case 'gmail':
     case 'outlook':
     case 'email':
-      await sendEmail(conversation.contact_email!, message.content, conversation.subject)
+      await sendEmail(conversation.contact_email!, message.content, conversation.subject, credentials)
       break
     case 'slack':
-      await sendSlack(conversation.contact_id, message.content)
+      await sendSlack(conversation.contact_id, message.content, credentials)
       break
     case 'discord':
-      await sendDiscord(conversation.contact_id, message.content)
+      await sendDiscord(conversation.contact_id, message.content, credentials)
       break
     case 'twitter':
-      await sendTwitterDM(conversation.contact_id, message.content)
+      await sendTwitterDM(conversation.contact_id, message.content, credentials)
       break
     case 'instagram':
-      await sendInstagramDM(conversation.contact_id, message.content)
+      await sendInstagramDM(conversation.contact_id, message.content, credentials)
       break
     case 'linkedin':
-      await sendLinkedInMessage(conversation.contact_id, message.content)
+      await sendLinkedInMessage(conversation.contact_id, message.content, credentials)
       break
     case 'whatsapp':
-      await sendWhatsApp(conversation.contact_phone!, message.content)
+      await sendWhatsApp(conversation.contact_phone!, message.content, credentials)
       break
     case 'teams':
-      await sendTeamsMessage(conversation.contact_id, message.content)
+      await sendTeamsMessage(conversation.contact_id, message.content, credentials)
       break
     case 'telegram':
-      await sendTelegram(conversation.contact_id, message.content)
+      await sendTelegram(conversation.contact_id, message.content, credentials)
       break
     case 'chat':
       // Website chat - typically handled via websocket/realtime
@@ -530,14 +534,19 @@ async function sendViaChannel(message: Message): Promise<void> {
   }
 }
 
-// Send SMS via Twilio
-async function sendSMS(to: string, body: string): Promise<void> {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  const from = process.env.TWILIO_PHONE_NUMBER
+// Credentials type for channel integrations
+type ChannelCreds = Record<string, string> | null
+
+// Send SMS via Twilio - uses user credentials or falls back to env
+async function sendSMS(to: string, body: string, creds: ChannelCreds): Promise<void> {
+  // User credentials: phone_number (their Twilio number), account_sid, auth_token
+  // Or fall back to system Twilio for shared usage
+  const accountSid = creds?.account_sid || process.env.TWILIO_ACCOUNT_SID
+  const authToken = creds?.auth_token || process.env.TWILIO_AUTH_TOKEN
+  const from = creds?.phone_number || process.env.TWILIO_PHONE_NUMBER
 
   if (!accountSid || !authToken || !from) {
-    throw new Error('Twilio credentials not configured')
+    throw new Error('SMS not configured - connect your phone number in settings')
   }
 
   const twilio = require('twilio')(accountSid, authToken)
@@ -549,37 +558,70 @@ async function sendSMS(to: string, body: string): Promise<void> {
   })
 }
 
-// Send email via Resend
-async function sendEmail(to: string, body: string, subject?: string): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY
+// Send email via Resend or Gmail/Outlook OAuth
+async function sendEmail(to: string, body: string, subject?: string, creds: ChannelCreds = null): Promise<void> {
+  // If user has OAuth credentials (Gmail/Outlook), use those
+  if (creds?.access_token) {
+    // Use OAuth to send via Gmail or Outlook
+    await sendEmailViaOAuth(to, body, subject, creds)
+    return
+  }
+
+  // Fall back to Resend API key
+  const apiKey = creds?.api_key || process.env.RESEND_API_KEY
+  const fromEmail = creds?.from_email || process.env.RESEND_FROM_EMAIL || 'wells@wellsonyx.com'
+
   if (!apiKey) {
-    throw new Error('Resend API key not configured')
+    throw new Error('Email not configured - connect your email in settings')
   }
 
   const { Resend } = require('resend')
   const resend = new Resend(apiKey)
 
   await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL || 'wells@wellsonyx.com',
+    from: fromEmail,
     to,
     subject: subject || 'Re: Your inquiry',
     text: body
   })
 }
 
-// Send iMessage via Sendblue or similar
-async function sendIMessage(to: string, body: string): Promise<void> {
-  const apiKey = process.env.SENDBLUE_API_KEY
+// Send email via Gmail/Outlook OAuth
+async function sendEmailViaOAuth(to: string, body: string, subject: string | undefined, creds: Record<string, string>): Promise<void> {
+  // For Gmail
+  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${creds.access_token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      raw: Buffer.from(
+        `To: ${to}\r\nSubject: ${subject || 'Re: Your inquiry'}\r\n\r\n${body}`
+      ).toString('base64url')
+    })
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(`Gmail API error: ${error.error?.message || response.status}`)
+  }
+}
+
+// Send iMessage via Sendblue
+async function sendIMessage(to: string, body: string, creds: ChannelCreds): Promise<void> {
+  const apiKey = creds?.api_key || process.env.SENDBLUE_API_KEY
+  const apiKeyId = creds?.api_key_id || process.env.SENDBLUE_API_KEY_ID
+
   if (!apiKey) {
-    console.log('[Inbox] iMessage not configured - SENDBLUE_API_KEY required')
-    return
+    throw new Error('iMessage not configured - connect Sendblue in settings')
   }
 
   const response = await fetch('https://api.sendblue.co/api/send-message', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'sb-api-key-id': process.env.SENDBLUE_API_KEY_ID || '',
+      'sb-api-key-id': apiKeyId || '',
       'sb-api-secret-key': apiKey
     },
     body: JSON.stringify({
@@ -593,12 +635,11 @@ async function sendIMessage(to: string, body: string): Promise<void> {
   }
 }
 
-// Send Slack message via Webhook or API
-async function sendSlack(channelOrUserId: string, body: string): Promise<void> {
-  const token = process.env.SLACK_BOT_TOKEN
+// Send Slack message via OAuth token
+async function sendSlack(channelOrUserId: string, body: string, creds: ChannelCreds): Promise<void> {
+  const token = creds?.access_token || process.env.SLACK_BOT_TOKEN
   if (!token) {
-    console.log('[Inbox] Slack not configured - SLACK_BOT_TOKEN required')
-    return
+    throw new Error('Slack not configured - connect your workspace in settings')
   }
 
   const response = await fetch('https://slack.com/api/chat.postMessage', {
@@ -620,11 +661,10 @@ async function sendSlack(channelOrUserId: string, body: string): Promise<void> {
 }
 
 // Send Discord message via Webhook
-async function sendDiscord(channelId: string, body: string): Promise<void> {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+async function sendDiscord(channelId: string, body: string, creds: ChannelCreds): Promise<void> {
+  const webhookUrl = creds?.webhook_url || process.env.DISCORD_WEBHOOK_URL
   if (!webhookUrl) {
-    console.log('[Inbox] Discord not configured - DISCORD_WEBHOOK_URL required')
-    return
+    throw new Error('Discord not configured - add webhook URL in settings')
   }
 
   const response = await fetch(webhookUrl, {
@@ -640,18 +680,17 @@ async function sendDiscord(channelId: string, body: string): Promise<void> {
   }
 }
 
-// Send Twitter/X DM
-async function sendTwitterDM(userId: string, body: string): Promise<void> {
-  const bearerToken = process.env.TWITTER_BEARER_TOKEN
-  if (!bearerToken) {
-    console.log('[Inbox] Twitter/X not configured - TWITTER_BEARER_TOKEN required')
-    return
+// Send Twitter/X DM via OAuth
+async function sendTwitterDM(userId: string, body: string, creds: ChannelCreds): Promise<void> {
+  const accessToken = creds?.access_token || process.env.TWITTER_BEARER_TOKEN
+  if (!accessToken) {
+    throw new Error('X/Twitter not configured - connect your account in settings')
   }
 
   const response = await fetch(`https://api.twitter.com/2/dm_conversations/with/${userId}/messages`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${bearerToken}`,
+      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
@@ -665,12 +704,11 @@ async function sendTwitterDM(userId: string, body: string): Promise<void> {
 }
 
 // Send Instagram DM via Meta Graph API
-async function sendInstagramDM(userId: string, body: string): Promise<void> {
-  const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN
-  const pageId = process.env.INSTAGRAM_PAGE_ID
+async function sendInstagramDM(userId: string, body: string, creds: ChannelCreds): Promise<void> {
+  const accessToken = creds?.access_token || process.env.INSTAGRAM_ACCESS_TOKEN
+  const pageId = creds?.page_id || process.env.INSTAGRAM_PAGE_ID
   if (!accessToken || !pageId) {
-    console.log('[Inbox] Instagram not configured - INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_PAGE_ID required')
-    return
+    throw new Error('Instagram not configured - connect your business account in settings')
   }
 
   const response = await fetch(`https://graph.facebook.com/v18.0/${pageId}/messages`, {
@@ -690,12 +728,11 @@ async function sendInstagramDM(userId: string, body: string): Promise<void> {
   }
 }
 
-// Send LinkedIn message
-async function sendLinkedInMessage(userId: string, body: string): Promise<void> {
-  const accessToken = process.env.LINKEDIN_ACCESS_TOKEN
+// Send LinkedIn message via OAuth
+async function sendLinkedInMessage(userId: string, body: string, creds: ChannelCreds): Promise<void> {
+  const accessToken = creds?.access_token || process.env.LINKEDIN_ACCESS_TOKEN
   if (!accessToken) {
-    console.log('[Inbox] LinkedIn not configured - LINKEDIN_ACCESS_TOKEN required')
-    return
+    throw new Error('LinkedIn not configured - connect your account in settings')
   }
 
   // LinkedIn messaging API requires approved access
@@ -718,14 +755,13 @@ async function sendLinkedInMessage(userId: string, body: string): Promise<void> 
 }
 
 // Send WhatsApp message via Twilio
-async function sendWhatsApp(to: string, body: string): Promise<void> {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  const from = process.env.TWILIO_WHATSAPP_NUMBER
+async function sendWhatsApp(to: string, body: string, creds: ChannelCreds): Promise<void> {
+  const accountSid = creds?.account_sid || process.env.TWILIO_ACCOUNT_SID
+  const authToken = creds?.auth_token || process.env.TWILIO_AUTH_TOKEN
+  const from = creds?.phone_number || process.env.TWILIO_WHATSAPP_NUMBER
 
   if (!accountSid || !authToken || !from) {
-    console.log('[Inbox] WhatsApp not configured - Twilio credentials required')
-    return
+    throw new Error('WhatsApp not configured - connect your WhatsApp Business in settings')
   }
 
   const twilio = require('twilio')(accountSid, authToken)
@@ -738,11 +774,10 @@ async function sendWhatsApp(to: string, body: string): Promise<void> {
 }
 
 // Send Microsoft Teams message
-async function sendTeamsMessage(conversationId: string, body: string): Promise<void> {
-  const webhookUrl = process.env.TEAMS_WEBHOOK_URL
+async function sendTeamsMessage(conversationId: string, body: string, creds: ChannelCreds): Promise<void> {
+  const webhookUrl = creds?.webhook_url || process.env.TEAMS_WEBHOOK_URL
   if (!webhookUrl) {
-    console.log('[Inbox] Teams not configured - TEAMS_WEBHOOK_URL required')
-    return
+    throw new Error('Teams not configured - add webhook URL in settings')
   }
 
   const response = await fetch(webhookUrl, {
@@ -759,11 +794,10 @@ async function sendTeamsMessage(conversationId: string, body: string): Promise<v
 }
 
 // Send Telegram message
-async function sendTelegram(chatId: string, body: string): Promise<void> {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
+async function sendTelegram(chatId: string, body: string, creds: ChannelCreds): Promise<void> {
+  const botToken = creds?.bot_token || process.env.TELEGRAM_BOT_TOKEN
   if (!botToken) {
-    console.log('[Inbox] Telegram not configured - TELEGRAM_BOT_TOKEN required')
-    return
+    throw new Error('Telegram not configured - add bot token in settings')
   }
 
   const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
