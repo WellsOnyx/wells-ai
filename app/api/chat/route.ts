@@ -1096,5 +1096,26 @@ export async function GET() {
     status: 'ok',
     service: 'Wells AI Chat',
     journeys: ['founder', 'buyer', 'seller', 'jobs'],
+  }, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    },
+  })
+}
+
+// ============================================================================
+// OPTIONS - CORS preflight handler
+// ============================================================================
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    },
   })
 }
