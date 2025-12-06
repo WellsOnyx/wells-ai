@@ -53,7 +53,7 @@ export default function GrainVaultOnboardingPage() {
   // Check auth
   useEffect(() => {
     if (isLoaded && !user) {
-      router.push('/grain-vault/signup')
+      router.push('/signup')
       return
     }
     if (isLoaded) {
@@ -82,8 +82,8 @@ export default function GrainVaultOnboardingPage() {
   const completeOnboarding = useCallback(async () => {
     setIsSubmitting(true)
     try {
-      // Try to finalize account data
-      await fetch('/api/grain-vault/account', {
+      // Create account in database
+      const response = await fetch('/api/grain-vault/account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -92,11 +92,21 @@ export default function GrainVaultOnboardingPage() {
           treasuryData
         })
       })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('Error creating account:', data.error)
+        // Still try to navigate - account might already exist
+      }
+
+      // Navigate to dashboard
+      router.push('/account')
     } catch (error) {
       console.error('Error completing onboarding:', error)
+      // Try to navigate anyway
+      router.push('/account')
     }
-    // Always navigate to dashboard (account was created during treasury step)
-    router.push('/grain-vault/account')
   }, [companyData, erpData, treasuryData, router])
 
   // Progress calculation
@@ -610,7 +620,7 @@ function TreasurySetupStep({
         <div className="grid md:grid-cols-3 gap-4">
           <div className="p-4 rounded-xl bg-white/5 border border-white/10">
             <Shield className="w-8 h-8 text-green-500 mb-2" />
-            <h3 className="font-semibold text-white">110% Collateralized</h3>
+            <h3 className="font-semibold text-white">100% Collateralized</h3>
             <p className="text-sm text-gray-400">Protected reserves</p>
           </div>
           <div className="p-4 rounded-xl bg-white/5 border border-white/10">
@@ -669,7 +679,7 @@ function TreasurySetupStep({
             <div>
               <h3 className="font-semibold text-white text-lg">Protected Value</h3>
               <p className="text-gray-400 mt-1">
-                110% over-collateralized reserves with automatic price protection.
+                100% collateralized reserves with automatic price protection.
               </p>
             </div>
           </div>

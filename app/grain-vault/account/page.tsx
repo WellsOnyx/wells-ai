@@ -57,7 +57,7 @@ export default function GrainVaultAccountPage() {
 
   useEffect(() => {
     if (isLoaded && !user) {
-      router.push('/grain-vault/signin')
+      router.push('/signin')
       return
     }
 
@@ -71,8 +71,9 @@ export default function GrainVaultAccountPage() {
       const response = await fetch('/api/grain-vault/account')
       const data = await response.json()
 
-      if (data.needsOnboarding) {
-        router.push('/grain-vault/onboarding')
+      // Check for 404 or needsOnboarding flag
+      if (!response.ok || data.needsOnboarding) {
+        router.push('/onboarding')
         return
       }
 
@@ -81,6 +82,8 @@ export default function GrainVaultAccountPage() {
       }
     } catch (error) {
       console.error('Error fetching account:', error)
+      // On error, redirect to onboarding
+      router.push('/onboarding')
     } finally {
       setIsLoading(false)
     }
@@ -213,7 +216,7 @@ export default function GrainVaultAccountPage() {
               <Activity className="w-4 h-4 text-purple-400" />
             </div>
             <p className="text-sm text-gray-400 mb-1">Collateral</p>
-            <p className="text-3xl font-bold text-white">110%</p>
+            <p className="text-3xl font-bold text-white">100%</p>
             <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div className="h-full w-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
             </div>
