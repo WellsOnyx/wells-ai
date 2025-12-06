@@ -31,6 +31,26 @@
       ]
     },
     {
+      "source": "/api/:path*",
+      "destination": "/api/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/_next/:path*",
+      "destination": "/_next/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
       "source": "/:path*",
       "destination": "/grain-vault/:path*",
       "has": [
