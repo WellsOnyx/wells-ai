@@ -20,9 +20,17 @@ interface Message {
 }
 
 interface TreasuryAction {
-  type: 'payment' | 'deposit' | 'transfer' | 'balance_check' | 'api_help'
+  type: 'payment' | 'deposit' | 'transfer' | 'balance_check' | 'api_help' | 'credit_draw'
   status: 'pending' | 'authorized' | 'completed' | 'cancelled'
-  details?: Record<string, unknown>
+  details?: {
+    amount?: number
+    recipient?: string
+    memo?: string
+    accountId?: string
+    fromWallet?: string
+    interestRate?: number
+    [key: string]: unknown
+  }
 }
 
 interface TreasuryChatProps {
@@ -117,17 +125,47 @@ export default function TreasuryChat({
 
     setIsLoading(true)
 
-    // Simulate authorization
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    try {
+      // Execute the authorized action via payment endpoint
+      const response = await fetch('/api/grain-vault/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: pendingAction
+        })
+      })
 
-    setMessages(prev => [
-      ...prev,
-      {
-        role: 'assistant',
-        content: `Transaction authorized and submitted. You'll receive a confirmation shortly.`,
-        action: { ...pendingAction, status: 'completed' }
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: data.message || `Transaction completed successfully. New balance: ${data.newBalance?.toLocaleString()} GRAIN`,
+            action: { ...pendingAction, status: 'completed' }
+          }
+        ])
+      } else {
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `Transaction failed: ${data.error || 'Unknown error'}. Please try again.`,
+            action: { ...pendingAction, status: 'cancelled' }
+          }
+        ])
       }
-    ])
+    } catch (error) {
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `Unable to process transaction. Please try again.`,
+          action: { ...pendingAction, status: 'cancelled' }
+        }
+      ])
+    }
 
     setPendingAction(null)
     setIsLoading(false)
@@ -220,10 +258,34 @@ export default function TreasuryChat({
                   <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-sm font-medium text-white">
-                        {message.action.type === 'payment' ? 'Payment Request' : 'Action Required'}
+                        {message.action.type === 'payment' ? 'Payment Request' :
+                         message.action.type === 'credit_draw' ? 'Credit Draw Request' : 'Action Required'}
                       </span>
                       <span className="text-xs text-yellow-400">Awaiting authorization</span>
                     </div>
+                    {/* Show payment/action details */}
+                    {message.action.details && (
+                      <div className="mb-3 p-2 bg-white/5 rounded-lg text-xs text-gray-300 space-y-1">
+                        {message.action.details.amount !== undefined && (
+                          <div className="flex justify-between">
+                            <span>Amount:</span>
+                            <span className="text-white font-medium">{message.action.details.amount.toLocaleString()} GRAIN</span>
+                          </div>
+                        )}
+                        {message.action.details.recipient && (
+                          <div className="flex justify-between">
+                            <span>To:</span>
+                            <span className="text-white font-mono text-xs truncate max-w-[180px]">{message.action.details.recipient}</span>
+                          </div>
+                        )}
+                        {message.action.details.memo && (
+                          <div className="flex justify-between">
+                            <span>Memo:</span>
+                            <span className="text-white">{message.action.details.memo}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <button
                       onClick={authorizeAction}
                       disabled={isLoading}
@@ -245,6 +307,13 @@ export default function TreasuryChat({
                   <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 flex items-center gap-2">
                     <Check className="w-4 h-4 text-green-400" />
                     <span className="text-sm text-green-400">Transaction completed</span>
+                  </div>
+                )}
+
+                {message.action && message.action.status === 'cancelled' && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-center gap-2">
+                    <X className="w-4 h-4 text-red-400" />
+                    <span className="text-sm text-red-400">Transaction cancelled</span>
                   </div>
                 )}
               </div>

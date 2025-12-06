@@ -24,6 +24,13 @@ import {
   getInvalidCredentials,
   type CredentialKey
 } from '@/lib/cold-start/credential-helper'
+import {
+  getAccountByClerkId,
+  getWallets,
+  getCreditLine,
+  getTransactions,
+  createTransaction,
+} from '@/lib/treasury-db'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -408,6 +415,86 @@ const MASTER_TOOLS: Anthropic.Tool[] = [
 // TOOLS FOR LEAD CAPTURE AND AI-TO-AI TRIGGERING
 // ============================================================================
 
+// ============================================================================
+// TOOLS FOR TREASURY OPERATIONS (Grain & Vault)
+// ============================================================================
+
+const TREASURY_TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'get_balance',
+    description: 'Get the current GRAIN balance, credit line, and available credit for the user. Use this when the user asks about their balance or how much they can spend.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'prepare_payment',
+    description: 'Prepare a GRAIN payment for authorization. This stages the payment but does NOT execute it. User must authorize before execution. Use this when user wants to send GRAIN to someone.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        recipient: {
+          type: 'string',
+          description: 'Recipient wallet address or email/name (will be resolved)'
+        },
+        amount: {
+          type: 'number',
+          description: 'Amount of GRAIN to send'
+        },
+        memo: {
+          type: 'string',
+          description: 'Optional payment memo or description'
+        },
+      },
+      required: ['recipient', 'amount']
+    }
+  },
+  {
+    name: 'get_transactions',
+    description: 'Get recent transactions for the account. Use this when user asks about their transaction history, recent payments, or receipts.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        limit: {
+          type: 'number',
+          description: 'Maximum number of transactions to return (default 10)'
+        },
+        type: {
+          type: 'string',
+          enum: ['payment', 'receipt', 'credit_draw', 'credit_repay', 'all'],
+          description: 'Filter by transaction type'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'get_credit_info',
+    description: 'Get detailed credit line information including limit, drawn amount, available credit, and interest rate.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'prepare_credit_draw',
+    description: 'Prepare to draw from credit line. Requires authorization before execution.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        amount: {
+          type: 'number',
+          description: 'Amount to draw from credit line'
+        },
+      },
+      required: ['amount']
+    }
+  },
+]
+
 const NEGOTIATION_TOOLS: Anthropic.Tool[] = [
   {
     name: 'capture_lead',
@@ -689,7 +776,8 @@ CRITICAL APPROVAL FLOW:
 NEVER skip the approval step. Real money is involved.`
 
     // Select tools based on journey
-    const tools = isMasterMode ? MASTER_TOOLS : NEGOTIATION_TOOLS
+    const isTreasuryMode = journey === 'treasury'
+    const tools = isMasterMode ? MASTER_TOOLS : (isTreasuryMode ? TREASURY_TOOLS : NEGOTIATION_TOOLS)
 
     // Call Claude with tools
     const response = await anthropic.messages.create({
@@ -858,6 +946,285 @@ NEVER skip the approval step. Real money is involved.`
       } catch (error) {
         return NextResponse.json({
           message: `Campaign action error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // ========================================================================
+    // TREASURY TOOLS HANDLERS
+    // ========================================================================
+
+    // Handle get_balance - returns current GRAIN balance and credit info
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'get_balance') {
+      try {
+        if (!userId) {
+          return NextResponse.json({
+            message: 'Please sign in to check your balance.',
+            error: true,
+          })
+        }
+
+        const account = await getAccountByClerkId(userId)
+        if (!account) {
+          return NextResponse.json({
+            message: 'No Grain & Vault account found. Please complete onboarding first.',
+            error: true,
+          })
+        }
+
+        const wallets = await getWallets(account.id)
+        const primaryWallet = wallets[0]
+        const creditLine = await getCreditLine(account.id)
+
+        const balance = primaryWallet?.balance || 0
+        const creditLimit = creditLine?.limitAmount || 0
+        const creditDrawn = creditLine?.drawnAmount || 0
+        const creditAvailable = creditLimit - creditDrawn
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `Your GRAIN balance is ${balance.toLocaleString()} GRAIN. You have a credit line of ${creditLimit.toLocaleString()} GRAIN with ${creditAvailable.toLocaleString()} available.`,
+          balanceInfo: {
+            grainBalance: balance,
+            creditLine: creditLimit,
+            creditDrawn,
+            creditAvailable,
+            walletAddress: primaryWallet?.address || null,
+          },
+        })
+      } catch (error) {
+        console.error('Error fetching balance:', error)
+        return NextResponse.json({
+          message: 'Unable to fetch your balance right now. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle prepare_payment - stages a payment for authorization (NLP + intent verification)
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'prepare_payment') {
+      const { recipient, amount, memo } = toolUse.input as { recipient: string; amount: number; memo?: string }
+
+      try {
+        if (!userId) {
+          return NextResponse.json({
+            message: 'Please sign in to send payments.',
+            error: true,
+          })
+        }
+
+        const account = await getAccountByClerkId(userId)
+        if (!account) {
+          return NextResponse.json({
+            message: 'No Grain & Vault account found. Please complete onboarding first.',
+            error: true,
+          })
+        }
+
+        const wallets = await getWallets(account.id)
+        const primaryWallet = wallets[0]
+        const balance = primaryWallet?.balance || 0
+
+        // Intent verification - check if user has sufficient funds
+        if (amount > balance) {
+          return NextResponse.json({
+            message: `Insufficient GRAIN balance. You want to send ${amount.toLocaleString()} GRAIN but only have ${balance.toLocaleString()} available. Would you like to draw from your credit line?`,
+            treasuryAction: null,
+          })
+        }
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        // Return pending action for user authorization (NLP guardrail - user must confirm)
+        return NextResponse.json({
+          message: baseMessage || `I've prepared a payment of ${amount.toLocaleString()} GRAIN to ${recipient}${memo ? ` for "${memo}"` : ''}. Please authorize below to complete the transaction.`,
+          treasuryAction: {
+            type: 'payment',
+            status: 'pending',
+            details: {
+              recipient,
+              amount,
+              memo: memo || null,
+              accountId: account.id,
+              fromWallet: primaryWallet?.walletId || null,
+            },
+          },
+        })
+      } catch (error) {
+        console.error('Error preparing payment:', error)
+        return NextResponse.json({
+          message: 'Unable to prepare payment right now. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle get_transactions - returns transaction history
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'get_transactions') {
+      const { limit = 10, type } = toolUse.input as { limit?: number; type?: string }
+
+      try {
+        if (!userId) {
+          return NextResponse.json({
+            message: 'Please sign in to view transactions.',
+            error: true,
+          })
+        }
+
+        const account = await getAccountByClerkId(userId)
+        if (!account) {
+          return NextResponse.json({
+            message: 'No Grain & Vault account found. Please complete onboarding first.',
+            error: true,
+          })
+        }
+
+        const { transactions, total } = await getTransactions(account.id, {
+          limit,
+          type: type === 'all' ? undefined : type,
+        })
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        // Format transactions for display
+        const formattedTxns = transactions.map(tx => ({
+          id: tx.id,
+          type: tx.type,
+          amount: tx.amount,
+          currency: tx.currency,
+          status: tx.status,
+          counterparty: tx.counterpartyName || tx.counterpartyWallet || 'Unknown',
+          description: tx.description || tx.memo || '',
+          date: tx.createdAt,
+        }))
+
+        return NextResponse.json({
+          message: baseMessage || (transactions.length > 0
+            ? `Here are your last ${transactions.length} transactions (${total} total):`
+            : 'No transactions found.'),
+          transactions: formattedTxns,
+          totalCount: total,
+        })
+      } catch (error) {
+        console.error('Error fetching transactions:', error)
+        return NextResponse.json({
+          message: 'Unable to fetch transactions right now. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle get_credit_info - returns detailed credit line information
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'get_credit_info') {
+      try {
+        if (!userId) {
+          return NextResponse.json({
+            message: 'Please sign in to view credit information.',
+            error: true,
+          })
+        }
+
+        const account = await getAccountByClerkId(userId)
+        if (!account) {
+          return NextResponse.json({
+            message: 'No Grain & Vault account found. Please complete onboarding first.',
+            error: true,
+          })
+        }
+
+        const creditLine = await getCreditLine(account.id)
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        if (!creditLine || creditLine.limitAmount === 0) {
+          return NextResponse.json({
+            message: baseMessage || 'You don\'t have an active credit line. Contact us to apply for one!',
+            creditInfo: null,
+          })
+        }
+
+        return NextResponse.json({
+          message: baseMessage || `Your credit line: ${creditLine.limitAmount.toLocaleString()} GRAIN limit, ${creditLine.drawnAmount.toLocaleString()} drawn, ${(creditLine.limitAmount - creditLine.drawnAmount).toLocaleString()} available. Interest rate: ${creditLine.interestRate}%`,
+          creditInfo: {
+            limit: creditLine.limitAmount,
+            drawn: creditLine.drawnAmount,
+            available: creditLine.limitAmount - creditLine.drawnAmount,
+            interestRate: creditLine.interestRate,
+            gracePeriodDays: creditLine.gracePeriodDays,
+            status: creditLine.status,
+          },
+        })
+      } catch (error) {
+        console.error('Error fetching credit info:', error)
+        return NextResponse.json({
+          message: 'Unable to fetch credit information right now. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle prepare_credit_draw - stages credit draw for authorization
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'prepare_credit_draw') {
+      const { amount } = toolUse.input as { amount: number }
+
+      try {
+        if (!userId) {
+          return NextResponse.json({
+            message: 'Please sign in to draw from your credit line.',
+            error: true,
+          })
+        }
+
+        const account = await getAccountByClerkId(userId)
+        if (!account) {
+          return NextResponse.json({
+            message: 'No Grain & Vault account found. Please complete onboarding first.',
+            error: true,
+          })
+        }
+
+        const creditLine = await getCreditLine(account.id)
+        const available = (creditLine?.limitAmount || 0) - (creditLine?.drawnAmount || 0)
+
+        if (!creditLine || creditLine.limitAmount === 0) {
+          return NextResponse.json({
+            message: 'You don\'t have an active credit line. Contact us to apply for one!',
+            treasuryAction: null,
+          })
+        }
+
+        if (amount > available) {
+          return NextResponse.json({
+            message: `Insufficient credit available. You want to draw ${amount.toLocaleString()} GRAIN but only have ${available.toLocaleString()} available.`,
+            treasuryAction: null,
+          })
+        }
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `I've prepared a credit draw of ${amount.toLocaleString()} GRAIN. Interest rate: ${creditLine.interestRate}%. Please authorize below.`,
+          treasuryAction: {
+            type: 'credit_draw',
+            status: 'pending',
+            details: {
+              amount,
+              accountId: account.id,
+              interestRate: creditLine.interestRate,
+            },
+          },
+        })
+      } catch (error) {
+        console.error('Error preparing credit draw:', error)
+        return NextResponse.json({
+          message: 'Unable to prepare credit draw right now. Please try again.',
           error: true,
         })
       }
