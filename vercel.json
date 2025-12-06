@@ -31,6 +31,76 @@
       ]
     },
     {
+      "source": "/signup",
+      "destination": "/grain-vault/signup",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/signup/:path*",
+      "destination": "/grain-vault/signup/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/signin",
+      "destination": "/grain-vault/signin",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/signin/:path*",
+      "destination": "/grain-vault/signin/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/demo",
+      "destination": "/grain-vault/demo",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/onboarding",
+      "destination": "/grain-vault/onboarding",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/account",
+      "destination": "/grain-vault/account",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*",
       "has": [
@@ -43,16 +113,6 @@
     {
       "source": "/_next/:path*",
       "destination": "/_next/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "grainandvault.com"
-        }
-      ]
-    },
-    {
-      "source": "/:path*",
-      "destination": "/grain-vault/:path*",
       "has": [
         {
           "type": "host",
