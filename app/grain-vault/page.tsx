@@ -10,6 +10,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import WellsAIChatWidget from '@/components/WellsAIChatWidget'
 import {
   Zap,
   Shield,
@@ -1139,6 +1140,18 @@ export default function GrainVaultLanding() {
           </div>
         </div>
       </footer>
+
+      {/* WellsAI Chat Widget - Grain & Vault is our first customer */}
+      <WellsAIChatWidget
+        brandColor="#22C55E"
+        accentColor="#10B981"
+        brandName="Grain & Vault Support"
+        context="You are a support assistant for Grain & Vault, a treasury infrastructure platform. You help users with: GRAIN payments (zero-friction instant settlement), VAULT reserves (110% collateralized), Treasury SDK integration (SAP, Oracle, NetSuite, Dynamics 365, Workday, Coupa), account setup, and technical questions about the API. Be concise, helpful, and knowledgeable about enterprise treasury operations."
+        journey="support"
+        greeting="Hi! I'm here to help with Grain & Vault. Ask me about GRAIN payments, VAULT reserves, the Treasury SDK, or getting started with your account."
+        placeholder="Ask about treasury, payments, SDK..."
+        position="bottom-right"
+      />
     </div>
   )
 }
