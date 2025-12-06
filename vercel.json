@@ -121,6 +121,16 @@
       ]
     },
     {
+      "source": "/referrals",
+      "destination": "/grain-vault/referrals",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*",
       "has": [
