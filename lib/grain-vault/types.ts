@@ -9,21 +9,41 @@
 
 export type GrainVaultOnboardingStep =
   | 'welcome'
+  | 'account_type'
+  | 'profile'
   | 'company'
   | 'erp'
   | 'treasury'
   | 'complete'
 
-export const GRAIN_VAULT_STEPS: GrainVaultOnboardingStep[] = [
+export type AccountType = 'individual' | 'business'
+
+// Steps for business accounts
+export const BUSINESS_STEPS: GrainVaultOnboardingStep[] = [
   'welcome',
+  'account_type',
   'company',
   'erp',
   'treasury',
   'complete'
 ]
 
+// Steps for individual accounts
+export const INDIVIDUAL_STEPS: GrainVaultOnboardingStep[] = [
+  'welcome',
+  'account_type',
+  'profile',
+  'treasury',
+  'complete'
+]
+
+// Default steps (before account type is selected)
+export const GRAIN_VAULT_STEPS: GrainVaultOnboardingStep[] = BUSINESS_STEPS
+
 export const STEP_TITLES: Record<GrainVaultOnboardingStep, string> = {
   'welcome': 'Welcome',
+  'account_type': 'Account Type',
+  'profile': 'Your Info',
   'company': 'Company Info',
   'erp': 'ERP Integration',
   'treasury': 'Treasury Setup',
@@ -117,6 +137,13 @@ export interface TreasuryData {
   walletAddress?: string
   initialDeposit?: number
   kycStatus: 'not-started' | 'pending' | 'approved' | 'rejected'
+}
+
+// Individual user profile data
+export interface ProfileData {
+  displayName: string
+  purpose: 'personal-finance' | 'freelance' | 'investing' | 'payments' | 'other'
+  expectedVolume: string
 }
 
 // ============================================================================

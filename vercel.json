@@ -101,6 +101,26 @@
       ]
     },
     {
+      "source": "/incentives",
+      "destination": "/grain-vault/incentives",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/enterprise",
+      "destination": "/grain-vault/enterprise",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*",
       "has": [

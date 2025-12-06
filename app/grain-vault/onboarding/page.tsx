@@ -23,10 +23,14 @@ import {
 import {
   GrainVaultOnboardingStep,
   GRAIN_VAULT_STEPS,
+  BUSINESS_STEPS,
+  INDIVIDUAL_STEPS,
   STEP_TITLES,
+  AccountType,
   CompanyData,
   ERPData,
   TreasuryData,
+  ProfileData,
   ERP_OPTIONS,
   INDUSTRY_OPTIONS,
   COMPANY_SIZE_OPTIONS,
@@ -41,14 +45,19 @@ export default function GrainVaultOnboardingPage() {
   // Step state
   const [currentStep, setCurrentStep] = useState<GrainVaultOnboardingStep>('welcome')
   const [completedSteps, setCompletedSteps] = useState<GrainVaultOnboardingStep[]>([])
+  const [accountType, setAccountType] = useState<AccountType | null>(null)
 
   // Form data
   const [companyData, setCompanyData] = useState<Partial<CompanyData>>({})
   const [erpData, setErpData] = useState<Partial<ERPData>>({})
   const [treasuryData, setTreasuryData] = useState<Partial<TreasuryData>>({})
+  const [profileData, setProfileData] = useState<Partial<ProfileData>>({})
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Get the steps based on account type
+  const steps = accountType === 'individual' ? INDIVIDUAL_STEPS : BUSINESS_STEPS
 
   // Check auth
   useEffect(() => {
@@ -63,20 +72,32 @@ export default function GrainVaultOnboardingPage() {
 
   // Navigation
   const goToNextStep = useCallback(() => {
-    const currentIndex = GRAIN_VAULT_STEPS.indexOf(currentStep)
-    const nextStep = GRAIN_VAULT_STEPS[currentIndex + 1]
+    const currentIndex = steps.indexOf(currentStep)
+    const nextStep = steps[currentIndex + 1]
     if (nextStep) {
       setCompletedSteps(prev => [...prev, currentStep])
       setCurrentStep(nextStep)
     }
-  }, [currentStep])
+  }, [currentStep, steps])
 
   const goToPreviousStep = useCallback(() => {
-    const currentIndex = GRAIN_VAULT_STEPS.indexOf(currentStep)
+    const currentIndex = steps.indexOf(currentStep)
     if (currentIndex > 0) {
-      setCurrentStep(GRAIN_VAULT_STEPS[currentIndex - 1])
+      setCurrentStep(steps[currentIndex - 1])
     }
-  }, [currentStep])
+  }, [currentStep, steps])
+
+  // Handle account type selection
+  const handleAccountTypeSelect = useCallback((type: AccountType) => {
+    setAccountType(type)
+    setCompletedSteps(prev => [...prev, 'account_type'])
+    // Navigate to next step based on type
+    if (type === 'individual') {
+      setCurrentStep('profile')
+    } else {
+      setCurrentStep('company')
+    }
+  }, [])
 
   // Complete onboarding
   const completeOnboarding = useCallback(async () => {
@@ -87,8 +108,10 @@ export default function GrainVaultOnboardingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          companyData,
-          erpData,
+          accountType,
+          companyData: accountType === 'business' ? companyData : undefined,
+          erpData: accountType === 'business' ? erpData : undefined,
+          profileData: accountType === 'individual' ? profileData : undefined,
           treasuryData
         })
       })
@@ -107,11 +130,11 @@ export default function GrainVaultOnboardingPage() {
       // Try to navigate anyway
       router.push('/account')
     }
-  }, [companyData, erpData, treasuryData, router])
+  }, [accountType, companyData, erpData, profileData, treasuryData, router])
 
   // Progress calculation
   const progress = Math.round(
-    (GRAIN_VAULT_STEPS.indexOf(currentStep) / (GRAIN_VAULT_STEPS.length - 1)) * 100
+    (steps.indexOf(currentStep) / (steps.length - 1)) * 100
   )
 
   if (isLoading) {
@@ -174,6 +197,20 @@ export default function GrainVaultOnboardingPage() {
           {/* Welcome Step */}
           {currentStep === 'welcome' && (
             <WelcomeStep onContinue={goToNextStep} />
+          )}
+
+          {/* Account Type Step */}
+          {currentStep === 'account_type' && (
+            <AccountTypeStep onSelect={handleAccountTypeSelect} />
+          )}
+
+          {/* Profile Step (for individuals) */}
+          {currentStep === 'profile' && (
+            <ProfileStep
+              data={profileData}
+              onUpdate={setProfileData}
+              onContinue={goToNextStep}
+            />
           )}
 
           {/* Company Step */}
@@ -241,11 +278,11 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
       <div className="grid gap-4 max-w-md mx-auto text-left">
         <div className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
           <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
-            <Building2 className="w-5 h-5 text-green-400" />
+            <Users className="w-5 h-5 text-green-400" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">Company Info</h3>
-            <p className="text-sm text-gray-400">Basic details about your business</p>
+            <h3 className="font-semibold text-white">Choose Account Type</h3>
+            <p className="text-sm text-gray-400">Personal or business account</p>
           </div>
         </div>
 
@@ -254,8 +291,8 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
             <Settings className="w-5 h-5 text-blue-400" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">ERP Integration</h3>
-            <p className="text-sm text-gray-400">Connect your financial systems</p>
+            <h3 className="font-semibold text-white">Quick Setup</h3>
+            <p className="text-sm text-gray-400">Tell us about yourself or your company</p>
           </div>
         </div>
 
@@ -275,6 +312,180 @@ function WelcomeStep({ onContinue }: { onContinue: () => void }) {
         className="w-full max-w-md mx-auto py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl text-white font-semibold text-lg transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
       >
         Get Started
+        <ArrowRight className="w-5 h-5" />
+      </button>
+    </div>
+  )
+}
+
+function AccountTypeStep({ onSelect }: { onSelect: (type: AccountType) => void }) {
+  return (
+    <div className="space-y-8">
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-green-500/20 mb-4">
+          <Users className="w-8 h-8 text-green-400" />
+        </div>
+        <h1 className="text-3xl font-bold text-white mb-2">How will you use Grain & Vault?</h1>
+        <p className="text-gray-400">Choose the account type that best fits your needs</p>
+      </div>
+
+      <div className="grid gap-4">
+        <button
+          onClick={() => onSelect('individual')}
+          className="group p-6 rounded-xl bg-white/5 border border-white/10 hover:border-green-500/50 transition-all text-left"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+              <Users className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-white mb-1 group-hover:text-green-400 transition-colors">
+                Personal Account
+              </h3>
+              <p className="text-gray-400 mb-3">
+                For individuals, freelancers, and personal finance
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded-full">Personal Payments</span>
+                <span className="px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded-full">Freelance Income</span>
+                <span className="px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded-full">Investing</span>
+              </div>
+            </div>
+            <ChevronRight className="w-6 h-6 text-gray-500 group-hover:text-green-400 transition-colors" />
+          </div>
+        </button>
+
+        <button
+          onClick={() => onSelect('business')}
+          className="group p-6 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/50 transition-all text-left"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">
+                Business Account
+              </h3>
+              <p className="text-gray-400 mb-3">
+                For companies with treasury and vendor payment needs
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-full">Vendor Payments</span>
+                <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-full">ERP Integration</span>
+                <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-full">Treasury SDK</span>
+              </div>
+            </div>
+            <ChevronRight className="w-6 h-6 text-gray-500 group-hover:text-blue-400 transition-colors" />
+          </div>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ProfileStep({
+  data,
+  onUpdate,
+  onContinue
+}: {
+  data: Partial<ProfileData>
+  onUpdate: (data: Partial<ProfileData>) => void
+  onContinue: () => void
+}) {
+  const isValid = data.displayName && data.purpose
+
+  const purposeOptions = [
+    { value: 'personal-finance', label: 'Personal Finance', description: 'Saving and payments' },
+    { value: 'freelance', label: 'Freelance Income', description: 'Receive client payments' },
+    { value: 'investing', label: 'Investing', description: 'Hold and grow GRAIN' },
+    { value: 'payments', label: 'Payments', description: 'Send money globally' },
+    { value: 'other', label: 'Other', description: 'Something else' },
+  ]
+
+  const volumeOptions = [
+    'Under $1K/month',
+    '$1K - $5K/month',
+    '$5K - $25K/month',
+    '$25K - $100K/month',
+    '$100K+/month'
+  ]
+
+  return (
+    <div className="space-y-8">
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-green-500/20 mb-4">
+          <Users className="w-8 h-8 text-green-400" />
+        </div>
+        <h1 className="text-3xl font-bold text-white mb-2">Tell us about yourself</h1>
+        <p className="text-gray-400">This helps us personalize your experience</p>
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Display Name *
+          </label>
+          <input
+            type="text"
+            value={data.displayName || ''}
+            onChange={(e) => onUpdate({ ...data, displayName: e.target.value })}
+            placeholder="Your name"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Primary Purpose *
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {purposeOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => onUpdate({ ...data, purpose: option.value as ProfileData['purpose'] })}
+                className={`p-4 rounded-xl border text-left transition-all ${
+                  data.purpose === option.value
+                    ? 'bg-green-500/20 border-green-500 text-white'
+                    : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20'
+                }`}
+              >
+                <div className="font-semibold">{option.label}</div>
+                <div className="text-sm text-gray-400">{option.description}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Expected Monthly Volume
+          </label>
+          <select
+            value={data.expectedVolume || ''}
+            onChange={(e) => onUpdate({ ...data, expectedVolume: e.target.value })}
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
+          >
+            <option value="" className="bg-gray-900">Select volume</option>
+            {volumeOptions.map((volume) => (
+              <option key={volume} value={volume} className="bg-gray-900">
+                {volume}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <button
+        onClick={onContinue}
+        disabled={!isValid}
+        className={`w-full py-4 rounded-xl font-semibold text-lg transition-all flex items-center justify-center gap-2 ${
+          isValid
+            ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white hover:scale-[1.02]'
+            : 'bg-white/10 text-gray-500 cursor-not-allowed'
+        }`}
+      >
+        Continue
         <ArrowRight className="w-5 h-5" />
       </button>
     </div>
