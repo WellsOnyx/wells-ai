@@ -234,19 +234,19 @@ export default function GrainVaultLanding() {
               </Link>
               <div className="flex items-center gap-3 ml-4">
                 <Link
-                  href="/grain-vault/demo"
+                  href="/demo"
                   className="text-sm text-gray-400 hover:text-white transition-colors"
                 >
                   Docs
                 </Link>
                 <Link
-                  href="/grain-vault/signin"
+                  href="/signin"
                   className="text-sm text-gray-400 hover:text-white transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
-                  href="/grain-vault/signup"
+                  href="/signup"
                   className="px-4 py-2 bg-green-500 hover:bg-green-600 text-black text-sm font-medium rounded-lg transition-all"
                 >
                   Open Account
@@ -290,7 +290,7 @@ export default function GrainVaultLanding() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
               <Link
-                href="/grain-vault/signup"
+                href="/signup"
                 className="group px-8 py-4 bg-green-500 hover:bg-green-600 text-black rounded-xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-2xl hover:shadow-green-500/50 flex items-center gap-2"
               >
                 Open Account
@@ -304,7 +304,7 @@ export default function GrainVaultLanding() {
                 Explore SDK
               </Link>
               <Link
-                href="/grain-vault/demo"
+                href="/demo"
                 className="group px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-xl font-semibold text-lg transition-all flex items-center gap-2"
               >
                 <Play className="w-5 h-5" />
@@ -854,7 +854,7 @@ export default function GrainVaultLanding() {
                 credit lines, and payment status in plain English.
               </p>
               <Link
-                href="/grain-vault/demo"
+                href="/demo"
                 className="text-green-400 hover:text-green-300 text-sm font-medium inline-flex items-center gap-1"
               >
                 View Dashboard
@@ -872,7 +872,7 @@ export default function GrainVaultLanding() {
                 No more spreadsheet gymnastics or manual entry.
               </p>
               <Link
-                href="/grain-vault/demo"
+                href="/demo"
                 className="text-blue-400 hover:text-blue-300 text-sm font-medium inline-flex items-center gap-1"
               >
                 See Integration
@@ -890,7 +890,7 @@ export default function GrainVaultLanding() {
                 Ship treasury features in hours, not quarters.
               </p>
               <Link
-                href="/grain-vault/demo"
+                href="/demo"
                 className="text-purple-400 hover:text-purple-300 text-sm font-medium inline-flex items-center gap-1"
               >
                 API Docs
@@ -1047,7 +1047,7 @@ export default function GrainVaultLanding() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
-              href="/grain-vault/demo"
+              href="/demo"
               className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-xl font-semibold text-lg transition-all flex items-center gap-2"
             >
               Read Documentation
@@ -1101,10 +1101,10 @@ export default function GrainVaultLanding() {
             <div>
               <h4 className="font-semibold mb-4 text-sm">Developers</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link href="/grain-vault/demo" className="text-gray-400 hover:text-white transition-colors">Documentation</Link></li>
-                <li><Link href="/grain-vault/demo" className="text-gray-400 hover:text-white transition-colors">API Reference</Link></li>
-                <li><Link href="/grain-vault/demo" className="text-gray-400 hover:text-white transition-colors">SDKs</Link></li>
-                <li><Link href="/grain-vault/demo" className="text-gray-400 hover:text-white transition-colors">Sandbox</Link></li>
+                <li><Link href="/demo" className="text-gray-400 hover:text-white transition-colors">Documentation</Link></li>
+                <li><Link href="/demo" className="text-gray-400 hover:text-white transition-colors">API Reference</Link></li>
+                <li><Link href="/demo" className="text-gray-400 hover:text-white transition-colors">SDKs</Link></li>
+                <li><Link href="/demo" className="text-gray-400 hover:text-white transition-colors">Sandbox</Link></li>
               </ul>
             </div>
 
