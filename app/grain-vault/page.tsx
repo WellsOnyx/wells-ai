@@ -320,7 +320,7 @@ export default function GrainVaultLanding() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>110% Collateralized</span>
+                <span>100% Collateralized</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
@@ -379,7 +379,7 @@ export default function GrainVaultLanding() {
               <div className="text-sm text-gray-400">Payment Friction</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold text-white mb-2">110%</div>
+              <div className="text-4xl md:text-5xl font-bold text-white mb-2">100%</div>
               <div className="text-sm text-gray-400">Collateral Ratio</div>
             </div>
             <div className="text-center">
@@ -485,7 +485,7 @@ export default function GrainVaultLanding() {
                 </div>
 
                 <p className="text-gray-400 mb-8 leading-relaxed">
-                  110% over-collateralized reserves with real-time blockchain audits.
+                  100% collateralized reserves with real-time blockchain audits.
                   Complete transparency, zero counterparty risk.
                 </p>
 
@@ -495,8 +495,8 @@ export default function GrainVaultLanding() {
                       <CheckCircle className="w-3 h-3 text-blue-400" />
                     </div>
                     <div>
-                      <div className="font-medium mb-1">110% Collateralized</div>
-                      <div className="text-sm text-gray-500">Every GRAIN backed by $1.10 USDC.</div>
+                      <div className="font-medium mb-1">100% Collateralized</div>
+                      <div className="text-sm text-gray-500">Every GRAIN backed by $1.00 USDC.</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -522,7 +522,7 @@ export default function GrainVaultLanding() {
                 <div className="pt-6 border-t border-white/10">
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
-                      <div className="text-2xl font-bold text-blue-400">110%</div>
+                      <div className="text-2xl font-bold text-blue-400">100%</div>
                       <div className="text-xs text-gray-500">Collateral</div>
                     </div>
                     <div>
@@ -605,11 +605,11 @@ export default function GrainVaultLanding() {
               </div>
               <h3 className="text-xl font-bold mb-2">Protected Value</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                110% over-collateralized reserves with real-time audits.
+                100% collateralized reserves with real-time audits.
                 Your treasury, secured and transparent.
               </p>
               <div className="mt-4 pt-4 border-t border-white/10">
-                <div className="text-3xl font-bold text-blue-400">110%</div>
+                <div className="text-3xl font-bold text-blue-400">100%</div>
                 <div className="text-xs text-gray-500">Collateralization ratio</div>
               </div>
             </div>
@@ -798,9 +798,9 @@ export default function GrainVaultLanding() {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full w-[110%] bg-gradient-to-r from-blue-500 to-blue-400 rounded-full" />
+                        <div className="h-full w-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full" />
                       </div>
-                      <span className="text-sm font-bold text-blue-400">110%</span>
+                      <span className="text-sm font-bold text-blue-400">100%</span>
                     </div>
                   </div>
                 </div>
@@ -992,7 +992,7 @@ export default function GrainVaultLanding() {
               <div className="w-16 h-16 rounded-xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-8 h-8 text-blue-400" />
               </div>
-              <h3 className="font-semibold mb-2">110% Collateral</h3>
+              <h3 className="font-semibold mb-2">100% Collateral</h3>
               <p className="text-sm text-gray-400">Plus asset reserves in float</p>
             </div>
 
@@ -1146,7 +1146,7 @@ export default function GrainVaultLanding() {
         brandColor="#22C55E"
         accentColor="#10B981"
         brandName="Grain & Vault Support"
-        context="You are a support assistant for Grain & Vault, a treasury infrastructure platform. You help users with: GRAIN payments (zero-friction instant settlement), VAULT reserves (110% collateralized), Treasury SDK integration (SAP, Oracle, NetSuite, Dynamics 365, Workday, Coupa), account setup, and technical questions about the API. Be concise, helpful, and knowledgeable about enterprise treasury operations."
+        context="You are a support assistant for Grain & Vault, a treasury infrastructure platform. You help users with: GRAIN payments (zero-friction instant settlement), VAULT reserves (100% collateralized), Treasury SDK integration (SAP, Oracle, NetSuite, Dynamics 365, Workday, Coupa), account setup, and technical questions about the API. Be concise, helpful, and knowledgeable about enterprise treasury operations."
         journey="support"
         greeting="Hi! I'm here to help with Grain & Vault. Ask me about GRAIN payments, VAULT reserves, the Treasury SDK, or getting started with your account."
         placeholder="Ask about treasury, payments, SDK..."
