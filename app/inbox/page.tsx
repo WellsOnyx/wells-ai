@@ -21,7 +21,8 @@ import {
   Loader2,
   RefreshCw,
   Archive,
-  CheckCircle
+  CheckCircle,
+  Settings
 } from 'lucide-react'
 
 // All supported channels
@@ -307,12 +308,22 @@ export default function InboxPage() {
               </Link>
               <h1 className="text-xl font-bold text-white">Inbox</h1>
             </div>
-            <button
-              onClick={() => fetchConversations()}
-              className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/10"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <Link
+                href="/settings/integrations"
+                className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/10"
+                title="Connect channels"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+              <button
+                onClick={() => fetchConversations()}
+                className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/10"
+                title="Refresh"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Search */}
