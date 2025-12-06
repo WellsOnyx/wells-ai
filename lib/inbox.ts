@@ -5,6 +5,105 @@ import { sql } from '@vercel/postgres'
 import Anthropic from '@anthropic-ai/sdk'
 
 export type Channel = 'sms' | 'email' | 'slack' | 'chat' | 'whatsapp'
+
+// Auto-migrate flag to ensure we only try once per cold start
+let tablesInitialized = false
+
+// Ensure inbox tables exist (auto-migration)
+async function ensureTablesExist(): Promise<void> {
+  if (tablesInitialized) return
+
+  try {
+    // Check if tables exist
+    const check = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'inbox_conversations'
+      ) as exists
+    `
+
+    if (check.rows[0].exists) {
+      tablesInitialized = true
+      return
+    }
+
+    console.log('[Inbox] Creating tables...')
+
+    // Create inbox_conversations table
+    await sql`
+      CREATE TABLE IF NOT EXISTS inbox_conversations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        contact_id TEXT NOT NULL,
+        contact_name TEXT,
+        contact_email TEXT,
+        contact_phone TEXT,
+        contact_company TEXT,
+        subject TEXT,
+        channel TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'open',
+        priority TEXT DEFAULT 'normal',
+        intent TEXT,
+        sentiment TEXT,
+        category TEXT,
+        assigned_to TEXT,
+        unread_count INTEGER DEFAULT 1,
+        last_message_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        last_message_preview TEXT,
+        lead_id UUID,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `
+
+    // Create inbox_messages table
+    await sql`
+      CREATE TABLE IF NOT EXISTS inbox_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        conversation_id UUID NOT NULL,
+        content TEXT NOT NULL,
+        content_html TEXT,
+        direction TEXT NOT NULL,
+        sender_type TEXT NOT NULL,
+        sender_id TEXT,
+        sender_name TEXT,
+        channel TEXT NOT NULL,
+        channel_message_id TEXT,
+        email_subject TEXT,
+        email_from TEXT,
+        email_to TEXT,
+        email_cc TEXT,
+        email_attachments JSONB DEFAULT '[]',
+        sms_from TEXT,
+        sms_to TEXT,
+        ai_generated BOOLEAN DEFAULT FALSE,
+        ai_approved BOOLEAN,
+        ai_approved_by TEXT,
+        ai_approved_at TIMESTAMP,
+        status TEXT DEFAULT 'sent',
+        error_message TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        sent_at TIMESTAMP,
+        delivered_at TIMESTAMP,
+        read_at TIMESTAMP
+      )
+    `
+
+    // Create indexes
+    await sql`CREATE INDEX IF NOT EXISTS idx_inbox_conversations_contact ON inbox_conversations(contact_id)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_inbox_conversations_status ON inbox_conversations(status)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_inbox_conversations_channel ON inbox_conversations(channel)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_inbox_messages_conversation ON inbox_messages(conversation_id)`
+
+    console.log('[Inbox] Tables created successfully')
+    tablesInitialized = true
+  } catch (error) {
+    console.error('[Inbox] Error creating tables:', error)
+    // Mark as initialized to avoid repeated failures
+    tablesInitialized = true
+    throw error
+  }
+}
 export type MessageDirection = 'inbound' | 'outbound'
 export type SenderType = 'contact' | 'user' | 'ai' | 'system'
 export type ConversationStatus = 'open' | 'pending' | 'resolved' | 'archived'
@@ -58,6 +157,7 @@ export async function getConversations(options: {
   offset?: number
   search?: string
 } = {}): Promise<Conversation[]> {
+  await ensureTablesExist()
   const { status, channel, limit = 50, offset = 0, search } = options
 
   let query = `
@@ -134,6 +234,7 @@ export async function findOrCreateConversation(contact: {
   company?: string
   channel: Channel
 }): Promise<Conversation> {
+  await ensureTablesExist()
   // Try to find existing open conversation
   const existing = await sql`
     SELECT * FROM inbox_conversations
