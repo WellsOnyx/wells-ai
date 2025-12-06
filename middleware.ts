@@ -59,6 +59,8 @@ const isPublicApiRoute = createRouteMatcher([
   '/api/chat',
   '/api/webhooks/(.*)',
   '/api/webhooks/circle',
+  '/api/health',
+  '/api/admin/(.*)',
 ])
 
 // Protected routes that require authentication
