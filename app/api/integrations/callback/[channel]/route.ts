@@ -97,14 +97,14 @@ export async function GET(
     }
 
     // Get user info
-    const accountInfo = await getUserInfo(channel, tokenResponse.access_token)
+    const accountInfo = await getUserInfo(channel, tokenResponse.access_token || '')
 
     // Store tokens in database
     await storeOAuthTokens(
       userId,
       channel as Channel,
       {
-        access_token: tokenResponse.access_token,
+        access_token: tokenResponse.access_token || '',
         refresh_token: tokenResponse.refresh_token,
         expires_in: tokenResponse.expires_in,
         scope: tokenResponse.scope,

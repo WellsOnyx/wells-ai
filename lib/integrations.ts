@@ -246,7 +246,7 @@ export async function storeOAuthTokens(
   await ensureIntegrationsTable()
 
   const expiresAt = tokens.expires_in
-    ? new Date(Date.now() + tokens.expires_in * 1000)
+    ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
     : null
 
   const credentials = {

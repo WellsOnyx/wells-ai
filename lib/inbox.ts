@@ -381,7 +381,7 @@ export async function generateAIResponse(
 
   // Build conversation history for Claude
   const messageHistory = messages.map(m => ({
-    role: m.direction === 'inbound' ? 'user' : 'assistant' as const,
+    role: (m.direction === 'inbound' ? 'user' : 'assistant') as 'user' | 'assistant',
     content: m.content
   }))
 
