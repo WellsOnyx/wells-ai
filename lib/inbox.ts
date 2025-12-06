@@ -4,7 +4,40 @@
 import { sql } from '@vercel/postgres'
 import Anthropic from '@anthropic-ai/sdk'
 
-export type Channel = 'sms' | 'email' | 'slack' | 'chat' | 'whatsapp'
+// All supported communication channels
+export type Channel =
+  | 'sms'           // Twilio SMS
+  | 'imessage'      // Apple iMessage (via Sendblue or similar)
+  | 'gmail'         // Google Gmail
+  | 'outlook'       // Microsoft Outlook
+  | 'email'         // Generic email (Resend)
+  | 'slack'         // Slack
+  | 'discord'       // Discord
+  | 'twitter'       // X (formerly Twitter)
+  | 'instagram'     // Instagram DMs
+  | 'linkedin'      // LinkedIn Messages
+  | 'whatsapp'      // WhatsApp Business
+  | 'chat'          // Website chat widget
+  | 'teams'         // Microsoft Teams
+  | 'telegram'      // Telegram
+
+// Channel display info
+export const CHANNEL_INFO: Record<Channel, { name: string; color: string; icon: string }> = {
+  sms: { name: 'SMS', color: '#22C55E', icon: '💬' },
+  imessage: { name: 'iMessage', color: '#34D399', icon: '🍎' },
+  gmail: { name: 'Gmail', color: '#EA4335', icon: '📧' },
+  outlook: { name: 'Outlook', color: '#0078D4', icon: '📨' },
+  email: { name: 'Email', color: '#6366F1', icon: '✉️' },
+  slack: { name: 'Slack', color: '#4A154B', icon: '💼' },
+  discord: { name: 'Discord', color: '#5865F2', icon: '🎮' },
+  twitter: { name: 'X', color: '#000000', icon: '𝕏' },
+  instagram: { name: 'Instagram', color: '#E4405F', icon: '📷' },
+  linkedin: { name: 'LinkedIn', color: '#0A66C2', icon: '💼' },
+  whatsapp: { name: 'WhatsApp', color: '#25D366', icon: '📱' },
+  chat: { name: 'Website', color: '#8B5CF6', icon: '💻' },
+  teams: { name: 'Teams', color: '#6264A7', icon: '👥' },
+  telegram: { name: 'Telegram', color: '#0088CC', icon: '✈️' },
+}
 
 // Auto-migrate flag to ensure we only try once per cold start
 let tablesInitialized = false
@@ -456,15 +489,44 @@ async function sendViaChannel(message: Message): Promise<void> {
     case 'sms':
       await sendSMS(conversation.contact_phone!, message.content)
       break
+    case 'imessage':
+      await sendIMessage(conversation.contact_phone!, message.content)
+      break
+    case 'gmail':
+    case 'outlook':
     case 'email':
       await sendEmail(conversation.contact_email!, message.content, conversation.subject)
       break
     case 'slack':
-      // Slack responses would go through webhook
-      console.log('Slack response:', message.content)
+      await sendSlack(conversation.contact_id, message.content)
+      break
+    case 'discord':
+      await sendDiscord(conversation.contact_id, message.content)
+      break
+    case 'twitter':
+      await sendTwitterDM(conversation.contact_id, message.content)
+      break
+    case 'instagram':
+      await sendInstagramDM(conversation.contact_id, message.content)
+      break
+    case 'linkedin':
+      await sendLinkedInMessage(conversation.contact_id, message.content)
+      break
+    case 'whatsapp':
+      await sendWhatsApp(conversation.contact_phone!, message.content)
+      break
+    case 'teams':
+      await sendTeamsMessage(conversation.contact_id, message.content)
+      break
+    case 'telegram':
+      await sendTelegram(conversation.contact_id, message.content)
+      break
+    case 'chat':
+      // Website chat - typically handled via websocket/realtime
+      console.log('[Inbox] Website chat response queued:', message.content.slice(0, 50))
       break
     default:
-      console.log(`Channel ${message.channel} send not implemented`)
+      console.log(`[Inbox] Channel ${message.channel} send not implemented`)
   }
 }
 
@@ -503,6 +565,219 @@ async function sendEmail(to: string, body: string, subject?: string): Promise<vo
     subject: subject || 'Re: Your inquiry',
     text: body
   })
+}
+
+// Send iMessage via Sendblue or similar
+async function sendIMessage(to: string, body: string): Promise<void> {
+  const apiKey = process.env.SENDBLUE_API_KEY
+  if (!apiKey) {
+    console.log('[Inbox] iMessage not configured - SENDBLUE_API_KEY required')
+    return
+  }
+
+  const response = await fetch('https://api.sendblue.co/api/send-message', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'sb-api-key-id': process.env.SENDBLUE_API_KEY_ID || '',
+      'sb-api-secret-key': apiKey
+    },
+    body: JSON.stringify({
+      number: to,
+      content: body
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`Sendblue error: ${response.status}`)
+  }
+}
+
+// Send Slack message via Webhook or API
+async function sendSlack(channelOrUserId: string, body: string): Promise<void> {
+  const token = process.env.SLACK_BOT_TOKEN
+  if (!token) {
+    console.log('[Inbox] Slack not configured - SLACK_BOT_TOKEN required')
+    return
+  }
+
+  const response = await fetch('https://slack.com/api/chat.postMessage', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      channel: channelOrUserId,
+      text: body
+    })
+  })
+
+  const result = await response.json()
+  if (!result.ok) {
+    throw new Error(`Slack error: ${result.error}`)
+  }
+}
+
+// Send Discord message via Webhook
+async function sendDiscord(channelId: string, body: string): Promise<void> {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+  if (!webhookUrl) {
+    console.log('[Inbox] Discord not configured - DISCORD_WEBHOOK_URL required')
+    return
+  }
+
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      content: body
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`Discord error: ${response.status}`)
+  }
+}
+
+// Send Twitter/X DM
+async function sendTwitterDM(userId: string, body: string): Promise<void> {
+  const bearerToken = process.env.TWITTER_BEARER_TOKEN
+  if (!bearerToken) {
+    console.log('[Inbox] Twitter/X not configured - TWITTER_BEARER_TOKEN required')
+    return
+  }
+
+  const response = await fetch(`https://api.twitter.com/2/dm_conversations/with/${userId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${bearerToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      text: body
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`Twitter error: ${response.status}`)
+  }
+}
+
+// Send Instagram DM via Meta Graph API
+async function sendInstagramDM(userId: string, body: string): Promise<void> {
+  const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN
+  const pageId = process.env.INSTAGRAM_PAGE_ID
+  if (!accessToken || !pageId) {
+    console.log('[Inbox] Instagram not configured - INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_PAGE_ID required')
+    return
+  }
+
+  const response = await fetch(`https://graph.facebook.com/v18.0/${pageId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      recipient: { id: userId },
+      message: { text: body }
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`Instagram error: ${response.status}`)
+  }
+}
+
+// Send LinkedIn message
+async function sendLinkedInMessage(userId: string, body: string): Promise<void> {
+  const accessToken = process.env.LINKEDIN_ACCESS_TOKEN
+  if (!accessToken) {
+    console.log('[Inbox] LinkedIn not configured - LINKEDIN_ACCESS_TOKEN required')
+    return
+  }
+
+  // LinkedIn messaging API requires approved access
+  const response = await fetch('https://api.linkedin.com/v2/messages', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0'
+    },
+    body: JSON.stringify({
+      recipients: [userId],
+      body: body
+    })
+  })
+
+  if (!response.ok) {
+    console.log('[Inbox] LinkedIn API error - this requires approved partner access')
+  }
+}
+
+// Send WhatsApp message via Twilio
+async function sendWhatsApp(to: string, body: string): Promise<void> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID
+  const authToken = process.env.TWILIO_AUTH_TOKEN
+  const from = process.env.TWILIO_WHATSAPP_NUMBER
+
+  if (!accountSid || !authToken || !from) {
+    console.log('[Inbox] WhatsApp not configured - Twilio credentials required')
+    return
+  }
+
+  const twilio = require('twilio')(accountSid, authToken)
+
+  await twilio.messages.create({
+    body,
+    from: `whatsapp:${from}`,
+    to: `whatsapp:${to}`
+  })
+}
+
+// Send Microsoft Teams message
+async function sendTeamsMessage(conversationId: string, body: string): Promise<void> {
+  const webhookUrl = process.env.TEAMS_WEBHOOK_URL
+  if (!webhookUrl) {
+    console.log('[Inbox] Teams not configured - TEAMS_WEBHOOK_URL required')
+    return
+  }
+
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: body
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`Teams error: ${response.status}`)
+  }
+}
+
+// Send Telegram message
+async function sendTelegram(chatId: string, body: string): Promise<void> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  if (!botToken) {
+    console.log('[Inbox] Telegram not configured - TELEGRAM_BOT_TOKEN required')
+    return
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: body
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`Telegram error: ${response.status}`)
+  }
 }
 
 // Update conversation status

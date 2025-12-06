@@ -24,6 +24,9 @@ import {
   CheckCircle
 } from 'lucide-react'
 
+// All supported channels
+type Channel = 'sms' | 'imessage' | 'gmail' | 'outlook' | 'email' | 'slack' | 'discord' | 'twitter' | 'instagram' | 'linkedin' | 'whatsapp' | 'chat' | 'teams' | 'telegram'
+
 interface Conversation {
   id: string
   contact_id: string
@@ -31,7 +34,7 @@ interface Conversation {
   contact_email?: string
   contact_phone?: string
   contact_company?: string
-  channel: 'sms' | 'email' | 'slack' | 'chat'
+  channel: Channel
   status: 'open' | 'pending' | 'resolved' | 'archived'
   priority: 'low' | 'normal' | 'high' | 'urgent'
   unread_count: number
@@ -53,18 +56,57 @@ interface Message {
   created_at: string
 }
 
+// Channel display info with icons (using lucide-react icons) and emoji fallbacks
+const CHANNEL_INFO: Record<Channel, { name: string; icon: string; color: string; bgColor: string }> = {
+  sms: { name: 'SMS', icon: '💬', color: 'text-green-400', bgColor: 'bg-green-500/20' },
+  imessage: { name: 'iMessage', icon: '🍎', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20' },
+  gmail: { name: 'Gmail', icon: '📧', color: 'text-red-400', bgColor: 'bg-red-500/20' },
+  outlook: { name: 'Outlook', icon: '📨', color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
+  email: { name: 'Email', icon: '✉️', color: 'text-indigo-400', bgColor: 'bg-indigo-500/20' },
+  slack: { name: 'Slack', icon: '💼', color: 'text-purple-400', bgColor: 'bg-purple-500/20' },
+  discord: { name: 'Discord', icon: '🎮', color: 'text-violet-400', bgColor: 'bg-violet-500/20' },
+  twitter: { name: 'X', icon: '𝕏', color: 'text-gray-400', bgColor: 'bg-gray-500/20' },
+  instagram: { name: 'Instagram', icon: '📷', color: 'text-pink-400', bgColor: 'bg-pink-500/20' },
+  linkedin: { name: 'LinkedIn', icon: '💼', color: 'text-sky-400', bgColor: 'bg-sky-500/20' },
+  whatsapp: { name: 'WhatsApp', icon: '📱', color: 'text-green-400', bgColor: 'bg-green-500/20' },
+  chat: { name: 'Website', icon: '💻', color: 'text-amber-400', bgColor: 'bg-amber-500/20' },
+  teams: { name: 'Teams', icon: '👥', color: 'text-indigo-400', bgColor: 'bg-indigo-500/20' },
+  telegram: { name: 'Telegram', icon: '✈️', color: 'text-cyan-400', bgColor: 'bg-cyan-500/20' },
+}
+
+// Fallback for lucide icons (keeping for backwards compatibility)
 const CHANNEL_ICONS: Record<string, any> = {
   sms: Phone,
+  imessage: Phone,
+  gmail: Mail,
+  outlook: Mail,
   email: Mail,
   slack: Slack,
-  chat: MessageSquare
+  discord: MessageSquare,
+  twitter: MessageSquare,
+  instagram: MessageSquare,
+  linkedin: MessageSquare,
+  whatsapp: Phone,
+  chat: MessageSquare,
+  teams: MessageSquare,
+  telegram: MessageSquare,
 }
 
 const CHANNEL_COLORS: Record<string, string> = {
   sms: 'bg-green-500/20 text-green-400',
-  email: 'bg-blue-500/20 text-blue-400',
+  imessage: 'bg-emerald-500/20 text-emerald-400',
+  gmail: 'bg-red-500/20 text-red-400',
+  outlook: 'bg-blue-500/20 text-blue-400',
+  email: 'bg-indigo-500/20 text-indigo-400',
   slack: 'bg-purple-500/20 text-purple-400',
-  chat: 'bg-amber-500/20 text-amber-400'
+  discord: 'bg-violet-500/20 text-violet-400',
+  twitter: 'bg-gray-500/20 text-gray-400',
+  instagram: 'bg-pink-500/20 text-pink-400',
+  linkedin: 'bg-sky-500/20 text-sky-400',
+  whatsapp: 'bg-green-500/20 text-green-400',
+  chat: 'bg-amber-500/20 text-amber-400',
+  teams: 'bg-indigo-500/20 text-indigo-400',
+  telegram: 'bg-cyan-500/20 text-cyan-400',
 }
 
 export default function InboxPage() {
