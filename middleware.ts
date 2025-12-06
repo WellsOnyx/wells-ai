@@ -91,14 +91,25 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   }
 
   // ========================================
-  // DOMAIN-BASED ROUTING
+  // DOMAIN-BASED ROUTING FOR GRAINANDVAULT.COM
   // ========================================
 
-  // If accessing grainandvault.com at root, rewrite to /grain-vault
-  if (isGrainVaultDomain(host) && pathname === '/') {
-    const url = request.nextUrl.clone()
-    url.pathname = '/grain-vault'
-    return NextResponse.rewrite(url)
+  if (isGrainVaultDomain(host)) {
+    // Routes that should be rewritten to /grain-vault/* on grainandvault.com
+    const grainVaultRoutes = ['/', '/demo', '/signup', '/signin', '/onboarding']
+
+    // Check if this is a route that needs rewriting
+    if (grainVaultRoutes.includes(pathname)) {
+      const url = request.nextUrl.clone()
+      url.pathname = pathname === '/' ? '/grain-vault' : `/grain-vault${pathname}`
+      return NextResponse.rewrite(url)
+    }
+
+    // Also rewrite /api/health for grainandvault.com
+    if (pathname === '/api/health') {
+      // Health endpoint works fine, just allow it
+      return NextResponse.next()
+    }
   }
 
   // ========================================
