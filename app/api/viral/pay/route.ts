@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { notifyPaymentReceived } from '@/lib/notifications/service';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -140,8 +141,32 @@ export async function POST(request: NextRequest) {
       referral_code: referralCode
     });
 
-    // TODO: Send notification to recipient (email/SMS)
-    // await notifyRecipient(payment);
+    // Get sender name for notification
+    const { data: senderAccount } = await supabase
+      .from('silent_accounts')
+      .select('company_name, email')
+      .eq('id', sender_id)
+      .single();
+
+    const senderName = senderAccount?.company_name || senderAccount?.email || 'Someone';
+
+    // Send notification to recipient (email and/or SMS)
+    await notifyPaymentReceived(
+      recipient_email,
+      recipient_phone,
+      amount,
+      senderName,
+      claimUrl,
+      {
+        senderCompany: recipient_company,
+        memo,
+        expiresAt: payment.expires_at,
+        userId: recipientAccountId,
+      }
+    ).catch((error) => {
+      // Don't fail the payment if notification fails
+      console.error('Failed to send payment notification:', error);
+    });
 
     return NextResponse.json({
       success: true,

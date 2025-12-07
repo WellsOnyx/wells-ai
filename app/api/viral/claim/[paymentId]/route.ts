@@ -8,6 +8,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { notify } from '@/lib/notifications/service';
+import { notifyPaymentClaimed } from '@/lib/notifications/service';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -136,7 +138,67 @@ export async function POST(
     }
 
     // Auto-approve credit line based on this transaction
-    await autoApproveCreditLine(payment.recipient_account_id, payment.amount_usdc);
+    const creditLimit = await autoApproveCreditLine(payment.recipient_account_id, payment.amount_usdc);
+
+    // Send claim confirmation to recipient
+    if (account.email || account.phone) {
+      await notify({
+        type: 'payment_claimed',
+        userId: payment.recipient_account_id,
+        email: account.email,
+        phone: account.phone,
+        channel: 'all',
+        priority: 'high',
+        data: {
+          amount: payment.amount_usdc,
+          walletBalance: account.total_volume_received + payment.amount_usdc,
+          senderName: payment.recipient_company,
+        },
+      }).catch((error) => {
+        console.error('Failed to send claim confirmation:', error);
+      });
+
+      // Send credit approval notification if credit was approved
+      if (creditLimit > 0) {
+        await notify({
+          type: 'credit_approved',
+          userId: payment.recipient_account_id,
+          email: account.email,
+          phone: account.phone,
+          channel: 'all',
+          priority: 'normal',
+          data: {
+            amount: creditLimit,
+            apr: 0.12,
+            availableCredit: creditLimit,
+            transactionAmount: payment.amount_usdc,
+          },
+        }).catch((error) => {
+          console.error('Failed to send credit approval notification:', error);
+        });
+      }
+    }
+
+    // Notify sender that payment was claimed
+    const { data: senderAccount } = await supabase
+      .from('silent_accounts')
+      .select('email, phone, company_name')
+      .eq('wallet_address', payment.sender_wallet)
+      .single();
+
+    if (senderAccount && (senderAccount.email || senderAccount.phone)) {
+      await notifyPaymentClaimed(
+        senderAccount.email,
+        senderAccount.phone,
+        payment.amount_usdc,
+        account.company_name || account.email || 'Recipient',
+        {
+          userId: senderAccount.id,
+        }
+      ).catch((error) => {
+        console.error('Failed to send sender notification:', error);
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -214,7 +276,7 @@ export async function GET(
 /**
  * Auto-approve credit line based on transaction
  */
-async function autoApproveCreditLine(accountId: string, transactionAmount: number): Promise<void> {
+async function autoApproveCreditLine(accountId: string, transactionAmount: number): Promise<number> {
   // Credit limit = 2x the transaction amount (up to $100K on first transaction)
   const creditLimit = Math.min(transactionAmount * 2, 100000);
 
@@ -225,7 +287,7 @@ async function autoApproveCreditLine(accountId: string, transactionAmount: numbe
     .eq('account_id', accountId)
     .single();
 
-  if (existing) return;
+  if (existing) return 0;
 
   // Create credit line
   await supabase.from('credit_lines').insert({
@@ -243,6 +305,8 @@ async function autoApproveCreditLine(accountId: string, transactionAmount: numbe
     },
     status: 'active'
   });
+
+  return creditLimit;
 }
 
 function calculateCreditLimit(transactionAmount: number): number {
