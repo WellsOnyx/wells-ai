@@ -3,21 +3,35 @@
  * WORKER PAYMENT API
  *
  * Handle payments to workers through Wells.
- * Work through Wells, get paid through Wells.
+ * Work through Wells, get paid through Wells - IN GRAIN.
  *
  * POST /api/worker/payment - Process payment
  * GET /api/worker/payment - Get payment history
  *
+ * Payment Options:
+ * - 100% USD: Traditional instant payment
+ * - 100% GRAIN: Get paid entirely in GRAIN with 5% bonus (appreciating asset!)
+ * - Custom Split: e.g., 50% USD / 50% GRAIN (5% bonus on GRAIN portion)
+ *
+ * Why GRAIN?
+ * - GRAIN appreciates as more assets back the system
+ * - 1:1 credit line means instant USD access when needed
+ * - 5% bonus for choosing GRAIN (Wells keeps USD longer)
+ * - You're earning equity in the Wells ecosystem
+ *
  * Payment Flow:
  * 1. Client pays Wells for work completed
- * 2. Wells takes platform fee (5%)
- * 3. Worker receives net amount instantly
- * 4. Worker earns GRAIN (1% of payment)
- * 5. GRAIN credit line available immediately
+ * 2. Wells takes 1% fee (on every transaction)
+ * 3. Worker chooses: USD, GRAIN, or split
+ * 4. GRAIN bonus applied if taking GRAIN
+ * 5. Credit line available immediately
  */
 
 import { NextResponse } from 'next/server'
 import { sql } from '@vercel/postgres'
+
+// GRAIN bonus for choosing GRAIN payment (Wells keeps USD longer)
+const GRAIN_PAYMENT_BONUS = 0.05 // 5% bonus for taking GRAIN
 
 // POST: Process a payment
 export async function POST(request: Request) {
@@ -29,7 +43,10 @@ export async function POST(request: Request) {
       timesheet_id,
       amount,
       payment_type,
-      description
+      description,
+      // NEW: Payment currency options
+      payment_currency = 'usd', // 'usd' | 'grain' | 'split'
+      grain_percentage = 0 // For split payments: 0-100
     } = body
 
     if (!worker_id || !amount) {
@@ -37,6 +54,18 @@ export async function POST(request: Request) {
         error: 'worker_id and amount required'
       }, { status: 400 })
     }
+
+    // Validate payment_currency
+    if (!['usd', 'grain', 'split'].includes(payment_currency)) {
+      return NextResponse.json({
+        error: 'payment_currency must be usd, grain, or split'
+      }, { status: 400 })
+    }
+
+    // Validate grain_percentage for split
+    const grainPct = payment_currency === 'grain' ? 100 :
+                     payment_currency === 'usd' ? 0 :
+                     Math.min(100, Math.max(0, parseFloat(grain_percentage) || 0))
 
     // Get worker
     const workerResult = await sql`
@@ -49,9 +78,19 @@ export async function POST(request: Request) {
 
     // Calculate payment breakdown
     const grossAmount = parseFloat(amount)
-    const wellsFee = grossAmount * 0.05 // 5% platform fee
+    const wellsFee = grossAmount * 0.01 // 1% Wells fee on every transaction
     const netAmount = grossAmount - wellsFee
-    const grainEarned = netAmount * 0.01 // 1% GRAIN reward
+
+    // Calculate GRAIN vs USD split
+    const grainPortionValue = netAmount * (grainPct / 100)
+    const usdPortionValue = netAmount - grainPortionValue
+
+    // Calculate GRAIN earned
+    // Workers earn GRAIN by choosing to be paid in GRAIN (with 5% bonus)
+    // No automatic GRAIN reward - they opt-in
+    const grainPaymentBonus = grainPortionValue * GRAIN_PAYMENT_BONUS
+    const totalGrainFromPayment = grainPortionValue + grainPaymentBonus // GRAIN portion + 5% bonus
+    const totalGrainEarned = totalGrainFromPayment
 
     // Create payment record
     const paymentResult = await sql`
@@ -75,7 +114,7 @@ export async function POST(request: Request) {
         ${grossAmount},
         ${wellsFee},
         ${netAmount},
-        ${grainEarned},
+        ${totalGrainEarned},
         'completed',
         ${worker.wallet_id}::UUID,
         CURRENT_DATE
@@ -84,35 +123,59 @@ export async function POST(request: Request) {
     `
     const payment = paymentResult.rows[0]
 
-    // Credit worker's wallet
-    await sql`
-      UPDATE treasury_wallets
-      SET balance = balance + ${netAmount},
-          updated_at = NOW()
-      WHERE id = ${worker.wallet_id}::UUID
-    `
+    // Credit worker's wallet with USD portion only
+    if (usdPortionValue > 0) {
+      await sql`
+        UPDATE treasury_wallets
+        SET balance = balance + ${usdPortionValue},
+            updated_at = NOW()
+        WHERE id = ${worker.wallet_id}::UUID
+      `
+    }
 
-    // Award GRAIN
-    await sql`
-      INSERT INTO grain_ledger (
-        wallet_id, type, quantity,
-        reference_type, reference_id,
-        reason, category
-      ) VALUES (
-        ${worker.wallet_id}::UUID,
-        'credit',
-        ${grainEarned},
-        'worker_payment',
-        ${payment.id}::TEXT,
-        ${description || 'GRAIN earned on payment'},
-        'worker_reward'
-      )
-    `
+    // Award GRAIN if worker chose GRAIN payment
+    if (grainPortionValue > 0) {
+      // Main payment in GRAIN
+      await sql`
+        INSERT INTO grain_ledger (
+          wallet_id, type, quantity,
+          reference_type, reference_id,
+          reason, category
+        ) VALUES (
+          ${worker.wallet_id}::UUID,
+          'credit',
+          ${grainPortionValue},
+          'worker_payment_grain',
+          ${payment.id}::TEXT,
+          'Payment received in GRAIN',
+          'worker_payment'
+        )
+      `
+
+      // 5% bonus for choosing GRAIN
+      if (grainPaymentBonus > 0) {
+        await sql`
+          INSERT INTO grain_ledger (
+            wallet_id, type, quantity,
+            reference_type, reference_id,
+            reason, category
+          ) VALUES (
+            ${worker.wallet_id}::UUID,
+            'credit',
+            ${grainPaymentBonus},
+            'worker_grain_bonus',
+            ${payment.id}::TEXT,
+            'GRAIN payment bonus (5%)',
+            'worker_reward'
+          )
+        `
+      }
+    }
 
     // Update worker's GRAIN balance
     await sql`
       UPDATE workers
-      SET grain_balance = grain_balance + ${grainEarned},
+      SET grain_balance = grain_balance + ${totalGrainEarned},
           updated_at = NOW()
       WHERE id = ${worker_id}::UUID
     `
@@ -123,15 +186,25 @@ export async function POST(request: Request) {
         UPDATE eor_engagements
         SET total_earned = total_earned + ${netAmount},
             total_paid = total_paid + ${netAmount},
-            total_grain_earned = total_grain_earned + ${grainEarned},
+            total_grain_earned = total_grain_earned + ${totalGrainEarned},
             updated_at = NOW()
         WHERE id = ${engagement_id}::UUID
       `
     }
 
-    // Calculate credit line available (1:1 against GRAIN)
-    const newGrainBalance = parseFloat(worker.grain_balance || 0) + grainEarned
+    // Calculate new balances
+    const newGrainBalance = parseFloat(worker.grain_balance || 0) + totalGrainEarned
     const creditLineAvailable = newGrainBalance // 1:1 GRAIN to USD credit line
+
+    // Build message based on payment type
+    let message = ''
+    if (payment_currency === 'usd') {
+      message = `$${netAmount.toFixed(2)} sent to your Wells wallet.`
+    } else if (payment_currency === 'grain') {
+      message = `${totalGrainFromPayment.toFixed(4)} GRAIN deposited (includes 5% bonus!). Credit line: $${newGrainBalance.toFixed(2)}`
+    } else {
+      message = `$${usdPortionValue.toFixed(2)} USD + ${totalGrainFromPayment.toFixed(4)} GRAIN deposited.`
+    }
 
     return NextResponse.json({
       success: true,
@@ -140,16 +213,30 @@ export async function POST(request: Request) {
         gross_amount: grossAmount,
         wells_fee: wellsFee,
         net_amount: netAmount,
-        grain_earned: grainEarned,
+        payment_currency,
+        grain_percentage: grainPct,
+        // Breakdown
+        usd_portion: usdPortionValue,
+        grain_portion_value: grainPortionValue,
+        grain_payment_bonus: grainPaymentBonus,
+        total_grain_earned: totalGrainEarned,
         status: 'completed',
         processed_at: new Date().toISOString()
       },
       worker_balance: {
-        wallet_balance: netAmount, // Would add to existing balance
+        usd_balance: usdPortionValue, // Added to wallet
         grain_balance: newGrainBalance,
-        credit_line_available: creditLineAvailable
+        credit_line_available: creditLineAvailable,
+        // The magic: even with 100% GRAIN, you have instant USD access
+        instant_usd_access: creditLineAvailable
       },
-      message: `Payment of $${netAmount.toFixed(2)} sent instantly to your Wells wallet. +${grainEarned.toFixed(4)} GRAIN earned.`
+      message,
+      grain_benefits: payment_currency !== 'usd' ? {
+        appreciation: 'GRAIN value grows as more assets back the system',
+        credit_line: '1:1 credit line for instant USD access',
+        bonus: `${(GRAIN_PAYMENT_BONUS * 100).toFixed(0)}% bonus for choosing GRAIN`,
+        no_loss: 'You can always access USD via credit line'
+      } : undefined
     })
   } catch (error) {
     console.error('Payment processing error:', error)
