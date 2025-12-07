@@ -3,13 +3,14 @@
  * Accept Deal API
  * POST /api/deals/accept
  *
- * Accepts a deal and creates a GRAIN payment intent
+ * Accepts a deal and creates escrow with USDC payment
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { sql } from '@vercel/postgres'
 import { TransactionEngine } from '@/lib/transactions'
+import { createEscrow, getEscrowByDealId } from '@/lib/escrow/escrow-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,17 +74,50 @@ export async function POST(request: NextRequest) {
       WHERE id = ${dealId}
     `
 
-    // Create escrow wallet if it doesn't exist
-    let escrowWalletId = deal.escrowWalletId
-    let escrowWalletAddress = deal.escrowWalletAddress
+    // Check if escrow already exists
+    let escrow = await getEscrowByDealId(dealId)
 
-    if (!escrowWalletId) {
+    // Create escrow if it doesn't exist
+    if (!escrow) {
       try {
-        const escrow = await TransactionEngine.createEscrowWallet(dealId)
-        escrowWalletId = escrow.walletId
-        escrowWalletAddress = escrow.walletAddress
+        // Fetch buyer and seller info
+        const buyerResult = await sql`
+          SELECT email FROM users WHERE id = ${deal.buyerId} LIMIT 1
+        `
+        const sellerResult = await sql`
+          SELECT email FROM users WHERE id = ${deal.sellerId} LIMIT 1
+        `
 
-        // Update deal with escrow wallet info
+        const buyerEmail = buyerResult.rows[0]?.email || 'buyer@example.com'
+        const sellerEmail = sellerResult.rows[0]?.email || 'seller@example.com'
+
+        escrow = await createEscrow({
+          dealId,
+          buyerId: deal.buyerId,
+          buyerEmail,
+          sellerId: deal.sellerId,
+          sellerEmail,
+          amount: parseFloat(deal.amount),
+          platformFee: parseFloat(deal.platformFee),
+          description: deal.description,
+          metadata: { originalDealId: dealId },
+        })
+
+        // Update deal with escrow info
+        await sql`
+          UPDATE deals
+          SET
+            escrow_wallet_id = ${escrow.escrowWalletId},
+            escrow_wallet_address = ${escrow.escrowWalletAddress},
+            status = 'escrow_pending'
+          WHERE id = ${dealId}
+        `
+      } catch (error) {
+        console.error('Error creating escrow:', error)
+        // Fallback: Create mock escrow wallet
+        const escrowWalletId = `escrow_${dealId}`
+        const escrowWalletAddress = `0x${Math.random().toString(16).substring(2, 42)}`
+
         await sql`
           UPDATE deals
           SET
@@ -92,55 +126,13 @@ export async function POST(request: NextRequest) {
             status = 'escrow_pending'
           WHERE id = ${dealId}
         `
-      } catch (error) {
-        console.error('Error creating escrow wallet:', error)
-        // Use mock wallet for demo
-        escrowWalletId = `escrow_${dealId}`
-        escrowWalletAddress = `0x${Math.random().toString(16).substring(2, 42)}`
+
+        escrow = {
+          escrowWalletId,
+          escrowWalletAddress,
+          totalAmount: parseFloat(deal.amount) + parseFloat(deal.platformFee),
+        }
       }
-    }
-
-    // Create payment intent for the buyer
-    const totalAmount = parseFloat(deal.amount) + parseFloat(deal.platformFee)
-    const paymentId = `payment_deal_${dealId}_${Date.now()}`
-
-    try {
-      await sql`
-        INSERT INTO payment_intents (
-          id,
-          user_id,
-          amount,
-          currency,
-          description,
-          status,
-          escrow_wallet_id,
-          escrow_wallet_address,
-          metadata,
-          created_at,
-          updated_at
-        ) VALUES (
-          ${paymentId},
-          ${deal.buyerId},
-          ${totalAmount},
-          ${deal.currency},
-          ${`Payment for deal: ${deal.description}`},
-          'pending',
-          ${escrowWalletId},
-          ${escrowWalletAddress},
-          ${JSON.stringify({ dealId, type: 'deal_payment' })},
-          NOW(),
-          NOW()
-        )
-      `
-
-      // Link payment to deal
-      await sql`
-        UPDATE deals
-        SET payment_intent_id = ${paymentId}
-        WHERE id = ${dealId}
-      `
-    } catch (error) {
-      console.error('Error creating payment intent:', error)
     }
 
     return NextResponse.json({
@@ -148,16 +140,20 @@ export async function POST(request: NextRequest) {
       deal: {
         id: dealId,
         status: 'escrow_pending',
-        escrowWalletAddress,
+        escrowWalletAddress: escrow.escrowWalletAddress,
       },
-      payment: {
-        id: paymentId,
-        amount: totalAmount,
-        currency: deal.currency,
-        walletAddress: escrowWalletAddress,
+      escrow: {
+        id: escrow.id,
+        walletAddress: escrow.escrowWalletAddress,
+        amount: escrow.totalAmount,
+        currency: 'USDC',
       },
-      message: 'Deal accepted! Please complete GRAIN payment to escrow.',
-      checkoutUrl: `/checkout?paymentId=${paymentId}`,
+      message: 'Deal accepted! Please fund escrow with USDC to proceed.',
+      nextSteps: [
+        `Send ${escrow.totalAmount} USDC to ${escrow.escrowWalletAddress}`,
+        'Funds will be held in escrow until delivery confirmation',
+        'Seller can begin work once escrow is funded',
+      ],
     })
   } catch (error) {
     console.error('Error accepting deal:', error)

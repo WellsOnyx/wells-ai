@@ -318,6 +318,184 @@ export async function POST(request: NextRequest) {
           active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )`
+      },
+      // Cold Start tables
+      {
+        name: 'coldstart_campaigns',
+        sql: `CREATE TABLE IF NOT EXISTS coldstart_campaigns (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL,
+          name TEXT,
+          icp_config JSONB NOT NULL,
+          channels JSONB NOT NULL DEFAULT '[]',
+          geo TEXT DEFAULT 'United States',
+          daily_volume INTEGER DEFAULT 50,
+          status TEXT DEFAULT 'draft',
+          total_contacts INTEGER DEFAULT 0,
+          total_reached INTEGER DEFAULT 0,
+          total_responses INTEGER DEFAULT 0,
+          total_meetings INTEGER DEFAULT 0,
+          total_deals INTEGER DEFAULT 0,
+          total_spend DECIMAL(12, 2) DEFAULT 0,
+          start_date TIMESTAMP,
+          end_date TIMESTAMP,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'coldstart_contacts',
+        sql: `CREATE TABLE IF NOT EXISTS coldstart_contacts (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          campaign_id UUID REFERENCES coldstart_campaigns(id),
+          first_name TEXT,
+          last_name TEXT,
+          email TEXT,
+          phone TEXT,
+          linkedin_url TEXT,
+          company_name TEXT,
+          company_domain TEXT,
+          company_size TEXT,
+          industry TEXT,
+          title TEXT,
+          department TEXT,
+          seniority TEXT,
+          apollo_id TEXT,
+          zoominfo_id TEXT,
+          linkedin_id TEXT,
+          enrichment_data JSONB,
+          status TEXT DEFAULT 'pending',
+          last_contacted_at TIMESTAMP,
+          last_response_at TIMESTAMP,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'coldstart_activities',
+        sql: `CREATE TABLE IF NOT EXISTS coldstart_activities (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          campaign_id UUID REFERENCES coldstart_campaigns(id),
+          contact_id UUID REFERENCES coldstart_contacts(id),
+          activity_type TEXT NOT NULL,
+          channel TEXT NOT NULL,
+          message TEXT,
+          details JSONB,
+          call_duration_seconds INTEGER,
+          call_recording_url TEXT,
+          call_transcript TEXT,
+          outcome TEXT,
+          sentiment TEXT,
+          next_action TEXT,
+          provider TEXT,
+          provider_id TEXT,
+          provider_response JSONB,
+          cost DECIMAL(8, 4) DEFAULT 0,
+          created_at TIMESTAMP DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'coldstart_conversations',
+        sql: `CREATE TABLE IF NOT EXISTS coldstart_conversations (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          campaign_id UUID REFERENCES coldstart_campaigns(id),
+          contact_id UUID REFERENCES coldstart_contacts(id),
+          channel TEXT NOT NULL,
+          status TEXT DEFAULT 'active',
+          messages JSONB DEFAULT '[]',
+          total_messages INTEGER DEFAULT 0,
+          last_message_at TIMESTAMP,
+          intent_signals JSONB,
+          buying_stage TEXT,
+          pain_points JSONB,
+          outcome TEXT,
+          meeting_scheduled_at TIMESTAMP,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'coldstart_voice_calls',
+        sql: `CREATE TABLE IF NOT EXISTS coldstart_voice_calls (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          campaign_id UUID REFERENCES coldstart_campaigns(id),
+          contact_id UUID REFERENCES coldstart_contacts(id),
+          activity_id UUID REFERENCES coldstart_activities(id),
+          phone_number TEXT,
+          provider TEXT,
+          provider_call_id TEXT,
+          status TEXT,
+          direction TEXT DEFAULT 'outbound',
+          initiated_at TIMESTAMP,
+          answered_at TIMESTAMP,
+          ended_at TIMESTAMP,
+          duration_seconds INTEGER,
+          recording_url TEXT,
+          transcript TEXT,
+          transcript_json JSONB,
+          summary TEXT,
+          sentiment TEXT,
+          key_topics JSONB,
+          objections JSONB,
+          next_actions JSONB,
+          outcome TEXT,
+          meeting_details JSONB,
+          cost DECIMAL(8, 4),
+          created_at TIMESTAMP DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'coldstart_linkedin_activities',
+        sql: `CREATE TABLE IF NOT EXISTS coldstart_linkedin_activities (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          campaign_id UUID REFERENCES coldstart_campaigns(id),
+          contact_id UUID REFERENCES coldstart_contacts(id),
+          action_type TEXT,
+          linkedin_url TEXT,
+          message_content TEXT,
+          post_url TEXT,
+          status TEXT,
+          sent_at TIMESTAMP,
+          response_at TIMESTAMP,
+          response_content TEXT,
+          created_at TIMESTAMP DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'coldstart_icp_templates',
+        sql: `CREATE TABLE IF NOT EXISTS coldstart_icp_templates (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          title TEXT,
+          keywords JSONB,
+          industries JSONB,
+          company_size TEXT,
+          geo TEXT,
+          pain_points JSONB,
+          value_props JSONB,
+          voice_script JSONB,
+          linkedin_script JSONB,
+          email_script JSONB,
+          is_default BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'coldstart_integrations',
+        sql: `CREATE TABLE IF NOT EXISTS coldstart_integrations (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL,
+          provider TEXT NOT NULL,
+          status TEXT DEFAULT 'pending',
+          api_key TEXT,
+          config JSONB,
+          credits_remaining INTEGER,
+          last_sync_at TIMESTAMP,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )`
       }
     ]
 
@@ -362,6 +540,16 @@ export async function POST(request: NextRequest) {
       'CREATE INDEX IF NOT EXISTS idx_inbox_messages_conversation ON inbox_messages(conversation_id)',
       'CREATE INDEX IF NOT EXISTS idx_inbox_messages_created ON inbox_messages(created_at DESC)',
       'CREATE INDEX IF NOT EXISTS idx_inbox_messages_channel ON inbox_messages(channel)',
+      // Cold Start indexes
+      'CREATE INDEX IF NOT EXISTS idx_coldstart_campaigns_user ON coldstart_campaigns(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_coldstart_campaigns_status ON coldstart_campaigns(status)',
+      'CREATE INDEX IF NOT EXISTS idx_coldstart_contacts_campaign ON coldstart_contacts(campaign_id)',
+      'CREATE INDEX IF NOT EXISTS idx_coldstart_contacts_status ON coldstart_contacts(status)',
+      'CREATE INDEX IF NOT EXISTS idx_coldstart_activities_campaign ON coldstart_activities(campaign_id)',
+      'CREATE INDEX IF NOT EXISTS idx_coldstart_activities_contact ON coldstart_activities(contact_id)',
+      'CREATE INDEX IF NOT EXISTS idx_coldstart_activities_type ON coldstart_activities(activity_type)',
+      'CREATE INDEX IF NOT EXISTS idx_coldstart_voice_calls_campaign ON coldstart_voice_calls(campaign_id)',
+      'CREATE INDEX IF NOT EXISTS idx_coldstart_linkedin_campaign ON coldstart_linkedin_activities(campaign_id)',
     ]
 
     for (const indexSql of indexes) {
@@ -378,7 +566,7 @@ export async function POST(request: NextRequest) {
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
-        AND table_name LIKE 'treasury_%'
+        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name LIKE 'coldstart_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
       ORDER BY table_name
     `)
 
@@ -415,7 +603,7 @@ export async function GET() {
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
-        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
+        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name LIKE 'coldstart_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
       ORDER BY table_name
     `)
 

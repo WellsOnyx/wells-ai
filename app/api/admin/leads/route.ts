@@ -6,8 +6,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { Pool } from 'pg'
+import { sendDealUpdate } from '@/lib/email'
 
 // Initialize Postgres connection
 const pool = new Pool({
@@ -221,9 +222,45 @@ export async function PATCH(request: NextRequest) {
         [leadId]
       )
 
+      const updatedLead = result.rows[0]
+
+      // Send deal update email if status changed
+      if (status && updatedLead) {
+        const statusMessages: Record<string, string> = {
+          contacted: "We've reviewed your request and one of our team members will be reaching out to you shortly.",
+          in_progress: "We're actively working on your request and making progress. We'll keep you updated as things move forward.",
+          won: "Great news! We've successfully matched you with what you're looking for. Check your email for details on next steps.",
+          closed: "We've reviewed your request. While we couldn't move forward this time, we appreciate you reaching out.",
+          lost: "We've reviewed your request carefully. Unfortunately, we're not able to proceed at this time, but we appreciate you thinking of us.",
+        }
+
+        const statusMessage = statusMessages[status]
+
+        if (statusMessage) {
+          // Get admin user info for contact name
+          const client = await clerkClient()
+          const adminUser = userId ? await client.users.getUser(userId) : null
+          const contactName = adminUser
+            ? [adminUser.firstName, adminUser.lastName].filter(Boolean).join(' ')
+            : undefined
+
+          // Send email asynchronously
+          sendDealUpdate(updatedLead.user_email, {
+            id: updatedLead.id,
+            userName: updatedLead.user_name,
+            status: status,
+            statusMessage: statusMessage,
+            nextSteps: note || undefined,
+            contactName,
+          }).catch((error) => {
+            console.error('Error sending deal update email:', error)
+          })
+        }
+      }
+
       return NextResponse.json({
         success: true,
-        lead: result.rows[0],
+        lead: updatedLead,
       })
     } catch (error) {
       await client.query('ROLLBACK')

@@ -4,6 +4,10 @@
     {
       "path": "/api/cold-start/check-replies",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/erp-sync",
+      "schedule": "0 * * * *"
     }
   ],
   "redirects": [
