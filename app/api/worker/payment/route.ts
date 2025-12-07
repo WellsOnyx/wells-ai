@@ -33,6 +33,14 @@ import { sql } from '@vercel/postgres'
 // GRAIN bonus for choosing GRAIN payment (Wells keeps USD longer)
 const GRAIN_PAYMENT_BONUS = 0.05 // 5% bonus for taking GRAIN
 
+// Wells fee tiers based on origination
+const WELLS_FEE_TIERS = {
+  transaction: 0.01,    // 1% - Transaction only (worker has own client)
+  sourced: 0.033,       // 3.3% - Wells AI discovered the opportunity
+  originated: 0.077,    // 7.7% - Wells brought both client AND worker together
+  partner: null         // Custom - Established partner pricing
+}
+
 // POST: Process a payment
 export async function POST(request: Request) {
   try {
@@ -44,9 +52,11 @@ export async function POST(request: Request) {
       amount,
       payment_type,
       description,
-      // NEW: Payment currency options
+      // Payment currency options
       payment_currency = 'usd', // 'usd' | 'grain' | 'split'
-      grain_percentage = 0 // For split payments: 0-100
+      grain_percentage = 0, // For split payments: 0-100
+      // Origination determines fee tier
+      origination_type = 'transaction' // 'transaction' | 'sourced' | 'originated' | 'partner'
     } = body
 
     if (!worker_id || !amount) {
@@ -67,6 +77,10 @@ export async function POST(request: Request) {
                      payment_currency === 'usd' ? 0 :
                      Math.min(100, Math.max(0, parseFloat(grain_percentage) || 0))
 
+    // Validate origination_type
+    const validOriginTypes = ['transaction', 'sourced', 'originated', 'partner']
+    const originType = validOriginTypes.includes(origination_type) ? origination_type : 'transaction'
+
     // Get worker
     const workerResult = await sql`
       SELECT * FROM workers WHERE id = ${worker_id}::UUID
@@ -76,9 +90,21 @@ export async function POST(request: Request) {
     }
     const worker = workerResult.rows[0]
 
-    // Calculate payment breakdown
+    // Calculate payment breakdown with dynamic fee tier
     const grossAmount = parseFloat(amount)
-    const wellsFee = grossAmount * 0.01 // 1% Wells fee on every transaction
+
+    // Determine fee rate based on origination
+    // - transaction: 1% (worker has own client, Wells just processes payment)
+    // - sourced: 3.3% (Wells AI discovered the opportunity)
+    // - originated: 7.7% (Wells brought client AND worker together)
+    // - partner: Custom rate from partner agreement
+    let feeRate = WELLS_FEE_TIERS[originType as keyof typeof WELLS_FEE_TIERS]
+    if (feeRate === null) {
+      // Partner pricing - look up from engagement or default to 1%
+      feeRate = 0.01 // TODO: Pull custom rate from partner agreement
+    }
+
+    const wellsFee = grossAmount * feeRate
     const netAmount = grossAmount - wellsFee
 
     // Calculate GRAIN vs USD split
@@ -212,6 +238,8 @@ export async function POST(request: Request) {
         id: payment.id,
         gross_amount: grossAmount,
         wells_fee: wellsFee,
+        wells_fee_rate: feeRate,
+        origination_type: originType,
         net_amount: netAmount,
         payment_currency,
         grain_percentage: grainPct,
