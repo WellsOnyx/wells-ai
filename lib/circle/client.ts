@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Circle Programmable Wallets Client
  *

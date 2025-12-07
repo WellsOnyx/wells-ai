@@ -12,7 +12,18 @@ import { Lead } from './leads-db'
 // CONFIGURATION
 // ============================================================================
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy-initialize Resend client to avoid build-time errors when API key is not set
+let resendClient: Resend | null = null
+
+function getResendClient(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null
+  }
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY)
+  }
+  return resendClient
+}
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Wells AI <hello@wellsonyx.com>'
 const TEAM_EMAIL = process.env.WELLS_TEAM_EMAIL || 'team@wellsonyx.com'
@@ -44,6 +55,9 @@ export async function sendLeadConfirmation(
   }
 
   try {
+    const resend = getResendClient()
+    if (!resend) return
+
     const html = generateConfirmationEmail(leadDetails)
 
     await resend.emails.send({
@@ -216,6 +230,9 @@ export async function sendLeadNotification(leadDetails: Lead): Promise<void> {
   }
 
   try {
+    const resend = getResendClient()
+    if (!resend) return
+
     const html = generateTeamNotificationEmail(leadDetails)
 
     await resend.emails.send({
@@ -523,6 +540,9 @@ export async function sendDealUpdate(
   }
 
   try {
+    const resend = getResendClient()
+    if (!resend) return
+
     const html = generateDealUpdateEmail(dealDetails)
 
     const statusSubjects = {
@@ -703,7 +723,8 @@ function generateDealUpdateEmail(deal: DealDetails): string {
  * Test email configuration
  */
 export async function testEmailConfiguration(): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) {
+  const resend = getResendClient()
+  if (!resend) {
     console.error('RESEND_API_KEY not configured')
     return false
   }
