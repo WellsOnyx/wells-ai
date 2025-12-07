@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     }
 
     // Validate platform
-    const validPlatforms = ['slack', 'teams', 'discord', 'whatsapp', 'sms', 'web']
+    const validPlatforms = ['slack', 'teams', 'discord', 'whatsapp', 'sms', 'web', 'gchat']
     if (!validPlatforms.includes(platform)) {
       return NextResponse.json({
         error: 'Invalid platform',
@@ -307,6 +307,10 @@ function getWebhookUrls(platform: string) {
       return {
         interactions: `${baseUrl}/api/chat/discord/interactions`
       }
+    case 'gchat':
+      return {
+        webhook: `${baseUrl}/api/chat/gchat/webhook`
+      }
     default:
       return {
         webhook: `${baseUrl}/api/chat/webhook`
@@ -338,6 +342,16 @@ function getSetupInstructions(platform: string) {
         '2. Under "General Information", set Interactions Endpoint URL',
         '3. Enable "Message Content Intent" under Bot settings',
         '4. Add bot to your server with appropriate permissions'
+      ]
+    case 'gchat':
+      return [
+        '1. Go to Google Cloud Console > APIs & Services > Credentials',
+        '2. Create a new project or select existing',
+        '3. Enable Google Chat API',
+        '4. Go to Google Chat API > Configuration',
+        '5. Set App URL to the webhook endpoint',
+        '6. Enable "Receive 1:1 messages" and "Join spaces and group conversations"',
+        '7. Set permissions and publish the app'
       ]
     default:
       return ['Use the webhook URL to send messages']
