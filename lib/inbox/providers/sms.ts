@@ -362,7 +362,7 @@ export async function syncToUnifiedInbox(smsMessage: SMSMessage): Promise<void> 
     }
 
     // Create inbox message
-    await supabase.from('inbox_messages').insert({
+    await supabase.from('inbox_messages_v2').insert({
       thread_id: inboxThread?.id,
       provider: 'sms',
       provider_message_id: smsMessage.id,

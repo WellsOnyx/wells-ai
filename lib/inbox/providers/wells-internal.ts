@@ -556,7 +556,7 @@ async function syncToUnifiedInbox(
     }
 
     // Create inbox message
-    await supabase.from('inbox_messages').insert({
+    await supabase.from('inbox_messages_v2').insert({
       thread_id: inboxThread?.id,
       provider: 'wells_internal',
       provider_message_id: message.id,

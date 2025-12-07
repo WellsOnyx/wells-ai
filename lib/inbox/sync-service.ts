@@ -179,7 +179,7 @@ export class InboxSyncService {
   ): Promise<void> {
     // Check if already imported
     const existing = await sql.query(
-      `SELECT id FROM inbox_messages WHERE external_message_id = $1 AND account_id = $2`,
+      `SELECT id FROM inbox_messages_v2 WHERE external_message_id = $1 AND account_id = $2`,
       [messageId, account.id]
     );
 
@@ -233,7 +233,7 @@ export class InboxSyncService {
     // Insert message
     const inboxMessageId = this.generateId();
     await sql.query(
-      `INSERT INTO inbox_messages (
+      `INSERT INTO inbox_messages_v2 (
         id, thread_id, account_id, user_id, provider, external_message_id,
         direction, from_address, from_name, to_addresses, cc_addresses,
         subject, body_text, body_html, attachments,

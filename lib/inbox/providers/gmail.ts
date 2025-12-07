@@ -991,7 +991,7 @@ async function saveMessageToInbox(
 
   // Check if message already exists
   const existing = await sql`
-    SELECT id FROM inbox_messages
+    SELECT id FROM inbox_messages_v2
     WHERE channel_message_id = ${message.id}
   `
 
@@ -1027,6 +1027,6 @@ async function saveMessageToInbox(
  */
 async function deleteMessageFromInbox(messageId: string): Promise<void> {
   await sql`
-    DELETE FROM inbox_messages WHERE channel_message_id = ${messageId}
+    DELETE FROM inbox_messages_v2 WHERE channel_message_id = ${messageId}
   `
 }

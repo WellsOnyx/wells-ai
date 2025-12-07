@@ -155,7 +155,7 @@ async function buildMessageContext(message: InboxMessage): Promise<string> {
     const senderEmail = message.from.email || message.from.phone;
     if (senderEmail) {
       const { data: previousMessages } = await supabase
-        .from('inbox_messages')
+        .from('inbox_messages_v2')
         .select('subject, body, created_at')
         .contains('from', { email: senderEmail })
         .order('created_at', { ascending: false })
@@ -224,7 +224,7 @@ async function storeTriage(messageId: string, result: TriageResult): Promise<voi
 
     // Update message with triage data
     await supabase
-      .from('inbox_messages')
+      .from('inbox_messages_v2')
       .update({
         priority: result.priority,
         category: result.category,
@@ -235,7 +235,7 @@ async function storeTriage(messageId: string, result: TriageResult): Promise<voi
     // Update thread labels
     if (result.labels && result.labels.length > 0) {
       const { data: message } = await supabase
-        .from('inbox_messages')
+        .from('inbox_messages_v2')
         .select('thread_id')
         .eq('id', messageId)
         .single();

@@ -154,7 +154,7 @@ export class InboxService {
 
     // Get messages
     const messagesResult = await sql.query(
-      `SELECT * FROM inbox_messages WHERE thread_id = $1 ORDER BY received_at ASC, created_at ASC`,
+      `SELECT * FROM inbox_messages_v2 WHERE thread_id = $1 ORDER BY received_at ASC, created_at ASC`,
       [threadId]
     );
 
@@ -187,7 +187,7 @@ export class InboxService {
    */
   async getMessage(messageId: string, userId: string): Promise<InboxMessage | null> {
     const result = await sql.query(
-      `SELECT * FROM inbox_messages WHERE id = $1 AND user_id = $2`,
+      `SELECT * FROM inbox_messages_v2 WHERE id = $1 AND user_id = $2`,
       [messageId, userId]
     );
 
@@ -211,7 +211,7 @@ export class InboxService {
 
     // Also update messages in these threads
     await sql.query(
-      `UPDATE inbox_messages SET is_read = $1 WHERE thread_id = ANY($2) AND user_id = $3`,
+      `UPDATE inbox_messages_v2 SET is_read = $1 WHERE thread_id = ANY($2) AND user_id = $3`,
       [isRead, threadIds, userId]
     );
   }
@@ -399,7 +399,7 @@ export class InboxService {
 
     let sqlQuery = `
       SELECT m.*, t.subject as thread_subject
-      FROM inbox_messages m
+      FROM inbox_messages_v2 m
       JOIN inbox_threads t ON m.thread_id = t.id
       WHERE m.user_id = $1
       AND (
@@ -604,7 +604,7 @@ Provide 3 alternative replies in JSON format:
 
     // Store suggested reply on message
     await sql.query(
-      `UPDATE inbox_messages SET ai_suggested_reply = $1 WHERE id = $2`,
+      `UPDATE inbox_messages_v2 SET ai_suggested_reply = $1 WHERE id = $2`,
       [suggestions.primary, messageId]
     );
 
