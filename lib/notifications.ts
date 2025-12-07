@@ -5,6 +5,7 @@
  */
 
 import { Lead } from './leads-db'
+import { sendLeadConfirmation, sendLeadNotification as sendLeadEmailNotification } from './email'
 
 // ============================================================================
 // SLACK NOTIFICATIONS
@@ -13,7 +14,7 @@ import { Lead } from './leads-db'
 /**
  * Send a Slack notification for a new lead
  */
-export async function notifyNewLead(lead: Lead): Promise<void> {
+async function notifyNewLeadSlack(lead: Lead): Promise<void> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL
 
   if (!webhookUrl) {
@@ -41,6 +42,31 @@ export async function notifyNewLead(lead: Lead): Promise<void> {
     console.error('Error sending Slack notification:', error)
     // Don't throw - notification failures shouldn't break the flow
   }
+}
+
+/**
+ * Main notification handler - sends to all channels
+ */
+export async function notifyNewLead(lead: Lead): Promise<void> {
+  // Send notifications in parallel
+  await Promise.allSettled([
+    // Send confirmation email to user
+    sendLeadConfirmation(lead.userEmail, {
+      id: lead.id,
+      userName: lead.userName,
+      userEmail: lead.userEmail,
+      journey: lead.journey,
+      requirements: lead.requirements,
+      timeline: lead.timeline,
+      budget: lead.budget,
+    }),
+
+    // Send notification email to Wells team
+    sendLeadEmailNotification(lead),
+
+    // Send Slack notification to Wells team
+    notifyNewLeadSlack(lead),
+  ])
 }
 
 /**

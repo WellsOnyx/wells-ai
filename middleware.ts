@@ -116,15 +116,8 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   // AUTHENTICATED USER REDIRECT
   // ========================================
 
-  // If user is signed in and on the home page of wellsonyx.io, redirect to dashboard
-  if (pathname === '/' && !isGrainVaultDomain(host)) {
-    const { userId } = await auth()
-    if (userId) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
-    }
-  }
+  // Skip authenticated user redirects - let users see the landing page
+  // Authentication will be handled by individual protected routes
 
   // ========================================
   // AUTHENTICATION

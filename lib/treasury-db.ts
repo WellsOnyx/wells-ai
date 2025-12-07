@@ -368,7 +368,7 @@ export async function createWallet(input: {
         ${input.walletId},
         ${input.address},
         ${input.blockchain || 'BASE'},
-        ${input.currency || 'GRAIN'},
+        ${input.currency || 'USDC'},
         NOW()
       )
       RETURNING *
@@ -400,6 +400,23 @@ export async function getWalletByAddress(address: string): Promise<TreasuryWalle
   try {
     const result = await sql`
       SELECT * FROM treasury_wallets WHERE address = ${address}
+    `
+
+    if (result.rows.length === 0) {
+      return null
+    }
+
+    return mapWalletFromDb(result.rows[0])
+  } catch (error) {
+    console.error('Error fetching treasury wallet:', error)
+    throw new Error('Failed to fetch treasury wallet')
+  }
+}
+
+export async function getWalletByWalletId(walletId: string): Promise<TreasuryWallet | null> {
+  try {
+    const result = await sql`
+      SELECT * FROM treasury_wallets WHERE wallet_id = ${walletId}
     `
 
     if (result.rows.length === 0) {
