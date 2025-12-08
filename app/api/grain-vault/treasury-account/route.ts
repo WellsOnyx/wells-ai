@@ -48,35 +48,51 @@ export async function GET(req: NextRequest) {
 
     const account = accountResult.rows[0]
 
-    // Get current GRAIN price
+    // Get current GRAIN price - try multiple methods
     let currentPrice = 1.0
     let change24h = 0
     try {
-      const priceResult = await sql`SELECT * FROM get_grain_price()`
-      if (priceResult.rows.length > 0) {
-        currentPrice = parseFloat(priceResult.rows[0].price_usd) || 1.0
-        change24h = parseFloat(priceResult.rows[0].change_24h) || 0
+      // Try grain_calculate_price first (actual function name)
+      const priceResult = await sql`SELECT grain_calculate_price() as price`
+      if (priceResult.rows.length > 0 && priceResult.rows[0].price) {
+        currentPrice = parseFloat(priceResult.rows[0].price) || 1.0
       }
     } catch (e) {
-      // If get_grain_price() doesn't exist, use default
-      console.log('Using default GRAIN price')
+      // Try getting latest from grain_price_history
+      try {
+        const historyResult = await sql`
+          SELECT price_usd FROM grain_price_history
+          ORDER BY recorded_at DESC LIMIT 1
+        `
+        if (historyResult.rows.length > 0) {
+          currentPrice = parseFloat(historyResult.rows[0].price_usd) || 1.0
+        }
+      } catch (e2) {
+        console.log('Using default GRAIN price')
+      }
     }
 
-    // Get recent transactions
-    const transactionsResult = await sql`
-      SELECT
-        id,
-        type,
-        amount,
-        grain_amount,
-        grain_price_at_time,
-        status,
-        created_at
-      FROM grain_transactions
-      WHERE account_id = ${account.id}
-      ORDER BY created_at DESC
-      LIMIT 10
-    `
+    // Get recent transactions using actual column names
+    let transactionsResult = { rows: [] }
+    try {
+      transactionsResult = await sql`
+        SELECT
+          id,
+          tx_type as type,
+          usd_value as amount,
+          grain_amount,
+          grain_price as grain_price_at_time,
+          status,
+          created_at
+        FROM grain_transactions
+        WHERE from_wallet_id = ${account.wallet_address}
+           OR to_wallet_id = ${account.wallet_address}
+        ORDER BY created_at DESC
+        LIMIT 10
+      `
+    } catch (e) {
+      console.log('Could not fetch transactions:', e.message)
+    }
 
     // Calculate GRAIN metrics
     const usdBalance = parseFloat(account.usd_balance || 0)
@@ -84,24 +100,27 @@ export async function GET(req: NextRequest) {
     const grainValue = grainBalance * currentPrice
 
     // Calculate average purchase price and unrealized gain
-    let avgPurchasePrice = currentPrice
-    let costBasis = grainBalance * currentPrice
+    let avgPurchasePrice = parseFloat(account.average_purchase_price || 0) || currentPrice
+    let costBasis = grainBalance * avgPurchasePrice
 
-    const purchaseTxns = transactionsResult.rows.filter(t =>
-      t.type === 'convert_usd_to_grain' && t.grain_price_at_time
-    )
-
-    if (purchaseTxns.length > 0) {
-      const totalGrainPurchased = purchaseTxns.reduce((sum, t) =>
-        sum + parseFloat(t.grain_amount || 0), 0
-      )
-      const totalCost = purchaseTxns.reduce((sum, t) =>
-        sum + (parseFloat(t.grain_amount || 0) * parseFloat(t.grain_price_at_time || 1)), 0
+    // Try to calculate from transactions if no stored average
+    if (!account.average_purchase_price && transactionsResult.rows.length > 0) {
+      const purchaseTxns = transactionsResult.rows.filter(t =>
+        (t.type === 'deposit' || t.type === 'buy') && t.grain_price_at_time
       )
 
-      if (totalGrainPurchased > 0) {
-        avgPurchasePrice = totalCost / totalGrainPurchased
-        costBasis = grainBalance * avgPurchasePrice
+      if (purchaseTxns.length > 0) {
+        const totalGrainPurchased = purchaseTxns.reduce((sum, t) =>
+          sum + parseFloat(t.grain_amount || 0), 0
+        )
+        const totalCost = purchaseTxns.reduce((sum, t) =>
+          sum + (parseFloat(t.grain_amount || 0) * parseFloat(t.grain_price_at_time || 1)), 0
+        )
+
+        if (totalGrainPurchased > 0) {
+          avgPurchasePrice = totalCost / totalGrainPurchased
+          costBasis = grainBalance * avgPurchasePrice
+        }
       }
     }
 
