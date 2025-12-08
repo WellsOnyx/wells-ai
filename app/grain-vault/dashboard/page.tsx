@@ -118,34 +118,61 @@ export default function DashboardPage() {
     else setLoading(true)
 
     try {
-      // Get email from URL or prompt user
+      // Get email from URL or localStorage
       const urlParams = new URLSearchParams(window.location.search)
-      const email = urlParams.get('email') || prompt('Enter your email to view dashboard:')
+      let email = urlParams.get('email')
 
+      // Check localStorage for saved email
+      if (!email && typeof window !== 'undefined') {
+        email = localStorage.getItem('grainvault_email')
+      }
+
+      // If still no email, redirect to onboarding
       if (!email) {
-        router.push('/grain-vault')
+        router.push('/grain-vault/onboard')
         return
       }
 
-      // Fetch account data and price data in parallel
+      // Save email to localStorage for future visits
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('grainvault_email', email)
+      }
+
+      // Fetch account data from treasury_accounts and price data
       const [accountRes, priceRes] = await Promise.all([
-        fetch(`/api/grain-vault/account?email=${encodeURIComponent(email)}`),
+        fetch(`/api/grain-vault/onboard?email=${encodeURIComponent(email)}`),
         fetch('/api/grain-vault/price')
       ])
 
       if (!accountRes.ok) {
-        const accountError = await accountRes.json()
-        throw new Error(accountError.error || 'Failed to load account')
+        // Account doesn't exist, redirect to onboarding
+        router.push('/grain-vault/onboard')
+        return
       }
 
       if (!priceRes.ok) {
         throw new Error('Failed to load GRAIN price')
       }
 
-      const accountResult = await accountRes.json()
+      const onboardResult = await accountRes.json()
       const priceResult = await priceRes.json()
 
-      setAccountData(accountResult)
+      // Check if account exists
+      if (!onboardResult.completed || !onboardResult.account) {
+        router.push('/grain-vault/onboard')
+        return
+      }
+
+      // Fetch full account details from treasury_accounts directly
+      const fullAccountRes = await fetch(`/api/grain-vault/treasury-account?email=${encodeURIComponent(email)}`)
+
+      if (!fullAccountRes.ok) {
+        throw new Error('Failed to load account details')
+      }
+
+      const fullAccountResult = await fullAccountRes.json()
+
+      setAccountData(fullAccountResult)
       setPriceData(priceResult)
       setError(null)
     } catch (err: any) {

@@ -196,8 +196,13 @@ export default function OnboardingPage() {
         throw new Error(result.error || 'Failed to complete onboarding')
       }
 
-      // Success! Redirect to dashboard
-      router.push('/grain-vault/dashboard')
+      // Save email to localStorage for dashboard access
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('grainvault_email', data.email)
+      }
+
+      // Success! Redirect to dashboard with email
+      router.push(`/grain-vault/dashboard?email=${encodeURIComponent(data.email)}`)
     } catch (err: any) {
       setError(err.message)
     } finally {
