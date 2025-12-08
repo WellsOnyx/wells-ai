@@ -175,19 +175,41 @@ export function estimateVehicleValue(
 
 /**
  * Lock GRAIN as collateral
+ *
+ * When GRAIN is used as collateral, 100% is initially locked:
+ * - 50% as primary collateral (at LTV)
+ * - 50% as secondary lock (can be unlocked via GRAIN market)
+ *
+ * Integration with GRAIN Lending Market:
+ * - Borrower can find backers to unlock the secondary 50%
+ * - Lenders provide their GRAIN to replace borrower's secondary lock
+ * - Borrower gains liquidity, lender earns yield
  */
 export function lockGrainCollateral(
   amount: number,
   walletAddress: string,
   grainPrice: number,
-  loanAmount: number
-): GrainCollateral {
+  loanAmount: number,
+  options: {
+    loanId?: string;
+    borrowerId?: string;
+    enableMarketBacking?: boolean;
+  } = {}
+): GrainCollateral & {
+  primaryLockAmount: number;
+  secondaryLockAmount: number;
+  canSeekBacking: boolean;
+} {
   const currentValue = amount * grainPrice;
   const ltv = loanAmount / currentValue;
 
   if (ltv > 0.50) {
     throw new Error('Cannot lock GRAIN - LTV exceeds 50% maximum');
   }
+
+  // Split into primary (actual collateral) and secondary (additional lock)
+  const primaryLockAmount = amount * ltv * 2; // Amount needed for 50% LTV
+  const secondaryLockAmount = amount - primaryLockAmount; // Remaining GRAIN
 
   return {
     amount,
@@ -197,6 +219,9 @@ export function lockGrainCollateral(
     grainPriceAtLock: grainPrice,
     currentGrainPrice: grainPrice,
     ltv,
+    primaryLockAmount,
+    secondaryLockAmount,
+    canSeekBacking: options.enableMarketBacking !== false && secondaryLockAmount > 0,
   };
 }
 
