@@ -212,10 +212,10 @@ export default function GrainVaultLanding() {
                   <Link href="#treasury-sdk" className="text-sm text-purple-400 hover:text-purple-300 transition-colors font-medium">
                     Treasury SDK
                   </Link>
-                  <Link href="/grain-vault/signin" className="text-sm text-gray-400 hover:text-white transition-colors">
-                    Sign In
+                  <Link href="/grain-vault/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors">
+                    Dashboard
                   </Link>
-                  <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/signup'}>
+                  <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/onboard'}>
                     Open Account
                   </ShimmerButton>
                 </nav>
@@ -263,17 +263,17 @@ export default function GrainVaultLanding() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-              <ShimmerButton size="lg" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/signup'}>
+              <ShimmerButton size="lg" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/onboard'}>
                 Open Account
                 <ArrowRight className="w-5 h-5" />
               </ShimmerButton>
-              <ShimmerButton variant="secondary" size="lg" onClick={() => document.getElementById('treasury-sdk')?.scrollIntoView()}>
-                <Code className="w-5 h-5" />
-                Explore SDK
+              <ShimmerButton variant="secondary" size="lg" onClick={() => window.location.href = '/grain-vault/dashboard'}>
+                <Wallet className="w-5 h-5" />
+                View Dashboard
               </ShimmerButton>
-              <ShimmerButton variant="ghost" size="lg" onClick={() => window.location.href = '/demo'}>
-                <Play className="w-5 h-5" />
-                Interactive Demo
+              <ShimmerButton variant="ghost" size="lg" onClick={() => document.getElementById('treasury-sdk')?.scrollIntoView()}>
+                <Code className="w-5 h-5" />
+                Treasury SDK
               </ShimmerButton>
             </div>
 
@@ -353,11 +353,11 @@ export default function GrainVaultLanding() {
                   </div>
 
                   <p className="text-gray-400 mb-8 leading-relaxed">
-                    Instant settlement with no chargebacks, no reversals, and no geographic limits.
+                    Instant settlement with no chargebacks, no reversals, and no geographic limits. GRAIN appreciates as treasury grows - all holders benefit equally.
                   </p>
 
                   <div className="space-y-4 mb-8">
-                    {['Instant Settlement', 'Zero Chargebacks', 'Global by Default'].map((item, i) => (
+                    {['Instant Settlement', 'Appreciates with Treasury', 'Global by Default'].map((item, i) => (
                       <div key={i} className="flex items-center gap-3">
                         <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
                         <span className="font-medium">{item}</span>
@@ -613,7 +613,7 @@ export default function GrainVaultLanding() {
                 </p>
 
                 <button
-                  onClick={() => window.location.href = '/grain-vault/signup'}
+                  onClick={() => window.location.href = '/grain-vault/onboard'}
                   className="inline-flex items-center gap-3 px-8 py-4 bg-black text-white rounded-xl font-bold text-lg hover:bg-gray-900 transition-all hover:scale-105"
                 >
                   Open Account
