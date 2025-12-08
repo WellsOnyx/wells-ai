@@ -96,6 +96,26 @@
       ]
     },
     {
+      "source": "/onboard",
+      "destination": "/grain-vault/onboard",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/grain-vault/dashboard",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
       "source": "/onboarding",
       "destination": "/grain-vault/onboarding",
       "has": [
