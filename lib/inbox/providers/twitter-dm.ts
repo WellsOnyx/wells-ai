@@ -19,7 +19,7 @@
 import { sql } from '@vercel/postgres';
 import crypto from 'crypto';
 import { triageMessage } from '../ai-triage';
-import { notifyRealtime } from '../realtime';
+import { publishMessage } from '../realtime';
 
 // Twitter API Configuration
 const TWITTER_CLIENT_ID = process.env.TWITTER_CLIENT_ID || '';
@@ -360,10 +360,7 @@ export async function handleInboundDM(
     await syncToUnifiedInbox(accountId, thread, message);
 
     // Send real-time notification
-    await notifyRealtime(accountId, 'twitter_dm', {
-      thread_id: thread.id,
-      message,
-    });
+    await publishMessage('twitter', thread.id, message);
 
     return message;
   } catch (error) {

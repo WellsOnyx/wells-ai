@@ -22,7 +22,7 @@
 import { sql } from '@vercel/postgres';
 import crypto from 'crypto';
 import { triageMessage } from '../ai-triage';
-import { notifyRealtime } from '../realtime';
+import { publishMessage } from '../realtime';
 
 // Meta WhatsApp Cloud API Configuration
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
@@ -493,10 +493,7 @@ async function handleInboundMessage(message: any, contacts: any[]): Promise<void
     await syncToUnifiedInbox(accountId, thread, dbMessage);
 
     // Real-time notification
-    await notifyRealtime(accountId, 'whatsapp_cloud_message', {
-      thread_id: thread.id,
-      message: dbMessage,
-    });
+    await publishMessage('whatsapp_cloud', thread.id, dbMessage);
   } catch (error) {
     console.error('Error handling inbound WhatsApp message:', error);
   }

@@ -14,7 +14,7 @@
 import twilio from 'twilio';
 import { sql } from '@vercel/postgres';
 import { triageMessage } from '../ai-triage';
-import { notifyRealtime } from '../realtime';
+import { publishMessage } from '../realtime';
 
 // Lazy initialization
 const getTwilioClient = () => {
@@ -208,10 +208,7 @@ export async function handleInboundWhatsApp(twilioPayload: any): Promise<WhatsAp
     await syncToUnifiedInbox(accountId, thread, waMessage);
 
     // Trigger real-time notification
-    await notifyRealtime(accountId, 'whatsapp_message', {
-      thread_id: thread.id,
-      message: waMessage,
-    });
+    await publishMessage('whatsapp', thread.id, waMessage);
 
     return waMessage;
   } catch (error) {
