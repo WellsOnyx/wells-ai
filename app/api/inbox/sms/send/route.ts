@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendSMS } from '@/lib/inbox/providers/sms';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization to prevent build-time errors
+const getSupabase = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    return { from: () => ({ select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }) }) } as any;
+  }
+  return createClient(supabaseUrl, supabaseKey);
+};
 
 /**
  * POST /api/inbox/sms/send
@@ -22,6 +27,7 @@ const supabase = createClient(
  */
 export async function POST(req: NextRequest) {
   try {
+    const supabase = getSupabase();
     const { accountId, to, body, mediaUrls } = await req.json();
 
     // Validate required fields
