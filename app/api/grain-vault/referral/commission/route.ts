@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@vercel/postgres'
+import { sqlQuery as sql } from '@/lib/db'
 
 // Platform fee rate
 const PLATFORM_FEE_RATE = 0.045 // 4.5%

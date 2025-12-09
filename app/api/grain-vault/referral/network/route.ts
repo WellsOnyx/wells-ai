@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { sql } from '@vercel/postgres'
+import { sqlQuery as sql } from '@/lib/db'
 
 // Commission structure (% of 4.5% platform fee)
 const COMMISSION_STRUCTURE = {

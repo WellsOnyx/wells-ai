@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { sql } from '@vercel/postgres'
+import { sqlQuery as sql } from '@/lib/db'
 import { formatReferralLink, getShareUrls, getShareText } from '@/lib/grain-vault/referrals'
 
 interface ReferralRow {

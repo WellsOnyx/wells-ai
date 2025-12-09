@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { sql } from '@vercel/postgres'
+import { sqlQuery as sql } from '@/lib/db'
 
 // Color scheme for transactions (accessibility-focused: blue/orange, not red/green)
 const FLOW_COLORS = {

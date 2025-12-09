@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { sql } from '@vercel/postgres'
+import { sqlQuery as sql } from '@/lib/db'
 
 // GET: Get conversion quote
 export async function GET(req: NextRequest) {
