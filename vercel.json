@@ -21,17 +21,6 @@
           "value": "www.grainandvault.com"
         }
       ]
-    },
-    {
-      "source": "/:path*",
-      "destination": "https://wellsonyx.io/:path*",
-      "permanent": true,
-      "has": [
-        {
-          "type": "host",
-          "value": "www.wellsonyx.io"
-        }
-      ]
     }
   ],
   "rewrites": [
