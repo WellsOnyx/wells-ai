@@ -23,21 +23,21 @@ export type Channel =
   | 'telegram'      // Telegram
 
 // Channel display info
-export const CHANNEL_INFO: Record<Channel, { name: string; color: string; icon: string }> = {
-  sms: { name: 'SMS', color: '#22C55E', icon: '💬' },
-  imessage: { name: 'iMessage', color: '#34D399', icon: '🍎' },
-  gmail: { name: 'Gmail', color: '#EA4335', icon: '📧' },
-  outlook: { name: 'Outlook', color: '#0078D4', icon: '📨' },
-  email: { name: 'Email', color: '#6366F1', icon: '✉️' },
-  slack: { name: 'Slack', color: '#4A154B', icon: '💼' },
-  discord: { name: 'Discord', color: '#5865F2', icon: '🎮' },
-  twitter: { name: 'X', color: '#000000', icon: '𝕏' },
-  instagram: { name: 'Instagram', color: '#E4405F', icon: '📷' },
-  linkedin: { name: 'LinkedIn', color: '#0A66C2', icon: '💼' },
-  whatsapp: { name: 'WhatsApp', color: '#25D366', icon: '📱' },
-  chat: { name: 'Website', color: '#8B5CF6', icon: '💻' },
-  teams: { name: 'Teams', color: '#6264A7', icon: '👥' },
-  telegram: { name: 'Telegram', color: '#0088CC', icon: '✈️' },
+export const CHANNEL_INFO: Record<Channel, { name: string; color: string; bgColor: string; icon: string }> = {
+  sms: { name: 'SMS', color: '#22C55E', bgColor: 'bg-green-500/20', icon: '💬' },
+  imessage: { name: 'iMessage', color: '#34D399', bgColor: 'bg-emerald-500/20', icon: '🍎' },
+  gmail: { name: 'Gmail', color: '#EA4335', bgColor: 'bg-red-500/20', icon: '📧' },
+  outlook: { name: 'Outlook', color: '#0078D4', bgColor: 'bg-blue-500/20', icon: '📨' },
+  email: { name: 'Email', color: '#6366F1', bgColor: 'bg-indigo-500/20', icon: '✉️' },
+  slack: { name: 'Slack', color: '#4A154B', bgColor: 'bg-purple-500/20', icon: '💼' },
+  discord: { name: 'Discord', color: '#5865F2', bgColor: 'bg-indigo-500/20', icon: '🎮' },
+  twitter: { name: 'X', color: '#000000', bgColor: 'bg-gray-500/20', icon: '𝕏' },
+  instagram: { name: 'Instagram', color: '#E4405F', bgColor: 'bg-pink-500/20', icon: '📷' },
+  linkedin: { name: 'LinkedIn', color: '#0A66C2', bgColor: 'bg-blue-600/20', icon: '💼' },
+  whatsapp: { name: 'WhatsApp', color: '#25D366', bgColor: 'bg-green-500/20', icon: '📱' },
+  chat: { name: 'Website', color: '#8B5CF6', bgColor: 'bg-violet-500/20', icon: '💻' },
+  teams: { name: 'Teams', color: '#6264A7', bgColor: 'bg-indigo-500/20', icon: '👥' },
+  telegram: { name: 'Telegram', color: '#0088CC', bgColor: 'bg-sky-500/20', icon: '✈️' },
 }
 
 // Auto-migrate flag to ensure we only try once per cold start
