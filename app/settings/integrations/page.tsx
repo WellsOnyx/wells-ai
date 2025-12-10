@@ -40,6 +40,42 @@ interface IntegrationConfig {
   setupInstructions: string
 }
 
+// Default channel info - used as fallback if API fails
+const DEFAULT_CHANNEL_INFO: Record<Channel, ChannelInfo> = {
+  sms: { name: 'SMS', color: '#22C55E', bgColor: 'bg-green-500/20', icon: '💬' },
+  imessage: { name: 'iMessage', color: '#34D399', bgColor: 'bg-emerald-500/20', icon: '🍎' },
+  gmail: { name: 'Gmail', color: '#EA4335', bgColor: 'bg-red-500/20', icon: '📧' },
+  outlook: { name: 'Outlook', color: '#0078D4', bgColor: 'bg-blue-500/20', icon: '📨' },
+  email: { name: 'Email', color: '#6366F1', bgColor: 'bg-indigo-500/20', icon: '✉️' },
+  slack: { name: 'Slack', color: '#4A154B', bgColor: 'bg-purple-500/20', icon: '💼' },
+  discord: { name: 'Discord', color: '#5865F2', bgColor: 'bg-indigo-500/20', icon: '🎮' },
+  twitter: { name: 'X', color: '#000000', bgColor: 'bg-gray-500/20', icon: '𝕏' },
+  instagram: { name: 'Instagram', color: '#E4405F', bgColor: 'bg-pink-500/20', icon: '📷' },
+  linkedin: { name: 'LinkedIn', color: '#0A66C2', bgColor: 'bg-blue-600/20', icon: '💼' },
+  whatsapp: { name: 'WhatsApp', color: '#25D366', bgColor: 'bg-green-500/20', icon: '📱' },
+  chat: { name: 'Website', color: '#8B5CF6', bgColor: 'bg-violet-500/20', icon: '💻' },
+  teams: { name: 'Teams', color: '#6264A7', bgColor: 'bg-indigo-500/20', icon: '👥' },
+  telegram: { name: 'Telegram', color: '#0088CC', bgColor: 'bg-sky-500/20', icon: '✈️' },
+}
+
+// Default integration config - used as fallback if API fails
+const DEFAULT_INTEGRATION_CONFIG: Record<Channel, IntegrationConfig> = {
+  sms: { authType: 'phone', requiredFields: ['phone_number'], setupInstructions: 'Enter your phone number to receive and send SMS messages via Twilio.' },
+  imessage: { authType: 'api_key', requiredFields: ['api_key', 'api_key_id'], setupInstructions: 'Connect your Sendblue account to send/receive iMessages.' },
+  gmail: { authType: 'oauth', requiredFields: [], setupInstructions: 'Connect your Gmail account to send and receive emails.' },
+  outlook: { authType: 'oauth', requiredFields: [], setupInstructions: 'Connect your Microsoft account to send and receive Outlook emails.' },
+  email: { authType: 'api_key', requiredFields: ['api_key', 'from_email'], setupInstructions: 'Connect your Resend account for custom email sending.' },
+  slack: { authType: 'oauth', requiredFields: [], setupInstructions: 'Connect your Slack workspace to send and receive messages.' },
+  discord: { authType: 'webhook', requiredFields: ['webhook_url'], setupInstructions: 'Create a Discord webhook in your server settings.' },
+  twitter: { authType: 'oauth', requiredFields: [], setupInstructions: 'Connect your X (Twitter) account to send and receive DMs.' },
+  instagram: { authType: 'oauth', requiredFields: [], setupInstructions: 'Connect your Instagram Business account to manage DMs.' },
+  linkedin: { authType: 'oauth', requiredFields: [], setupInstructions: 'Connect your LinkedIn account to send messages.' },
+  whatsapp: { authType: 'phone', requiredFields: ['phone_number', 'business_account_id'], setupInstructions: 'Connect your WhatsApp Business account via Twilio.' },
+  chat: { authType: 'webhook', requiredFields: [], setupInstructions: 'Website chat is automatically enabled. Embed the chat widget on your site.' },
+  teams: { authType: 'webhook', requiredFields: ['webhook_url'], setupInstructions: 'Create an incoming webhook connector in your Teams channel.' },
+  telegram: { authType: 'api_key', requiredFields: ['bot_token'], setupInstructions: 'Create a Telegram bot via @BotFather and paste your bot token here.' },
+}
+
 // Field labels for user-friendly display
 const FIELD_LABELS: Record<string, string> = {
   phone_number: 'Phone Number',
@@ -53,8 +89,8 @@ const FIELD_LABELS: Record<string, string> = {
 
 export default function IntegrationsPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([])
-  const [channelInfo, setChannelInfo] = useState<Record<Channel, ChannelInfo>>({} as any)
-  const [integrationConfig, setIntegrationConfig] = useState<Record<Channel, IntegrationConfig>>({} as any)
+  const [channelInfo, setChannelInfo] = useState<Record<Channel, ChannelInfo>>(DEFAULT_CHANNEL_INFO)
+  const [integrationConfig, setIntegrationConfig] = useState<Record<Channel, IntegrationConfig>>(DEFAULT_INTEGRATION_CONFIG)
   const [isLoading, setIsLoading] = useState(true)
   const [connectingChannel, setConnectingChannel] = useState<Channel | null>(null)
   const [showConnectModal, setShowConnectModal] = useState(false)
@@ -69,11 +105,18 @@ export default function IntegrationsPage() {
       const data = await res.json()
       if (data.success) {
         setIntegrations(data.integrations || [])
-        setChannelInfo(data.channelInfo || {})
-        setIntegrationConfig(data.integrationConfig || {})
+        // Only update if we get valid data from API
+        if (data.channelInfo && Object.keys(data.channelInfo).length > 0) {
+          setChannelInfo(data.channelInfo)
+        }
+        if (data.integrationConfig && Object.keys(data.integrationConfig).length > 0) {
+          setIntegrationConfig(data.integrationConfig)
+        }
       }
+      // If API fails, we still have defaults so channels render
     } catch (error) {
       console.error('Error fetching integrations:', error)
+      // Defaults are already set, so page still works
     } finally {
       setIsLoading(false)
     }
