@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
   DollarSign,
@@ -11,6 +12,8 @@ import {
   Loader2,
   AlertCircle,
   Info,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react'
 
 export default function CreateOfferPage() {
@@ -18,6 +21,12 @@ export default function CreateOfferPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   const [form, setForm] = useState({
     title: '',
@@ -73,6 +82,7 @@ export default function CreateOfferPage() {
       const json = await res.json()
       if (!res.ok) {
         setError(json.error || 'Failed to create offer')
+        showToast('Failed to create offer', 'error')
         return
       }
 
@@ -85,9 +95,11 @@ export default function CreateOfferPage() {
         })
       }
 
-      router.push(`/attribution/offers/${json.offer.id}`)
+      showToast(`Offer ${activate ? 'created and activated' : 'created'}!`, 'success')
+      setTimeout(() => router.push(`/attribution/offers/${json.offer.id}`), 500)
     } catch {
       setError('Failed to create offer')
+      showToast('Failed to create offer', 'error')
     } finally {
       setLoading(false)
     }
@@ -304,6 +316,31 @@ export default function CreateOfferPage() {
           </div>
         </form>
       </div>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 right-6 z-50"
+          >
+            <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-xl border ${
+              toast.type === 'success'
+                ? 'bg-green-500/20 border-green-500/50 text-green-200'
+                : 'bg-red-500/20 border-red-500/50 text-red-200'
+            }`}>
+              {toast.type === 'success' ? (
+                <CheckCircle className="w-5 h-5" />
+              ) : (
+                <XCircle className="w-5 h-5" />
+              )}
+              <span className="font-medium">{toast.message}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
   Users,
@@ -14,6 +15,8 @@ import {
   Mail,
   Clock,
   AlertCircle,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react'
 import { ConnectionsResponse, MAX_CONNECTIONS } from '@/lib/attribution/types'
 
@@ -25,6 +28,12 @@ export default function ConnectionsPage() {
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteError, setInviteError] = useState('')
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   const fetchConnections = useCallback(async () => {
     try {
@@ -55,10 +64,14 @@ export default function ConnectionsPage() {
         body: JSON.stringify({ action: 'accept' }),
       })
       if (res.ok) {
+        showToast('Connection accepted!', 'success')
         fetchConnections()
+      } else {
+        showToast('Failed to accept connection', 'error')
       }
     } catch (error) {
       console.error('Failed to accept:', error)
+      showToast('Failed to accept connection', 'error')
     } finally {
       setActionLoading(null)
     }
@@ -73,10 +86,14 @@ export default function ConnectionsPage() {
         body: JSON.stringify({ action: 'decline' }),
       })
       if (res.ok) {
+        showToast('Connection request declined', 'success')
         fetchConnections()
+      } else {
+        showToast('Failed to decline connection', 'error')
       }
     } catch (error) {
       console.error('Failed to decline:', error)
+      showToast('Failed to decline connection', 'error')
     } finally {
       setActionLoading(null)
     }
@@ -90,10 +107,14 @@ export default function ConnectionsPage() {
         method: 'DELETE',
       })
       if (res.ok) {
+        showToast('Connection removed', 'success')
         fetchConnections()
+      } else {
+        showToast('Failed to remove connection', 'error')
       }
     } catch (error) {
       console.error('Failed to remove:', error)
+      showToast('Failed to remove connection', 'error')
     } finally {
       setActionLoading(null)
     }
@@ -119,6 +140,7 @@ export default function ConnectionsPage() {
       if (res.ok) {
         setShowInviteModal(false)
         setInviteEmail('')
+        showToast('Invitation sent successfully!', 'success')
         fetchConnections()
       } else {
         setInviteError(json.error || 'Failed to send invite')
@@ -132,8 +154,26 @@ export default function ConnectionsPage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+      <div className="min-h-screen bg-black text-white">
+        <div className="border-b border-white/10">
+          <div className="max-w-4xl mx-auto px-6 py-6">
+            <div className="h-4 w-32 bg-white/5 rounded animate-pulse mb-4" />
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="h-8 w-40 bg-white/5 rounded-lg animate-pulse mb-2" />
+                <div className="h-4 w-32 bg-white/5 rounded animate-pulse" />
+              </div>
+              <div className="h-10 w-24 bg-white/5 rounded-lg animate-pulse" />
+            </div>
+          </div>
+        </div>
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 bg-white/5 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -234,16 +274,31 @@ export default function ConnectionsPage() {
             Active Connections ({data?.connections.length || 0})
           </h2>
           {data?.connections.length === 0 ? (
-            <div className="text-center py-12 bg-white/5 rounded-xl">
-              <Users className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No connections yet</p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center py-16 bg-white/5 rounded-xl border border-white/10"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.1, type: 'spring' }}
+                className="w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              >
+                <Users className="w-8 h-8 text-purple-400" />
+              </motion.div>
+              <h3 className="text-lg font-semibold mb-2">No connections yet</h3>
+              <p className="text-gray-400 mb-6 max-w-sm mx-auto">
+                Start building your network by inviting your first connection
+              </p>
               <button
                 onClick={() => setShowInviteModal(true)}
-                className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-all hover:scale-105"
               >
+                <UserPlus className="w-4 h-4" />
                 Invite your first connection
               </button>
-            </div>
+            </motion.div>
           ) : (
             <div className="space-y-3">
               {data?.connections.map((conn) => (
@@ -352,6 +407,31 @@ export default function ConnectionsPage() {
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 right-6 z-50"
+          >
+            <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-xl border ${
+              toast.type === 'success'
+                ? 'bg-green-500/20 border-green-500/50 text-green-200'
+                : 'bg-red-500/20 border-red-500/50 text-red-200'
+            }`}>
+              {toast.type === 'success' ? (
+                <CheckCircle className="w-5 h-5" />
+              ) : (
+                <XCircle className="w-5 h-5" />
+              )}
+              <span className="font-medium">{toast.message}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

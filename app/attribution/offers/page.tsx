@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import {
   ArrowLeft,
   Plus,
@@ -14,6 +15,7 @@ import {
   CheckCircle,
   XCircle,
   FileText,
+  Sparkles,
 } from 'lucide-react'
 import { AttrOffer, formatUsd, totalCommissionPct } from '@/lib/attribution/types'
 
@@ -78,8 +80,31 @@ export default function OffersPage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+      <div className="min-h-screen bg-black text-white">
+        <div className="border-b border-white/10">
+          <div className="max-w-4xl mx-auto px-6 py-6">
+            <div className="h-4 w-32 bg-white/5 rounded animate-pulse mb-4" />
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="h-8 w-32 bg-white/5 rounded-lg animate-pulse mb-2" />
+                <div className="h-4 w-24 bg-white/5 rounded animate-pulse" />
+              </div>
+              <div className="h-10 w-32 bg-white/5 rounded-lg animate-pulse" />
+            </div>
+          </div>
+        </div>
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="flex gap-2 mb-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-10 w-20 bg-white/5 rounded-lg animate-pulse" />
+            ))}
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-white/5 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -132,25 +157,45 @@ export default function OffersPage() {
 
         {/* Offers List */}
         {offers.length === 0 ? (
-          <div className="text-center py-16 bg-white/5 rounded-xl">
-            <Briefcase className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400 mb-4">No offers yet</p>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-16 bg-white/5 rounded-xl border border-white/10"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.1, type: 'spring' }}
+              className="w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            >
+              <Briefcase className="w-8 h-8 text-purple-400" />
+            </motion.div>
+            <h3 className="text-lg font-semibold mb-2">No offers yet</h3>
+            <p className="text-gray-400 mb-6 max-w-sm mx-auto">
+              Create your first offer to start earning commissions through your network
+            </p>
             <Link
               href="/attribution/offers/create"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-all hover:scale-105"
             >
-              <Plus className="w-4 h-4" />
+              <Sparkles className="w-4 h-4" />
               Create your first offer
             </Link>
-          </div>
+          </motion.div>
         ) : (
           <div className="space-y-4">
-            {offers.map((offer) => (
-              <Link
+            {offers.map((offer, index) => (
+              <motion.div
                 key={offer.id}
-                href={`/attribution/offers/${offer.id}`}
-                className="group block p-6 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
               >
+                <Link
+                  href={`/attribution/offers/${offer.id}`}
+                  className="group block p-6 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/30 rounded-xl transition-all"
+                  aria-label={`View offer: ${offer.title}`}
+                >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
@@ -181,9 +226,10 @@ export default function OffersPage() {
                       )}
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition" />
+                  <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
                 </div>
               </Link>
+              </motion.div>
             ))}
           </div>
         )}

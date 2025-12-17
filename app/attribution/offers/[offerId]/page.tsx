@@ -4,17 +4,19 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
   DollarSign,
   Users,
   Share2,
-  CheckCircle,
+  CheckCircle as CheckCircleIcon,
   Loader2,
   Play,
   XCircle,
   ChevronRight,
   Gift,
+  Sparkles,
 } from 'lucide-react'
 import {
   AttrOffer,
@@ -50,6 +52,12 @@ export default function OfferDetailPage() {
   const [showIntroduceModal, setShowIntroduceModal] = useState(false)
   const [showCloseModal, setShowCloseModal] = useState(false)
   const [closeForm, setCloseForm] = useState({ closerId: '', actualValue: '', notes: '' })
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   const fetchData = useCallback(async () => {
     try {
@@ -82,6 +90,7 @@ export default function OfferDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'activate' }),
       })
+      showToast('Offer activated!', 'success')
       fetchData()
     } finally {
       setActionLoading(null)
@@ -97,6 +106,7 @@ export default function OfferDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'cancel' }),
       })
+      showToast('Offer cancelled', 'success')
       fetchData()
     } finally {
       setActionLoading(null)
@@ -113,7 +123,10 @@ export default function OfferDetailPage() {
       })
       if (res.ok) {
         setShowIntroduceModal(false)
+        showToast('Introduction sent!', 'success')
         fetchData()
+      } else {
+        showToast('Failed to send introduction', 'error')
       }
     } finally {
       setActionLoading(null)
@@ -136,7 +149,10 @@ export default function OfferDetailPage() {
       })
       if (res.ok) {
         setShowCloseModal(false)
+        showToast('Deal closed and commissions paid!', 'success')
         fetchData()
+      } else {
+        showToast('Failed to close deal', 'error')
       }
     } finally {
       setActionLoading(null)
@@ -145,8 +161,27 @@ export default function OfferDetailPage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+      <div className="min-h-screen bg-black text-white">
+        <div className="border-b border-white/10">
+          <div className="max-w-4xl mx-auto px-6 py-6">
+            <div className="h-4 w-32 bg-white/5 rounded animate-pulse mb-4" />
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="h-8 w-64 bg-white/5 rounded-lg animate-pulse mb-2" />
+                <div className="h-4 w-96 bg-white/5 rounded animate-pulse" />
+              </div>
+              <div className="h-10 w-32 bg-white/5 rounded-lg animate-pulse" />
+            </div>
+          </div>
+        </div>
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white/5 rounded-xl p-4 border border-white/10 h-20 animate-pulse" />
+            ))}
+          </div>
+          <div className="bg-white/5 rounded-xl p-6 border border-white/10 h-48 animate-pulse" />
+        </div>
       </div>
     )
   }
@@ -476,6 +511,31 @@ export default function OfferDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 right-6 z-50"
+          >
+            <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-xl border ${
+              toast.type === 'success'
+                ? 'bg-green-500/20 border-green-500/50 text-green-200'
+                : 'bg-red-500/20 border-red-500/50 text-red-200'
+            }`}>
+              {toast.type === 'success' ? (
+                <CheckCircleIcon className="w-5 h-5" />
+              ) : (
+                <XCircle className="w-5 h-5" />
+              )}
+              <span className="font-medium">{toast.message}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import {
   ArrowRight,
   Users,
@@ -17,6 +18,7 @@ import {
   Coins,
   Target,
   Zap,
+  Sparkles,
 } from 'lucide-react'
 import { NetworkStatsResponse, formatUsd, formatGrain } from '@/lib/attribution/types'
 
@@ -58,8 +60,52 @@ export default function AttributionDashboard() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+      <div className="min-h-screen bg-black text-white">
+        {/* Header Skeleton */}
+        <div className="border-b border-white/10">
+          <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="h-9 w-64 bg-white/5 rounded-lg animate-pulse mb-2" />
+                <div className="h-4 w-96 bg-white/5 rounded animate-pulse" />
+              </div>
+              <div className="flex gap-3">
+                <div className="h-10 w-32 bg-white/5 rounded-lg animate-pulse" />
+                <div className="h-10 w-32 bg-white/5 rounded-lg animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          {/* Stats Grid Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-9 h-9 bg-white/10 rounded-lg animate-pulse" />
+                  <div className="h-4 w-24 bg-white/10 rounded animate-pulse" />
+                </div>
+                <div className="h-9 w-32 bg-white/10 rounded animate-pulse mb-2" />
+                <div className="h-4 w-40 bg-white/10 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+
+          {/* Content Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {[1, 2].map((i) => (
+              <div key={i} className="bg-white/5 rounded-2xl p-6 border border-white/10 h-64">
+                <div className="h-6 w-48 bg-white/10 rounded animate-pulse mb-6" />
+                <div className="space-y-4">
+                  {[1, 2, 3, 4].map((j) => (
+                    <div key={j} className="h-12 bg-white/10 rounded animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -67,15 +113,31 @@ export default function AttributionDashboard() {
   if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Sign in to access Attribution</h1>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+            className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6"
+          >
+            <Network className="w-10 h-10 text-white" />
+          </motion.div>
+          <h1 className="text-3xl font-bold text-white mb-2">Attribution Network</h1>
+          <p className="text-gray-400 mb-8 max-w-md">
+            Sign in to build your network, earn commissions, and track your attribution success
+          </p>
           <Link
             href="/sign-in"
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all hover:scale-105"
           >
-            Sign In
+            <Sparkles className="w-4 h-4" />
+            Sign In to Get Started
           </Link>
-        </div>
+        </motion.div>
       </div>
     )
   }
@@ -120,7 +182,12 @@ export default function AttributionDashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Total Earnings */}
-          <div className="bg-gradient-to-br from-purple-900/50 to-purple-800/30 rounded-2xl p-6 border border-purple-500/20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            whileHover={{ scale: 1.02 }}
+            className="bg-gradient-to-br from-purple-900/50 to-purple-800/30 rounded-2xl p-6 border border-purple-500/20 hover:border-purple-500/40 transition-colors cursor-default">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-purple-500/20 rounded-lg">
                 <DollarSign className="w-5 h-5 text-purple-400" />
@@ -133,10 +200,15 @@ export default function AttributionDashboard() {
             <div className="text-purple-400 text-sm mt-1">
               {formatGrain(stats?.grain.total || 0)} GRAIN
             </div>
-          </div>
+          </motion.div>
 
           {/* Network Size */}
-          <div className="bg-gradient-to-br from-blue-900/50 to-blue-800/30 rounded-2xl p-6 border border-blue-500/20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ scale: 1.02 }}
+            className="bg-gradient-to-br from-blue-900/50 to-blue-800/30 rounded-2xl p-6 border border-blue-500/20 hover:border-blue-500/40 transition-colors cursor-default">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-blue-500/20 rounded-lg">
                 <Network className="w-5 h-5 text-blue-400" />
@@ -149,10 +221,15 @@ export default function AttributionDashboard() {
             <div className="text-blue-400 text-sm mt-1">
               {stats?.connections.direct || 0} direct / {stats?.connections.remaining || 30} slots left
             </div>
-          </div>
+          </motion.div>
 
           {/* Active Offers */}
-          <div className="bg-gradient-to-br from-green-900/50 to-green-800/30 rounded-2xl p-6 border border-green-500/20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            whileHover={{ scale: 1.02 }}
+            className="bg-gradient-to-br from-green-900/50 to-green-800/30 rounded-2xl p-6 border border-green-500/20 hover:border-green-500/40 transition-colors cursor-default">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-green-500/20 rounded-lg">
                 <Briefcase className="w-5 h-5 text-green-400" />
@@ -165,10 +242,15 @@ export default function AttributionDashboard() {
             <div className="text-green-400 text-sm mt-1">
               {stats?.offers.closed || 0} deals closed
             </div>
-          </div>
+          </motion.div>
 
           {/* Monthly Earnings */}
-          <div className="bg-gradient-to-br from-orange-900/50 to-orange-800/30 rounded-2xl p-6 border border-orange-500/20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            whileHover={{ scale: 1.02 }}
+            className="bg-gradient-to-br from-orange-900/50 to-orange-800/30 rounded-2xl p-6 border border-orange-500/20 hover:border-orange-500/40 transition-colors cursor-default">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-orange-500/20 rounded-lg">
                 <TrendingUp className="w-5 h-5 text-orange-400" />
@@ -181,7 +263,7 @@ export default function AttributionDashboard() {
             <div className="text-orange-400 text-sm mt-1">
               {formatGrain(stats?.grain.monthly || 0)} GRAIN
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Earnings by Level */}
@@ -240,10 +322,17 @@ export default function AttributionDashboard() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Link
-            href="/attribution/connections"
-            className="group bg-white/5 hover:bg-white/10 rounded-2xl p-6 border border-white/10 transition flex items-center justify-between"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            whileHover={{ scale: 1.02 }}
           >
+            <Link
+              href="/attribution/connections"
+              className="group bg-white/5 hover:bg-white/10 rounded-2xl p-6 border border-white/10 hover:border-purple-500/30 transition-all flex items-center justify-between block"
+              aria-label="Manage your network connections"
+            >
             <div className="flex items-center gap-4">
               <div className="p-3 bg-purple-500/20 rounded-xl">
                 <Users className="w-6 h-6 text-purple-400" />
@@ -255,13 +344,21 @@ export default function AttributionDashboard() {
                 </p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition" />
+            <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
           </Link>
+          </motion.div>
 
-          <Link
-            href="/attribution/offers"
-            className="group bg-white/5 hover:bg-white/10 rounded-2xl p-6 border border-white/10 transition flex items-center justify-between"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            whileHover={{ scale: 1.02 }}
           >
+            <Link
+              href="/attribution/offers"
+              className="group bg-white/5 hover:bg-white/10 rounded-2xl p-6 border border-white/10 hover:border-blue-500/30 transition-all flex items-center justify-between block"
+              aria-label="View your offers"
+            >
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-500/20 rounded-xl">
                 <Briefcase className="w-6 h-6 text-blue-400" />
@@ -273,13 +370,21 @@ export default function AttributionDashboard() {
                 </p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition" />
+            <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
           </Link>
+          </motion.div>
 
-          <Link
-            href="/attribution/network"
-            className="group bg-white/5 hover:bg-white/10 rounded-2xl p-6 border border-white/10 transition flex items-center justify-between"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            whileHover={{ scale: 1.02 }}
           >
+            <Link
+              href="/attribution/network"
+              className="group bg-white/5 hover:bg-white/10 rounded-2xl p-6 border border-white/10 hover:border-green-500/30 transition-all flex items-center justify-between block"
+              aria-label="View your network tree"
+            >
             <div className="flex items-center gap-4">
               <div className="p-3 bg-green-500/20 rounded-xl">
                 <Network className="w-6 h-6 text-green-400" />
@@ -291,8 +396,9 @@ export default function AttributionDashboard() {
                 </p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition" />
+            <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
           </Link>
+          </motion.div>
         </div>
 
         {/* Leaderboard */}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import {
   ArrowLeft,
   Network,
@@ -11,6 +12,7 @@ import {
   ChevronRight,
   Loader2,
   DollarSign,
+  UserPlus,
 } from 'lucide-react'
 import { NetworkTreeResponse, formatUsd } from '@/lib/attribution/types'
 
@@ -126,8 +128,26 @@ export default function NetworkTreePage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+      <div className="min-h-screen bg-black text-white">
+        <div className="border-b border-white/10">
+          <div className="max-w-4xl mx-auto px-6 py-6">
+            <div className="h-4 w-32 bg-white/5 rounded animate-pulse mb-4" />
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="h-8 w-48 bg-white/5 rounded-lg animate-pulse mb-2" />
+                <div className="h-4 w-64 bg-white/5 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="grid grid-cols-4 gap-4 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white/5 rounded-xl p-4 border border-white/10 h-20 animate-pulse" />
+            ))}
+          </div>
+          <div className="bg-white/5 rounded-2xl p-6 border border-white/10 h-96 animate-pulse" />
+        </div>
       </div>
     )
   }
@@ -200,16 +220,31 @@ export default function NetworkTreePage() {
           </div>
 
           {data?.tree.level1.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400 mb-4">Your network is empty</p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center py-16"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.1, type: 'spring' }}
+                className="w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              >
+                <Network className="w-8 h-8 text-purple-400" />
+              </motion.div>
+              <h3 className="text-lg font-semibold mb-2">Your network is empty</h3>
+              <p className="text-gray-400 mb-6 max-w-sm mx-auto">
+                Start building your 4-level network by adding your first connection
+              </p>
               <Link
                 href="/attribution/connections"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-all hover:scale-105"
               >
+                <UserPlus className="w-4 h-4" />
                 Add Connections
               </Link>
-            </div>
+            </motion.div>
           ) : (
             <div className="space-y-1">
               {data?.tree.level1.map((node, idx) => (
