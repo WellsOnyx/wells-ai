@@ -1,7 +1,7 @@
 // Attribution Offer Service
 // Manages enterprise deals/opportunities with custom commission terms
 
-import { sqlQuery as sql } from '@/lib/db'
+import { sqlQuery as sql, query } from '@/lib/db'
 import {
   AttrOffer,
   CreateOfferInput,
@@ -231,14 +231,16 @@ export async function updateOffer(
   }
 
   updates.push('updated_at = NOW()')
+  values.push(offerId)
 
   // Use raw query for dynamic update
-  const result = await sql`
+  const queryText = `
     UPDATE attr_offers
-    SET ${sql.unsafe(updates.join(', '))}
-    WHERE id = ${offerId}
+    SET ${updates.join(', ')}
+    WHERE id = $${values.length}
     RETURNING *
   `
+  const result = await query(queryText, values)
 
   return rowToOffer(result.rows[0])
 }
