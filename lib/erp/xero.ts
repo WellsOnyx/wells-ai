@@ -4,7 +4,7 @@
 import { neon } from '@neondatabase/serverless';
 import type { XeroInvoice, XeroContact, XeroPayment, ERPConnection } from './types';
 
-const sql = neon(process.env.DATABASE_URL!);
+const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
 
 const XERO_API_BASE = 'https://api.xero.com/api.xro/2.0';
 const XERO_OAUTH_BASE = 'https://login.xero.com/identity/connect';
@@ -15,11 +15,11 @@ export class XeroService {
   private clientSecret: string;
 
   constructor() {
-    this.clientId = process.env.XERO_CLIENT_ID!;
-    this.clientSecret = process.env.XERO_CLIENT_SECRET!;
+    this.clientId = process.env.XERO_CLIENT_ID || '';
+    this.clientSecret = process.env.XERO_CLIENT_SECRET || '';
 
     if (!this.clientId || !this.clientSecret) {
-      throw new Error('Xero credentials not configured');
+      console.warn('Xero credentials not configured - integration disabled');
     }
   }
 

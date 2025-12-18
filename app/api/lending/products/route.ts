@@ -5,8 +5,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getProductsByType, LOAN_PRODUCTS, getTodaysRates } from '@/lib/lending/products';
-import { generateRateSheet } from '@/lib/lending/rates';
+import { getProductsByType, LOAN_PRODUCTS } from '@/lib/lending/products';
+import { generateRateSheet, getTodaysRates } from '@/lib/lending/rates';
 
 export async function GET(request: Request) {
   try {

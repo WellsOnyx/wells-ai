@@ -6,10 +6,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function ApplyPage() {
+function ApplyPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -999,5 +999,13 @@ export default function ApplyPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ApplyPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-xl">Loading application...</div></div>}>
+      <ApplyPageContent />
+    </Suspense>
   );
 }

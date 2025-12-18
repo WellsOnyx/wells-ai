@@ -4,7 +4,7 @@
 import { neon } from '@neondatabase/serverless';
 import type { CodatBill, CodatSupplier } from './types';
 
-const sql = neon(process.env.DATABASE_URL!);
+const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
 
 const CODAT_API_BASE = 'https://api.codat.io';
 
@@ -12,10 +12,10 @@ export class CodatService {
   private apiKey: string;
 
   constructor() {
-    this.apiKey = process.env.CODAT_API_KEY!;
+    this.apiKey = process.env.CODAT_API_KEY || '';
 
     if (!this.apiKey) {
-      throw new Error('Codat API key not configured');
+      console.warn('Codat API key not configured - integration disabled');
     }
   }
 

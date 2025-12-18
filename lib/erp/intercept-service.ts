@@ -7,7 +7,7 @@ import { quickbooks } from './quickbooks';
 import { xero } from './xero';
 import { codat } from './codat';
 
-const sql = neon(process.env.DATABASE_URL!);
+const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
 
 export class InterceptService {
   // Scan for payables across all connected ERPs

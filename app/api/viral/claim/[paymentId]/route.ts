@@ -12,8 +12,8 @@ import { notify } from '@/lib/notifications/service';
 import { notifyPaymentClaimed } from '@/lib/notifications/service';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
 );
 
 export async function POST(
@@ -180,20 +180,20 @@ export async function POST(
     }
 
     // Notify sender that payment was claimed
-    const { data: senderAccount } = await supabase
+    const { data: senderForNotify } = await supabase
       .from('silent_accounts')
-      .select('email, phone, company_name')
+      .select('id, email, phone, company_name')
       .eq('wallet_address', payment.sender_wallet)
       .single();
 
-    if (senderAccount && (senderAccount.email || senderAccount.phone)) {
+    if (senderForNotify && (senderForNotify.email || senderForNotify.phone)) {
       await notifyPaymentClaimed(
-        senderAccount.email,
-        senderAccount.phone,
+        senderForNotify.email,
+        senderForNotify.phone,
         payment.amount_usdc,
         account.company_name || account.email || 'Recipient',
         {
-          userId: senderAccount.id,
+          userId: senderForNotify.id,
         }
       ).catch((error) => {
         console.error('Failed to send sender notification:', error);

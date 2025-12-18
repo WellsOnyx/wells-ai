@@ -11,8 +11,8 @@ import { generateAmortizationSchedule } from '@/lib/lending/amortization';
 import { allocatePayment } from '@/lib/lending/servicing';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
 );
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {

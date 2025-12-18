@@ -4,7 +4,7 @@ import { neon } from '@neondatabase/serverless';
 import { xero } from '@/lib/erp/xero';
 import { interceptService } from '@/lib/erp/intercept-service';
 
-const sql = neon(process.env.DATABASE_URL!);
+const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
 
 export async function GET(req: NextRequest) {
   try {

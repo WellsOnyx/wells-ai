@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { interceptService } from '@/lib/erp/intercept-service';
 
-const sql = neon(process.env.DATABASE_URL!);
+const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
 
 export async function GET(req: NextRequest) {
   // Verify cron secret to prevent unauthorized access

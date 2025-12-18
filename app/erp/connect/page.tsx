@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function ERPConnectPage() {
+function ERPConnectContent() {
   const searchParams = useSearchParams();
   const [connections, setConnections] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -212,5 +212,13 @@ export default function ERPConnectPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ERPConnectPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center"><div className="text-white text-xl">Loading...</div></div>}>
+      <ERPConnectContent />
+    </Suspense>
   );
 }

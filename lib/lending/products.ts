@@ -262,7 +262,7 @@ export const LOAN_PRODUCTS: Record<string, LoanProduct> = {
       grainBacked: true,
       instantApproval: true,
       maxLTV: 0.50, // Can borrow up to 50% of GRAIN value
-      noCredit checkRequired: true,
+      noCreditCheckRequired: true,
       flexibleRepayment: true,
       grainReleaseOnPayoff: true,
     },

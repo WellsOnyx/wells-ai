@@ -4,7 +4,7 @@
 import { neon } from '@neondatabase/serverless';
 import type { QBOBill, QBOVendor, QBOPayment, ERPConnection } from './types';
 
-const sql = neon(process.env.DATABASE_URL!);
+const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
 
 const QBO_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
 const QBO_OAUTH_BASE = 'https://oauth.platform.intuit.com/oauth2/v1';
@@ -15,11 +15,11 @@ export class QuickBooksService {
   private clientSecret: string;
 
   constructor() {
-    this.clientId = process.env.QUICKBOOKS_CLIENT_ID!;
-    this.clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET!;
+    this.clientId = process.env.QUICKBOOKS_CLIENT_ID || '';
+    this.clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET || '';
 
     if (!this.clientId || !this.clientSecret) {
-      throw new Error('QuickBooks credentials not configured');
+      console.warn('QuickBooks credentials not configured - integration disabled');
     }
   }
 

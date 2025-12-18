@@ -58,10 +58,10 @@ export interface NotificationResult {
   error?: string;
 }
 
-// Supabase client
+// Supabase client - use fallbacks for build-time safety
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
 );
 
 // Rate limiting cache (in-memory for now, should use Redis in production)
