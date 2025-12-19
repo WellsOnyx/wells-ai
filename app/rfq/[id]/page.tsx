@@ -387,13 +387,18 @@ export default function RFQDetailPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <FileText className="w-6 h-6 text-gold-400" />
-              <h2 className="text-xl font-bold">Quotes</h2>
+              <div>
+                <h2 className="text-xl font-bold">Supplier Quotes</h2>
+                <p className="text-gray-500 text-sm">Compare pricing and negotiate for better terms</p>
+              </div>
             </div>
           </div>
 
           {rfq.quotes.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No quotes yet. Waiting for suppliers to respond.
+            <div className="text-center py-8">
+              <Loader2 className="w-8 h-8 text-gold-500/50 animate-spin mx-auto mb-3" />
+              <div className="text-gray-400 font-medium">Gathering quotes from suppliers</div>
+              <div className="text-gray-500 text-sm mt-1">Usually takes 2-4 hours for initial responses</div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -500,7 +505,10 @@ export default function RFQDetailPage() {
           <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
             <div className="flex items-center gap-3 mb-4">
               <MessageSquare className="w-6 h-6 text-cyan-400" />
-              <h2 className="text-xl font-bold">AI Negotiations</h2>
+              <div>
+                <h2 className="text-xl font-bold">AI Negotiations</h2>
+                <p className="text-gray-500 text-sm">Wells AI negotiated with supplier AI on your behalf</p>
+              </div>
             </div>
 
             <div className="space-y-4">

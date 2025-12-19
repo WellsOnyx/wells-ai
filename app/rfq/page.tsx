@@ -100,7 +100,7 @@ export default function RFQListPage() {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
               Your RFQs
             </h1>
-            <p className="text-gray-400 mt-1">Manage your procurement requests and negotiations</p>
+            <p className="text-gray-400 mt-1">Track quotes, negotiations, and orders in one place</p>
           </div>
           <Link
             href="/dashboard"
@@ -132,15 +132,36 @@ export default function RFQListPage() {
         {filteredRFQs.length === 0 ? (
           <div className="text-center py-16 bg-white/5 rounded-2xl border border-white/10">
             <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-400 mb-2">No RFQs yet</h3>
-            <p className="text-gray-500 mb-6">Start sourcing by describing what you need in the chat</p>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gold-400 to-gold-600 text-black rounded-xl font-semibold hover:opacity-90 transition-all"
-            >
-              <Sparkles className="w-5 h-5" />
-              Talk to Wells
-            </Link>
+            {rfqs.length === 0 ? (
+              <>
+                <h3 className="text-xl font-semibold text-gray-400 mb-2">No procurement requests yet</h3>
+                <p className="text-gray-500 mb-6">Just tell Wells what you need. AI will handle quotes, negotiate prices, and get you the best deal.</p>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gold-400 to-gold-600 text-black rounded-xl font-semibold hover:opacity-90 transition-all"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  Talk to Wells
+                </Link>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-semibold text-gray-400 mb-2">
+                  No {filter === 'active' ? 'active' : 'completed'} requests
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  {filter === 'active'
+                    ? 'All your requests have been completed or cancelled.'
+                    : 'You have no completed or cancelled requests yet.'}
+                </p>
+                <button
+                  onClick={() => setFilter('all')}
+                  className="text-gold-400 hover:text-gold-300 font-medium"
+                >
+                  View all requests
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
