@@ -59,6 +59,8 @@ const isPublicApiRoute = createRouteMatcher([
   '/api/chat',
   '/api/webhooks/(.*)',
   '/api/health',
+  '/api/coldstart/(.*)',  // Cold start uses its own auth via master key
+  '/api/admin/migrate(.*)',  // Migration uses master key auth, not Clerk
   // Public read-only endpoints for listings
   '/api/rfq',  // Only GET for public RFQ listings
 ])
