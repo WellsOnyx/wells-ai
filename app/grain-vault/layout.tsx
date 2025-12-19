@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Grain & Vault | Treasury Infrastructure for Modern Finance',
   description: 'Zero friction payments. 1:1 credit lines. Native ERP integration. The Treasury SDK that eliminates payment failures.',

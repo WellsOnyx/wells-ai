@@ -106,6 +106,36 @@ async function updateTransactionStatus(
   transactionHash?: string
 ): Promise<void> {
   try {
+    // Try grain_transactions first (new table)
+    const grainResult = await sql`
+      UPDATE grain_transactions
+      SET
+        status = ${status},
+        payment_reference = COALESCE(payment_reference, ${transactionHash || null}),
+        description = CASE WHEN ${status} = 'failed' THEN COALESCE(description, '') || ' Error: ' || ${errorMessage || 'Unknown'} ELSE description END,
+        completed_at = CASE WHEN ${status} = 'completed' THEN NOW() ELSE NULL END,
+        updated_at = NOW()
+      WHERE circle_transfer_id = ${circleTransferId} OR id::text = ${circleTransferId}
+      RETURNING id, account_id, usd_amount, type
+    `
+
+    if (grainResult.rows.length > 0) {
+      const tx = grainResult.rows[0]
+      console.log(`[Circle Webhook] Updated grain transaction ${tx.id} to ${status}`)
+
+      // If deposit completed, credit the balance
+      if (status === 'completed' && tx.type === 'deposit') {
+        await sql`
+          UPDATE treasury_accounts
+          SET usd_balance = usd_balance + ${tx.usd_amount}, updated_at = NOW()
+          WHERE id = ${tx.account_id}
+        `
+        console.log(`[Circle Webhook] Credited $${tx.usd_amount} to account ${tx.account_id}`)
+      }
+      return
+    }
+
+    // Fallback to treasury_transactions (legacy)
     await sql`
       UPDATE treasury_transactions
       SET
@@ -117,7 +147,7 @@ async function updateTransactionStatus(
       WHERE circle_transfer_id = ${circleTransferId}
     `
 
-    console.log(`[Circle Webhook] Updated transaction ${circleTransferId} to ${status}`)
+    console.log(`[Circle Webhook] Updated treasury transaction ${circleTransferId} to ${status}`)
   } catch (error) {
     console.error('[Circle Webhook] Database update error:', error)
     throw error

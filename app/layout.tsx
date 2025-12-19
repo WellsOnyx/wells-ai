@@ -34,18 +34,32 @@ export const metadata: Metadata = {
   },
 }
 
+// Check if Clerk is configured
+const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
+function RootLayoutContent({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className="dark">
+      <body className={`${inter.className} bg-black text-white antialiased`}>
+        {children}
+      </body>
+    </html>
+  )
+}
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // If Clerk is not configured, render without it
+  if (!clerkPublishableKey) {
+    return <RootLayoutContent>{children}</RootLayoutContent>
+  }
+
   return (
     <ClerkProvider>
-      <html lang="en" className="dark">
-        <body className={`${inter.className} bg-black text-white antialiased`}>
-          {children}
-        </body>
-      </html>
+      <RootLayoutContent>{children}</RootLayoutContent>
     </ClerkProvider>
   )
 }
