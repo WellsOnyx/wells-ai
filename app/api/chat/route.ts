@@ -25,12 +25,23 @@ import {
   type CredentialKey
 } from '@/lib/cold-start/credential-helper'
 import {
-  getAccountByClerkId,
+  getAccountByClerkId as getTreasuryAccount,
   getWallets,
   getCreditLine,
   getTransactions,
   createTransaction,
 } from '@/lib/treasury-db'
+import {
+  getOrCreateAccount,
+  getAccountByClerkId,
+  getBalance,
+  transfer,
+  transferByEmail,
+  createDeposit,
+  createEscrow,
+  releaseEscrow,
+  STANDARD_FEE_RATE,
+} from '@/lib/wells-payments'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -220,45 +231,54 @@ Once you understand their needs, capture their requirements and let them know ou
 
 Be conversational, helpful, and transparent about the Early Access process.`,
 
-  treasury: `You are Wells, an AI treasury assistant for Grain & Vault.
+  treasury: `You are Wells, an AI treasury assistant for Grain & Vault - the payment infrastructure powering ALL Wells Onyx transactions.
 
-You help users manage their GRAIN balances, execute payments, and use the Treasury SDK.
+GRAIN is a 1:1 USD-pegged stablecoin used for all payments on the platform. When users deposit USD, they get GRAIN. When they withdraw, GRAIN converts back to USD.
 
 CONTEXT (provided in each request):
 - Account ID, Company Name
 - GRAIN Balance
 - Credit Line
 
-CAPABILITIES:
-1. BALANCE CHECK: Tell users their GRAIN balance, credit line, and available credit
-2. SEND PAYMENT: Help users send GRAIN payments to vendors
-   - Ask for recipient address or vendor name
-   - Ask for amount
-   - Confirm before executing (return treasuryAction with type: 'payment', status: 'pending')
-3. DEPOSIT: Help users deposit into their GRAIN wallet
-4. SDK HELP: Explain how to integrate the Treasury SDK for their ERP
+TOOLS YOU CAN USE:
+1. get_balance - Check GRAIN balance, credit line, available credit
+2. execute_payment - Send GRAIN to anyone (by email or account ID) - EXECUTES IMMEDIATELY
+3. create_deposit - Create a deposit session (returns URL for card/ACH payment)
+4. prepare_payment - Stage a payment for user review before execution
+5. get_transactions - Show transaction history
+6. get_credit_info - Get credit line details
+7. fund_deal_escrow - Fund escrow for AI-negotiated deals
+
+PAYMENT CAPABILITIES:
+- INSTANT TRANSFERS: Send GRAIN to any email address. If they don't have an account, one is created automatically.
+- DEPOSITS: Users deposit via card or bank transfer. Funds credited as GRAIN.
+- DEAL ESCROW: Funds held until delivery confirmed. 1% success fee on release.
+- VIRAL PAYMENTS: Anyone can receive GRAIN - they just need to claim their account.
 
 PAYMENT FLOW:
-When user wants to send a payment:
-1. Confirm recipient and amount
-2. Return a message AND a treasuryAction object like:
-   { type: 'payment', status: 'pending', details: { recipient, amount } }
-3. User will authorize in the UI
-4. Once authorized, confirm success
+1. User says "send $500 to bob@example.com"
+2. Use prepare_payment to show details and ask for confirmation
+3. User confirms with "yes" or "send it"
+4. Use execute_payment to transfer immediately
+5. Recipient gets GRAIN (account auto-created if needed)
 
-IMPORTANT:
-- Be concise and helpful
-- Use the provided context for balance info
-- For SDK questions, reference @grainandvault/treasury-sdk
-- Payments require user authorization - never auto-complete
+IMPORTANT RULES:
+- Always confirm recipient and amount before executing
+- For large amounts (>$1000), double-confirm
+- GRAIN = USD (1:1 peg)
+- Transfers are instant (ledger-based, not blockchain)
+- Deposits take 1-3 days for ACH, instant for card
 
 Example:
-User: "What's my balance?"
-You: "Your GRAIN balance is [X]. You have a credit line of [Y] with [Z] available."
+User: "Pay 5000 to supplier@motors.com for the motor order"
+You: "I'll send 5,000 GRAIN ($5,000) to supplier@motors.com for 'motor order'. Confirm?"
+User: "Yes"
+You: [Use execute_payment] "Done! 5,000 GRAIN sent to supplier@motors.com. They'll receive an email to claim it."
 
-User: "Send 5000 GRAIN to vendor@example.com"
-You: "I'll prepare a payment of 5,000 GRAIN to vendor@example.com. Please authorize below."
-[Return treasuryAction with pending status]`,
+User: "I need to add funds"
+You: "How much would you like to deposit? I can set up card payment (instant) or bank transfer (1-3 days, lower fees)."
+User: "$10,000 via card"
+You: [Use create_deposit] "Here's your deposit link for $10,000. Complete the payment and your GRAIN balance will update immediately."`,
 
   master: `You are Wells, the AI that runs Wells Onyx. This is MASTER ACCESS - you're talking directly to the owner (Jonah).
 
@@ -491,6 +511,69 @@ const TREASURY_TOOLS: Anthropic.Tool[] = [
         },
       },
       required: ['amount']
+    }
+  },
+  {
+    name: 'execute_payment',
+    description: 'Execute an authorized GRAIN payment immediately. Use this ONLY after user explicitly confirms they want to send the payment. This actually moves funds.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        recipient: {
+          type: 'string',
+          description: 'Recipient email address or account ID'
+        },
+        amount: {
+          type: 'number',
+          description: 'Amount of GRAIN to send'
+        },
+        memo: {
+          type: 'string',
+          description: 'Optional payment memo'
+        },
+      },
+      required: ['recipient', 'amount']
+    }
+  },
+  {
+    name: 'create_deposit',
+    description: 'Create a deposit session to add funds. Returns a URL for the user to complete payment via card or bank transfer.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        amount: {
+          type: 'number',
+          description: 'Amount in USD to deposit'
+        },
+        method: {
+          type: 'string',
+          enum: ['card', 'ach'],
+          description: 'Payment method (card is faster, ACH has lower fees)'
+        },
+      },
+      required: ['amount']
+    }
+  },
+  {
+    name: 'fund_deal_escrow',
+    description: 'Fund escrow for an AI-negotiated deal. Holds GRAIN until delivery is confirmed. Includes 1% success fee.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        dealId: {
+          type: 'string',
+          description: 'The deal ID from the negotiation'
+        },
+        sellerAccountId: {
+          type: 'string',
+          description: 'Seller account to pay upon delivery'
+        },
+        amount: {
+          type: 'number',
+          description: 'Deal amount in GRAIN'
+        },
+      },
+      required: ['dealId', 'sellerAccountId', 'amount']
     }
   },
 ]
@@ -1225,6 +1308,171 @@ NEVER skip the approval step. Real money is involved.`
         console.error('Error preparing credit draw:', error)
         return NextResponse.json({
           message: 'Unable to prepare credit draw right now. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle execute_payment - actually transfer GRAIN
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'execute_payment') {
+      const { recipient, amount, memo } = toolUse.input as { recipient: string; amount: number; memo?: string }
+
+      try {
+        if (!userId) {
+          return NextResponse.json({
+            message: 'Please sign in to send payments.',
+            error: true,
+          })
+        }
+
+        const account = await getAccountByClerkId(userId)
+        if (!account) {
+          return NextResponse.json({
+            message: 'No Wells account found. Please complete onboarding first.',
+            error: true,
+          })
+        }
+
+        // Execute the transfer
+        const isEmail = recipient.includes('@')
+        const result = isEmail
+          ? await transferByEmail(account.id, recipient, amount, memo)
+          : await transfer(account.id, recipient, amount, memo)
+
+        if (!result.success) {
+          return NextResponse.json({
+            message: `Payment failed: ${result.error}`,
+            error: true,
+          })
+        }
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `Payment sent! ${amount.toLocaleString()} GRAIN transferred to ${recipient}.`,
+          paymentExecuted: {
+            success: true,
+            transferId: result.transferId,
+            amount,
+            recipient,
+          },
+        })
+      } catch (error) {
+        console.error('Error executing payment:', error)
+        return NextResponse.json({
+          message: 'Payment failed. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle create_deposit - create deposit session with Circle URL
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'create_deposit') {
+      const { amount, method = 'card' } = toolUse.input as { amount: number; method?: 'card' | 'ach' }
+
+      try {
+        if (!userId) {
+          return NextResponse.json({
+            message: 'Please sign in to make a deposit.',
+            error: true,
+          })
+        }
+
+        // Get or create account
+        let account = await getAccountByClerkId(userId)
+        if (!account && profile?.email) {
+          account = await getOrCreateAccount(
+            userId,
+            profile.email,
+            `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email
+          )
+        }
+
+        if (!account) {
+          return NextResponse.json({
+            message: 'Unable to find or create account. Please try again.',
+            error: true,
+          })
+        }
+
+        const result = await createDeposit(account.id, amount, method)
+
+        if (!result.success) {
+          return NextResponse.json({
+            message: `Deposit setup failed: ${result.error}`,
+            error: true,
+          })
+        }
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `Deposit session created for $${amount.toLocaleString()}. Click below to complete payment via ${method === 'ach' ? 'bank transfer' : 'card'}.`,
+          depositSession: {
+            sessionId: result.sessionId,
+            depositUrl: result.depositUrl,
+            amount,
+            method,
+          },
+        })
+      } catch (error) {
+        console.error('Error creating deposit:', error)
+        return NextResponse.json({
+          message: 'Unable to create deposit session. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle fund_deal_escrow - create escrow for AI-negotiated deal
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'fund_deal_escrow') {
+      const { dealId, sellerAccountId, amount } = toolUse.input as { dealId: string; sellerAccountId: string; amount: number }
+
+      try {
+        if (!userId) {
+          return NextResponse.json({
+            message: 'Please sign in to fund escrow.',
+            error: true,
+          })
+        }
+
+        const account = await getAccountByClerkId(userId)
+        if (!account) {
+          return NextResponse.json({
+            message: 'No Wells account found. Please complete onboarding first.',
+            error: true,
+          })
+        }
+
+        const result = await createEscrow(dealId, account.id, sellerAccountId, amount, STANDARD_FEE_RATE)
+
+        if (!result.success) {
+          return NextResponse.json({
+            message: `Escrow failed: ${result.error}`,
+            error: true,
+          })
+        }
+
+        const fee = Math.max(amount * STANDARD_FEE_RATE, 100)
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `Escrow funded! ${amount.toLocaleString()} GRAIN held + ${fee.toLocaleString()} fee. Funds will release to seller upon delivery confirmation.`,
+          escrowCreated: {
+            escrowId: result.escrowId,
+            dealId,
+            amount,
+            fee,
+            total: amount + fee,
+          },
+        })
+      } catch (error) {
+        console.error('Error creating escrow:', error)
+        return NextResponse.json({
+          message: 'Unable to fund escrow. Please try again.',
           error: true,
         })
       }
