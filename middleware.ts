@@ -84,11 +84,20 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   const pathname = request.nextUrl.pathname
 
   // ========================================
-  // WIDGET API - BYPASS ALL AUTH (CORS-SAFE)
+  // BYPASS CLERK FOR ROUTES WITH OWN AUTH
   // ========================================
 
-  // Widget routes need to work cross-origin without any redirects
-  if (pathname.startsWith('/api/widget')) {
+  // These routes use their own authentication (master key, API key, etc.)
+  // Must return early before Clerk tries to parse Authorization header
+  const bypassClerkRoutes = [
+    '/api/widget',
+    '/api/webhooks',
+    '/api/coldstart',
+    '/api/admin/migrate',
+    '/api/health',
+  ]
+
+  if (bypassClerkRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next()
   }
 
