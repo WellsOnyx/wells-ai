@@ -2,9 +2,11 @@
 /**
  * Grain & Vault Onboarding API
  * POST: Complete onboarding and create treasury account
+ * SECURITY: Requires authentication
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { sqlQuery as sql } from '@/lib/db'
 import crypto from 'crypto'
 
@@ -26,6 +28,12 @@ function generateApiKey(): string {
 
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY: Require authentication for onboarding
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await req.json()
 
     const {
@@ -86,8 +94,8 @@ export async function POST(req: NextRequest) {
     const accountId = generateId()
     const walletAddress = generateWalletAddress(email)
     const apiKey = generateApiKey()
-    // For personal accounts, use email-derived clerk_user_id
-    const clerkUserId = `gv_${crypto.createHash('sha256').update(email).digest('hex').substring(0, 16)}`
+    // Use authenticated Clerk user ID for proper account ownership
+    const clerkUserId = userId
 
     // Determine verification level and limits based on info provided
     let verificationLevel = 'basic'

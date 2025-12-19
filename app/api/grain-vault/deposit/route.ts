@@ -2,18 +2,24 @@
 /**
  * Deposit API
  * POST: Deposit USD and optionally convert to GRAIN
+ * SECURITY: Requires authentication and account ownership verification
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { sqlQuery as sql } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY: Require authentication
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await req.json()
 
     const {
-      email,
-      wallet_address,
       amount,
       payment_method,
       payment_reference,
@@ -28,20 +34,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!email && !wallet_address) {
-      return NextResponse.json(
-        { error: 'Email or wallet address required' },
-        { status: 400 }
-      )
-    }
-
-    // Get account
-    let accountQuery
-    if (wallet_address) {
-      accountQuery = sql`SELECT * FROM treasury_accounts WHERE wallet_address = ${wallet_address}`
-    } else {
-      accountQuery = sql`SELECT * FROM treasury_accounts WHERE email = ${email}`
-    }
+    // SECURITY: Get account by authenticated user ID only - no email/wallet_address lookup
+    const accountQuery = sql`SELECT * FROM treasury_accounts WHERE clerk_user_id = ${userId}`
 
     const accountResult = await accountQuery
     if (accountResult.rows.length === 0) {

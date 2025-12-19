@@ -15,15 +15,24 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 })
 
-// Admin check - in production, use Clerk roles
-// For now, hardcode admin user IDs or check email domain
-const isAdmin = (userId: string | null, userEmail?: string) => {
+// Admin check - checks Clerk metadata for admin role
+// SECURITY: Must verify admin role, not just authentication
+const ADMIN_USER_IDS = process.env.ADMIN_USER_IDS?.split(',').filter(Boolean) || []
+
+const isAdmin = async (userId: string | null): Promise<boolean> => {
   if (!userId) return false
 
-  // TODO: Replace with proper admin role check from Clerk
-  // For now, allow any authenticated user for development
-  // In production, check: user.publicMetadata.role === 'admin'
-  return true
+  // Allow specific admin user IDs from env
+  if (ADMIN_USER_IDS.includes(userId)) return true
+
+  // Check Clerk user metadata for admin role
+  try {
+    const client = await clerkClient()
+    const user = await client.users.getUser(userId)
+    return user.publicMetadata?.role === 'admin'
+  } catch {
+    return false
+  }
 }
 
 // ============================================================================
@@ -35,9 +44,9 @@ export async function GET(request: NextRequest) {
     const { userId } = await auth()
 
     // Check admin access
-    if (!isAdmin(userId)) {
+    if (!(await isAdmin(userId))) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - Admin access required' },
         { status: 403 }
       )
     }
@@ -130,9 +139,9 @@ export async function PATCH(request: NextRequest) {
     const { userId } = await auth()
 
     // Check admin access
-    if (!isAdmin(userId)) {
+    if (!(await isAdmin(userId))) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - Admin access required' },
         { status: 403 }
       )
     }

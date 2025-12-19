@@ -52,21 +52,16 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
 ])
 
-// API routes that should be public
+// API routes that should be public (no auth required)
+// SECURITY: Be very careful what goes here - financial routes MUST require auth
 const isPublicApiRoute = createRouteMatcher([
   '/api/suppliers/register',
   '/api/suppliers/cached',
   '/api/chat',
   '/api/webhooks/(.*)',
-  '/api/webhooks/circle',
   '/api/health',
-  '/api/admin/(.*)',
-  '/api/seller/(.*)',
-  '/api/buyer/(.*)',
-  '/api/rfq/(.*)',
-  '/api/jobs/(.*)',
-  '/api/worker/(.*)',
-  '/api/founder/(.*)',
+  // Public read-only endpoints for listings
+  '/api/rfq',  // Only GET for public RFQ listings
 ])
 
 // Protected routes that require authentication

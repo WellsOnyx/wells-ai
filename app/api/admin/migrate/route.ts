@@ -9,8 +9,11 @@ function getClient() {
   return createClient({ connectionString })
 }
 
-// Master key for admin operations
-const MASTER_KEY = process.env.COLD_START_MASTER_KEY || 'wells-master-2024-coldstart'
+// Master key for admin operations - MUST be set in environment
+const MASTER_KEY = process.env.COLD_START_MASTER_KEY
+if (!MASTER_KEY) {
+  console.error('CRITICAL: COLD_START_MASTER_KEY environment variable is required')
+}
 
 export async function POST(request: NextRequest) {
   const client = getClient()
@@ -20,8 +23,8 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('authorization')
     const key = authHeader?.replace('Bearer ', '')
 
-    if (key !== MASTER_KEY) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!MASTER_KEY || key !== MASTER_KEY) {
+      return NextResponse.json({ error: 'Unauthorized - COLD_START_MASTER_KEY not configured or invalid' }, { status: 401 })
     }
 
     await client.connect()
