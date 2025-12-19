@@ -38,25 +38,67 @@ export async function POST(req: NextRequest) {
     const runStep = async (stepNum: number) => {
       switch (stepNum) {
         case 1:
-          // Add Circle columns to treasury_accounts
-          await client.query(`ALTER TABLE treasury_accounts ADD COLUMN IF NOT EXISTS circle_wallet_id TEXT`);
-          await client.query(`ALTER TABLE treasury_accounts ADD COLUMN IF NOT EXISTS circle_wallet_set_id TEXT`);
-          await client.query(`ALTER TABLE treasury_accounts ADD COLUMN IF NOT EXISTS circle_user_token TEXT`);
-          results.push('Step 1: Added Circle columns to treasury_accounts');
+          // Create treasury_accounts table (base table)
+          await client.query(`
+            CREATE TABLE IF NOT EXISTS treasury_accounts (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              clerk_user_id TEXT UNIQUE,
+              email TEXT UNIQUE NOT NULL,
+              phone TEXT,
+              full_name TEXT NOT NULL,
+              date_of_birth DATE,
+              wallet_address TEXT,
+              circle_wallet_id TEXT,
+              circle_wallet_set_id TEXT,
+              circle_user_token TEXT,
+              grain_balance DECIMAL(24,6) DEFAULT 0,
+              usd_balance DECIMAL(20,2) DEFAULT 0,
+              verification_level TEXT DEFAULT 'basic',
+              daily_deposit_limit DECIMAL(20,2) DEFAULT 10000,
+              daily_withdraw_limit DECIMAL(20,2) DEFAULT 10000,
+              status TEXT DEFAULT 'active',
+              created_at TIMESTAMP DEFAULT NOW(),
+              updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+          results.push('Step 1: Created treasury_accounts table');
           break;
 
         case 2:
-          // Add Circle columns to grain_transactions
-          await client.query(`ALTER TABLE grain_transactions ADD COLUMN IF NOT EXISTS circle_transfer_id TEXT`);
-          await client.query(`ALTER TABLE grain_transactions ADD COLUMN IF NOT EXISTS circle_payout_id TEXT`);
-          results.push('Step 2: Added Circle columns to grain_transactions');
+          // Create grain_transactions table (base table)
+          await client.query(`
+            CREATE TABLE IF NOT EXISTS grain_transactions (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              account_id UUID REFERENCES treasury_accounts(id),
+              type TEXT NOT NULL,
+              usd_amount DECIMAL(20,2),
+              grain_amount DECIMAL(24,6),
+              fee_amount DECIMAL(20,2) DEFAULT 0,
+              grain_price DECIMAL(20,10) DEFAULT 1.0,
+              counterparty_id UUID,
+              deal_id TEXT,
+              circle_transfer_id TEXT,
+              circle_payout_id TEXT,
+              status TEXT DEFAULT 'pending',
+              description TEXT,
+              created_at TIMESTAMP DEFAULT NOW(),
+              completed_at TIMESTAMP
+            )
+          `);
+          results.push('Step 2: Created grain_transactions table');
           break;
 
         case 3:
-          // Create indexes on existing tables
+          // Create indexes on base tables
+          await client.query(`CREATE INDEX IF NOT EXISTS idx_treasury_email ON treasury_accounts(email)`);
+          await client.query(`CREATE INDEX IF NOT EXISTS idx_treasury_clerk ON treasury_accounts(clerk_user_id)`);
+          await client.query(`CREATE INDEX IF NOT EXISTS idx_treasury_status ON treasury_accounts(status)`);
           await client.query(`CREATE INDEX IF NOT EXISTS idx_treasury_circle_wallet ON treasury_accounts(circle_wallet_id)`);
+          await client.query(`CREATE INDEX IF NOT EXISTS idx_grain_tx_account ON grain_transactions(account_id)`);
+          await client.query(`CREATE INDEX IF NOT EXISTS idx_grain_tx_type ON grain_transactions(type)`);
+          await client.query(`CREATE INDEX IF NOT EXISTS idx_grain_tx_status ON grain_transactions(status)`);
           await client.query(`CREATE INDEX IF NOT EXISTS idx_grain_tx_circle ON grain_transactions(circle_transfer_id)`);
-          results.push('Step 3: Created indexes on existing tables');
+          results.push('Step 3: Created indexes on base tables');
           break;
 
         case 4:
