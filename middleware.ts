@@ -162,9 +162,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and static files
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // API routes EXCEPT those with own auth (coldstart, admin/migrate, webhooks)
-    '/(api(?!/coldstart|/admin/migrate|/webhooks|/health|/widget))(.*)',
+    // Skip Next.js internals, static files, AND routes with own auth
+    '/((?!_next|api/coldstart|api/admin/migrate|api/webhooks|api/health|api/widget|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
   ],
 }
