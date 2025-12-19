@@ -3,11 +3,18 @@
 
 /**
  * Grain & Vault Dashboard
- * Shows real data from database with proper GRAIN appreciation tracking
+ *
+ * PRODUCTION-READY GRAIN WALLET
+ * - Shows real GRAIN balance from user_wallets table
+ * - Uses Clerk authentication
+ * - Displays deposit address and transaction history
+ * - Real-time treasury backing data
  */
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useUser, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs'
+import Link from 'next/link'
 import {
   TrendingUp,
   TrendingDown,
@@ -22,7 +29,12 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  Copy,
+  Check,
+  QrCode,
+  ArrowDown,
+  ArrowUp
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
@@ -48,132 +60,77 @@ ChartJS.register(
   Filler
 )
 
-interface AccountData {
-  account: {
+// Types for GRAIN wallet data
+interface WalletData {
+  has_wallet: boolean
+  wallet?: {
+    address: string
+    network: string
+  }
+  balance: {
+    grain: number
+    usd_value: number
+  }
+  recent_transactions: Array<{
     id: string
-    email: string
-    full_name: string
-    wallet_address: string
+    type: string
+    amount: number
     status: string
-    verification_level: string
-  }
-  balances: {
-    usd: number
-    grain: {
-      quantity: number
-      current_price: number
-      current_value: number
-      avg_purchase_price: number
-      cost_basis: number
-      unrealized_gain: number
-      unrealized_gain_pct: number
-    }
-    portfolio: {
-      total_value: number
-      allocation: {
-        usd_pct: number
-        grain_pct: number
-      }
-    }
-  }
-  limits: {
-    daily_deposit: number
-    daily_withdraw: number
-  }
-  recent_transactions: any[]
+    created_at: string
+  }>
+  last_updated?: string
 }
 
-interface GrainPrice {
-  grain: {
-    price_usd: number
-    change_24h: number
-    change_7d: number
-    change_30d: number
-    circulating_supply: number
-  }
-  treasury: {
-    total_usd: number
-    backing_ratio: number
-    assets: Array<{
-      type: string
-      name: string
-      amount: number
-      percentage: number
-      apy: number
-    }>
-  }
+interface TreasuryData {
+  grainValue: number
+  totalBacking: number
+  backingRatio: number
+  assetBreakdown: Array<{
+    type: string
+    value: number
+    percentage: number
+  }>
+  lastUpdated: string
 }
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { user, isLoaded } = useUser()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [accountData, setAccountData] = useState<AccountData | null>(null)
-  const [priceData, setPriceData] = useState<GrainPrice | null>(null)
+  const [walletData, setWalletData] = useState<WalletData | null>(null)
+  const [treasuryData, setTreasuryData] = useState<TreasuryData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [showDepositModal, setShowDepositModal] = useState(false)
 
-  // Fetch data
+  // Fetch wallet and treasury data
   const fetchData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
     else setLoading(true)
 
     try {
-      // Get email from URL or localStorage
-      const urlParams = new URLSearchParams(window.location.search)
-      let email = urlParams.get('email')
+      // Fetch wallet data (uses Clerk auth via API)
+      const walletRes = await fetch('/api/grain-vault/deposit')
 
-      // Check localStorage for saved email
-      if (!email && typeof window !== 'undefined') {
-        email = localStorage.getItem('grainvault_email')
+      if (!walletRes.ok) {
+        if (walletRes.status === 401) {
+          router.push('/grain-vault/signin')
+          return
+        }
+        throw new Error('Failed to load wallet data')
       }
 
-      // If still no email, redirect to onboarding
-      if (!email) {
-        router.push('/grain-vault/onboard')
-        return
+      const walletResult = await walletRes.json()
+      setWalletData(walletResult)
+
+      // Fetch treasury data for GRAIN value
+      const treasuryRes = await fetch('/api/grain-vault/treasury')
+      if (treasuryRes.ok) {
+        const treasuryResult = await treasuryRes.json()
+        setTreasuryData(treasuryResult)
       }
 
-      // Save email to localStorage for future visits
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('grainvault_email', email)
-      }
-
-      // Fetch account data from treasury_accounts and price data
-      const [accountRes, priceRes] = await Promise.all([
-        fetch(`/api/grain-vault/onboard?email=${encodeURIComponent(email)}`),
-        fetch('/api/grain-vault/price')
-      ])
-
-      if (!accountRes.ok) {
-        // Account doesn't exist, redirect to onboarding
-        router.push('/grain-vault/onboard')
-        return
-      }
-
-      if (!priceRes.ok) {
-        throw new Error('Failed to load GRAIN price')
-      }
-
-      const onboardResult = await accountRes.json()
-      const priceResult = await priceRes.json()
-
-      // Check if account exists
-      if (!onboardResult.completed || !onboardResult.account) {
-        router.push('/grain-vault/onboard')
-        return
-      }
-
-      // Fetch full account details from treasury_accounts directly
-      const fullAccountRes = await fetch(`/api/grain-vault/treasury-account?email=${encodeURIComponent(email)}`)
-
-      if (!fullAccountRes.ok) {
-        throw new Error('Failed to load account details')
-      }
-
-      const fullAccountResult = await fullAccountRes.json()
-
-      setAccountData(fullAccountResult)
-      setPriceData(priceResult)
       setError(null)
     } catch (err: any) {
       console.error('Dashboard error:', err)
@@ -184,41 +141,90 @@ export default function DashboardPage() {
     }
   }
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  // Create wallet if user doesn't have one
+  const createWallet = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch('/api/grain-vault/deposit', { method: 'POST' })
 
-  if (loading) {
+      if (!res.ok) {
+        throw new Error('Failed to create wallet')
+      }
+
+      const result = await res.json()
+      await fetchData()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const copyAddress = async () => {
+    if (walletData?.wallet?.address) {
+      await navigator.clipboard.writeText(walletData.wallet.address)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      fetchData()
+    }
+  }, [isLoaded, user])
+
+  // Show signin if not authenticated
+  if (isLoaded && !user) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-green-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading your dashboard...</p>
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+            <Wallet className="w-8 h-8 text-black" />
+          </div>
+          <h2 className="text-2xl font-bold mb-4">Sign in to access your GRAIN wallet</h2>
+          <p className="text-gray-400 mb-6">
+            Connect your account to view your balance, deposit USDC, and manage your treasury.
+          </p>
+          <Link
+            href="/grain-vault/signin"
+            className="inline-block px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all"
+          >
+            Sign In
+          </Link>
         </div>
       </div>
     )
   }
 
-  if (error || !accountData || !priceData) {
+  if (loading || !isLoaded) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-green-500 animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading your wallet...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center max-w-md">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Unable to Load Dashboard</h2>
-          <p className="text-gray-400 mb-6">{error || 'Account not found'}</p>
+          <h2 className="text-2xl font-bold mb-2">Unable to Load Wallet</h2>
+          <p className="text-gray-400 mb-6">{error}</p>
           <button
-            onClick={() => router.push('/grain-vault/onboard')}
+            onClick={() => fetchData()}
             className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all"
           >
-            Complete Onboarding
+            Try Again
           </button>
         </div>
       </div>
     )
   }
-
-  const { account, balances, limits, recent_transactions } = accountData
-  const { grain: grainPrice, treasury } = priceData
 
   // Format currency
   const formatUSD = (amount: number) => {
@@ -237,20 +243,19 @@ export default function DashboardPage() {
     }).format(amount)
   }
 
-  const formatPercent = (pct: number) => {
-    const sign = pct >= 0 ? '+' : ''
-    return `${sign}${pct.toFixed(2)}%`
-  }
-
   // Transaction type labels
   const txTypeLabels: Record<string, string> = {
-    deposit: 'Deposit',
+    deposit: 'USDC Deposit',
     withdraw: 'Withdrawal',
-    buy_grain: 'Buy GRAIN',
-    sell_grain: 'Sell GRAIN',
-    transfer_in: 'Transfer In',
-    transfer_out: 'Transfer Out'
+    transfer: 'Transfer',
+    escrow_lock: 'Escrow Lock',
+    escrow_release: 'Escrow Release',
+    fee: 'Fee'
   }
+
+  const grainValue = treasuryData?.grainValue || 1.0
+  const balance = walletData?.balance?.grain || 0
+  const usdValue = balance * grainValue
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -258,15 +263,15 @@ export default function DashboardPage() {
       <header className="border-b border-white/10 bg-black/50 backdrop-blur-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <Link href="/grain-vault" className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
                 <div className="w-3 h-3 bg-black rounded-sm" />
               </div>
               <div>
                 <h1 className="text-lg font-semibold">Grain & Vault</h1>
-                <p className="text-xs text-gray-400">{account.full_name}</p>
+                <p className="text-xs text-gray-400">{user?.firstName || 'Wallet'}</p>
               </div>
-            </div>
+            </Link>
 
             <button
               onClick={() => fetchData(true)}
@@ -281,346 +286,297 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Portfolio Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Total Portfolio Value */}
-          <div className="lg:col-span-2 bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 rounded-2xl p-6">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <p className="text-sm text-gray-400 mb-2">Total Portfolio Value</p>
-                <h2 className="text-4xl font-bold text-white mb-2">
-                  {formatUSD(balances.portfolio.total_value)}
-                </h2>
-                <div className="flex items-center gap-2 text-sm">
-                  {balances.grain.unrealized_gain_pct >= 0 ? (
-                    <>
-                      <TrendingUp className="w-4 h-4 text-green-400" />
-                      <span className="text-green-400 font-semibold">
-                        {formatPercent(balances.grain.unrealized_gain_pct)}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <TrendingDown className="w-4 h-4 text-red-400" />
-                      <span className="text-red-400 font-semibold">
-                        {formatPercent(balances.grain.unrealized_gain_pct)}
-                      </span>
-                    </>
-                  )}
-                  <span className="text-gray-400">All-time</span>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <button className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all text-sm">
-                  Deposit
-                </button>
-                <button className="px-4 py-2 bg-white/5 border border-white/10 text-white rounded-lg font-semibold hover:bg-white/10 transition-all text-sm">
-                  Withdraw
-                </button>
-              </div>
+        {/* GRAIN Balance Card */}
+        <div className="mb-8 p-8 rounded-2xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20">
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <p className="text-sm text-gray-400 mb-2">GRAIN Balance</p>
+              <h2 className="text-5xl font-bold text-white mb-2">
+                {formatGRAIN(balance)} <span className="text-2xl text-gray-400">GRAIN</span>
+              </h2>
+              <p className="text-xl text-green-400 font-semibold">
+                ≈ {formatUSD(usdValue)}
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                1 GRAIN = {formatUSD(grainValue)} (100% USDC backed)
+              </p>
             </div>
 
-            {/* Allocation */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-black/20 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-5 h-5 text-green-400" />
-                  <span className="text-sm text-gray-400">USD Balance</span>
-                </div>
-                <p className="text-2xl font-bold text-white">{formatUSD(balances.usd)}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {balances.portfolio.allocation.usd_pct.toFixed(1)}% of portfolio
-                </p>
-              </div>
-
-              <div className="bg-black/20 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Wallet className="w-5 h-5 text-green-400" />
-                  <span className="text-sm text-gray-400">GRAIN Value</span>
-                </div>
-                <p className="text-2xl font-bold text-white">
-                  {formatUSD(balances.grain.current_value)}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {balances.portfolio.allocation.grain_pct.toFixed(1)}% of portfolio
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* GRAIN Price */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-400">GRAIN Price</p>
-                <p className="text-xs text-gray-500">Live</p>
-              </div>
-            </div>
-
-            <h3 className="text-3xl font-bold text-white mb-4">
-              {formatUSD(grainPrice.price_usd)}
-            </h3>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">24h</span>
-                <span
-                  className={`font-semibold ${
-                    grainPrice.change_24h >= 0 ? 'text-green-400' : 'text-red-400'
-                  }`}
-                >
-                  {formatPercent(grainPrice.change_24h)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">7d</span>
-                <span
-                  className={`font-semibold ${
-                    grainPrice.change_7d >= 0 ? 'text-green-400' : 'text-red-400'
-                  }`}
-                >
-                  {formatPercent(grainPrice.change_7d)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">30d</span>
-                <span
-                  className={`font-semibold ${
-                    grainPrice.change_30d >= 0 ? 'text-green-400' : 'text-red-400'
-                  }`}
-                >
-                  {formatPercent(grainPrice.change_30d)}
-                </span>
-              </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDepositModal(true)}
+                className="px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all flex items-center gap-2"
+              >
+                <ArrowDown className="w-5 h-5" />
+                Deposit USDC
+              </button>
+              <button
+                disabled={balance === 0}
+                className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowUp className="w-5 h-5" />
+                Withdraw
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Holdings & Treasury */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* GRAIN Holdings */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-6">GRAIN Holdings</h3>
-
-            <div className="space-y-6">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Balance</p>
-                <p className="text-2xl font-bold text-white">
-                  {formatGRAIN(balances.grain.quantity)} GRAIN
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-400 mb-1">Current Value</p>
-                  <p className="text-lg font-semibold text-white">
-                    {formatUSD(balances.grain.current_value)}
-                  </p>
+        {/* Deposit Address Card */}
+        {walletData?.wallet?.address ? (
+          <div className="mb-8 p-6 rounded-2xl bg-white/5 border border-white/10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                  <QrCode className="w-5 h-5 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">Cost Basis</p>
-                  <p className="text-lg font-semibold text-white">
-                    {formatUSD(balances.grain.cost_basis)}
-                  </p>
+                  <h3 className="text-lg font-semibold text-white">Deposit Address</h3>
+                  <p className="text-sm text-gray-400">Send USDC on Base network</p>
                 </div>
               </div>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400">
+                Base L2
+              </span>
+            </div>
 
-              <div className="pt-4 border-t border-white/10">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-400">Unrealized Gain/Loss</p>
-                  <div className="text-right">
-                    <p
-                      className={`font-semibold ${
-                        balances.grain.unrealized_gain >= 0
-                          ? 'text-green-400'
-                          : 'text-red-400'
-                      }`}
-                    >
-                      {formatUSD(balances.grain.unrealized_gain)}
-                    </p>
-                    <p
-                      className={`text-sm ${
-                        balances.grain.unrealized_gain_pct >= 0
-                          ? 'text-green-400'
-                          : 'text-red-400'
-                      }`}
-                    >
-                      {formatPercent(balances.grain.unrealized_gain_pct)}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="p-4 rounded-xl bg-black/30 flex items-center justify-between mb-4">
+              <p className="text-sm text-gray-300 font-mono break-all">
+                {walletData.wallet.address}
+              </p>
+              <button
+                onClick={copyAddress}
+                className="ml-4 p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
+              >
+                {copied ? (
+                  <Check className="w-5 h-5 text-green-400" />
+                ) : (
+                  <Copy className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
+            </div>
 
-              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                <p className="text-xs text-green-400 font-medium mb-2">
-                  How GRAIN Appreciates
-                </p>
-                <p className="text-xs text-gray-400">
-                  GRAIN is backed 1:1 by real assets. As the treasury grows through fees
-                  and yield, the backing per GRAIN increases, causing appreciation. All
-                  holders benefit equally.
-                </p>
-              </div>
+            <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+              <p className="text-sm text-green-400 font-medium mb-2">Deposit Instructions</p>
+              <ul className="text-sm text-gray-400 space-y-1">
+                <li>• Send USDC on Base network to the address above</li>
+                <li>• Minimum deposit: $10 USDC</li>
+                <li>• GRAIN credited 1:1 after 1 confirmation (~2 seconds)</li>
+                <li>• Do NOT send from an exchange - use a self-custody wallet</li>
+              </ul>
             </div>
           </div>
+        ) : (
+          <div className="mb-8 p-8 rounded-2xl bg-white/5 border border-white/10 text-center">
+            <Wallet className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">Create Your Wallet</h3>
+            <p className="text-gray-400 mb-6">
+              Generate a deposit address to start receiving USDC and earning GRAIN
+            </p>
+            <button
+              onClick={createWallet}
+              className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all"
+            >
+              Create Wallet
+            </button>
+          </div>
+        )}
 
-          {/* Treasury Info */}
+        {/* Treasury & Transactions Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Treasury Backing */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-white">Treasury Backing</h3>
               <div className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full">
-                100% Backed
+                {treasuryData ? `${(treasuryData.backingRatio * 100).toFixed(0)}% Backed` : '100% Backed'}
               </div>
             </div>
 
             <div className="mb-6">
               <p className="text-sm text-gray-400 mb-1">Total Treasury Value</p>
               <p className="text-2xl font-bold text-white">
-                {formatUSD(treasury.total_usd)}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Circulating Supply: {formatGRAIN(grainPrice.circulating_supply)} GRAIN
+                {formatUSD(treasuryData?.totalBacking || 0)}
               </p>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-gray-400 mb-3">Asset Breakdown</p>
-              {treasury.assets.map((asset, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-white">{asset.name}</p>
-                    <p className="text-xs text-gray-500">{asset.type}</p>
+            {treasuryData?.assetBreakdown && treasuryData.assetBreakdown.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-gray-400 mb-3">Asset Breakdown</p>
+                {treasuryData.assetBreakdown.map((asset, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-white capitalize">{asset.type}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-white">
+                        {formatUSD(asset.value)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {asset.percentage.toFixed(1)}%
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-white">
-                      {formatUSD(asset.amount)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {asset.percentage.toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             <div className="mt-6 pt-6 border-t border-white/10">
-              <button className="w-full flex items-center justify-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
+              <Link
+                href="/grain-vault/admin/treasury"
+                className="w-full flex items-center justify-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
                 <Shield className="w-4 h-4" />
                 View Proof of Reserves
                 <ExternalLink className="w-4 h-4" />
-              </button>
+              </Link>
             </div>
+          </div>
+
+          {/* Recent Transactions */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
+            </div>
+
+            {!walletData?.recent_transactions || walletData.recent_transactions.length === 0 ? (
+              <div className="text-center py-12">
+                <Clock className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+                <p className="text-gray-400">No transactions yet</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Make your first deposit to get started
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {walletData.recent_transactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-lg"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          tx.type === 'deposit' || tx.type === 'escrow_release'
+                            ? 'bg-green-500/20'
+                            : 'bg-blue-500/20'
+                        }`}
+                      >
+                        {tx.type === 'deposit' || tx.type === 'escrow_release' ? (
+                          <ArrowDownRight className="w-5 h-5 text-green-400" />
+                        ) : (
+                          <ArrowUpRight className="w-5 h-5 text-blue-400" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">
+                          {txTypeLabels[tx.type] || tx.type}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(tx.created_at).toLocaleDateString()} at{' '}
+                          {new Date(tx.created_at).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="font-semibold text-white">
+                        {formatGRAIN(tx.amount)} GRAIN
+                      </p>
+                      <div className="flex items-center justify-end gap-1 mt-1">
+                        {tx.status === 'completed' ? (
+                          <CheckCircle className="w-3 h-3 text-green-400" />
+                        ) : tx.status === 'pending' ? (
+                          <Clock className="w-3 h-3 text-yellow-400" />
+                        ) : (
+                          <AlertCircle className="w-3 h-3 text-gray-400" />
+                        )}
+                        <span className="text-xs text-gray-400 capitalize">
+                          {tx.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Recent Transactions */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
-            <button className="text-sm text-gray-400 hover:text-white transition-colors">
-              View All
-            </button>
-          </div>
-
-          {recent_transactions.length === 0 ? (
-            <div className="text-center py-12">
-              <Clock className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-              <p className="text-gray-400">No transactions yet</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Make your first deposit to get started
+        {/* How GRAIN Works */}
+        <div className="p-6 rounded-2xl bg-gradient-to-r from-green-500/10 via-blue-500/10 to-purple-500/10 border border-white/10">
+          <h3 className="text-lg font-semibold text-white mb-4">How GRAIN Works</h3>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold">1</div>
+                <p className="font-medium text-white">Deposit USDC</p>
+              </div>
+              <p className="text-sm text-gray-400 pl-10">
+                Send USDC to your deposit address. It arrives in ~2 seconds on Base L2.
               </p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {recent_transactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        tx.type.includes('deposit') || tx.type.includes('buy')
-                          ? 'bg-green-500/20'
-                          : 'bg-blue-500/20'
-                      }`}
-                    >
-                      {tx.type.includes('deposit') || tx.type.includes('buy') ? (
-                        <ArrowDownRight className="w-5 h-5 text-green-400" />
-                      ) : (
-                        <ArrowUpRight className="w-5 h-5 text-blue-400" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-white">
-                        {txTypeLabels[tx.type] || tx.type}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(tx.created_at).toLocaleDateString()} at{' '}
-                        {new Date(tx.created_at).toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    {tx.usd_amount && (
-                      <p className="font-semibold text-white">
-                        {formatUSD(tx.usd_amount)}
-                      </p>
-                    )}
-                    {tx.grain_amount && (
-                      <p className="text-sm text-gray-400">
-                        {formatGRAIN(tx.grain_amount)} GRAIN
-                      </p>
-                    )}
-                    <div className="flex items-center justify-end gap-1 mt-1">
-                      {tx.status === 'completed' ? (
-                        <CheckCircle className="w-3 h-3 text-green-400" />
-                      ) : tx.status === 'processing' ? (
-                        <Clock className="w-3 h-3 text-yellow-400" />
-                      ) : (
-                        <AlertCircle className="w-3 h-3 text-gray-400" />
-                      )}
-                      <span className="text-xs text-gray-400 capitalize">
-                        {tx.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">2</div>
+                <p className="font-medium text-white">Get GRAIN 1:1</p>
+              </div>
+              <p className="text-sm text-gray-400 pl-10">
+                Receive GRAIN credited instantly to your balance. 1 USDC = 1 GRAIN.
+              </p>
             </div>
-          )}
-        </div>
-
-        {/* Account Info */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Wallet Address</p>
-            <p className="text-sm font-mono text-white truncate">
-              {account.wallet_address}
-            </p>
-          </div>
-
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Verification Level</p>
-            <p className="text-sm font-semibold text-white capitalize">
-              {account.verification_level}
-            </p>
-          </div>
-
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Daily Limits</p>
-            <p className="text-sm text-white">
-              Deposit: {formatUSD(limits.daily_deposit)} • Withdraw:{' '}
-              {formatUSD(limits.daily_withdraw)}
-            </p>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">3</div>
+                <p className="font-medium text-white">Appreciate</p>
+              </div>
+              <p className="text-sm text-gray-400 pl-10">
+                GRAIN value grows as treasury earns yield. All holders benefit equally.
+              </p>
+            </div>
           </div>
         </div>
       </main>
+
+      {/* Deposit Modal */}
+      {showDepositModal && walletData?.wallet?.address && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full border border-white/10">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">Deposit USDC</h3>
+              <button
+                onClick={() => setShowDepositModal(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-gray-400 mb-3">Send USDC to this address on Base L2:</p>
+              <div className="p-4 rounded-xl bg-black/30 border border-white/10">
+                <p className="text-sm text-green-400 font-mono break-all">
+                  {walletData.wallet.address}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                copyAddress()
+                setShowDepositModal(false)
+              }}
+              className="w-full py-4 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+            >
+              <Copy className="w-5 h-5" />
+              Copy Address
+            </button>
+
+            <p className="text-xs text-gray-500 mt-4 text-center">
+              GRAIN will be credited 1:1 after 1 confirmation (~2 seconds)
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

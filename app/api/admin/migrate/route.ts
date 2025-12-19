@@ -1,54 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@vercel/postgres'
+import { sql } from '@vercel/postgres'
 
 export const dynamic = 'force-dynamic'
-
-// Create client for direct connection (works with Prisma Postgres)
-function getClient() {
-  const connectionString = process.env.POSTGRES_URL || process.env.wellsmemory_POSTGRES_URL
-  return createClient({ connectionString })
-}
-
-// Master key for admin operations - MUST be set in environment
-const MASTER_KEY = process.env.COLD_START_MASTER_KEY
-if (!MASTER_KEY) {
-  console.error('CRITICAL: COLD_START_MASTER_KEY environment variable is required')
-}
+export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
-  const client = getClient()
-
   try {
-    // Verify master key
+    // Verify master key - check at runtime, not module level
+    // Trim whitespace in case env var has trailing newline
+    const MASTER_KEY = process.env.COLD_START_MASTER_KEY?.trim()
     const authHeader = request.headers.get('authorization')
-    const key = authHeader?.replace('Bearer ', '')
+    const key = authHeader?.replace('Bearer ', '')?.trim()
 
-    if (!MASTER_KEY || key !== MASTER_KEY) {
-      return NextResponse.json({ error: 'Unauthorized - COLD_START_MASTER_KEY not configured or invalid' }, { status: 401 })
+    if (!MASTER_KEY) {
+      console.error('CRITICAL: COLD_START_MASTER_KEY environment variable is not set')
+      return NextResponse.json({
+        error: 'Server configuration error - COLD_START_MASTER_KEY not set',
+        hint: 'Add COLD_START_MASTER_KEY to Vercel environment variables'
+      }, { status: 500 })
     }
 
-    await client.connect()
+    if (key !== MASTER_KEY) {
+      return NextResponse.json({ error: 'Unauthorized - invalid master key' }, { status: 401 })
+    }
+
     console.log('🚀 Starting Treasury SDK database migration...\n')
 
     const results: { statement: string; success: boolean; error?: string }[] = []
 
-    // Create tables one by one
-    const statements = [
+    // Create tables using raw SQL via sql.query()
+    const tableStatements = [
       {
         name: 'treasury_accounts',
         sql: `CREATE TABLE IF NOT EXISTS treasury_accounts (
           id TEXT PRIMARY KEY,
           clerk_user_id TEXT NOT NULL UNIQUE,
           company_name TEXT NOT NULL,
-          company_size TEXT NOT NULL CHECK (company_size IN ('startup', 'smb', 'mid-market', 'enterprise')),
+          company_size TEXT NOT NULL,
           industry TEXT NOT NULL,
           country TEXT NOT NULL DEFAULT 'US',
-          erp_system TEXT NOT NULL CHECK (erp_system IN ('sap', 'oracle', 'netsuite', 'dynamics365', 'workday', 'coupa', 'other', 'none')),
+          erp_system TEXT NOT NULL,
           erp_version TEXT,
           erp_connected BOOLEAN DEFAULT FALSE,
           erp_config JSONB DEFAULT '{}',
-          tier TEXT NOT NULL DEFAULT 'starter' CHECK (tier IN ('starter', 'growth', 'enterprise')),
-          status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('pending', 'active', 'suspended', 'closed')),
+          tier TEXT NOT NULL DEFAULT 'starter',
+          status TEXT NOT NULL DEFAULT 'active',
           api_key TEXT NOT NULL UNIQUE,
           sdk_enabled BOOLEAN DEFAULT TRUE,
           grain_balance DECIMAL(20, 2) DEFAULT 0,
@@ -58,7 +54,28 @@ export async function POST(request: NextRequest) {
           created_at TIMESTAMP NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
           onboarding_completed_at TIMESTAMP,
-          last_activity_at TIMESTAMP
+          last_activity_at TIMESTAMP,
+          email TEXT,
+          phone TEXT,
+          full_name TEXT,
+          date_of_birth TEXT,
+          ssn_last_four TEXT,
+          address_line1 TEXT,
+          address_line2 TEXT,
+          city TEXT,
+          state TEXT,
+          zip_code TEXT,
+          employment_status TEXT,
+          annual_income_range TEXT,
+          net_worth_range TEXT,
+          investment_experience TEXT,
+          source_of_funds TEXT,
+          wallet_address TEXT,
+          verification_level TEXT DEFAULT 'basic',
+          daily_deposit_limit DECIMAL(20, 2) DEFAULT 1000,
+          daily_withdraw_limit DECIMAL(20, 2) DEFAULT 1000,
+          lifetime_deposit_limit DECIMAL(20, 2) DEFAULT 10000,
+          terms_accepted_at TIMESTAMP
         )`
       },
       {
@@ -73,8 +90,8 @@ export async function POST(request: NextRequest) {
           balance DECIMAL(20, 2) DEFAULT 0,
           grain_value_at_deposit DECIMAL(20, 6) DEFAULT 1.0,
           current_grain_value DECIMAL(20, 6) DEFAULT 1.0,
-          status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'frozen')),
-          kyc_status TEXT DEFAULT 'not-started' CHECK (kyc_status IN ('not-started', 'pending', 'approved', 'rejected')),
+          status TEXT NOT NULL DEFAULT 'active',
+          kyc_status TEXT DEFAULT 'not-started',
           metadata JSONB DEFAULT '{}',
           created_at TIMESTAMP NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -86,10 +103,10 @@ export async function POST(request: NextRequest) {
         sql: `CREATE TABLE IF NOT EXISTS treasury_transactions (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           account_id TEXT NOT NULL REFERENCES treasury_accounts(id) ON DELETE CASCADE,
-          type TEXT NOT NULL CHECK (type IN ('payment', 'receipt', 'credit_draw', 'credit_repay', 'conversion', 'reserve')),
+          type TEXT NOT NULL,
           amount DECIMAL(20, 2) NOT NULL,
-          currency TEXT NOT NULL DEFAULT 'GRAIN' CHECK (currency IN ('GRAIN', 'USDC', 'USD')),
-          status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
+          currency TEXT NOT NULL DEFAULT 'GRAIN',
+          status TEXT NOT NULL DEFAULT 'pending',
           from_wallet TEXT,
           to_wallet TEXT,
           circle_tx_id TEXT,
@@ -120,7 +137,7 @@ export async function POST(request: NextRequest) {
           drawn_amount DECIMAL(20, 2) NOT NULL DEFAULT 0,
           interest_rate DECIMAL(5, 4) DEFAULT 0.0000,
           grace_period_days INTEGER DEFAULT 30,
-          status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'closed')),
+          status TEXT NOT NULL DEFAULT 'active',
           last_draw_at TIMESTAMP,
           last_repay_at TIMESTAMP,
           created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -142,9 +159,9 @@ export async function POST(request: NextRequest) {
           early_payment_discount DECIMAL(5, 2),
           early_payment_days INTEGER,
           auto_pay_enabled BOOLEAN DEFAULT FALSE,
-          trust_score INTEGER CHECK (trust_score >= 0 AND trust_score <= 100),
-          status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'blocked')),
-          onboarding_status TEXT DEFAULT 'invited' CHECK (onboarding_status IN ('invited', 'pending', 'completed', 'declined')),
+          trust_score INTEGER,
+          status TEXT NOT NULL DEFAULT 'active',
+          onboarding_status TEXT DEFAULT 'invited',
           metadata JSONB DEFAULT '{}',
           created_at TIMESTAMP NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -166,8 +183,8 @@ export async function POST(request: NextRequest) {
           currency TEXT NOT NULL DEFAULT 'USD',
           invoice_date DATE NOT NULL,
           due_date DATE NOT NULL,
-          status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'paid', 'cancelled', 'overdue')),
-          payment_status TEXT DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'partial', 'paid', 'failed')),
+          status TEXT NOT NULL DEFAULT 'pending',
+          payment_status TEXT DEFAULT 'unpaid',
           paid_amount DECIMAL(20, 2) DEFAULT 0,
           transaction_id UUID REFERENCES treasury_transactions(id),
           erp_po_number TEXT,
@@ -176,7 +193,7 @@ export async function POST(request: NextRequest) {
           description TEXT,
           metadata JSONB DEFAULT '{}',
           synced_at TIMESTAMP,
-          sync_status TEXT DEFAULT 'synced' CHECK (sync_status IN ('synced', 'pending', 'failed')),
+          sync_status TEXT DEFAULT 'synced',
           created_at TIMESTAMP NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
           paid_at TIMESTAMP,
@@ -199,7 +216,7 @@ export async function POST(request: NextRequest) {
           payment_link TEXT NOT NULL,
           qr_code_url TEXT,
           wallet_address TEXT NOT NULL,
-          status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'expired', 'cancelled')),
+          status TEXT NOT NULL DEFAULT 'pending',
           due_date DATE,
           expires_at TIMESTAMP,
           paid_amount DECIMAL(20, 2) DEFAULT 0,
@@ -247,11 +264,11 @@ export async function POST(request: NextRequest) {
           contact_phone TEXT,
           contact_company TEXT,
           subject TEXT,
-          channel TEXT NOT NULL CHECK (channel IN ('sms', 'email', 'slack', 'chat', 'whatsapp')),
-          status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'pending', 'resolved', 'archived')),
-          priority TEXT DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+          channel TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'open',
+          priority TEXT DEFAULT 'normal',
           intent TEXT,
-          sentiment TEXT CHECK (sentiment IN ('positive', 'neutral', 'negative')),
+          sentiment TEXT,
           category TEXT,
           assigned_to TEXT,
           unread_count INTEGER DEFAULT 1,
@@ -269,11 +286,11 @@ export async function POST(request: NextRequest) {
           conversation_id UUID NOT NULL REFERENCES inbox_conversations(id) ON DELETE CASCADE,
           content TEXT NOT NULL,
           content_html TEXT,
-          direction TEXT NOT NULL CHECK (direction IN ('inbound', 'outbound')),
-          sender_type TEXT NOT NULL CHECK (sender_type IN ('contact', 'user', 'ai', 'system')),
+          direction TEXT NOT NULL,
+          sender_type TEXT NOT NULL,
           sender_id TEXT,
           sender_name TEXT,
-          channel TEXT NOT NULL CHECK (channel IN ('sms', 'email', 'slack', 'chat', 'whatsapp')),
+          channel TEXT NOT NULL,
           channel_message_id TEXT,
           email_subject TEXT,
           email_from TEXT,
@@ -286,7 +303,7 @@ export async function POST(request: NextRequest) {
           ai_approved BOOLEAN,
           ai_approved_by TEXT,
           ai_approved_at TIMESTAMP,
-          status TEXT DEFAULT 'sent' CHECK (status IN ('draft', 'pending_approval', 'sending', 'sent', 'delivered', 'failed', 'read')),
+          status TEXT DEFAULT 'sent',
           error_message TEXT,
           created_at TIMESTAMP NOT NULL DEFAULT NOW(),
           sent_at TIMESTAMP,
@@ -499,13 +516,131 @@ export async function POST(request: NextRequest) {
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         )`
+      },
+      // GRAIN Stablecoin tables
+      {
+        name: 'grain_transactions',
+        sql: `CREATE TABLE IF NOT EXISTS grain_transactions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL,
+          type TEXT NOT NULL,
+          amount DECIMAL(20, 6) NOT NULL,
+          to_user_id TEXT,
+          deal_id TEXT,
+          reason TEXT,
+          circle_transfer_id TEXT,
+          status TEXT NOT NULL DEFAULT 'pending',
+          error_message TEXT,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          completed_at TIMESTAMP
+        )`
+      },
+      {
+        name: 'grain_credit_lines',
+        sql: `CREATE TABLE IF NOT EXISTS grain_credit_lines (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL UNIQUE,
+          tier TEXT NOT NULL DEFAULT 'starter',
+          max_limit DECIMAL(20, 6) NOT NULL DEFAULT 0,
+          current_balance DECIMAL(20, 6) NOT NULL DEFAULT 0,
+          interest_rate DECIMAL(5, 4) NOT NULL DEFAULT 0.0000,
+          grace_period_days INTEGER DEFAULT 30,
+          status TEXT NOT NULL DEFAULT 'active',
+          last_draw_date TIMESTAMP,
+          last_payment_date TIMESTAMP,
+          next_payment_due TIMESTAMP,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'grain_escrow',
+        sql: `CREATE TABLE IF NOT EXISTS grain_escrow (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          deal_id TEXT NOT NULL UNIQUE,
+          buyer_user_id TEXT NOT NULL,
+          supplier_user_id TEXT,
+          amount DECIMAL(20, 6) NOT NULL,
+          fee_amount DECIMAL(20, 6) DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'locked',
+          locked_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          released_at TIMESTAMP,
+          refunded_at TIMESTAMP,
+          release_conditions JSONB DEFAULT '{}',
+          created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'grain_treasury_snapshots',
+        sql: `CREATE TABLE IF NOT EXISTS grain_treasury_snapshots (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          snapshot_date DATE NOT NULL UNIQUE,
+          total_grain_supply DECIMAL(20, 6) NOT NULL,
+          total_usdc_backing DECIMAL(20, 6) NOT NULL,
+          backing_ratio DECIMAL(10, 6) NOT NULL,
+          asset_vault_value DECIMAL(20, 6) DEFAULT 0,
+          grain_value DECIMAL(10, 6) DEFAULT 1.0,
+          total_credit_extended DECIMAL(20, 6) NOT NULL,
+          effective_leverage DECIMAL(10, 6) NOT NULL,
+          active_escrow_amount DECIMAL(20, 6) NOT NULL,
+          transaction_count_24h INTEGER NOT NULL,
+          transaction_volume_24h DECIMAL(20, 6) NOT NULL,
+          unique_users_24h INTEGER NOT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'grain_asset_holdings',
+        sql: `CREATE TABLE IF NOT EXISTS grain_asset_holdings (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          type TEXT NOT NULL,
+          name TEXT NOT NULL,
+          purchase_price DECIMAL(20, 6) NOT NULL,
+          current_value DECIMAL(20, 6) NOT NULL,
+          purchase_date TIMESTAMP NOT NULL,
+          on_chain_address TEXT,
+          blockchain TEXT,
+          yield_rate DECIMAL(8, 4),
+          status TEXT NOT NULL DEFAULT 'active',
+          last_valuation_at TIMESTAMP,
+          valuation_source TEXT,
+          metadata JSONB DEFAULT '{}',
+          created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'grain_treasury_events',
+        sql: `CREATE TABLE IF NOT EXISTS grain_treasury_events (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          type TEXT NOT NULL,
+          amount DECIMAL(20, 6) NOT NULL,
+          source TEXT,
+          circle_transfer_id TEXT,
+          sweep_id UUID,
+          swept_at TIMESTAMP,
+          notes TEXT,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'grain_interest_sweeps',
+        sql: `CREATE TABLE IF NOT EXISTS grain_interest_sweeps (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          amount DECIMAL(20, 6) NOT NULL,
+          source TEXT NOT NULL,
+          sweep_date TIMESTAMP NOT NULL,
+          tx_hash TEXT,
+          status TEXT NOT NULL DEFAULT 'pending',
+          asset_purchase_id UUID,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )`
       }
     ]
 
-    // Create each table
-    for (const table of statements) {
+    // Create each table using sql.query for raw SQL
+    for (const table of tableStatements) {
       try {
-        await client.query(table.sql)
+        await sql.query(table.sql)
         results.push({ statement: `CREATE TABLE ${table.name}`, success: true })
         console.log(`✅ Created table: ${table.name}`)
       } catch (error: any) {
@@ -553,29 +688,51 @@ export async function POST(request: NextRequest) {
       'CREATE INDEX IF NOT EXISTS idx_coldstart_activities_type ON coldstart_activities(activity_type)',
       'CREATE INDEX IF NOT EXISTS idx_coldstart_voice_calls_campaign ON coldstart_voice_calls(campaign_id)',
       'CREATE INDEX IF NOT EXISTS idx_coldstart_linkedin_campaign ON coldstart_linkedin_activities(campaign_id)',
+      // GRAIN indexes
+      'CREATE INDEX IF NOT EXISTS idx_grain_transactions_user ON grain_transactions(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_grain_transactions_type ON grain_transactions(type)',
+      'CREATE INDEX IF NOT EXISTS idx_grain_transactions_status ON grain_transactions(status)',
+      'CREATE INDEX IF NOT EXISTS idx_grain_transactions_deal ON grain_transactions(deal_id)',
+      'CREATE INDEX IF NOT EXISTS idx_grain_credit_lines_user ON grain_credit_lines(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_grain_credit_lines_status ON grain_credit_lines(status)',
+      'CREATE INDEX IF NOT EXISTS idx_grain_escrow_deal ON grain_escrow(deal_id)',
+      'CREATE INDEX IF NOT EXISTS idx_grain_escrow_buyer ON grain_escrow(buyer_user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_grain_escrow_status ON grain_escrow(status)',
     ]
 
     for (const indexSql of indexes) {
       try {
-        await client.query(indexSql)
+        await sql.query(indexSql)
         results.push({ statement: indexSql.substring(0, 60) + '...', success: true })
       } catch (error: any) {
         results.push({ statement: indexSql.substring(0, 60) + '...', success: false, error: error.message })
       }
     }
 
+    // Initialize system accounts
+    try {
+      await sql.query(`
+        INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance)
+        VALUES
+          ('WELLS_ESCROW_ACCOUNT', 'ESCROW', 'ESCROW', 0),
+          ('WELLS_TREASURY', 'TREASURY', 'TREASURY', 0)
+        ON CONFLICT (user_id) DO NOTHING
+      `)
+      results.push({ statement: 'Initialize system accounts', success: true })
+    } catch (error: any) {
+      results.push({ statement: 'Initialize system accounts', success: false, error: error.message })
+    }
+
     // Verify tables created
-    const tablesResult = await client.query(`
+    const tablesResult = await sql`
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
-        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name LIKE 'coldstart_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
+        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name LIKE 'coldstart_%' OR table_name LIKE 'grain_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
       ORDER BY table_name
-    `)
+    `
 
     const tables = tablesResult.rows.map((r: any) => r.table_name)
-
-    await client.end()
 
     return NextResponse.json({
       success: true,
@@ -587,28 +744,24 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Migration failed:', error)
-    try { await client.end() } catch {}
     return NextResponse.json({
       success: false,
-      error: error.message || 'Migration failed'
+      error: error.message || 'Migration failed',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 })
   }
 }
 
 // GET to check migration status
 export async function GET() {
-  const client = getClient()
-
   try {
-    await client.connect()
-
-    const tablesResult = await client.query(`
+    const tablesResult = await sql`
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
-        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name LIKE 'coldstart_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
+        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name LIKE 'coldstart_%' OR table_name LIKE 'grain_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
       ORDER BY table_name
-    `)
+    `
 
     const tables = tablesResult.rows.map((r: any) => r.table_name)
 
@@ -616,14 +769,12 @@ export async function GET() {
     const counts: Record<string, number> = {}
     for (const table of tables) {
       try {
-        const result = await client.query(`SELECT COUNT(*) as count FROM ${table}`)
+        const result = await sql.query(`SELECT COUNT(*) as count FROM ${table}`)
         counts[table] = Number(result.rows[0]?.count || 0)
       } catch {
         counts[table] = -1 // Error reading
       }
     }
-
-    await client.end()
 
     return NextResponse.json({
       success: true,
@@ -634,7 +785,6 @@ export async function GET() {
     })
 
   } catch (error: any) {
-    try { await client.end() } catch {}
     return NextResponse.json({
       success: false,
       error: error.message,
