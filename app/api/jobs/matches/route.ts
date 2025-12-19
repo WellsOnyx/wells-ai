@@ -8,9 +8,9 @@ import { auth } from '@clerk/nextjs/server';
 import { getWorkerProfileByUserId } from '@/lib/jobs/worker-service';
 import {
   matchWorkersToTask,
-  matchTasksToWorker,
-  rankWorkers,
-  rankTasks,
+  scanForOpportunities,
+  getMatchesForTask,
+  scoreMatch,
 } from '@/lib/jobs/matching-engine';
 import {
   getProactiveOpportunities,
@@ -98,7 +98,12 @@ export async function GET(req: NextRequest) {
           });
         }
 
-        const result = await matchTasksToWorker(targetWorkerId, { limit, minScore });
+        const result = await scanForOpportunities(targetWorkerId, {
+          limit,
+          minScore,
+          includePosted: true,
+          includeProactive: false,
+        });
 
         return NextResponse.json({
           success: true,
@@ -109,7 +114,7 @@ export async function GET(req: NextRequest) {
       }
 
       case 'rank_workers': {
-        // Rank specific workers for a task
+        // Rank specific workers for a task - use getMatchesForTask and filter
         if (!taskId) {
           return NextResponse.json({
             success: false,
@@ -125,17 +130,32 @@ export async function GET(req: NextRequest) {
           });
         }
 
-        const result = await rankWorkers(taskId, workerIds);
+        // Get all matches for the task, then filter to requested workers
+        const result = await getMatchesForTask(taskId, { limit: 100, minScore: 0 });
+        const filteredWorkers = result.workers.filter(w => workerIds.includes(w.worker.id));
+        const rankings = filteredWorkers
+          .sort((a, b) => b.score.score - a.score.score)
+          .map((w, index) => ({
+            rank: index + 1,
+            workerId: w.worker.id,
+            workerName: w.worker.displayName,
+            score: w.score.score,
+            breakdown: w.score.breakdown,
+            highlights: w.score.highlights,
+            concerns: w.score.concerns,
+          }));
 
         return NextResponse.json({
           success: true,
-          message: result.message,
-          rankings: result.rankings,
+          message: rankings.length > 0
+            ? `Ranked ${rankings.length} workers. Top: ${rankings[0].workerName} (${rankings[0].score}%)`
+            : "No matching workers found for the provided IDs.",
+          rankings,
         });
       }
 
       case 'rank_tasks': {
-        // Rank specific tasks for a worker
+        // Rank specific tasks for a worker - use scanForOpportunities and filter
         const targetWorkerId = workerId || workerProfile.profile?.id;
 
         if (!targetWorkerId) {
@@ -153,12 +173,32 @@ export async function GET(req: NextRequest) {
           });
         }
 
-        const result = await rankTasks(targetWorkerId, taskIds);
+        // Get all matches for the worker, then filter to requested tasks
+        const result = await scanForOpportunities(targetWorkerId, {
+          limit: 100,
+          minScore: 0,
+          includePosted: true,
+          includeProactive: false,
+        });
+        const filteredTasks = result.matches.filter(m => m.task && taskIds.includes(m.task.id));
+        const rankings = filteredTasks
+          .sort((a, b) => b.score.score - a.score.score)
+          .map((m, index) => ({
+            rank: index + 1,
+            taskId: m.task?.id,
+            taskTitle: m.task?.title,
+            score: m.score.score,
+            breakdown: m.score.breakdown,
+            highlights: m.score.highlights,
+            concerns: m.score.concerns,
+          }));
 
         return NextResponse.json({
           success: true,
-          message: result.message,
-          rankings: result.rankings,
+          message: rankings.length > 0
+            ? `Ranked ${rankings.length} tasks. Top: "${rankings[0].taskTitle}" (${rankings[0].score}%)`
+            : "No matching tasks found for the provided IDs.",
+          rankings,
         });
       }
 
@@ -320,9 +360,11 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        const result = await matchTasksToWorker(targetWorkerId, {
+        const result = await scanForOpportunities(targetWorkerId, {
           limit: data.limit || 10,
           minScore: data.minScore || 50,
+          includePosted: true,
+          includeProactive: false,
         });
 
         return NextResponse.json({

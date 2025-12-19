@@ -241,35 +241,70 @@ You: [Use seller_generate_quote + seller_adjust_quote] "Done. Quote ready at $75
 
 Make every interaction feel like talking to a sales assistant who handles all the busywork.`,
 
-  jobs: `You are Wells, an AI career partner on the Wells Onyx platform.
+  jobs: `You are Wells, an AI work partner on the Wells Onyx platform.
 
-🏆 FIRST MOVER STATUS: This candidate is a First Mover - one of the first in their specialty!
+You help workers find tasks, complete work, earn GRAIN (our 1:1 USD stablecoin), and build attribution through referrals. Everything happens through conversation - no forms, no job boards, just talk to Wells.
 
-IMPORTANT FRAMING:
-- They're in the talent pool before it gets crowded
-- First Movers in a specialty get priority with hiring companies
-- They're establishing themselves early
-- Celebrate this! They're pioneers
+WORKER PROFILE MANAGEMENT:
+- Use worker_get_profile to check their current profile, skills, and ratings
+- Use worker_update_profile to update their bio, availability, or preferences from natural language
+- Use worker_add_skills to add skills from natural language ("I know Python, React, and SQL")
 
-When helping a job seeker:
-1. Understand their experience, skills, and preferences
-2. Once you have enough details, use the capture_lead tool to save their profile
-3. Celebrate: "You're a First Mover in [specialty]! 🏆 That means when companies need [role], you're first in line. Our team will personally match you with opportunities within 24 hours. First Movers get priority placement!"
+TASK DISCOVERY:
+- Use worker_find_tasks to find tasks matching their skills and preferences
+- Use worker_view_task to see detailed requirements, pay, and deadline for a specific task
+- Use worker_get_opportunities to see curated opportunities based on their profile
 
-When understanding a candidate, extract:
-- ROLE: What title/function?
-- EXPERIENCE: Background and skills
-- COMPENSATION: Target salary/equity
-- PREFERENCES: Remote, location, industry
-- DEALBREAKERS: What they won't accept
+TASK APPLICATIONS:
+- Use worker_apply to apply for a task with a pitch
+- Use worker_accept_task to accept a task that was offered directly
+- Use worker_decline_task to decline a task that isn't a good fit
 
-Example flow:
-User: "Looking for VP Engineering roles"
-You: "VP Engineering - exciting! What's your target compensation? Remote only or open to hybrid? Any industry preferences?"
-User: "$250k+, remote only, prefer fintech"
-You: "You're now a First Mover in fintech VP Engineering! 🏆 You're one of the first senior engineering leaders in our network. When fintech companies need VP Eng talent, you'll be first to hear. Our team will personally match you with opportunities within 24 hours!"
+TASK COMPLETION:
+- Use worker_get_active_tasks to see tasks they're currently working on
+- Use worker_submit_work to submit completed work for review
+- Use worker_request_payment to request payment after work is accepted
 
-Make First Mover status feel like early access to the best opportunities.`,
+EARNINGS & PAYMENTS:
+- Use worker_get_earnings to see total earnings, pending payments, and history
+- Use worker_withdraw to withdraw GRAIN to their bank or wallet
+- All payments are in GRAIN (1:1 with USD)
+
+ATTRIBUTION & REFERRALS:
+- Use worker_get_attribution to see referral earnings and network stats
+- Use worker_create_referral to generate referral links for other workers or clients
+- Use worker_view_attribution_tree to see their full attribution network
+- Workers earn ongoing attribution from their referrals' activity
+
+CONVERSATIONAL STYLE:
+- NO forms, cards, or buttons - pure conversational commerce
+- Understand what the worker wants through dialogue
+- Use tools behind the scenes, surface results conversationally
+- Be proactive about opportunities and next steps
+
+Example flows:
+
+User: "What tasks can I do?"
+You: [Use worker_find_tasks] "Found 5 tasks matching your React skills. Top one is building a dashboard component - $500, due Friday. Want details?"
+
+User: "I finished the dashboard task"
+You: [Use worker_submit_work] "Submitted! The client will review within 24 hours. Once approved, $500 GRAIN will be ready to withdraw. Want to find your next task?"
+
+User: "How much have I earned?"
+You: [Use worker_get_earnings] "You've earned $2,450 GRAIN this month. $500 is pending from the dashboard task. Plus $125 in attribution from referrals. Ready to withdraw?"
+
+User: "I can also do Python and data analysis"
+You: [Use worker_add_skills] "Added Python and data analysis to your profile. That opens up 12 more tasks. Want me to find the best matches?"
+
+User: "I want to refer my friend Sarah"
+You: [Use worker_create_referral] "Here's your referral link for Sarah. When she completes her first task, you'll earn 5% attribution on all her future work. It compounds!"
+
+KEY PRINCIPLES:
+- Help workers find good-fit tasks quickly
+- Make it easy to submit work and get paid
+- Encourage building attribution through referrals
+- All payments in GRAIN (1:1 USD), instant withdrawals
+- Celebrate their earnings and growth`,
 
   default: `You are Wells, an AI on the Wells Onyx platform.
 
@@ -1340,6 +1375,312 @@ const SELLER_TOOLS: Anthropic.Tool[] = [
 ]
 
 // ============================================================================
+// TOOLS FOR JOBS/WORKER (Task Discovery, Work, Earnings, Attribution)
+// ============================================================================
+
+const JOBS_TOOLS: Anthropic.Tool[] = [
+  // Profile Management
+  {
+    name: 'worker_get_profile',
+    description: 'Get the worker profile. Shows current bio, skills, ratings, availability, and stats.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'worker_update_profile',
+    description: 'Update worker profile from natural language. Use when worker describes themselves, their availability, or preferences.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Natural language profile updates (e.g., "I\'m a senior React developer, available 20 hours/week, prefer remote work")'
+        },
+      },
+      required: ['text']
+    }
+  },
+  {
+    name: 'worker_add_skills',
+    description: 'Add skills to worker profile from natural language. Parse skill names from text.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Natural language skill description (e.g., "I know Python, React, TypeScript, and data analysis")'
+        },
+      },
+      required: ['text']
+    }
+  },
+
+  // Task Discovery
+  {
+    name: 'worker_find_tasks',
+    description: 'Find tasks matching worker skills and preferences. Returns ranked list of available tasks.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        skills: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional: specific skills to match. If not provided, uses worker profile skills.'
+        },
+        minPay: {
+          type: 'number',
+          description: 'Minimum pay in USD'
+        },
+        maxDeadline: {
+          type: 'string',
+          description: 'Maximum deadline (e.g., "3 days", "1 week")'
+        },
+        category: {
+          type: 'string',
+          description: 'Task category (e.g., "development", "design", "writing", "data")'
+        },
+        limit: {
+          type: 'number',
+          description: 'Number of tasks to return (default 10)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'worker_view_task',
+    description: 'View detailed information about a specific task including requirements, pay, deadline, and client info.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        taskId: {
+          type: 'string',
+          description: 'The task ID to view'
+        },
+      },
+      required: ['taskId']
+    }
+  },
+  {
+    name: 'worker_get_opportunities',
+    description: 'Get curated task opportunities based on worker profile, past performance, and preferences.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['recommended', 'new', 'urgent', 'high_pay'],
+          description: 'Type of opportunities to show (default: recommended)'
+        },
+      },
+      required: []
+    }
+  },
+
+  // Task Applications
+  {
+    name: 'worker_apply',
+    description: 'Apply for a task with an optional pitch message.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        taskId: {
+          type: 'string',
+          description: 'The task ID to apply for'
+        },
+        pitch: {
+          type: 'string',
+          description: 'Optional pitch message to the client explaining why you\'re a good fit'
+        },
+        proposedRate: {
+          type: 'number',
+          description: 'Optional: propose a different rate than listed'
+        },
+      },
+      required: ['taskId']
+    }
+  },
+  {
+    name: 'worker_accept_task',
+    description: 'Accept a task that was directly offered to the worker.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        taskId: {
+          type: 'string',
+          description: 'The task ID to accept'
+        },
+      },
+      required: ['taskId']
+    }
+  },
+  {
+    name: 'worker_decline_task',
+    description: 'Decline a task offer or withdraw an application.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        taskId: {
+          type: 'string',
+          description: 'The task ID to decline'
+        },
+        reason: {
+          type: 'string',
+          description: 'Optional reason for declining'
+        },
+      },
+      required: ['taskId']
+    }
+  },
+
+  // Task Completion
+  {
+    name: 'worker_get_active_tasks',
+    description: 'Get all active tasks the worker is currently working on.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['in_progress', 'submitted', 'revision_requested', 'all'],
+          description: 'Filter by task status (default: all)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'worker_submit_work',
+    description: 'Submit completed work for a task. Include deliverables and any notes.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        taskId: {
+          type: 'string',
+          description: 'The task ID to submit work for'
+        },
+        deliverables: {
+          type: 'string',
+          description: 'Description of deliverables or link to work'
+        },
+        notes: {
+          type: 'string',
+          description: 'Optional notes for the client'
+        },
+      },
+      required: ['taskId', 'deliverables']
+    }
+  },
+  {
+    name: 'worker_request_payment',
+    description: 'Request payment for accepted/completed work.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        taskId: {
+          type: 'string',
+          description: 'The task ID to request payment for'
+        },
+      },
+      required: ['taskId']
+    }
+  },
+
+  // Earnings & Payments
+  {
+    name: 'worker_get_earnings',
+    description: 'Get earnings summary including total earned, pending payments, and history.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        period: {
+          type: 'string',
+          enum: ['today', 'week', 'month', 'year', 'all'],
+          description: 'Time period for earnings (default: month)'
+        },
+        includeHistory: {
+          type: 'boolean',
+          description: 'Include detailed transaction history'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'worker_withdraw',
+    description: 'Withdraw GRAIN to bank account or external wallet.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        amount: {
+          type: 'number',
+          description: 'Amount of GRAIN to withdraw (or "all" for full balance)'
+        },
+        method: {
+          type: 'string',
+          enum: ['bank', 'wallet'],
+          description: 'Withdrawal method (default: bank)'
+        },
+      },
+      required: ['amount']
+    }
+  },
+
+  // Attribution & Referrals
+  {
+    name: 'worker_get_attribution',
+    description: 'Get attribution earnings from referrals, including network stats and pending attribution.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        period: {
+          type: 'string',
+          enum: ['week', 'month', 'year', 'all'],
+          description: 'Time period for attribution earnings (default: month)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'worker_create_referral',
+    description: 'Create a referral link for inviting other workers or clients.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['worker', 'client'],
+          description: 'Type of referral (worker = other freelancers, client = businesses)'
+        },
+        name: {
+          type: 'string',
+          description: 'Optional: name of person being referred for tracking'
+        },
+      },
+      required: ['type']
+    }
+  },
+  {
+    name: 'worker_view_attribution_tree',
+    description: 'View the full attribution network showing referrals and their activity.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        depth: {
+          type: 'number',
+          description: 'How many levels deep to show (default: 3)'
+        },
+      },
+      required: []
+    }
+  },
+]
+
+// ============================================================================
 // TOOLS FOR BUYER ERP SCANNER (Proactive Procurement)
 // ============================================================================
 
@@ -1657,9 +1998,11 @@ NEVER skip the approval step. Real money is involved.`
     const isTreasuryMode = journey === 'treasury'
     const isBuyerMode = journey === 'buyer'
     const isSellerMode = journey === 'seller'
+    const isJobsMode = journey === 'jobs'
 
     // Buyer gets RFQ flow tools + ERP tools + treasury tools for payments
     // Seller gets seller tools + treasury tools for payments
+    // Jobs gets worker tools + treasury tools for earnings
     // Treasury mode gets treasury tools
     // Master mode gets master tools
     // Others get negotiation tools
@@ -1681,6 +2024,14 @@ NEVER skip the approval step. Real money is involved.`
       // Seller gets seller tools + payment tools
       tools = [
         ...SELLER_TOOLS,
+        ...TREASURY_TOOLS.filter(t =>
+          ['get_balance', 'get_transactions'].includes(t.name)
+        )
+      ]
+    } else if (isJobsMode) {
+      // Jobs/Worker gets worker tools + payment tools for earnings
+      tools = [
+        ...JOBS_TOOLS,
         ...TREASURY_TOOLS.filter(t =>
           ['get_balance', 'get_transactions'].includes(t.name)
         )
@@ -3249,6 +3600,181 @@ Reply "Yes, go ahead" to approve, or let me know what to change.`,
         console.error('ERP tool error:', error)
         return NextResponse.json({
           message: baseMessage || `Error processing ERP action: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // ========================================================================
+    // JOBS/WORKER TOOLS HANDLERS
+    // ========================================================================
+
+    // Handle worker tools by delegating to worker API routes
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name.startsWith('worker_')) {
+      const toolName = toolUse.name
+      const toolInput = toolUse.input as Record<string, any>
+      const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
+      const textBlock = response.content.find(block => block.type === 'text')
+      const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+      try {
+        let apiResult: any
+
+        // Profile tools
+        if (toolName === 'worker_get_profile') {
+          const res = await fetch(`${baseUrl}/api/worker/profile`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_update_profile') {
+          const res = await fetch(`${baseUrl}/api/worker/profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'update', text: toolInput.text })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_add_skills') {
+          const res = await fetch(`${baseUrl}/api/worker/profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'add_skills', text: toolInput.text })
+          })
+          apiResult = await res.json()
+        }
+        // Task discovery tools
+        else if (toolName === 'worker_find_tasks') {
+          const params = new URLSearchParams()
+          if (toolInput.skills) params.set('skills', toolInput.skills.join(','))
+          if (toolInput.minPay) params.set('minPay', String(toolInput.minPay))
+          if (toolInput.maxDeadline) params.set('maxDeadline', toolInput.maxDeadline)
+          if (toolInput.category) params.set('category', toolInput.category)
+          if (toolInput.limit) params.set('limit', String(toolInput.limit))
+          const res = await fetch(`${baseUrl}/api/worker/tasks?${params}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_view_task') {
+          const res = await fetch(`${baseUrl}/api/worker/tasks/${toolInput.taskId}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_get_opportunities') {
+          const type = toolInput.type || 'recommended'
+          const res = await fetch(`${baseUrl}/api/worker/tasks?type=${type}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        }
+        // Task application tools
+        else if (toolName === 'worker_apply') {
+          const res = await fetch(`${baseUrl}/api/worker/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'apply',
+              taskId: toolInput.taskId,
+              pitch: toolInput.pitch,
+              proposedRate: toolInput.proposedRate
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_accept_task') {
+          const res = await fetch(`${baseUrl}/api/worker/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'accept', taskId: toolInput.taskId })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_decline_task') {
+          const res = await fetch(`${baseUrl}/api/worker/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'decline', taskId: toolInput.taskId, reason: toolInput.reason })
+          })
+          apiResult = await res.json()
+        }
+        // Task completion tools
+        else if (toolName === 'worker_get_active_tasks') {
+          const status = toolInput.status || 'all'
+          const res = await fetch(`${baseUrl}/api/worker/tasks?active=true&status=${status}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_submit_work') {
+          const res = await fetch(`${baseUrl}/api/worker/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'submit_work',
+              taskId: toolInput.taskId,
+              deliverables: toolInput.deliverables,
+              notes: toolInput.notes
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_request_payment') {
+          const res = await fetch(`${baseUrl}/api/worker/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'request_payment', taskId: toolInput.taskId })
+          })
+          apiResult = await res.json()
+        }
+        // Earnings tools
+        else if (toolName === 'worker_get_earnings') {
+          const params = new URLSearchParams()
+          if (toolInput.period) params.set('period', toolInput.period)
+          if (toolInput.includeHistory) params.set('includeHistory', 'true')
+          const res = await fetch(`${baseUrl}/api/worker/earnings?${params}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_withdraw') {
+          const res = await fetch(`${baseUrl}/api/worker/earnings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'withdraw',
+              amount: toolInput.amount,
+              method: toolInput.method || 'bank'
+            })
+          })
+          apiResult = await res.json()
+        }
+        // Attribution tools
+        else if (toolName === 'worker_get_attribution') {
+          const period = toolInput.period || 'month'
+          const res = await fetch(`${baseUrl}/api/worker/attribution?period=${period}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_create_referral') {
+          const res = await fetch(`${baseUrl}/api/worker/attribution`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'create_referral',
+              type: toolInput.type,
+              name: toolInput.name
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'worker_view_attribution_tree') {
+          const depth = toolInput.depth || 3
+          const res = await fetch(`${baseUrl}/api/worker/attribution?view=tree&depth=${depth}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        }
+
+        return NextResponse.json({
+          message: baseMessage || apiResult.message || 'Done.',
+          data: apiResult,
+        })
+      } catch (error) {
+        console.error('Worker tool error:', error)
+        return NextResponse.json({
+          message: baseMessage || `Error processing worker action: ${error instanceof Error ? error.message : 'Unknown error'}`,
           error: true,
         })
       }
