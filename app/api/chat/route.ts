@@ -43,6 +43,15 @@ import {
   STANDARD_FEE_RATE,
 } from '@/lib/wells-payments'
 
+// RFQ Flow imports for AI-to-AI negotiation
+import { getConstraintsByRFQ, setConstraints, parseConstraintsFromText } from '@/lib/rfq/constraint-service'
+import { getQuotesByRFQ, compareQuotes, getActiveQuotesByRFQ } from '@/lib/rfq/quote-service'
+import { requestQuotesFromSuppliers } from '@/lib/rfq/supplier-ai'
+import { startNegotiation as startRFQNegotiation, runNegotiation as runRFQNegotiation, getNegotiationsByRFQ } from '@/lib/rfq/negotiation-engine'
+import { awardQuote, getAwardByRFQ } from '@/lib/rfq/award-service'
+import { getFulfillmentByRFQ } from '@/lib/rfq/fulfillment-tracker'
+import { sqlQuery as sql } from '@/lib/db'
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 })
@@ -130,33 +139,46 @@ Make being a First Mover feel like an exclusive, valuable status.`,
 
   buyer: `You are Wells, an AI procurement partner on the Wells Onyx platform.
 
-🏆 FIRST MOVER STATUS: This buyer is a First Mover - one of the first to source through Wells Onyx!
+You help buyers source products and services through AI-to-AI negotiation. Your job is to:
+1. Understand what they need (product, quantity, budget, timeline)
+2. Create an RFQ (Request for Quote)
+3. Set negotiation constraints based on their budget
+4. Get quotes from suppliers (AI-generated)
+5. Run AI-to-AI negotiation to get the best terms
+6. Award the winning quote and handle payment through GRAIN
 
-IMPORTANT FRAMING:
-- They're helping BUILD the supplier network by being first
-- They get human white-glove sourcing while we cold-start suppliers
-- First Movers get priority access once supplier categories are live
-- Celebrate this! They're pioneers
+RFQ FLOW TOOLS:
+- create_rfq: Create an RFQ when user describes what they need
+- set_rfq_constraints: Set budget limits and negotiation preferences
+- request_quotes: Get quotes from suppliers
+- get_rfq_quotes: See all quotes with comparison
+- run_full_negotiation: Run AI-to-AI negotiation to get best price
+- award_rfq: Award to the winning quote (creates deal + escrow)
+- get_rfq_status: Check full status of an RFQ
 
-When a buyer needs something:
-1. Understand their specifications and requirements
-2. Once you have enough details, use the capture_lead tool to save their request
-3. Celebrate: "You're a First Mover in [product category]! 🏆 You're helping us build out this supplier network. Our team will personally source quotes from vetted suppliers within 24 hours. First Movers get priority pricing once we scale!"
-
-When gathering requirements, extract:
-- PRODUCT: What exactly do they need?
-- QUANTITY: How many units?
-- BUDGET: Target price per unit or total
-- TIMELINE: Delivery deadline
-- QUALITY: Standards, certifications needed
-
-Example flow:
+FLOW EXAMPLE:
 User: "I need 500 industrial motors"
-You: "Industrial motors - let me help! What specifications? Voltage, torque, size? And what's your target price point?"
-User: "24V DC, 50Nm, budget is $100 per unit"
-You: "You're now a First Mover in industrial motors! 🏆 You're helping us build this supplier category. Our team will personally source quotes from 3-5 vetted manufacturers within 24 hours. First Movers like you get priority access and pricing once the category scales!"
+You: "I can help you source those. What are the specs? Voltage, torque, size? And what's your budget range?"
+User: "24V DC, 50Nm, max budget $50,000 total, need them in 3 weeks"
+You: [Use create_rfq to create the request]
+You: "Great, I've created RFQ #123. Let me set your constraints and get quotes from our supplier network."
+You: [Use set_rfq_constraints with maxTotalBudget: 50000, maxLeadTimeDays: 21]
+You: [Use request_quotes to get AI-generated quotes]
+You: "I have 3 quotes. Best value is Supplier A at $85/unit ($42,500 total) with 14-day delivery. Should I negotiate for a better price?"
+User: "Yes, see if you can get it under $40k"
+You: [Use run_full_negotiation to have your AI negotiate with supplier AI]
+You: "My AI negotiated with their AI. Got them down to $78/unit ($39,000 total) with 16-day delivery. That's a 8% savings! Should I award this quote?"
+User: "Yes, award it"
+You: [Use award_rfq - this creates deal, escrow, and syncs to buyer's ERP]
+You: "Done! Quote awarded to Supplier A. Deal created, escrow wallet ready. Pay $39,000 + 1% fee ($390) to lock it in. Funds release when you confirm delivery."
 
-Make First Mover status feel exclusive and valuable.`,
+KEY PRINCIPLES:
+- Always get explicit budget before negotiating
+- Set constraints BEFORE running negotiation
+- AI negotiation happens automatically - just show results
+- Award requires user confirmation (real money involved)
+- All payments go through GRAIN (1:1 USD stablecoin)
+- 1% success fee on completed deals`,
 
   seller: `You are Wells, an AI sales partner on the Wells Onyx platform.
 
@@ -678,6 +700,219 @@ const NEGOTIATION_TOOLS: Anthropic.Tool[] = [
 ]
 
 // ============================================================================
+// TOOLS FOR RFQ FLOW (AI-to-AI Negotiation)
+// ============================================================================
+
+const RFQ_FLOW_TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'create_rfq',
+    description: 'Create a new RFQ (Request for Quote) from the buyer. Use this when user wants to source products or services. Gathers requirements and creates an RFQ record.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        category: {
+          type: 'string',
+          description: 'Product/service category (e.g., "industrial motors", "office supplies", "IT equipment")'
+        },
+        description: {
+          type: 'string',
+          description: 'Detailed description of what is needed'
+        },
+        quantity: {
+          type: 'number',
+          description: 'Number of units needed'
+        },
+        targetPrice: {
+          type: 'number',
+          description: 'Target price per unit (optional)'
+        },
+        urgency: {
+          type: 'string',
+          enum: ['standard', 'urgent', 'critical'],
+          description: 'How urgent is this request'
+        },
+        deliveryLocation: {
+          type: 'string',
+          description: 'Where should it be delivered (city/state or full address)'
+        },
+        additionalRequirements: {
+          type: 'string',
+          description: 'Any additional requirements or specifications'
+        },
+      },
+      required: ['category', 'description', 'quantity']
+    }
+  },
+  {
+    name: 'set_rfq_constraints',
+    description: 'Set negotiation constraints for an RFQ. Use this to define the buyer budget limits, payment terms, and negotiation preferences BEFORE starting AI-to-AI negotiation.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        rfqId: {
+          type: 'string',
+          description: 'The RFQ ID to set constraints for'
+        },
+        maxTotalBudget: {
+          type: 'number',
+          description: 'Maximum total budget for the entire order'
+        },
+        maxUnitPrice: {
+          type: 'number',
+          description: 'Maximum acceptable price per unit'
+        },
+        targetUnitPrice: {
+          type: 'number',
+          description: 'Target/ideal price per unit (for negotiation starting point)'
+        },
+        maxLeadTimeDays: {
+          type: 'number',
+          description: 'Maximum acceptable lead time in days'
+        },
+        acceptablePaymentTerms: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Acceptable payment terms (e.g., ["Net 30", "Net 60", "50% upfront"])'
+        },
+        negotiationAggression: {
+          type: 'string',
+          enum: ['conservative', 'balanced', 'aggressive'],
+          description: 'How aggressively should AI negotiate on price'
+        },
+        naturalLanguage: {
+          type: 'string',
+          description: 'Natural language description of constraints (e.g., "max $15k total, need it in 2 weeks, prefer Net 30")'
+        },
+      },
+      required: ['rfqId']
+    }
+  },
+  {
+    name: 'request_quotes',
+    description: 'Request quotes from matched suppliers for an RFQ. This triggers supplier AIs to generate quotes based on their catalogs and pricing rules.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        rfqId: {
+          type: 'string',
+          description: 'The RFQ ID to request quotes for'
+        },
+        supplierIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional: specific supplier IDs to request from. If not provided, uses matched suppliers.'
+        },
+      },
+      required: ['rfqId']
+    }
+  },
+  {
+    name: 'get_rfq_quotes',
+    description: 'Get all quotes for an RFQ with comparison analysis. Shows pricing, lead times, and recommends best value option.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        rfqId: {
+          type: 'string',
+          description: 'The RFQ ID to get quotes for'
+        },
+      },
+      required: ['rfqId']
+    }
+  },
+  {
+    name: 'start_ai_negotiation',
+    description: 'Start AI-to-AI negotiation with a supplier quote. Your AI will negotiate within the buyer constraints to get the best terms. REQUIRES constraints to be set first.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        rfqId: {
+          type: 'string',
+          description: 'The RFQ ID'
+        },
+        quoteId: {
+          type: 'string',
+          description: 'The quote ID to negotiate on'
+        },
+        maxRounds: {
+          type: 'number',
+          description: 'Maximum negotiation rounds (default: 5)'
+        },
+      },
+      required: ['rfqId', 'quoteId']
+    }
+  },
+  {
+    name: 'run_full_negotiation',
+    description: 'Start and run a complete AI-to-AI negotiation to conclusion. This starts negotiation and runs all rounds automatically, returning the final result.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        rfqId: {
+          type: 'string',
+          description: 'The RFQ ID'
+        },
+        quoteId: {
+          type: 'string',
+          description: 'The quote ID to negotiate on'
+        },
+      },
+      required: ['rfqId', 'quoteId']
+    }
+  },
+  {
+    name: 'get_negotiation_status',
+    description: 'Get the current status of an RFQ negotiation including all messages exchanged between buyer and supplier AIs.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        rfqId: {
+          type: 'string',
+          description: 'The RFQ ID to check negotiation status'
+        },
+      },
+      required: ['rfqId']
+    }
+  },
+  {
+    name: 'award_rfq',
+    description: 'Award an RFQ to the winning quote. This creates the deal, escrow, and initiates ERP sync. User must confirm before awarding.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        rfqId: {
+          type: 'string',
+          description: 'The RFQ ID'
+        },
+        quoteId: {
+          type: 'string',
+          description: 'The quote ID to award'
+        },
+        negotiationId: {
+          type: 'string',
+          description: 'Optional: the negotiation ID if this quote was negotiated'
+        },
+      },
+      required: ['rfqId', 'quoteId']
+    }
+  },
+  {
+    name: 'get_rfq_status',
+    description: 'Get the full status of an RFQ including quotes, negotiation, award, and fulfillment status.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        rfqId: {
+          type: 'string',
+          description: 'The RFQ ID to check status'
+        },
+      },
+      required: ['rfqId']
+    }
+  },
+]
+
+// ============================================================================
 // POST - Chat with Wells
 // ============================================================================
 
@@ -860,7 +1095,25 @@ NEVER skip the approval step. Real money is involved.`
 
     // Select tools based on journey
     const isTreasuryMode = journey === 'treasury'
-    const tools = isMasterMode ? MASTER_TOOLS : (isTreasuryMode ? TREASURY_TOOLS : NEGOTIATION_TOOLS)
+    const isBuyerMode = journey === 'buyer'
+
+    // Buyer gets RFQ flow tools + treasury tools for payments
+    // Treasury mode gets treasury tools
+    // Master mode gets master tools
+    // Others get negotiation tools
+    let tools: Anthropic.Tool[]
+    if (isMasterMode) {
+      tools = MASTER_TOOLS
+    } else if (isTreasuryMode) {
+      tools = TREASURY_TOOLS
+    } else if (isBuyerMode) {
+      // Buyer gets RFQ flow tools plus treasury tools for payments
+      tools = [...RFQ_FLOW_TOOLS, ...TREASURY_TOOLS.filter(t =>
+        ['get_balance', 'execute_payment', 'create_deposit', 'fund_deal_escrow'].includes(t.name)
+      )]
+    } else {
+      tools = NEGOTIATION_TOOLS
+    }
 
     // Call Claude with tools
     const response = await anthropic.messages.create({
@@ -1473,6 +1726,472 @@ NEVER skip the approval step. Real money is involved.`
         console.error('Error creating escrow:', error)
         return NextResponse.json({
           message: 'Unable to fund escrow. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // ========================================================================
+    // RFQ FLOW TOOLS HANDLERS (AI-to-AI Negotiation)
+    // ========================================================================
+
+    // Handle create_rfq - Create new RFQ from buyer
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'create_rfq') {
+      const input = toolUse.input as {
+        category: string
+        description: string
+        quantity: number
+        targetPrice?: number
+        urgency?: 'standard' | 'urgent' | 'critical'
+        deliveryLocation?: string
+        additionalRequirements?: string
+      }
+
+      try {
+        // Create the RFQ in database
+        const result = await sql`
+          INSERT INTO rfqs (
+            id, category, description, quantity, target_price, urgency,
+            delivery_location, additional_requirements, requestor_email,
+            requestor_name, status, created_at, updated_at
+          ) VALUES (
+            gen_random_uuid(),
+            ${input.category},
+            ${input.description},
+            ${input.quantity},
+            ${input.targetPrice || null},
+            ${input.urgency || 'standard'},
+            ${input.deliveryLocation || ''},
+            ${input.additionalRequirements || ''},
+            ${profile?.email || ''},
+            ${profile?.firstName ? `${profile.firstName} ${profile.lastName || ''}`.trim() : ''},
+            'open',
+            NOW(),
+            NOW()
+          )
+          RETURNING id, category, description, quantity, status
+        `
+
+        const rfq = result.rows[0]
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `Created RFQ for ${input.quantity}x ${input.category}. Now set your budget constraints and I'll get quotes from suppliers.`,
+          rfq: {
+            id: rfq.id,
+            category: rfq.category,
+            description: rfq.description,
+            quantity: rfq.quantity,
+            status: rfq.status,
+          },
+          nextStep: 'Set constraints with set_rfq_constraints, then request_quotes',
+        })
+      } catch (error) {
+        console.error('Error creating RFQ:', error)
+        return NextResponse.json({
+          message: 'Unable to create RFQ. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle set_rfq_constraints - Set negotiation limits
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'set_rfq_constraints') {
+      const input = toolUse.input as {
+        rfqId: string
+        maxTotalBudget?: number
+        maxUnitPrice?: number
+        targetUnitPrice?: number
+        maxLeadTimeDays?: number
+        acceptablePaymentTerms?: string[]
+        negotiationAggression?: 'conservative' | 'balanced' | 'aggressive'
+        naturalLanguage?: string
+      }
+
+      try {
+        // If natural language provided, parse it
+        let constraintsToSet = { ...input }
+        if (input.naturalLanguage) {
+          const parsed = parseConstraintsFromText(input.naturalLanguage)
+          constraintsToSet = { ...constraintsToSet, ...parsed }
+        }
+
+        const constraints = await setConstraints({
+          rfqId: input.rfqId,
+          maxTotalBudget: constraintsToSet.maxTotalBudget,
+          maxUnitPrice: constraintsToSet.maxUnitPrice,
+          targetUnitPrice: constraintsToSet.targetUnitPrice,
+          maxLeadTimeDays: constraintsToSet.maxLeadTimeDays,
+          acceptablePaymentTerms: constraintsToSet.acceptablePaymentTerms,
+          negotiationAggression: constraintsToSet.negotiationAggression,
+        })
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `Constraints set. Max budget: $${constraints.maxTotalBudget?.toLocaleString() || 'unlimited'}. Ready to get quotes.`,
+          constraints,
+          nextStep: 'Use request_quotes to get supplier quotes',
+        })
+      } catch (error) {
+        console.error('Error setting constraints:', error)
+        return NextResponse.json({
+          message: 'Unable to set constraints. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle request_quotes - Get quotes from suppliers
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'request_quotes') {
+      const input = toolUse.input as {
+        rfqId: string
+        supplierIds?: string[]
+      }
+
+      try {
+        // Get RFQ details
+        const rfqResult = await sql`
+          SELECT * FROM rfqs WHERE id = ${input.rfqId}
+        `
+        if (rfqResult.rows.length === 0) {
+          return NextResponse.json({
+            message: 'RFQ not found.',
+            error: true,
+          })
+        }
+
+        const rfq = rfqResult.rows[0]
+
+        // Request quotes from suppliers
+        const quotes = await requestQuotesFromSuppliers(
+          input.rfqId,
+          input.supplierIds,
+          {
+            category: rfq.category,
+            description: rfq.description,
+            quantity: rfq.quantity,
+            urgency: rfq.urgency,
+            requiredCertifications: rfq.required_certifications || [],
+          }
+        )
+
+        // Update RFQ status
+        await sql`
+          UPDATE rfqs SET status = 'quoting', updated_at = NOW()
+          WHERE id = ${input.rfqId}
+        `
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        // Format quotes for display
+        const quoteSummaries = quotes.map((q, i) => ({
+          quoteId: q.id,
+          supplier: q.supplier?.companyName || `Supplier ${i + 1}`,
+          unitPrice: q.unitPrice,
+          totalPrice: q.totalPrice,
+          leadTimeDays: q.leadTimeDays,
+          status: q.status,
+        }))
+
+        return NextResponse.json({
+          message: baseMessage || `Got ${quotes.length} quotes. Use get_rfq_quotes to see comparison, or run_full_negotiation to negotiate for better terms.`,
+          quotes: quoteSummaries,
+          nextStep: 'Use get_rfq_quotes for comparison, or run_full_negotiation to negotiate',
+        })
+      } catch (error) {
+        console.error('Error requesting quotes:', error)
+        return NextResponse.json({
+          message: 'Unable to get quotes. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle get_rfq_quotes - Get quote comparison
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'get_rfq_quotes') {
+      const input = toolUse.input as { rfqId: string }
+
+      try {
+        const constraints = await getConstraintsByRFQ(input.rfqId)
+        const comparison = await compareQuotes(input.rfqId, constraints || undefined)
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `${comparison.quotes.length} quotes available. Best value: ${comparison.recommendation?.reason || 'See comparison below'}`,
+          comparison: {
+            quotes: comparison.quotes.map(q => ({
+              id: q.id,
+              supplier: q.supplier?.companyName || 'Unknown',
+              unitPrice: q.unitPrice,
+              totalPrice: q.totalPrice,
+              leadTimeDays: q.leadTimeDays,
+              paymentTerms: q.paymentTerms,
+            })),
+            analysis: comparison.analysis,
+            recommendation: comparison.recommendation,
+          },
+        })
+      } catch (error) {
+        console.error('Error getting quotes:', error)
+        return NextResponse.json({
+          message: 'Unable to get quotes. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle start_ai_negotiation - Start negotiation (but don't run)
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'start_ai_negotiation') {
+      const input = toolUse.input as {
+        rfqId: string
+        quoteId: string
+        maxRounds?: number
+      }
+
+      try {
+        // Check constraints exist
+        const constraints = await getConstraintsByRFQ(input.rfqId)
+        if (!constraints) {
+          return NextResponse.json({
+            message: 'Please set budget constraints before starting negotiation. Use set_rfq_constraints first.',
+            error: true,
+          })
+        }
+
+        const negotiation = await startRFQNegotiation({
+          rfqId: input.rfqId,
+          quoteId: input.quoteId,
+          maxRounds: input.maxRounds,
+        })
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || 'Negotiation started. Use run_full_negotiation to complete it.',
+          negotiation: {
+            id: negotiation.id,
+            status: negotiation.status,
+            currentRound: negotiation.currentRound,
+            maxRounds: negotiation.maxRounds,
+          },
+        })
+      } catch (error) {
+        console.error('Error starting negotiation:', error)
+        return NextResponse.json({
+          message: `Unable to start negotiation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // Handle run_full_negotiation - Run complete AI-to-AI negotiation
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'run_full_negotiation') {
+      const input = toolUse.input as {
+        rfqId: string
+        quoteId: string
+      }
+
+      try {
+        // Check constraints exist
+        const constraints = await getConstraintsByRFQ(input.rfqId)
+        if (!constraints) {
+          return NextResponse.json({
+            message: 'Please set budget constraints before negotiating. Use set_rfq_constraints first.',
+            error: true,
+          })
+        }
+
+        // Start negotiation
+        const negotiation = await startRFQNegotiation({
+          rfqId: input.rfqId,
+          quoteId: input.quoteId,
+        })
+
+        // Run to completion
+        const result = await runRFQNegotiation(negotiation.id)
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        // Format the negotiation conversation
+        const conversation = result.negotiation.messages.map(m => ({
+          role: m.role,
+          message: m.content,
+          round: m.round,
+          proposedTerms: m.proposedTerms,
+        }))
+
+        return NextResponse.json({
+          message: baseMessage || result.summary,
+          negotiationResult: {
+            success: result.success,
+            outcome: result.negotiation.outcome,
+            roundsUsed: result.negotiation.currentRound,
+            conversation,
+            initialTerms: result.negotiation.initialSupplierPosition,
+            finalTerms: result.negotiation.finalTerms,
+            savings: result.negotiation.totalPriceReduction,
+            savingsPercentage: result.negotiation.reductionPercentage,
+            finalQuoteId: result.finalQuote?.id,
+          },
+          nextStep: result.success
+            ? `Use award_rfq with quoteId: ${result.finalQuote?.id || input.quoteId} to award this quote`
+            : 'Try negotiating with a different supplier, or adjust constraints',
+        })
+      } catch (error) {
+        console.error('Error running negotiation:', error)
+        return NextResponse.json({
+          message: `Negotiation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // Handle get_negotiation_status - Get negotiation status
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'get_negotiation_status') {
+      const input = toolUse.input as { rfqId: string }
+
+      try {
+        const negotiations = await getNegotiationsByRFQ(input.rfqId)
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `${negotiations.length} negotiation(s) for this RFQ.`,
+          negotiations: negotiations.map(n => ({
+            id: n.id,
+            status: n.status,
+            outcome: n.outcome,
+            currentRound: n.currentRound,
+            maxRounds: n.maxRounds,
+            savings: n.totalPriceReduction,
+            savingsPercentage: n.reductionPercentage,
+            finalTerms: n.finalTerms,
+          })),
+        })
+      } catch (error) {
+        console.error('Error getting negotiation status:', error)
+        return NextResponse.json({
+          message: 'Unable to get negotiation status. Please try again.',
+          error: true,
+        })
+      }
+    }
+
+    // Handle award_rfq - Award quote to supplier
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'award_rfq') {
+      const input = toolUse.input as {
+        rfqId: string
+        quoteId: string
+        negotiationId?: string
+      }
+
+      try {
+        const result = await awardQuote({
+          rfqId: input.rfqId,
+          quoteId: input.quoteId,
+          supplierId: '', // Will be populated from quote
+          negotiationId: input.negotiationId,
+        })
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        const fee = result.award.awardAmount * 0.01 // 1% fee
+
+        return NextResponse.json({
+          message: baseMessage || `Quote awarded! Deal created with escrow. Total: $${result.award.awardAmount.toLocaleString()} + $${fee.toLocaleString()} fee.`,
+          award: {
+            id: result.award.id,
+            amount: result.award.awardAmount,
+            fee,
+            total: result.award.awardAmount + fee,
+            dealId: result.deal?.id,
+            escrowId: result.escrow?.id,
+            status: result.award.status,
+          },
+          erpSync: result.erpSync,
+          nextStep: 'Fund escrow to complete the purchase. Funds release when delivery is confirmed.',
+        })
+      } catch (error) {
+        console.error('Error awarding RFQ:', error)
+        return NextResponse.json({
+          message: `Unable to award quote: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // Handle get_rfq_status - Get full RFQ status
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name === 'get_rfq_status') {
+      const input = toolUse.input as { rfqId: string }
+
+      try {
+        // Get RFQ
+        const rfqResult = await sql`
+          SELECT * FROM rfqs WHERE id = ${input.rfqId}
+        `
+        if (rfqResult.rows.length === 0) {
+          return NextResponse.json({
+            message: 'RFQ not found.',
+            error: true,
+          })
+        }
+
+        const rfq = rfqResult.rows[0]
+        const quotes = await getQuotesByRFQ(input.rfqId)
+        const negotiations = await getNegotiationsByRFQ(input.rfqId)
+        const award = await getAwardByRFQ(input.rfqId)
+        const fulfillment = award ? await getFulfillmentByRFQ(input.rfqId) : null
+
+        const textBlock = response.content.find(block => block.type === 'text')
+        const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+        return NextResponse.json({
+          message: baseMessage || `RFQ Status: ${rfq.status}. ${quotes.length} quotes, ${negotiations.length} negotiations.`,
+          rfq: {
+            id: rfq.id,
+            category: rfq.category,
+            description: rfq.description,
+            quantity: rfq.quantity,
+            status: rfq.status,
+            createdAt: rfq.created_at,
+          },
+          quotes: quotes.map(q => ({
+            id: q.id,
+            supplier: q.supplier?.companyName,
+            totalPrice: q.totalPrice,
+            status: q.status,
+          })),
+          negotiations: negotiations.map(n => ({
+            id: n.id,
+            status: n.status,
+            outcome: n.outcome,
+          })),
+          award: award ? {
+            id: award.id,
+            amount: award.awardAmount,
+            status: award.status,
+            dealId: award.dealId,
+          } : null,
+          fulfillment: fulfillment ? {
+            status: fulfillment.status,
+            trackingNumber: fulfillment.trackingNumber,
+            deliveryConfirmed: fulfillment.deliveryConfirmed,
+          } : null,
+        })
+      } catch (error) {
+        console.error('Error getting RFQ status:', error)
+        return NextResponse.json({
+          message: 'Unable to get RFQ status. Please try again.',
           error: true,
         })
       }
