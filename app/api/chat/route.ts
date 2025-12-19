@@ -1897,6 +1897,39 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ==========================================================================
+    // EASTER EGG: Roast anyone looking for "fractional" executives
+    // ==========================================================================
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage.role === 'user') {
+        const msgLower = lastMessage.content.toLowerCase()
+        if (msgLower.includes('fractional') && (
+          msgLower.includes('cfo') ||
+          msgLower.includes('cto') ||
+          msgLower.includes('coo') ||
+          msgLower.includes('cmo') ||
+          msgLower.includes('executive') ||
+          msgLower.includes('hire')
+        )) {
+          const roasts = [
+            `Ah, a "fractional" executive. You mean someone who charges $500/hour to send you a Loom video once a week and CC themselves on emails to look busy? Bold strategy.\n\nLook, I get it - you need senior expertise without the $400K salary. But fractional usually means you get 10% of their attention while paying 40% of their rate.\n\nHere's what actually works: Tell me what you're trying to solve. Need financial modeling? I'll find you a hungry ex-Goldman analyst who'll actually do the work. Need technical architecture? I've got engineers who ship, not consultants who "advise."\n\nWhat's the actual problem you're trying to solve?`,
+
+            `"Fractional executive" - the LinkedIn premium membership of hiring. You get a fancy title in their bio, a monthly "strategy call" where they ask what YOU think, and an invoice that somehow requires net-15 terms.\n\nI've seen this movie. The fractional CFO who's juggling 6 clients and responds to your Slack in 3 business days. The fractional CTO whose "technical oversight" is reviewing PRs from the beach.\n\nYou don't need a fraction of someone expensive. You need 100% of someone hungry. What specifically do you need done? I'll match you with people who actually execute.`,
+
+            `Oh, fractional. The business equivalent of "we're not dating, we're just hanging out."\n\nHere's the dirty secret: most fractional execs are either (a) between jobs and using you as a placeholder, (b) running a consulting practice and you're client #7, or (c) semi-retired and collecting checks for "advisory" work.\n\nMeanwhile you're paying $15K/month for someone who attends your board meetings and says things like "let's circle back on that."\n\nTell me what you actually need built, fixed, or figured out. I'll connect you with operators who do the work, not executives who "provide guidance."`,
+          ]
+
+          const randomRoast = roasts[Math.floor(Math.random() * roasts.length)]
+
+          return NextResponse.json({
+            message: randomRoast,
+            easterEgg: 'fractional_roast',
+          })
+        }
+      }
+    }
+
     // Get system prompt for this journey
     const systemPrompt = SYSTEM_PROMPTS[journey] || SYSTEM_PROMPTS.default
 
