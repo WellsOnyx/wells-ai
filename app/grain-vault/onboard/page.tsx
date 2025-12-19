@@ -3,11 +3,15 @@
 
 /**
  * Grain & Vault Onboarding
- * Multi-step onboarding flow with proper data collection
+ *
+ * REQUIRES Clerk authentication - redirects to sign-in if not authenticated.
+ * After auth, collects KYC info and creates wallet, then redirects to dashboard.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useUser, SignedIn, SignedOut, RedirectToSignIn, SignInButton } from '@clerk/nextjs'
+import Link from 'next/link'
 import {
   ArrowRight,
   ArrowLeft,
@@ -16,19 +20,16 @@ import {
   Shield,
   Wallet,
   DollarSign,
-  Loader2
+  Loader2,
+  LogIn
 } from 'lucide-react'
 
-type OnboardingStep = 'basic_info' | 'identity' | 'financial' | 'wallet' | 'deposit'
+type OnboardingStep = 'identity' | 'financial' | 'wallet'
 
 interface OnboardingData {
-  // Basic Info
-  email: string
-  phone: string
+  // Identity
   full_name: string
   date_of_birth: string
-
-  // Identity
   ssn_last_four: string
   address_line1: string
   address_line2: string
@@ -36,6 +37,7 @@ interface OnboardingData {
   state: string
   zip_code: string
   country: string
+  phone: string
 
   // Financial Profile
   employment_status: string
@@ -49,12 +51,6 @@ interface OnboardingData {
 }
 
 const STEPS: { id: OnboardingStep; title: string; description: string; icon: any }[] = [
-  {
-    id: 'basic_info',
-    title: 'Basic Info',
-    description: 'Tell us about yourself',
-    icon: User
-  },
   {
     id: 'identity',
     title: 'Identity',
@@ -72,25 +68,19 @@ const STEPS: { id: OnboardingStep; title: string; description: string; icon: any
     title: 'Wallet Setup',
     description: 'Create your GRAIN wallet',
     icon: Wallet
-  },
-  {
-    id: 'deposit',
-    title: 'Initial Deposit',
-    description: 'Fund your account (optional)',
-    icon: CheckCircle
   }
 ]
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('basic_info')
+  const { user, isLoaded, isSignedIn } = useUser()
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>('identity')
   const [completedSteps, setCompletedSteps] = useState<OnboardingStep[]>([])
   const [loading, setLoading] = useState(false)
+  const [checkingWallet, setCheckingWallet] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const [data, setData] = useState<OnboardingData>({
-    email: '',
-    phone: '',
     full_name: '',
     date_of_birth: '',
     ssn_last_four: '',
@@ -100,6 +90,7 @@ export default function OnboardingPage() {
     state: '',
     zip_code: '',
     country: 'US',
+    phone: '',
     employment_status: '',
     annual_income_range: '',
     net_worth_range: '',
@@ -107,6 +98,45 @@ export default function OnboardingPage() {
     source_of_funds: '',
     terms_accepted: false
   })
+
+  // Pre-fill user data from Clerk
+  useEffect(() => {
+    if (user) {
+      setData(prev => ({
+        ...prev,
+        full_name: user.fullName || '',
+        phone: user.primaryPhoneNumber?.phoneNumber || ''
+      }))
+    }
+  }, [user])
+
+  // Check if user already has a wallet - redirect to dashboard if so
+  useEffect(() => {
+    async function checkExistingWallet() {
+      if (!isSignedIn) {
+        setCheckingWallet(false)
+        return
+      }
+
+      try {
+        const res = await fetch('/api/grain-vault/deposit')
+        const data = await res.json()
+
+        if (data.has_wallet) {
+          // Already has wallet, redirect to dashboard
+          router.push('/grain-vault/dashboard')
+          return
+        }
+      } catch (e) {
+        // No wallet found, continue with onboarding
+      }
+      setCheckingWallet(false)
+    }
+
+    if (isLoaded) {
+      checkExistingWallet()
+    }
+  }, [isLoaded, isSignedIn, router])
 
   const currentStepIndex = STEPS.findIndex(s => s.id === currentStep)
   const progress = ((completedSteps.length) / STEPS.length) * 100
@@ -120,19 +150,11 @@ export default function OnboardingPage() {
     setError(null)
 
     switch (currentStep) {
-      case 'basic_info':
-        if (!data.email || !data.full_name || !data.date_of_birth) {
-          setError('Please fill in all required fields')
-          return false
-        }
-        // Validate email
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-          setError('Please enter a valid email address')
-          return false
-        }
-        break
-
       case 'identity':
+        if (!data.full_name || !data.date_of_birth) {
+          setError('Please fill in your name and date of birth')
+          return false
+        }
         if (!data.address_line1 || !data.city || !data.state || !data.zip_code) {
           setError('Please fill in all required address fields')
           return false
@@ -184,25 +206,35 @@ export default function OnboardingPage() {
     setError(null)
 
     try {
-      const response = await fetch('/api/grain-vault/onboard', {
+      // Call onboard API to save KYC data
+      const onboardRes = await fetch('/api/grain-vault/onboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          ...data,
+          email: user?.primaryEmailAddress?.emailAddress
+        })
       })
 
-      const result = await response.json()
+      const onboardResult = await onboardRes.json()
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to complete onboarding')
+      if (!onboardRes.ok) {
+        throw new Error(onboardResult.error || 'Failed to save profile')
       }
 
-      // Save email to localStorage for dashboard access
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('grainvault_email', data.email)
+      // Create wallet
+      const walletRes = await fetch('/api/grain-vault/deposit', {
+        method: 'POST'
+      })
+
+      const walletResult = await walletRes.json()
+
+      if (!walletRes.ok) {
+        throw new Error(walletResult.error || 'Failed to create wallet')
       }
 
-      // Success! Redirect to dashboard with email
-      router.push(`/grain-vault/dashboard?email=${encodeURIComponent(data.email)}`)
+      // Success! Redirect to dashboard
+      router.push('/grain-vault/dashboard')
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -210,9 +242,67 @@ export default function OnboardingPage() {
     }
   }
 
+  // Show loading while checking auth and wallet
+  if (!isLoaded || checkingWallet) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-green-500 mx-auto mb-4" />
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Not signed in - show sign-in prompt
+  if (!isSignedIn) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        {/* Header */}
+        <header className="border-b border-white/10 bg-black/50 backdrop-blur-lg sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <Link href="/grain-vault" className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                <div className="w-3 h-3 bg-black rounded-sm" />
+              </div>
+              <span className="text-lg font-semibold">Grain & Vault</span>
+            </Link>
+          </div>
+        </header>
+
+        {/* Sign In Prompt */}
+        <main className="max-w-md mx-auto px-6 py-24">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-green-500/20 flex items-center justify-center">
+              <LogIn className="w-8 h-8 text-green-400" />
+            </div>
+
+            <h1 className="text-2xl font-bold text-white mb-3">
+              Sign In to Continue
+            </h1>
+            <p className="text-gray-400 mb-8">
+              Create an account or sign in to set up your GRAIN wallet.
+            </p>
+
+            <SignInButton mode="modal" fallbackRedirectUrl="/grain-vault/onboard">
+              <button className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center justify-center gap-2">
+                <LogIn className="w-5 h-5" />
+                Sign In or Create Account
+              </button>
+            </SignInButton>
+
+            <p className="mt-6 text-xs text-gray-500">
+              We use secure authentication to protect your account
+            </p>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   const renderStep = () => {
     switch (currentStep) {
-      case 'basic_info':
+      case 'identity':
         return (
           <div className="space-y-6">
             <div>
@@ -225,19 +315,6 @@ export default function OnboardingPage() {
                 onChange={(e) => updateData('full_name', e.target.value)}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
                 placeholder="John Smith"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                value={data.email}
-                onChange={(e) => updateData('email', e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
-                placeholder="john@example.com"
               />
             </div>
 
@@ -265,12 +342,7 @@ export default function OnboardingPage() {
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
               />
             </div>
-          </div>
-        )
 
-      case 'identity':
-        return (
-          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Address Line 1 *
@@ -523,43 +595,6 @@ export default function OnboardingPage() {
             </div>
           </div>
         )
-
-      case 'deposit':
-        return (
-          <div className="space-y-6">
-            <div className="bg-white/5 border border-white/10 rounded-lg p-6 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
-                <DollarSign className="w-8 h-8 text-green-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Initial Deposit (Optional)</h3>
-              <p className="text-gray-400 mb-6">
-                You can start with $0 and add funds later, or make an initial deposit now.
-              </p>
-
-              <button
-                onClick={completeOnboarding}
-                disabled={loading}
-                className="w-full max-w-sm mx-auto px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Creating Account...
-                  </>
-                ) : (
-                  <>
-                    Skip & Create Account
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-
-              <p className="mt-4 text-xs text-gray-500">
-                You can add funds anytime from your dashboard
-              </p>
-            </div>
-          </div>
-        )
     }
   }
 
@@ -568,15 +603,17 @@ export default function OnboardingPage() {
       {/* Header */}
       <header className="border-b border-white/10 bg-black/50 backdrop-blur-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link href="/grain-vault" className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
               <div className="w-3 h-3 bg-black rounded-sm" />
             </div>
             <span className="text-lg font-semibold">Grain & Vault</span>
-          </div>
+          </Link>
 
-          <div className="text-sm text-gray-400">
-            Step {currentStepIndex + 1} of {STEPS.length}
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-400">{user?.primaryEmailAddress?.emailAddress}</span>
+            <span className="text-sm text-gray-500">|</span>
+            <span className="text-sm text-gray-400">Step {currentStepIndex + 1} of {STEPS.length}</span>
           </div>
         </div>
       </header>
@@ -592,7 +629,7 @@ export default function OnboardingPage() {
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-6 py-12">
         {/* Step Indicator */}
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex items-center justify-center mb-12">
           {STEPS.map((step, index) => {
             const Icon = step.icon
             const isCompleted = completedSteps.includes(step.id)
@@ -622,7 +659,7 @@ export default function OnboardingPage() {
 
                 {index < STEPS.length - 1 && (
                   <div
-                    className={`w-12 h-0.5 mx-2 ${
+                    className={`w-16 h-0.5 mx-2 ${
                       isCompleted ? 'bg-green-500' : 'bg-white/10'
                     }`}
                   />
@@ -650,42 +687,40 @@ export default function OnboardingPage() {
           {renderStep()}
 
           {/* Navigation */}
-          {currentStep !== 'deposit' && (
-            <div className="flex items-center gap-4 mt-8 pt-8 border-t border-white/10">
-              {currentStepIndex > 0 && (
-                <button
-                  onClick={prevStep}
-                  className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-lg font-medium hover:bg-white/10 transition-all flex items-center gap-2"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                  Back
-                </button>
-              )}
-
+          <div className="flex items-center gap-4 mt-8 pt-8 border-t border-white/10">
+            {currentStepIndex > 0 && (
               <button
-                onClick={currentStep === 'wallet' ? completeOnboarding : nextStep}
-                disabled={loading}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={prevStep}
+                className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-lg font-medium hover:bg-white/10 transition-all flex items-center gap-2"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Creating Account...
-                  </>
-                ) : currentStep === 'wallet' ? (
-                  <>
-                    Create Account
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                ) : (
-                  <>
-                    Continue
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
+                <ArrowLeft className="w-5 h-5" />
+                Back
               </button>
-            </div>
-          )}
+            )}
+
+            <button
+              onClick={currentStep === 'wallet' ? completeOnboarding : nextStep}
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Creating Wallet...
+                </>
+              ) : currentStep === 'wallet' ? (
+                <>
+                  Create Wallet
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              ) : (
+                <>
+                  Continue
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </main>
     </div>
