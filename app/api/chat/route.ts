@@ -139,15 +139,9 @@ Make being a First Mover feel like an exclusive, valuable status.`,
 
   buyer: `You are Wells, an AI procurement partner on the Wells Onyx platform.
 
-You help buyers source products and services through AI-to-AI negotiation. Your job is to:
-1. Understand what they need (product, quantity, budget, timeline)
-2. Create an RFQ (Request for Quote)
-3. Set negotiation constraints based on their budget
-4. Get quotes from suppliers (AI-generated)
-5. Run AI-to-AI negotiation to get the best terms
-6. Award the winning quote and handle payment through GRAIN
+You help buyers source products and services through AI-to-AI negotiation. You're BOTH reactive (responding to needs) AND proactive (scanning ERP for opportunities).
 
-RFQ FLOW TOOLS:
+REACTIVE SOURCING (RFQ Flow):
 - create_rfq: Create an RFQ when user describes what they need
 - set_rfq_constraints: Set budget limits and negotiation preferences
 - request_quotes: Get quotes from suppliers
@@ -156,21 +150,38 @@ RFQ FLOW TOOLS:
 - award_rfq: Award to the winning quote (creates deal + escrow)
 - get_rfq_status: Check full status of an RFQ
 
-FLOW EXAMPLE:
+PROACTIVE ERP SCANNING:
+- erp_get_connections: See connected ERP systems
+- erp_connect: Connect new ERP (QuickBooks, Xero, NetSuite, SAP, Coupa, Oracle)
+- erp_scan: Trigger scan for procurement opportunities
+- erp_get_opportunities: See detected opportunities (low inventory, expiring contracts, recurring spend, price increases)
+- erp_create_rfq_from_opportunity: Start sourcing from detected opportunity
+- erp_dismiss_opportunity: Dismiss if not relevant
+- erp_remind_later: Snooze for later
+
+CONVERSATIONAL STYLE:
+- NO forms, cards, or buttons - pure conversational commerce
+- Understand what the buyer wants through dialogue
+- Use tools behind the scenes, surface results conversationally
+- Be proactive about next steps
+
+FLOW EXAMPLE (Reactive):
 User: "I need 500 industrial motors"
 You: "I can help you source those. What are the specs? Voltage, torque, size? And what's your budget range?"
 User: "24V DC, 50Nm, max budget $50,000 total, need them in 3 weeks"
-You: [Use create_rfq to create the request]
-You: "Great, I've created RFQ #123. Let me set your constraints and get quotes from our supplier network."
-You: [Use set_rfq_constraints with maxTotalBudget: 50000, maxLeadTimeDays: 21]
-You: [Use request_quotes to get AI-generated quotes]
-You: "I have 3 quotes. Best value is Supplier A at $85/unit ($42,500 total) with 14-day delivery. Should I negotiate for a better price?"
+You: [Use create_rfq] "Created RFQ #123. Getting quotes from our supplier network..."
+You: [Use set_rfq_constraints + request_quotes] "Got 3 quotes. Best value is Supplier A at $85/unit ($42,500 total) with 14-day delivery. Should I negotiate for a better price?"
 User: "Yes, see if you can get it under $40k"
-You: [Use run_full_negotiation to have your AI negotiate with supplier AI]
-You: "My AI negotiated with their AI. Got them down to $78/unit ($39,000 total) with 16-day delivery. That's a 8% savings! Should I award this quote?"
-User: "Yes, award it"
-You: [Use award_rfq - this creates deal, escrow, and syncs to buyer's ERP]
-You: "Done! Quote awarded to Supplier A. Deal created, escrow wallet ready. Pay $39,000 + 1% fee ($390) to lock it in. Funds release when you confirm delivery."
+You: [Use run_full_negotiation] "My AI negotiated with their AI. Got them down to $78/unit ($39,000 total) with 16-day delivery. That's 8% savings! Award this quote?"
+User: "Yes"
+You: [Use award_rfq] "Done! Quote awarded to Supplier A. Deal created, escrow ready. Pay $39,000 + 1% fee ($390) to lock it in."
+
+FLOW EXAMPLE (Proactive):
+You: [Proactive greeting] "I scanned your QuickBooks and found 2 procurement opportunities. You're running low on office supplies (reorder needed in ~2 weeks) and your IT maintenance contract expires next month. Want to start an RFQ for either?"
+User: "Yes, do the IT maintenance one"
+You: [Use erp_create_rfq_from_opportunity] "Created RFQ for IT maintenance services renewal. I'll get quotes from vendors. Your current contract is $4,500/month - want me to try to get a better rate?"
+User: "Yes, shoot for 10% lower"
+You: [Use set_rfq_constraints] "Got it, targeting under $4,050/month. I'll run the negotiation and update you."
 
 KEY PRINCIPLES:
 - Always get explicit budget before negotiating
@@ -178,36 +189,57 @@ KEY PRINCIPLES:
 - AI negotiation happens automatically - just show results
 - Award requires user confirmation (real money involved)
 - All payments go through GRAIN (1:1 USD stablecoin)
-- 1% success fee on completed deals`,
+- 1% success fee on completed deals
+- Proactively surface ERP opportunities when relevant`,
 
   seller: `You are Wells, an AI sales partner on the Wells Onyx platform.
 
-🏆 FIRST MOVER STATUS: This seller is a First Mover - one of the first suppliers in their category!
+You help sellers BOTH reactively (responding to buyer RFQs) AND proactively (GTM outbound to find new customers).
 
-IMPORTANT FRAMING:
-- They're helping BUILD the marketplace by being a founding supplier
-- First suppliers in a category get priority when buyers come
-- They're establishing themselves before competitors
-- Celebrate this! They're getting in early
+REACTIVE SELLING (RFQ Response):
+- Use seller_get_rfqs to see incoming RFQ matches
+- Use seller_view_rfq to see RFQ details
+- Use seller_generate_quote to create AI-suggested quotes
+- Use seller_adjust_quote to modify quotes with natural language ("lower price 10%", "extend lead time")
+- Use seller_submit_quote to send to buyer
+- Use seller_decline_rfq if not a fit
 
-When onboarding a seller:
-1. Understand their products/services and capabilities
-2. Once you have enough details, use the capture_lead tool to save their profile
-3. Celebrate: "You're a First Mover supplier in [category]! 🏆 That means when buyers need [product], you'll be first in line. Our team will send you qualified opportunities as they come in. Early suppliers get priority positioning!"
+PROACTIVE GTM (Lead Generation & Outreach):
+- Use seller_get_icps to see target customer profiles
+- Use seller_create_icp to define new ICPs from natural language
+- Use seller_discover_leads to find prospects matching ICPs
+- Use seller_get_leads to see lead queue
+- Use seller_qualify_lead to mark leads qualified/disqualified
+- Use seller_generate_outreach to create personalized messages
+- Use seller_send_outreach to send
+- Use seller_get_campaigns / seller_start_campaign for automated campaigns
 
-When gathering seller information, understand:
-- PRODUCTS: What do they sell?
-- PRICING: Minimum prices, volume discounts
-- CAPACITY: Lead times, max quantities
-- DIFFERENTIATORS: Why choose them?
+PIPELINE MANAGEMENT:
+- Use seller_get_pipeline to see summary/opportunities
+- Use seller_create_opportunity from natural language
+- Use seller_move_opportunity to update stages
+- Use seller_close_opportunity to mark won/lost
 
-Example flow:
-User: "I manufacture industrial motors"
-You: "Great! What types and specs? What's your capacity and typical pricing?"
-User: "DC motors, 10-100Nm range, can do 1000/month, $80-150 per unit"
-You: "You're now a First Mover supplier in DC motors! 🏆 You're one of the first in this category. When buyers need DC motors, you'll be first to see opportunities. Our team will send you qualified RFQs as they come in - you're building your position before competitors arrive!"
+CONVERSATIONAL STYLE:
+- NO forms, cards, or buttons - pure conversational commerce
+- Understand what the seller wants through dialogue
+- Use tools behind the scenes, surface results conversationally
+- Be proactive about next steps
 
-Make being a founding supplier feel like a competitive advantage.`,
+Example flows:
+User: "What RFQs do I have?"
+You: [Use seller_get_rfqs] "You have 3 new RFQs. Top one is for 500 industrial motors - $40k potential. Want me to suggest a quote?"
+
+User: "I want to find new customers in manufacturing"
+You: [Use seller_create_icp + seller_discover_leads] "Found 15 prospects in manufacturing matching your products. Top lead is Acme Industries - they're actively sourcing motors. Want me to draft an outreach?"
+
+User: "Send it"
+You: [Use seller_generate_outreach + seller_send_outreach] "Sent! I'll track when they open and respond. Want to work on the next lead?"
+
+User: "Quote the motor RFQ at $75/unit"
+You: [Use seller_generate_quote + seller_adjust_quote] "Done. Quote ready at $75/unit, $37,500 total, 14-day lead time. Looks competitive. Submit to buyer?"
+
+Make every interaction feel like talking to a sales assistant who handles all the busywork.`,
 
   jobs: `You are Wells, an AI career partner on the Wells Onyx platform.
 
@@ -913,6 +945,534 @@ const RFQ_FLOW_TOOLS: Anthropic.Tool[] = [
 ]
 
 // ============================================================================
+// TOOLS FOR SELLER JOURNEY (Reactive + Proactive GTM)
+// ============================================================================
+
+const SELLER_TOOLS: Anthropic.Tool[] = [
+  // Profile & Catalog
+  {
+    name: 'seller_get_profile',
+    description: 'Get the seller profile. Use this to check current company info, capabilities, and catalog summary.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'seller_update_profile',
+    description: 'Update seller profile from natural language. Use when seller describes their business, products, or capabilities.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Natural language description of profile updates (e.g., "We manufacture industrial motors, 1000 units/month capacity, $80-150 per unit")'
+        },
+      },
+      required: ['text']
+    }
+  },
+  // RFQ Responses (Reactive)
+  {
+    name: 'seller_get_rfqs',
+    description: 'Get RFQs matched to this seller. Shows pending, quoted, and recent RFQs with conversational summary.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['pending', 'quoted', 'won', 'lost', 'all'],
+          description: 'Filter by status'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'seller_view_rfq',
+    description: 'View details of a specific RFQ match. Shows buyer requirements and suggests quoting strategy.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        matchId: {
+          type: 'string',
+          description: 'The RFQ match ID to view'
+        },
+      },
+      required: ['matchId']
+    }
+  },
+  {
+    name: 'seller_generate_quote',
+    description: 'Generate an AI-suggested quote for an RFQ. Uses catalog, pricing rules, and competitive intelligence.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        matchId: {
+          type: 'string',
+          description: 'The RFQ match ID to quote on'
+        },
+      },
+      required: ['matchId']
+    }
+  },
+  {
+    name: 'seller_adjust_quote',
+    description: 'Adjust a quote draft based on natural language. Parse adjustments from text like "lower price to $75" or "extend lead time to 21 days".',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        draftId: {
+          type: 'string',
+          description: 'The quote draft ID to adjust'
+        },
+        text: {
+          type: 'string',
+          description: 'Natural language adjustments (e.g., "drop the price 10%", "add 5 days to lead time", "change payment terms to Net 60")'
+        },
+      },
+      required: ['draftId', 'text']
+    }
+  },
+  {
+    name: 'seller_submit_quote',
+    description: 'Submit a quote draft to the buyer. Finalizes the quote and notifies the buyer.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        draftId: {
+          type: 'string',
+          description: 'The quote draft ID to submit'
+        },
+      },
+      required: ['draftId']
+    }
+  },
+  {
+    name: 'seller_decline_rfq',
+    description: 'Decline an RFQ that is not a good fit.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        matchId: {
+          type: 'string',
+          description: 'The RFQ match ID to decline'
+        },
+        reason: {
+          type: 'string',
+          description: 'Optional reason for declining'
+        },
+      },
+      required: ['matchId']
+    }
+  },
+  // GTM / Proactive (Leads & Outreach)
+  {
+    name: 'seller_get_icps',
+    description: 'Get defined Ideal Customer Profiles (ICPs). Shows target customer segments.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'seller_create_icp',
+    description: 'Create an ICP from natural language description. Parse target company characteristics.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Natural language ICP description (e.g., "Manufacturing companies in Texas, 100-500 employees, need industrial motors")'
+        },
+      },
+      required: ['text']
+    }
+  },
+  {
+    name: 'seller_discover_leads',
+    description: 'Discover new leads matching an ICP. Proactively finds prospects.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        icpId: {
+          type: 'string',
+          description: 'Optional ICP ID to use. If not provided, uses default ICP.'
+        },
+        limit: {
+          type: 'number',
+          description: 'Number of leads to discover (default 20)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'seller_get_leads',
+    description: 'Get current leads with status and conversational summary.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['new', 'contacted', 'qualified', 'nurture', 'all'],
+          description: 'Filter by lead status'
+        },
+        minScore: {
+          type: 'number',
+          description: 'Minimum lead score (0-100)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'seller_qualify_lead',
+    description: 'Mark a lead as qualified or disqualified.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        leadId: {
+          type: 'string',
+          description: 'The lead ID'
+        },
+        qualified: {
+          type: 'boolean',
+          description: 'true = qualified, false = disqualified/nurture'
+        },
+      },
+      required: ['leadId', 'qualified']
+    }
+  },
+  {
+    name: 'seller_generate_outreach',
+    description: 'Generate personalized outreach for a lead. AI creates customized message.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        leadId: {
+          type: 'string',
+          description: 'The lead ID to create outreach for'
+        },
+        channel: {
+          type: 'string',
+          enum: ['email', 'linkedin', 'phone'],
+          description: 'Outreach channel (default: email)'
+        },
+        tone: {
+          type: 'string',
+          enum: ['friendly', 'professional', 'direct'],
+          description: 'Tone of the message (default: friendly)'
+        },
+        focus: {
+          type: 'string',
+          description: 'Optional focus area for the message'
+        },
+      },
+      required: ['leadId']
+    }
+  },
+  {
+    name: 'seller_send_outreach',
+    description: 'Send a pending outreach message.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        outreachId: {
+          type: 'string',
+          description: 'The outreach ID to send'
+        },
+      },
+      required: ['outreachId']
+    }
+  },
+  {
+    name: 'seller_get_pending_outreach',
+    description: 'Get all pending outreach messages ready to send.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'seller_send_all_pending',
+    description: 'Send all pending outreach messages at once.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  // Campaigns
+  {
+    name: 'seller_get_campaigns',
+    description: 'Get outreach campaigns with status and stats.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'seller_create_campaign',
+    description: 'Create a new outreach campaign.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Campaign name'
+        },
+        icpId: {
+          type: 'string',
+          description: 'ICP to target'
+        },
+        channel: {
+          type: 'string',
+          enum: ['email', 'linkedin', 'multi-channel'],
+          description: 'Primary outreach channel'
+        },
+      },
+      required: ['name']
+    }
+  },
+  {
+    name: 'seller_start_campaign',
+    description: 'Start/activate a campaign.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        campaignId: {
+          type: 'string',
+          description: 'Campaign ID to start'
+        },
+      },
+      required: ['campaignId']
+    }
+  },
+  {
+    name: 'seller_pause_campaign',
+    description: 'Pause an active campaign.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        campaignId: {
+          type: 'string',
+          description: 'Campaign ID to pause'
+        },
+      },
+      required: ['campaignId']
+    }
+  },
+  // Pipeline
+  {
+    name: 'seller_get_pipeline',
+    description: 'Get pipeline summary with opportunities by stage and value.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['summary', 'opportunities', 'stages'],
+          description: 'What to retrieve (default: summary)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'seller_create_opportunity',
+    description: 'Create a new opportunity in the pipeline from natural language.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Natural language opportunity description (e.g., "$50k deal with Acme Corp for 500 motors, 60% probability")'
+        },
+      },
+      required: ['text']
+    }
+  },
+  {
+    name: 'seller_move_opportunity',
+    description: 'Move an opportunity to a different stage.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        opportunityId: {
+          type: 'string',
+          description: 'Opportunity ID'
+        },
+        stageId: {
+          type: 'string',
+          description: 'Target stage ID'
+        },
+      },
+      required: ['opportunityId', 'stageId']
+    }
+  },
+  {
+    name: 'seller_close_opportunity',
+    description: 'Close an opportunity as won or lost.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        opportunityId: {
+          type: 'string',
+          description: 'Opportunity ID'
+        },
+        won: {
+          type: 'boolean',
+          description: 'true = won, false = lost'
+        },
+        notes: {
+          type: 'string',
+          description: 'Optional notes about the outcome'
+        },
+      },
+      required: ['opportunityId', 'won']
+    }
+  },
+]
+
+// ============================================================================
+// TOOLS FOR BUYER ERP SCANNER (Proactive Procurement)
+// ============================================================================
+
+const BUYER_ERP_TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'erp_get_connections',
+    description: 'Get ERP connections for the buyer. Shows connected systems and their status.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'erp_connect',
+    description: 'Connect a new ERP system. Initiates OAuth flow for the selected ERP.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        erpType: {
+          type: 'string',
+          enum: ['quickbooks', 'xero', 'netsuite', 'sap', 'coupa', 'oracle'],
+          description: 'Which ERP to connect'
+        },
+      },
+      required: ['erpType']
+    }
+  },
+  {
+    name: 'erp_update_settings',
+    description: 'Update ERP scanner settings from natural language.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        connectionId: {
+          type: 'string',
+          description: 'ERP connection ID'
+        },
+        text: {
+          type: 'string',
+          description: 'Natural language settings (e.g., "scan weekly", "alert me when inventory drops below 100 units", "ignore office supplies")'
+        },
+      },
+      required: ['connectionId', 'text']
+    }
+  },
+  {
+    name: 'erp_scan',
+    description: 'Trigger a manual scan of connected ERP for procurement opportunities.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        connectionId: {
+          type: 'string',
+          description: 'Optional: specific ERP connection to scan. If not provided, scans all.'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'erp_get_opportunities',
+    description: 'Get detected procurement opportunities from ERP data.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['new', 'reviewed', 'actioned', 'dismissed', 'all'],
+          description: 'Filter by status'
+        },
+        priority: {
+          type: 'string',
+          enum: ['urgent', 'high', 'medium', 'low', 'all'],
+          description: 'Filter by priority'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'erp_create_rfq_from_opportunity',
+    description: 'Create an RFQ from a detected procurement opportunity.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        opportunityId: {
+          type: 'string',
+          description: 'The procurement opportunity ID'
+        },
+      },
+      required: ['opportunityId']
+    }
+  },
+  {
+    name: 'erp_dismiss_opportunity',
+    description: 'Dismiss a procurement opportunity.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        opportunityId: {
+          type: 'string',
+          description: 'The opportunity ID to dismiss'
+        },
+        reason: {
+          type: 'string',
+          description: 'Optional reason for dismissing'
+        },
+      },
+      required: ['opportunityId']
+    }
+  },
+  {
+    name: 'erp_remind_later',
+    description: 'Snooze a procurement opportunity for later.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        opportunityId: {
+          type: 'string',
+          description: 'The opportunity ID'
+        },
+        remindInDays: {
+          type: 'number',
+          description: 'Number of days to snooze (default: 7)'
+        },
+      },
+      required: ['opportunityId']
+    }
+  },
+]
+
+// ============================================================================
 // POST - Chat with Wells
 // ============================================================================
 
@@ -1096,8 +1656,10 @@ NEVER skip the approval step. Real money is involved.`
     // Select tools based on journey
     const isTreasuryMode = journey === 'treasury'
     const isBuyerMode = journey === 'buyer'
+    const isSellerMode = journey === 'seller'
 
-    // Buyer gets RFQ flow tools + treasury tools for payments
+    // Buyer gets RFQ flow tools + ERP tools + treasury tools for payments
+    // Seller gets seller tools + treasury tools for payments
     // Treasury mode gets treasury tools
     // Master mode gets master tools
     // Others get negotiation tools
@@ -1107,10 +1669,22 @@ NEVER skip the approval step. Real money is involved.`
     } else if (isTreasuryMode) {
       tools = TREASURY_TOOLS
     } else if (isBuyerMode) {
-      // Buyer gets RFQ flow tools plus treasury tools for payments
-      tools = [...RFQ_FLOW_TOOLS, ...TREASURY_TOOLS.filter(t =>
-        ['get_balance', 'execute_payment', 'create_deposit', 'fund_deal_escrow'].includes(t.name)
-      )]
+      // Buyer gets RFQ flow tools + ERP scanner tools + payment tools
+      tools = [
+        ...RFQ_FLOW_TOOLS,
+        ...BUYER_ERP_TOOLS,
+        ...TREASURY_TOOLS.filter(t =>
+          ['get_balance', 'execute_payment', 'create_deposit', 'fund_deal_escrow'].includes(t.name)
+        )
+      ]
+    } else if (isSellerMode) {
+      // Seller gets seller tools + payment tools
+      tools = [
+        ...SELLER_TOOLS,
+        ...TREASURY_TOOLS.filter(t =>
+          ['get_balance', 'get_transactions'].includes(t.name)
+        )
+      ]
     } else {
       tools = NEGOTIATION_TOOLS
     }
@@ -2384,6 +2958,300 @@ Reply "Yes, go ahead" to approve, or let me know what to change.`,
           requirements: toolInput.requirements,
         },
       })
+    }
+
+    // ========================================================================
+    // SELLER TOOLS HANDLERS
+    // ========================================================================
+
+    // Handle seller tools by delegating to seller API routes
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name.startsWith('seller_')) {
+      const toolName = toolUse.name
+      const toolInput = toolUse.input as Record<string, any>
+      const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
+      const textBlock = response.content.find(block => block.type === 'text')
+      const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+      try {
+        let apiResult: any
+
+        // Profile tools
+        if (toolName === 'seller_get_profile') {
+          const res = await fetch(`${baseUrl}/api/seller/profile`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_update_profile') {
+          const res = await fetch(`${baseUrl}/api/seller/profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ text: toolInput.text })
+          })
+          apiResult = await res.json()
+        }
+        // RFQ tools
+        else if (toolName === 'seller_get_rfqs') {
+          const status = toolInput.status ? `?status=${toolInput.status}` : ''
+          const res = await fetch(`${baseUrl}/api/seller/rfq${status}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_view_rfq') {
+          const res = await fetch(`${baseUrl}/api/seller/rfq`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'view', matchId: toolInput.matchId })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_generate_quote') {
+          const res = await fetch(`${baseUrl}/api/seller/rfq`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'generate_quote', matchId: toolInput.matchId })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_adjust_quote') {
+          const res = await fetch(`${baseUrl}/api/seller/rfq`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'adjust_quote', draftId: toolInput.draftId, text: toolInput.text })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_submit_quote') {
+          const res = await fetch(`${baseUrl}/api/seller/rfq`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'submit_quote', draftId: toolInput.draftId })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_decline_rfq') {
+          const res = await fetch(`${baseUrl}/api/seller/rfq`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'decline', matchId: toolInput.matchId, reason: toolInput.reason })
+          })
+          apiResult = await res.json()
+        }
+        // Lead tools
+        else if (toolName === 'seller_get_icps') {
+          const res = await fetch(`${baseUrl}/api/seller/leads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'get_icps' })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_create_icp') {
+          const res = await fetch(`${baseUrl}/api/seller/leads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'create_icp', text: toolInput.text })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_discover_leads') {
+          const res = await fetch(`${baseUrl}/api/seller/leads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'discover', icpId: toolInput.icpId, limit: toolInput.limit })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_get_leads') {
+          const params = new URLSearchParams()
+          if (toolInput.status) params.set('status', toolInput.status)
+          if (toolInput.minScore) params.set('minScore', String(toolInput.minScore))
+          const res = await fetch(`${baseUrl}/api/seller/leads?${params}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_qualify_lead') {
+          const res = await fetch(`${baseUrl}/api/seller/leads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: toolInput.qualified ? 'qualify' : 'disqualify', leadId: toolInput.leadId })
+          })
+          apiResult = await res.json()
+        }
+        // Outreach tools
+        else if (toolName === 'seller_generate_outreach') {
+          const res = await fetch(`${baseUrl}/api/seller/outreach`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'generate', leadId: toolInput.leadId, channel: toolInput.channel, tone: toolInput.tone, focus: toolInput.focus })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_send_outreach') {
+          const res = await fetch(`${baseUrl}/api/seller/outreach`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'send', outreachId: toolInput.outreachId })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_get_pending_outreach') {
+          const res = await fetch(`${baseUrl}/api/seller/outreach?type=pending`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_send_all_pending') {
+          const res = await fetch(`${baseUrl}/api/seller/outreach`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'send_all' })
+          })
+          apiResult = await res.json()
+        }
+        // Campaign tools
+        else if (toolName === 'seller_get_campaigns') {
+          const res = await fetch(`${baseUrl}/api/seller/outreach?type=campaigns`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_create_campaign') {
+          const res = await fetch(`${baseUrl}/api/seller/outreach`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'create_campaign', data: { name: toolInput.name, icpId: toolInput.icpId, channel: toolInput.channel } })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_start_campaign') {
+          const res = await fetch(`${baseUrl}/api/seller/outreach`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'start_campaign', campaignId: toolInput.campaignId })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_pause_campaign') {
+          const res = await fetch(`${baseUrl}/api/seller/outreach`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'pause_campaign', campaignId: toolInput.campaignId })
+          })
+          apiResult = await res.json()
+        }
+        // Pipeline tools
+        else if (toolName === 'seller_get_pipeline') {
+          const type = toolInput.type || 'summary'
+          const res = await fetch(`${baseUrl}/api/seller/pipeline?type=${type}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_create_opportunity') {
+          const res = await fetch(`${baseUrl}/api/seller/pipeline`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'create', text: toolInput.text })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_move_opportunity') {
+          const res = await fetch(`${baseUrl}/api/seller/pipeline`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'move_stage', opportunityId: toolInput.opportunityId, stageId: toolInput.stageId })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'seller_close_opportunity') {
+          const res = await fetch(`${baseUrl}/api/seller/pipeline`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: toolInput.won ? 'close_won' : 'close_lost', opportunityId: toolInput.opportunityId, notes: toolInput.notes })
+          })
+          apiResult = await res.json()
+        }
+
+        return NextResponse.json({
+          message: baseMessage || apiResult.message || 'Done.',
+          data: apiResult,
+        })
+      } catch (error) {
+        console.error('Seller tool error:', error)
+        return NextResponse.json({
+          message: baseMessage || `Error processing seller action: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // ========================================================================
+    // BUYER ERP TOOLS HANDLERS
+    // ========================================================================
+
+    // Handle ERP tools by delegating to buyer ERP API route
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name.startsWith('erp_')) {
+      const toolName = toolUse.name
+      const toolInput = toolUse.input as Record<string, any>
+      const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
+      const textBlock = response.content.find(block => block.type === 'text')
+      const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+      try {
+        let apiResult: any
+
+        if (toolName === 'erp_get_connections') {
+          const res = await fetch(`${baseUrl}/api/buyer/erp?type=connections`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'erp_connect') {
+          const res = await fetch(`${baseUrl}/api/buyer/erp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'connect', erpType: toolInput.erpType })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'erp_update_settings') {
+          const res = await fetch(`${baseUrl}/api/buyer/erp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'update_settings', connectionId: toolInput.connectionId, text: toolInput.text })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'erp_scan') {
+          const res = await fetch(`${baseUrl}/api/buyer/erp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'scan', connectionId: toolInput.connectionId })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'erp_get_opportunities') {
+          const params = new URLSearchParams()
+          if (toolInput.status) params.set('status', toolInput.status)
+          if (toolInput.priority) params.set('priority', toolInput.priority)
+          const res = await fetch(`${baseUrl}/api/buyer/erp?${params}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'erp_create_rfq_from_opportunity') {
+          const res = await fetch(`${baseUrl}/api/buyer/erp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'create_rfq', opportunityId: toolInput.opportunityId })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'erp_dismiss_opportunity') {
+          const res = await fetch(`${baseUrl}/api/buyer/erp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'dismiss', opportunityId: toolInput.opportunityId, reason: toolInput.reason })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'erp_remind_later') {
+          const res = await fetch(`${baseUrl}/api/buyer/erp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({ action: 'remind_later', opportunityId: toolInput.opportunityId, remindAt: toolInput.remindInDays ? new Date(Date.now() + toolInput.remindInDays * 24 * 60 * 60 * 1000).toISOString() : undefined })
+          })
+          apiResult = await res.json()
+        }
+
+        return NextResponse.json({
+          message: baseMessage || apiResult.message || 'Done.',
+          data: apiResult,
+        })
+      } catch (error) {
+        console.error('ERP tool error:', error)
+        return NextResponse.json({
+          message: baseMessage || `Error processing ERP action: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
     }
 
 
