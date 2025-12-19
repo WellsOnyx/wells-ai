@@ -164,7 +164,7 @@ export const config = {
   matcher: [
     // Skip Next.js internals and static files
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
-    '/(api|trpc)(.*)',
+    // API routes EXCEPT those with own auth (coldstart, admin/migrate, webhooks)
+    '/(api(?!/coldstart|/admin/migrate|/webhooks|/health|/widget))(.*)',
   ],
 }
