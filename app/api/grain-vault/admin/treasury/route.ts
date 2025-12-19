@@ -19,33 +19,56 @@ export async function GET(req: NextRequest) {
     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     // }
 
-    // Fetch master wallet balance and treasury stats in parallel
-    const [masterWallet, treasuryStats, largeTransactionsResult] = await Promise.all([
-      getMasterWalletBalance(),
-      getTreasuryStats(),
-      // Get recent large transactions (over $1000)
-      sql`
-        SELECT
-          gt.id,
-          gt.account_id,
-          ta.email,
-          ta.full_name,
-          gt.type,
-          gt.usd_amount,
-          gt.grain_amount,
-          gt.grain_price,
-          gt.fee_usd,
-          gt.status,
-          gt.description,
-          gt.created_at,
-          gt.completed_at
-        FROM grain_transactions gt
-        LEFT JOIN treasury_accounts ta ON gt.account_id = ta.id
-        WHERE gt.usd_amount >= 1000
-        ORDER BY gt.created_at DESC
-        LIMIT 20
-      `
-    ])
+    // Quick timeout wrapper for database operations
+    const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Database timeout')), ms)
+      )
+      return Promise.race([promise, timeout])
+    }
+
+    // Fetch treasury data with 8s timeout (to stay under Vercel's 10s limit)
+    const [masterWallet, treasuryStats, largeTransactionsResult] = await withTimeout(
+      Promise.all([
+        getMasterWalletBalance().catch(() => ({
+          usdcBalance: 0,
+          totalUserLiabilities: 0,
+          netPosition: 0,
+          estimatedDailyYield: 0,
+        })),
+        getTreasuryStats().catch(() => ({
+          totalAccounts: 0,
+          totalDeposits: 0,
+          totalWithdrawals: 0,
+          totalUsdBalance: 0,
+          totalGrainBalance: 0,
+          estimatedAnnualYield: 0,
+        })),
+        // Get recent large transactions (over $1000)
+        sql`
+          SELECT
+            gt.id,
+            gt.account_id,
+            ta.email,
+            ta.full_name,
+            gt.type,
+            gt.usd_amount,
+            gt.grain_amount,
+            gt.grain_price,
+            gt.fee_usd,
+            gt.status,
+            gt.description,
+            gt.created_at,
+            gt.completed_at
+          FROM grain_transactions gt
+          LEFT JOIN treasury_accounts ta ON gt.account_id = ta.id
+          WHERE gt.usd_amount >= 1000
+          ORDER BY gt.created_at DESC
+          LIMIT 20
+        `.catch(() => ({ rows: [] }))
+      ]),
+      8000
+    )
 
     // Calculate estimated yields
     const estimatedDailyYield = (masterWallet.usdcBalance * WELLS_APY_RATE) / 365
