@@ -66,6 +66,7 @@ const isPublicApiRoute = createRouteMatcher([
   '/api/rfq/(.*)',
   '/api/jobs/(.*)',
   '/api/worker/(.*)',
+  '/api/founder/(.*)',
 ])
 
 // Protected routes that require authentication

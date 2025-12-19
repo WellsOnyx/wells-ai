@@ -104,38 +104,85 @@ const MOCK_CANDIDATES: PartyProfile[] = [
 // ============================================================================
 
 const SYSTEM_PROMPTS = {
-  founder: `You are Wells, an AI that works FOR this founder on the Wells Onyx platform.
+  founder: `You are Wells, an AI chief of staff for founders on the Wells Onyx platform.
 
-🏆 FIRST MOVER STATUS: This user is a First Mover - one of the first to use Wells Onyx in their category. This is special!
+You help founders run their business through conversation. You can manage projects, source through the network, handle communications, hire talent, track finances, and run marketing.
 
-IMPORTANT FRAMING:
-- They're helping BUILD the marketplace by being first
-- They get human white-glove service while we cold-start the network
-- It may take a bit longer, but they get FIRST MOVER ADVANTAGE
-- Once we build matches in their category, they'll have priority access
-- Celebrate this! They're pioneers, not just users
+CAPABILITIES:
 
-When the founder needs something:
-1. Understand their requirements through conversation
-2. Once you have enough details, use the capture_lead tool to save their request
-3. Celebrate their First Mover status with something like:
-   "You're one of our First Movers in [category]! 🏆 That means you're helping us build the network. Our team will personally curate matches for you within 24 hours. The process is more hands-on right now, but you get first mover advantage once we build out this category."
+1. PROJECT MANAGEMENT
+   - Create and manage projects with timelines and budgets
+   - Build Bill of Materials (BOM) for products
+   - Auto-source materials through Wells supplier network
+   - Track tasks and assign team members
+   - Monitor project financials and spend
 
-When gathering requirements, extract:
-- INTENT: What do they need? (hire, source, sell, raise)
-- SPECS: Quantities, qualifications, budget
-- TIMELINE: When do they need it?
-- CONSTRAINTS: Must-haves vs nice-to-haves
+2. NETWORK SOURCING (33% success fee on closed deals)
+   - Find CUSTOMERS through Wells buyer network
+   - Find SUPPLIERS for materials and services
+   - Find TALENT through Wells worker network
+   - Find INVESTORS and PARTNERS
+   - Request warm introductions
+   - Track sourcing pipeline and conversion
 
-Be excited and celebratory about their First Mover status. This is a BENEFIT, not a limitation.
+3. UNIFIED INBOX
+   - View messages across all channels (email, Slack, SMS, LinkedIn)
+   - AI summarize long threads
+   - Draft replies with instructions ("politely decline", "ask for timeline")
+   - Extract action items from conversations
+   - Never miss important communications
 
-Example flow:
-User: "I need a CTO"
-You: "A CTO search - exciting! Let me gather some details. Remote or on-site? What's your budget range? Any must-have technical skills?"
-User: "Remote, $200-300k, needs AI/ML experience"
-You: "Perfect! You're now a First Mover in AI/ML executive hiring. 🏆 That means you're helping us build out this category. Our team will personally source and vet candidates for you - expect curated matches within 24 hours. First Movers like you get priority once the category is live!"
+4. HIRING (in-network first, external fallback)
+   - Create job postings
+   - Search Wells worker network for matches
+   - Invite qualified workers to apply
+   - Track hiring pipeline
+   - Manage candidates through stages
 
-Make being a First Mover feel like an exclusive, valuable status.`,
+5. FINANCIALS
+   - Get P&L statements
+   - Track cash position (bank + GRAIN balance)
+   - Calculate burn rate
+   - Calculate runway
+   - Add expenses
+   - Set and monitor budgets
+
+6. MARKETING
+   - Generate marketing copy (landing pages, emails, social)
+   - Generate ad copy for paid campaigns
+   - Create and manage ad campaigns
+   - Track marketing ROI
+   - Allocate marketing budget
+
+CONVERSATIONAL STYLE:
+- Be direct and efficient - founders are busy
+- Use tools behind the scenes, surface results conversationally
+- Proactively suggest next steps
+- Ask clarifying questions when needed
+- Remember context from the conversation
+
+EXAMPLE FLOWS:
+
+User: "I'm building a drone and need motors"
+You: [Use founder_create_project + founder_add_bom_item] "Created your drone project. Added motors to the BOM. Want me to source these through our supplier network? I can get quotes and negotiate automatically."
+
+User: "Find me customers in Texas manufacturing"
+You: [Use founder_create_sourcing_request or founder_search_network] "Found 12 manufacturing companies in Texas that match your profile. Top match is Acme Industries - they're actively looking for suppliers like you. Want me to request an introduction?"
+
+User: "What's in my inbox?"
+You: [Use founder_get_inbox] "You have 8 unread messages. 3 need action: a supplier asking about pricing, a customer ready to close, and a candidate accepting your offer. Want me to summarize any of these?"
+
+User: "What's my runway?"
+You: [Use founder_get_runway] "At your current burn rate of $45K/month, you have 8.5 months of runway. Your GRAIN balance is $12,500. Want me to break down where the spend is going?"
+
+User: "I need a React developer"
+You: [Use founder_create_job] "Created the job posting. I found 8 Wells workers with React experience. Top match has 5 years experience and a 4.9 rating. Want me to invite them to apply?"
+
+IMPORTANT:
+- All payments flow through GRAIN (1:1 USD stablecoin)
+- Network sourcing has 33% success fee on closed deals
+- Always confirm before taking irreversible actions
+- Be proactive but not pushy`,
 
   buyer: `You are Wells, an AI procurement partner on the Wells Onyx platform.
 
@@ -1684,6 +1731,797 @@ const JOBS_TOOLS: Anthropic.Tool[] = [
 // TOOLS FOR BUYER ERP SCANNER (Proactive Procurement)
 // ============================================================================
 
+// ============================================================================
+// TOOLS FOR FOUNDER JOURNEY (Projects, BOM, Network, Inbox, Hiring, Financials, Marketing)
+// ============================================================================
+
+const FOUNDER_TOOLS: Anthropic.Tool[] = [
+  // ==================== PROJECT MANAGEMENT ====================
+  {
+    name: 'founder_create_project',
+    description: 'Create a new project for the founder. Use when founder wants to start a new project, product build, or initiative.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Project name'
+        },
+        description: {
+          type: 'string',
+          description: 'Project description and goals'
+        },
+        type: {
+          type: 'string',
+          enum: ['product', 'service', 'internal', 'client'],
+          description: 'Type of project'
+        },
+        budget: {
+          type: 'number',
+          description: 'Project budget in USD'
+        },
+        deadline: {
+          type: 'string',
+          description: 'Target completion date (ISO format or natural language like "end of Q1")'
+        },
+      },
+      required: ['name']
+    }
+  },
+  {
+    name: 'founder_get_projects',
+    description: 'List all projects for the founder. Shows active, completed, and paused projects with status summaries.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['active', 'completed', 'paused', 'all'],
+          description: 'Filter by project status (default: active)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'founder_get_project_dashboard',
+    description: 'Get comprehensive dashboard for a specific project including timeline, BOM status, tasks, spend, and team.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'Project ID to get dashboard for'
+        },
+      },
+      required: ['projectId']
+    }
+  },
+  {
+    name: 'founder_add_bom_item',
+    description: 'Add a material or component to project Bill of Materials (BOM). Use when founder needs parts, materials, or components.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'Project ID to add BOM item to'
+        },
+        name: {
+          type: 'string',
+          description: 'Item name/description'
+        },
+        quantity: {
+          type: 'number',
+          description: 'Quantity needed'
+        },
+        unit: {
+          type: 'string',
+          description: 'Unit of measure (e.g., "pcs", "kg", "m")'
+        },
+        category: {
+          type: 'string',
+          description: 'Category (e.g., "electronics", "mechanical", "raw materials")'
+        },
+        specifications: {
+          type: 'string',
+          description: 'Detailed specifications or requirements'
+        },
+        targetPrice: {
+          type: 'number',
+          description: 'Target unit price in USD'
+        },
+        requiredBy: {
+          type: 'string',
+          description: 'When this item is needed'
+        },
+      },
+      required: ['projectId', 'name', 'quantity']
+    }
+  },
+  {
+    name: 'founder_source_bom',
+    description: 'Auto-source BOM items through Wells network. Finds suppliers, gets quotes, and can initiate negotiation.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'Project ID to source BOM for'
+        },
+        bomItemIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional: specific BOM item IDs to source. If not provided, sources all unsourced items.'
+        },
+        autoNegotiate: {
+          type: 'boolean',
+          description: 'If true, automatically negotiate with suppliers for best price (default: false)'
+        },
+      },
+      required: ['projectId']
+    }
+  },
+  {
+    name: 'founder_create_task',
+    description: 'Create a task within a project. Use when founder needs to track work items, assign team members, or set milestones.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'Project ID to create task in'
+        },
+        title: {
+          type: 'string',
+          description: 'Task title'
+        },
+        description: {
+          type: 'string',
+          description: 'Task description and requirements'
+        },
+        assigneeId: {
+          type: 'string',
+          description: 'Optional: User ID to assign task to'
+        },
+        dueDate: {
+          type: 'string',
+          description: 'Task due date'
+        },
+        priority: {
+          type: 'string',
+          enum: ['low', 'medium', 'high', 'urgent'],
+          description: 'Task priority'
+        },
+        estimatedHours: {
+          type: 'number',
+          description: 'Estimated hours to complete'
+        },
+      },
+      required: ['projectId', 'title']
+    }
+  },
+  {
+    name: 'founder_get_project_financials',
+    description: 'Get project financials including budget, actual spend, remaining, and breakdown by category.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'Project ID to get financials for'
+        },
+      },
+      required: ['projectId']
+    }
+  },
+
+  // ==================== GTM / NETWORK SOURCING ====================
+  {
+    name: 'founder_create_sourcing_request',
+    description: 'Create a sourcing request to find customers, suppliers, or talent through Wells network. Wells takes 33% success fee on closed deals.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['customer', 'supplier', 'talent', 'investor', 'partner'],
+          description: 'What type of connection to find'
+        },
+        description: {
+          type: 'string',
+          description: 'Detailed description of what you are looking for'
+        },
+        criteria: {
+          type: 'string',
+          description: 'Specific criteria or requirements (natural language)'
+        },
+        budget: {
+          type: 'number',
+          description: 'Budget or expected deal value'
+        },
+        urgency: {
+          type: 'string',
+          enum: ['low', 'medium', 'high', 'urgent'],
+          description: 'How urgent is this request'
+        },
+      },
+      required: ['type', 'description']
+    }
+  },
+  {
+    name: 'founder_search_network',
+    description: 'Search Wells network for potential matches. Find customers, suppliers, talent, investors, or partners.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Natural language search query (e.g., "manufacturing companies in Texas that need motors")'
+        },
+        type: {
+          type: 'string',
+          enum: ['customer', 'supplier', 'talent', 'investor', 'partner', 'all'],
+          description: 'Type of connection to search for'
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum results to return (default: 10)'
+        },
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'founder_request_intro',
+    description: 'Request an introduction to a specific network contact. Wells facilitates warm intros.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        contactId: {
+          type: 'string',
+          description: 'Network contact ID to request intro to'
+        },
+        message: {
+          type: 'string',
+          description: 'Custom message for the intro request'
+        },
+        context: {
+          type: 'string',
+          description: 'Context about why you want to connect'
+        },
+      },
+      required: ['contactId']
+    }
+  },
+  {
+    name: 'founder_get_sourcing_stats',
+    description: 'Get sourcing statistics including active requests, matches found, intros made, and deals closed.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        period: {
+          type: 'string',
+          enum: ['week', 'month', 'quarter', 'year', 'all'],
+          description: 'Time period for stats (default: month)'
+        },
+      },
+      required: []
+    }
+  },
+
+  // ==================== UNIFIED INBOX ====================
+  {
+    name: 'founder_get_inbox',
+    description: 'Get unified inbox across all channels (email, Slack, SMS, etc.). Shows messages, threads, and action items.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        filter: {
+          type: 'string',
+          enum: ['all', 'unread', 'starred', 'action_needed', 'from_network'],
+          description: 'Filter inbox messages'
+        },
+        channel: {
+          type: 'string',
+          enum: ['all', 'email', 'slack', 'sms', 'linkedin'],
+          description: 'Filter by communication channel'
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum messages to return (default: 20)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'founder_summarize_thread',
+    description: 'AI summarize a conversation thread. Provides key points, decisions, and action items.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        threadId: {
+          type: 'string',
+          description: 'Thread ID to summarize'
+        },
+      },
+      required: ['threadId']
+    }
+  },
+  {
+    name: 'founder_draft_reply',
+    description: 'Draft a reply to a message or thread with AI assistance. Provide instructions for tone and content.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        threadId: {
+          type: 'string',
+          description: 'Thread ID to reply to'
+        },
+        instruction: {
+          type: 'string',
+          description: 'Instructions for the reply (e.g., "politely decline but leave door open", "accept and ask about timeline")'
+        },
+        tone: {
+          type: 'string',
+          enum: ['formal', 'friendly', 'brief', 'detailed'],
+          description: 'Tone of the reply'
+        },
+      },
+      required: ['threadId', 'instruction']
+    }
+  },
+  {
+    name: 'founder_send_reply',
+    description: 'Send a drafted or custom reply to a thread.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        threadId: {
+          type: 'string',
+          description: 'Thread ID to reply to'
+        },
+        draftId: {
+          type: 'string',
+          description: 'Optional: draft ID if using a previously created draft'
+        },
+        message: {
+          type: 'string',
+          description: 'Message content (if not using a draft)'
+        },
+      },
+      required: ['threadId']
+    }
+  },
+  {
+    name: 'founder_extract_actions',
+    description: 'Extract action items from a thread or set of messages. Creates tasks from commitments.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        threadId: {
+          type: 'string',
+          description: 'Thread ID to extract actions from'
+        },
+        createTasks: {
+          type: 'boolean',
+          description: 'If true, automatically create tasks from extracted actions (default: false)'
+        },
+      },
+      required: ['threadId']
+    }
+  },
+
+  // ==================== HIRING ====================
+  {
+    name: 'founder_create_job',
+    description: 'Create a job posting. Can search in-network first (Wells workers) or go external.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        title: {
+          type: 'string',
+          description: 'Job title'
+        },
+        description: {
+          type: 'string',
+          description: 'Job description and responsibilities'
+        },
+        requirements: {
+          type: 'string',
+          description: 'Requirements and qualifications (natural language)'
+        },
+        type: {
+          type: 'string',
+          enum: ['full-time', 'part-time', 'contract', 'freelance'],
+          description: 'Employment type'
+        },
+        location: {
+          type: 'string',
+          description: 'Location (or "remote")'
+        },
+        salaryMin: {
+          type: 'number',
+          description: 'Minimum salary/rate'
+        },
+        salaryMax: {
+          type: 'number',
+          description: 'Maximum salary/rate'
+        },
+        projectId: {
+          type: 'string',
+          description: 'Optional: associate with a specific project'
+        },
+      },
+      required: ['title', 'description']
+    }
+  },
+  {
+    name: 'founder_publish_job',
+    description: 'Publish job and start sourcing candidates. Searches in-network first, then external if needed.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        jobId: {
+          type: 'string',
+          description: 'Job ID to publish'
+        },
+        searchNetwork: {
+          type: 'boolean',
+          description: 'Search Wells worker network first (default: true)'
+        },
+        postExternal: {
+          type: 'boolean',
+          description: 'Also post to external job boards (default: false)'
+        },
+      },
+      required: ['jobId']
+    }
+  },
+  {
+    name: 'founder_search_network_candidates',
+    description: 'Search Wells worker network for candidates matching job requirements.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        jobId: {
+          type: 'string',
+          description: 'Optional: Job ID to match against'
+        },
+        query: {
+          type: 'string',
+          description: 'Natural language search (e.g., "React developers with 5+ years experience")'
+        },
+        skills: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Required skills to match'
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum candidates to return (default: 20)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'founder_invite_candidate',
+    description: 'Invite a Wells worker to apply for a job. Sends personalized invitation.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        jobId: {
+          type: 'string',
+          description: 'Job ID to invite for'
+        },
+        candidateId: {
+          type: 'string',
+          description: 'Worker/candidate ID to invite'
+        },
+        message: {
+          type: 'string',
+          description: 'Optional personalized message'
+        },
+      },
+      required: ['jobId', 'candidateId']
+    }
+  },
+  {
+    name: 'founder_get_hiring_pipeline',
+    description: 'Get hiring pipeline for jobs including applicants, stages, and stats.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        jobId: {
+          type: 'string',
+          description: 'Optional: specific job ID. If not provided, shows all jobs.'
+        },
+      },
+      required: []
+    }
+  },
+
+  // ==================== FINANCIALS ====================
+  {
+    name: 'founder_get_pl',
+    description: 'Get P&L (Profit & Loss) statement for the company or specific period.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        period: {
+          type: 'string',
+          enum: ['month', 'quarter', 'ytd', 'year', 'all'],
+          description: 'Time period for P&L (default: month)'
+        },
+        startDate: {
+          type: 'string',
+          description: 'Optional: custom start date'
+        },
+        endDate: {
+          type: 'string',
+          description: 'Optional: custom end date'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'founder_get_cash_position',
+    description: 'Get current cash position including bank balance and GRAIN balance.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'founder_get_burn_rate',
+    description: 'Calculate current burn rate based on recent expenses.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        period: {
+          type: 'string',
+          enum: ['week', 'month', 'quarter'],
+          description: 'Period to calculate burn rate over (default: month)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'founder_get_runway',
+    description: 'Calculate runway in months based on current cash and burn rate.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'founder_add_expense',
+    description: 'Add an expense record. Can associate with project or category.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        amount: {
+          type: 'number',
+          description: 'Expense amount in USD'
+        },
+        description: {
+          type: 'string',
+          description: 'Expense description'
+        },
+        category: {
+          type: 'string',
+          description: 'Expense category (e.g., "software", "materials", "payroll")'
+        },
+        projectId: {
+          type: 'string',
+          description: 'Optional: associate with a project'
+        },
+        date: {
+          type: 'string',
+          description: 'Expense date (default: today)'
+        },
+        vendor: {
+          type: 'string',
+          description: 'Vendor/payee name'
+        },
+      },
+      required: ['amount', 'description']
+    }
+  },
+  {
+    name: 'founder_set_budget',
+    description: 'Set or update budget for a category, project, or overall.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['overall', 'category', 'project'],
+          description: 'Type of budget to set'
+        },
+        targetId: {
+          type: 'string',
+          description: 'Category name or project ID (if not overall)'
+        },
+        amount: {
+          type: 'number',
+          description: 'Budget amount in USD'
+        },
+        period: {
+          type: 'string',
+          enum: ['monthly', 'quarterly', 'annual', 'total'],
+          description: 'Budget period (default: monthly)'
+        },
+      },
+      required: ['type', 'amount']
+    }
+  },
+
+  // ==================== MARKETING ====================
+  {
+    name: 'founder_generate_copy',
+    description: 'Generate marketing copy for various purposes. AI creates on-brand content.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['landing_page', 'email', 'social_post', 'blog', 'product_description', 'tagline'],
+          description: 'Type of copy to generate'
+        },
+        topic: {
+          type: 'string',
+          description: 'Topic or subject of the copy'
+        },
+        tone: {
+          type: 'string',
+          enum: ['professional', 'casual', 'bold', 'inspirational', 'technical'],
+          description: 'Tone of voice'
+        },
+        length: {
+          type: 'string',
+          enum: ['short', 'medium', 'long'],
+          description: 'Desired length'
+        },
+        context: {
+          type: 'string',
+          description: 'Additional context or requirements'
+        },
+      },
+      required: ['type', 'topic']
+    }
+  },
+  {
+    name: 'founder_generate_ad_copy',
+    description: 'Generate ad copy for paid campaigns (Google, Facebook, LinkedIn, etc.).',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        platform: {
+          type: 'string',
+          enum: ['google', 'facebook', 'instagram', 'linkedin', 'twitter'],
+          description: 'Ad platform'
+        },
+        objective: {
+          type: 'string',
+          enum: ['awareness', 'traffic', 'leads', 'conversions'],
+          description: 'Campaign objective'
+        },
+        product: {
+          type: 'string',
+          description: 'Product or service being advertised'
+        },
+        targetAudience: {
+          type: 'string',
+          description: 'Target audience description'
+        },
+        callToAction: {
+          type: 'string',
+          description: 'Desired call to action'
+        },
+        variations: {
+          type: 'number',
+          description: 'Number of variations to generate (default: 3)'
+        },
+      },
+      required: ['platform', 'product']
+    }
+  },
+  {
+    name: 'founder_create_campaign',
+    description: 'Create a marketing/ad campaign with budget and targeting.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Campaign name'
+        },
+        platform: {
+          type: 'string',
+          enum: ['google', 'facebook', 'instagram', 'linkedin', 'twitter', 'email'],
+          description: 'Marketing platform'
+        },
+        objective: {
+          type: 'string',
+          enum: ['awareness', 'traffic', 'leads', 'conversions'],
+          description: 'Campaign objective'
+        },
+        budget: {
+          type: 'number',
+          description: 'Campaign budget in USD'
+        },
+        budgetPeriod: {
+          type: 'string',
+          enum: ['daily', 'total'],
+          description: 'Budget period'
+        },
+        startDate: {
+          type: 'string',
+          description: 'Campaign start date'
+        },
+        endDate: {
+          type: 'string',
+          description: 'Campaign end date'
+        },
+        targetAudience: {
+          type: 'string',
+          description: 'Target audience description (natural language)'
+        },
+      },
+      required: ['name', 'platform', 'budget']
+    }
+  },
+  {
+    name: 'founder_get_marketing_roi',
+    description: 'Get marketing ROI and performance metrics across campaigns.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        campaignId: {
+          type: 'string',
+          description: 'Optional: specific campaign ID. If not provided, shows all campaigns.'
+        },
+        period: {
+          type: 'string',
+          enum: ['week', 'month', 'quarter', 'all'],
+          description: 'Time period for metrics (default: month)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'founder_set_marketing_budget',
+    description: 'Set overall marketing budget or allocate across channels.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        totalBudget: {
+          type: 'number',
+          description: 'Total marketing budget in USD'
+        },
+        period: {
+          type: 'string',
+          enum: ['monthly', 'quarterly', 'annual'],
+          description: 'Budget period'
+        },
+        allocation: {
+          type: 'object',
+          description: 'Optional allocation by channel (e.g., {"google": 40, "facebook": 30, "linkedin": 30} as percentages)'
+        },
+      },
+      required: ['totalBudget']
+    }
+  },
+]
+
 const BUYER_ERP_TOOLS: Anthropic.Tool[] = [
   {
     name: 'erp_get_connections',
@@ -2032,7 +2870,9 @@ NEVER skip the approval step. Real money is involved.`
     const isBuyerMode = journey === 'buyer'
     const isSellerMode = journey === 'seller'
     const isJobsMode = journey === 'jobs'
+    const isFounderMode = journey === 'founder'
 
+    // Founder gets founder tools + treasury tools for payments
     // Buyer gets RFQ flow tools + ERP tools + treasury tools for payments
     // Seller gets seller tools + treasury tools for payments
     // Jobs gets worker tools + treasury tools for earnings
@@ -2044,6 +2884,14 @@ NEVER skip the approval step. Real money is involved.`
       tools = MASTER_TOOLS
     } else if (isTreasuryMode) {
       tools = TREASURY_TOOLS
+    } else if (isFounderMode) {
+      // Founder gets founder tools + payment tools
+      tools = [
+        ...FOUNDER_TOOLS,
+        ...TREASURY_TOOLS.filter(t =>
+          ['get_balance', 'execute_payment', 'create_deposit', 'get_transactions'].includes(t.name)
+        )
+      ]
     } else if (isBuyerMode) {
       // Buyer gets RFQ flow tools + ERP scanner tools + payment tools
       tools = [
@@ -3808,6 +4656,401 @@ Reply "Yes, go ahead" to approve, or let me know what to change.`,
         console.error('Worker tool error:', error)
         return NextResponse.json({
           message: baseMessage || `Error processing worker action: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // ========================================================================
+    // FOUNDER TOOLS HANDLERS
+    // ========================================================================
+
+    // Handle founder tools by delegating to founder API routes
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name.startsWith('founder_')) {
+      const toolName = toolUse.name
+      const toolInput = toolUse.input as Record<string, any>
+      const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
+      const textBlock = response.content.find(block => block.type === 'text')
+      const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+      try {
+        let apiResult: any
+
+        // ==================== PROJECT MANAGEMENT ====================
+        if (toolName === 'founder_create_project') {
+          const res = await fetch(`${baseUrl}/api/founder/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'create',
+              name: toolInput.name,
+              description: toolInput.description,
+              type: toolInput.type,
+              budget: toolInput.budget,
+              deadline: toolInput.deadline
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_get_projects') {
+          const status = toolInput.status || 'active'
+          const res = await fetch(`${baseUrl}/api/founder/projects?status=${status}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_get_project_dashboard') {
+          const res = await fetch(`${baseUrl}/api/founder/projects/${toolInput.projectId}/dashboard`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_add_bom_item') {
+          const res = await fetch(`${baseUrl}/api/founder/projects/${toolInput.projectId}/bom`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'add',
+              name: toolInput.name,
+              quantity: toolInput.quantity,
+              unit: toolInput.unit,
+              category: toolInput.category,
+              specifications: toolInput.specifications,
+              targetPrice: toolInput.targetPrice,
+              requiredBy: toolInput.requiredBy
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_source_bom') {
+          const res = await fetch(`${baseUrl}/api/founder/projects/${toolInput.projectId}/bom`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'source',
+              bomItemIds: toolInput.bomItemIds,
+              autoNegotiate: toolInput.autoNegotiate
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_create_task') {
+          const res = await fetch(`${baseUrl}/api/founder/projects/${toolInput.projectId}/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'create',
+              title: toolInput.title,
+              description: toolInput.description,
+              assigneeId: toolInput.assigneeId,
+              dueDate: toolInput.dueDate,
+              priority: toolInput.priority,
+              estimatedHours: toolInput.estimatedHours
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_get_project_financials') {
+          const res = await fetch(`${baseUrl}/api/founder/projects/${toolInput.projectId}/financials`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        }
+
+        // ==================== GTM / NETWORK SOURCING ====================
+        else if (toolName === 'founder_create_sourcing_request') {
+          const res = await fetch(`${baseUrl}/api/founder/sourcing`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'create_request',
+              type: toolInput.type,
+              description: toolInput.description,
+              criteria: toolInput.criteria,
+              budget: toolInput.budget,
+              urgency: toolInput.urgency
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_search_network') {
+          const res = await fetch(`${baseUrl}/api/founder/sourcing`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'search',
+              query: toolInput.query,
+              type: toolInput.type,
+              limit: toolInput.limit
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_request_intro') {
+          const res = await fetch(`${baseUrl}/api/founder/sourcing`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'request_intro',
+              contactId: toolInput.contactId,
+              message: toolInput.message,
+              context: toolInput.context
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_get_sourcing_stats') {
+          const period = toolInput.period || 'month'
+          const res = await fetch(`${baseUrl}/api/founder/sourcing?type=stats&period=${period}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        }
+
+        // ==================== UNIFIED INBOX ====================
+        else if (toolName === 'founder_get_inbox') {
+          const params = new URLSearchParams()
+          if (toolInput.filter) params.set('filter', toolInput.filter)
+          if (toolInput.channel) params.set('channel', toolInput.channel)
+          if (toolInput.limit) params.set('limit', String(toolInput.limit))
+          const res = await fetch(`${baseUrl}/api/founder/inbox?${params}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_summarize_thread') {
+          const res = await fetch(`${baseUrl}/api/founder/inbox`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'summarize',
+              threadId: toolInput.threadId
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_draft_reply') {
+          const res = await fetch(`${baseUrl}/api/founder/inbox`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'draft_reply',
+              threadId: toolInput.threadId,
+              instruction: toolInput.instruction,
+              tone: toolInput.tone
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_send_reply') {
+          const res = await fetch(`${baseUrl}/api/founder/inbox`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'send_reply',
+              threadId: toolInput.threadId,
+              draftId: toolInput.draftId,
+              message: toolInput.message
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_extract_actions') {
+          const res = await fetch(`${baseUrl}/api/founder/inbox`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'extract_actions',
+              threadId: toolInput.threadId,
+              createTasks: toolInput.createTasks
+            })
+          })
+          apiResult = await res.json()
+        }
+
+        // ==================== HIRING ====================
+        else if (toolName === 'founder_create_job') {
+          const res = await fetch(`${baseUrl}/api/founder/hiring`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'create_job',
+              title: toolInput.title,
+              description: toolInput.description,
+              requirements: toolInput.requirements,
+              type: toolInput.type,
+              location: toolInput.location,
+              salaryMin: toolInput.salaryMin,
+              salaryMax: toolInput.salaryMax,
+              projectId: toolInput.projectId
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_publish_job') {
+          const res = await fetch(`${baseUrl}/api/founder/hiring`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'publish_job',
+              jobId: toolInput.jobId,
+              searchNetwork: toolInput.searchNetwork ?? true,
+              postExternal: toolInput.postExternal ?? false
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_search_network_candidates') {
+          const res = await fetch(`${baseUrl}/api/founder/hiring`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'search_candidates',
+              jobId: toolInput.jobId,
+              query: toolInput.query,
+              skills: toolInput.skills,
+              limit: toolInput.limit
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_invite_candidate') {
+          const res = await fetch(`${baseUrl}/api/founder/hiring`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'invite_candidate',
+              jobId: toolInput.jobId,
+              candidateId: toolInput.candidateId,
+              message: toolInput.message
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_get_hiring_pipeline') {
+          const jobId = toolInput.jobId ? `?jobId=${toolInput.jobId}` : ''
+          const res = await fetch(`${baseUrl}/api/founder/hiring${jobId}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        }
+
+        // ==================== FINANCIALS ====================
+        else if (toolName === 'founder_get_pl') {
+          const params = new URLSearchParams()
+          if (toolInput.period) params.set('period', toolInput.period)
+          if (toolInput.startDate) params.set('startDate', toolInput.startDate)
+          if (toolInput.endDate) params.set('endDate', toolInput.endDate)
+          const res = await fetch(`${baseUrl}/api/founder/financials?type=pl&${params}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_get_cash_position') {
+          const res = await fetch(`${baseUrl}/api/founder/financials?type=cash`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_get_burn_rate') {
+          const period = toolInput.period || 'month'
+          const res = await fetch(`${baseUrl}/api/founder/financials?type=burn_rate&period=${period}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_get_runway') {
+          const res = await fetch(`${baseUrl}/api/founder/financials?type=runway`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_add_expense') {
+          const res = await fetch(`${baseUrl}/api/founder/financials`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'add_expense',
+              amount: toolInput.amount,
+              description: toolInput.description,
+              category: toolInput.category,
+              projectId: toolInput.projectId,
+              date: toolInput.date,
+              vendor: toolInput.vendor
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_set_budget') {
+          const res = await fetch(`${baseUrl}/api/founder/financials`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'set_budget',
+              type: toolInput.type,
+              targetId: toolInput.targetId,
+              amount: toolInput.amount,
+              period: toolInput.period
+            })
+          })
+          apiResult = await res.json()
+        }
+
+        // ==================== MARKETING ====================
+        else if (toolName === 'founder_generate_copy') {
+          const res = await fetch(`${baseUrl}/api/founder/marketing`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'generate_copy',
+              type: toolInput.type,
+              topic: toolInput.topic,
+              tone: toolInput.tone,
+              length: toolInput.length,
+              context: toolInput.context
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_generate_ad_copy') {
+          const res = await fetch(`${baseUrl}/api/founder/marketing`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'generate_ad_copy',
+              platform: toolInput.platform,
+              objective: toolInput.objective,
+              product: toolInput.product,
+              targetAudience: toolInput.targetAudience,
+              callToAction: toolInput.callToAction,
+              variations: toolInput.variations
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_create_campaign') {
+          const res = await fetch(`${baseUrl}/api/founder/marketing`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'create_campaign',
+              name: toolInput.name,
+              platform: toolInput.platform,
+              objective: toolInput.objective,
+              budget: toolInput.budget,
+              budgetPeriod: toolInput.budgetPeriod,
+              startDate: toolInput.startDate,
+              endDate: toolInput.endDate,
+              targetAudience: toolInput.targetAudience
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_get_marketing_roi') {
+          const params = new URLSearchParams()
+          if (toolInput.campaignId) params.set('campaignId', toolInput.campaignId)
+          if (toolInput.period) params.set('period', toolInput.period)
+          const res = await fetch(`${baseUrl}/api/founder/marketing?type=roi&${params}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'founder_set_marketing_budget') {
+          const res = await fetch(`${baseUrl}/api/founder/marketing`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'set_budget',
+              totalBudget: toolInput.totalBudget,
+              period: toolInput.period,
+              allocation: toolInput.allocation
+            })
+          })
+          apiResult = await res.json()
+        }
+
+        return NextResponse.json({
+          message: baseMessage || apiResult?.message || 'Done.',
+          data: apiResult,
+        })
+      } catch (error) {
+        console.error('Founder tool error:', error)
+        return NextResponse.json({
+          message: baseMessage || `Error processing founder action: ${error instanceof Error ? error.message : 'Unknown error'}`,
           error: true,
         })
       }
