@@ -11,10 +11,10 @@
  * Blocked: All US-sanctioned countries
  *
  * Verification Levels:
- * - Level 1: Email verified ($1K daily limit)
- * - Level 2: Phone + Address verified ($10K daily limit)
- * - Level 3: Full KYC + ID verified ($100K daily limit)
- * - Level 4: Enhanced due diligence (unlimited)
+ * - Level 1: Email verified ($1K daily limit) - Basic tier
+ * - Level 2: ID verified via Veriff ($10K daily limit) - Standard tier
+ * - Level 3: ID + Address verified ($100K daily limit) - Premium tier
+ * - Level 4: Enhanced due diligence (unlimited) - Unlimited tier
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -41,6 +41,7 @@ interface OnboardingRequest {
   last_name?: string
   date_of_birth: string
   phone?: string
+  email?: string
   nationality?: string
 
   // Country of Residence (REQUIRED)
@@ -77,6 +78,11 @@ interface OnboardingRequest {
   risk_tolerance?: 'conservative' | 'moderate' | 'aggressive'
   time_horizon?: 'short' | 'medium' | 'long'
 
+  // KYC Tier Selection
+  desired_tier?: 'basic' | 'standard' | 'premium' | 'unlimited'
+  verification_level?: number    // Explicitly set verification level (1-4)
+  kyc_session_id?: string        // Veriff session ID if verification completed
+
   // Terms
   terms_accepted: boolean
   marketing_consent?: boolean
@@ -85,31 +91,6 @@ interface OnboardingRequest {
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-/**
- * Calculate verification level based on provided information
- */
-function calculateVerificationLevel(data: OnboardingRequest, emailVerified: boolean): number {
-  // Level 1: Basic info only
-  if (!emailVerified) return 1
-
-  const countryConfig = getCountryConfig(data.country_of_residence)
-
-  // Level 2: Phone + Address
-  const hasAddress = data.address_line1 && data.city && data.zip_code
-  const needsState = countryConfig?.address.hasState ?? true
-  const stateOk = !needsState || data.state
-  if (!hasAddress || !stateOk) return 1
-
-  // Level 3: Full KYC with Tax ID (country-specific)
-  const hasFinancialProfile = data.employment_status && data.source_of_funds
-  const requiresTaxId = countryConfig?.kyc.requiresTaxId ?? false
-  const hasTaxId = !requiresTaxId || (data.tax_id_last_four && data.tax_id_last_four.length >= 3)
-  if (hasFinancialProfile && hasTaxId) return 3
-
-  // Level 2: Has address but no full KYC
-  return 2
-}
 
 /**
  * Get limits based on verification level and country
@@ -169,6 +150,19 @@ function getLimitsForLevel(level: number, countryCode: string = 'US'): {
         monthly_withdraw: level1Daily * 10,
         lifetime_deposit: level1Daily * 50
       }
+  }
+}
+
+/**
+ * Get tier name from verification level
+ */
+function getTierName(level: number): string {
+  switch (level) {
+    case 1: return 'basic'
+    case 2: return 'standard'
+    case 3: return 'premium'
+    case 4: return 'unlimited'
+    default: return 'basic'
   }
 }
 
@@ -308,9 +302,55 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Calculate verification level
-    const verificationLevel = calculateVerificationLevel(body, emailVerified)
+    // ========================================================================
+    // VERIFICATION LEVEL DETERMINATION
+    // ========================================================================
+
+    // Use explicitly provided verification level if available
+    // Otherwise default to level 1 (basic - email only)
+    let verificationLevel = body.verification_level || 1
+
+    // Validate verification level is within bounds
+    if (verificationLevel < 1 || verificationLevel > 4) {
+      verificationLevel = 1
+    }
+
+    // Map tier to verification level if no explicit level provided
+    if (!body.verification_level && body.desired_tier) {
+      switch (body.desired_tier) {
+        case 'basic':
+          verificationLevel = 1
+          break
+        case 'standard':
+          verificationLevel = 2
+          break
+        case 'premium':
+          verificationLevel = 3
+          break
+        case 'unlimited':
+          verificationLevel = 4
+          break
+      }
+    }
+
+    // For levels > 1, verify that KYC session exists and is approved
+    // The webhook will handle updating the verification level when approved
+    // Here we just record the intended tier
+    const verificationStatus = verificationLevel > 1 && body.kyc_session_id
+      ? 'approved'
+      : verificationLevel === 1
+        ? 'approved'
+        : 'pending'
+
     const limits = getLimitsForLevel(verificationLevel, countryOfResidence)
+    const tierName = getTierName(verificationLevel)
+
+    console.log('[onboard POST] Verification:', {
+      level: verificationLevel,
+      tier: tierName,
+      status: verificationStatus,
+      kycSessionId: body.kyc_session_id
+    })
 
     // Check if profile already exists
     let existingProfile = null
@@ -357,6 +397,9 @@ export async function POST(req: NextRequest) {
           risk_tolerance = ${body.risk_tolerance || null},
           time_horizon = ${body.time_horizon || null},
           verification_level = ${verificationLevel},
+          verification_status = ${verificationStatus},
+          kyc_session_id = ${body.kyc_session_id || null},
+          desired_tier = ${tierName},
           daily_deposit_limit = ${limits.daily_deposit},
           daily_withdraw_limit = ${limits.daily_withdraw},
           monthly_deposit_limit = ${limits.monthly_deposit},
@@ -405,6 +448,8 @@ export async function POST(req: NextRequest) {
           time_horizon,
           verification_level,
           verification_status,
+          kyc_session_id,
+          desired_tier,
           daily_deposit_limit,
           daily_withdraw_limit,
           monthly_deposit_limit,
@@ -421,7 +466,7 @@ export async function POST(req: NextRequest) {
         ) VALUES (
           ${userId},
           ${userId},
-          ${email || null},
+          ${email || body.email || null},
           ${emailVerified},
           ${body.full_name},
           ${body.first_name || null},
@@ -452,7 +497,9 @@ export async function POST(req: NextRequest) {
           ${body.risk_tolerance || null},
           ${body.time_horizon || null},
           ${verificationLevel},
-          'approved',
+          ${verificationStatus},
+          ${body.kyc_session_id || null},
+          ${tierName},
           ${limits.daily_deposit},
           ${limits.daily_withdraw},
           ${limits.monthly_deposit},
@@ -508,7 +555,7 @@ export async function POST(req: NextRequest) {
       try {
         await sql`
           INSERT INTO grain_treasury_events (type, amount, user_id, notes, created_at)
-          VALUES ('system_adjustment', 0, ${userId}, 'Ledger entry created during onboarding (custodial model)', NOW())
+          VALUES ('system_adjustment', 0, ${userId}, 'Ledger entry created during onboarding - ${tierName} tier', NOW())
         `
       } catch (e) {
         // Table might not exist yet
@@ -527,6 +574,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Return success with tier information
     return NextResponse.json({
       success: true,
       message: 'Onboarding complete',
@@ -535,7 +583,8 @@ export async function POST(req: NextRequest) {
         country_of_residence: countryOfResidence,
         country_name: countryConfig?.name || countryOfResidence,
         verification_level: verificationLevel,
-        verification_status: 'approved',
+        verification_status: verificationStatus,
+        tier: tierName,
         limits: {
           daily_deposit: limits.daily_deposit,
           daily_withdraw: limits.daily_withdraw,
@@ -583,6 +632,8 @@ export async function GET(req: NextRequest) {
           full_name,
           verification_level,
           verification_status,
+          desired_tier,
+          kyc_session_id,
           daily_deposit_limit,
           daily_withdraw_limit,
           status,
@@ -615,6 +666,8 @@ export async function GET(req: NextRequest) {
           full_name: profile.full_name,
           verification_level: profile.verification_level,
           verification_status: profile.verification_status,
+          tier: profile.desired_tier || getTierName(profile.verification_level || 1),
+          kyc_session_id: profile.kyc_session_id,
           status: profile.status,
           limits: {
             daily_deposit: parseFloat(profile.daily_deposit_limit),

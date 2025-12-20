@@ -127,6 +127,70 @@ function verifySignature(
 }
 
 // ============================================================================
+// LIMIT CONFIGURATION
+// ============================================================================
+
+/**
+ * Get limits for verification level
+ */
+function getLimitsForLevel(level: VerificationLevel): {
+  daily: number
+  monthly: number
+  lifetime: number
+} {
+  switch (level) {
+    case VerificationLevel.EMAIL_ONLY:
+      return {
+        daily: 1000,
+        monthly: 10000,
+        lifetime: 50000,
+      }
+    case VerificationLevel.PHONE_BASIC:
+      return {
+        daily: 10000,
+        monthly: 100000,
+        lifetime: 500000,
+      }
+    case VerificationLevel.FULL_KYC:
+      return {
+        daily: 100000,
+        monthly: 1000000,
+        lifetime: 5000000,
+      }
+    case VerificationLevel.ENHANCED_DD:
+      return {
+        daily: 1000000,
+        monthly: 10000000,
+        lifetime: 100000000,
+      }
+    default:
+      return {
+        daily: 1000,
+        monthly: 10000,
+        lifetime: 50000,
+      }
+  }
+}
+
+/**
+ * Get tier name from verification level
+ */
+function getTierFromLevel(level: VerificationLevel): string {
+  switch (level) {
+    case VerificationLevel.EMAIL_ONLY:
+      return 'basic'
+    case VerificationLevel.PHONE_BASIC:
+      return 'standard'
+    case VerificationLevel.FULL_KYC:
+      return 'premium'
+    case VerificationLevel.ENHANCED_DD:
+      return 'unlimited'
+    default:
+      return 'basic'
+  }
+}
+
+// ============================================================================
 // NOTIFICATION SYSTEM
 // ============================================================================
 
@@ -139,21 +203,24 @@ async function notifyVerificationComplete(
   try {
     const status = result.status === VerificationStatus.APPROVED ? 'Approved' : 'Requires Attention'
     const emoji = result.status === VerificationStatus.APPROVED ? '✅' : '⚠️'
+    const tier = getTierFromLevel(result.level)
+    const limits = getLimitsForLevel(result.level)
 
     console.log(`[Veriff Webhook] Verification ${status}:`, {
       userId: result.userId,
       sessionId: result.sessionId,
       level: result.level,
+      tier,
     })
 
     // Send Slack notification if configured
     const webhookUrl = process.env.SLACK_WEBHOOK_URL
     if (webhookUrl) {
       const levelNames = {
-        [VerificationLevel.EMAIL_ONLY]: 'Basic ($1K)',
-        [VerificationLevel.PHONE_BASIC]: 'Standard ($10K)',
-        [VerificationLevel.FULL_KYC]: 'Verified ($100K)',
-        [VerificationLevel.ENHANCED_DD]: 'Enhanced (Unlimited)',
+        [VerificationLevel.EMAIL_ONLY]: 'Basic ($1K/day)',
+        [VerificationLevel.PHONE_BASIC]: 'Standard ($10K/day)',
+        [VerificationLevel.FULL_KYC]: 'Premium ($100K/day)',
+        [VerificationLevel.ENHANCED_DD]: 'Unlimited',
       }
 
       await fetch(webhookUrl, {
@@ -166,10 +233,11 @@ async function notifyVerificationComplete(
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `*${emoji} KYC Verification ${status}*\n` +
-                  `User: ${result.userId}\n` +
-                  `Session: ${result.sessionId}\n` +
-                  `Level: ${levelNames[result.level] || 'Unknown'}\n` +
+                text: `*${emoji} Grain & Vault KYC Verification ${status}*\n` +
+                  `User: \`${result.userId}\`\n` +
+                  `Session: \`${result.sessionId}\`\n` +
+                  `Tier: ${levelNames[result.level] || 'Unknown'}\n` +
+                  `Daily Limit: $${limits.daily.toLocaleString()}\n` +
                   (result.rejectionReasons?.length
                     ? `Reason: ${result.rejectionReasons.join(', ')}`
                     : ''),
@@ -192,6 +260,9 @@ async function recordVerificationEvent(
   result: VerificationResult,
   rawPayload: string
 ): Promise<void> {
+  const tier = getTierFromLevel(result.level)
+  const limits = getLimitsForLevel(result.level)
+
   try {
     await sql`
       INSERT INTO grain_treasury_events (
@@ -205,16 +276,18 @@ async function recordVerificationEvent(
         'kyc_verification',
         0,
         ${result.userId},
-        ${`KYC ${result.status}: Session ${result.sessionId}, Level ${result.level}`},
+        ${`KYC ${result.status}: ${tier} tier - $${limits.daily.toLocaleString()}/day limit`},
         ${JSON.stringify({
           sessionId: result.sessionId,
           provider: result.provider,
           status: result.status,
           level: result.level,
+          tier,
           decision: result.decision,
           riskScore: result.riskScore,
           checks: result.checks,
           rejectionReasons: result.rejectionReasons,
+          limits
         })},
         NOW()
       )
@@ -232,47 +305,53 @@ async function updateUserLimits(
   userId: string,
   level: VerificationLevel
 ): Promise<void> {
-  const limits = {
-    [VerificationLevel.EMAIL_ONLY]: {
-      daily: 1000,
-      monthly: 10000,
-      lifetime: 50000,
-    },
-    [VerificationLevel.PHONE_BASIC]: {
-      daily: 10000,
-      monthly: 100000,
-      lifetime: 500000,
-    },
-    [VerificationLevel.FULL_KYC]: {
-      daily: 100000,
-      monthly: 1000000,
-      lifetime: 5000000,
-    },
-    [VerificationLevel.ENHANCED_DD]: {
-      daily: 1000000,
-      monthly: 10000000,
-      lifetime: 100000000,
-    },
-  }
-
-  const userLimits = limits[level]
+  const limits = getLimitsForLevel(level)
+  const tier = getTierFromLevel(level)
 
   try {
     await sql`
       UPDATE grain_user_profiles
       SET
-        daily_deposit_limit = ${userLimits.daily},
-        daily_withdraw_limit = ${userLimits.daily},
-        monthly_deposit_limit = ${userLimits.monthly},
-        monthly_withdraw_limit = ${userLimits.monthly},
-        lifetime_deposit_limit = ${userLimits.lifetime},
+        verification_level = ${level},
+        verification_status = 'approved',
+        desired_tier = ${tier},
+        government_id_verified = TRUE,
+        daily_deposit_limit = ${limits.daily},
+        daily_withdraw_limit = ${limits.daily},
+        monthly_deposit_limit = ${limits.monthly},
+        monthly_withdraw_limit = ${limits.monthly},
+        lifetime_deposit_limit = ${limits.lifetime},
         updated_at = NOW()
       WHERE user_id = ${userId}
     `
 
-    console.log(`[Veriff Webhook] Updated limits for user ${userId}: $${userLimits.daily}/day`)
+    console.log(`[Veriff Webhook] Updated limits for user ${userId}: ${tier} tier - $${limits.daily.toLocaleString()}/day`)
   } catch (error) {
     console.error('[Veriff Webhook] Update limits error:', error)
+    throw error // Re-throw as this is critical
+  }
+}
+
+/**
+ * Handle rejected verification
+ */
+async function handleRejectedVerification(
+  userId: string,
+  result: VerificationResult
+): Promise<void> {
+  try {
+    await sql`
+      UPDATE grain_user_profiles
+      SET
+        verification_status = 'rejected',
+        verification_notes = ${result.rejectionReasons?.join(', ') || 'Verification failed'},
+        updated_at = NOW()
+      WHERE user_id = ${userId}
+    `
+
+    console.log(`[Veriff Webhook] Marked verification as rejected for user ${userId}`)
+  } catch (error) {
+    console.error('[Veriff Webhook] Handle rejection error:', error)
   }
 }
 
@@ -353,9 +432,60 @@ export async function POST(request: NextRequest) {
       undefined // Signature already verified above
     )
 
-    // Update user limits based on new verification level
+    // Handle based on verification status
     if (result.status === VerificationStatus.APPROVED && result.userId) {
-      await updateUserLimits(result.userId, result.level)
+      // Determine the appropriate level based on desired tier
+      // Check if user wanted a higher tier
+      let targetLevel = result.level
+
+      try {
+        const profileResult = await sql`
+          SELECT desired_tier, address_line1, address_verified
+          FROM grain_user_profiles
+          WHERE user_id = ${result.userId}
+        `
+
+        if (profileResult.rows.length > 0) {
+          const profile = profileResult.rows[0]
+          const desiredTier = profile.desired_tier
+
+          // Upgrade level based on desired tier and whether address is provided
+          if (desiredTier === 'premium' && profile.address_line1) {
+            targetLevel = VerificationLevel.FULL_KYC
+          } else if (desiredTier === 'unlimited' && profile.address_line1) {
+            // Unlimited requires manual compliance review
+            // For now, set to FULL_KYC and flag for review
+            targetLevel = VerificationLevel.FULL_KYC
+
+            // Record that enhanced DD is pending
+            await sql`
+              INSERT INTO grain_treasury_events (
+                type,
+                amount,
+                user_id,
+                notes,
+                created_at
+              ) VALUES (
+                'enhanced_dd_pending',
+                0,
+                ${result.userId},
+                'User requested unlimited tier - pending manual compliance review',
+                NOW()
+              )
+            `
+          } else if (desiredTier === 'standard') {
+            targetLevel = VerificationLevel.PHONE_BASIC
+          }
+        }
+      } catch (e) {
+        console.log('[Veriff Webhook] Could not check desired tier:', e)
+      }
+
+      // Update to the determined level
+      result.level = targetLevel
+      await updateUserLimits(result.userId, targetLevel)
+    } else if (result.status === VerificationStatus.REJECTED && result.userId) {
+      await handleRejectedVerification(result.userId, result)
     }
 
     // Record audit event
@@ -371,6 +501,7 @@ export async function POST(request: NextRequest) {
       userId: result.userId,
       status: result.status,
       level: result.level,
+      tier: getTierFromLevel(result.level),
     })
 
     return NextResponse.json(
@@ -378,6 +509,7 @@ export async function POST(request: NextRequest) {
         received: true,
         sessionId: result.sessionId,
         status: result.status,
+        tier: getTierFromLevel(result.level),
         processingTime: `${processingTime}ms`,
       },
       { status: 200 }
@@ -429,13 +561,19 @@ export async function GET() {
 
   return NextResponse.json({
     status: 'active',
-    service: 'Veriff Webhook Handler',
+    service: 'Veriff Webhook Handler - Grain & Vault KYC',
     timestamp: new Date().toISOString(),
     configuration: {
       apiKeyConfigured: hasApiKey,
       apiSecretConfigured: hasApiSecret,
       webhookSecretConfigured: hasWebhookSecret,
       allConfigured: hasApiKey && hasApiSecret && hasWebhookSecret,
+    },
+    verificationLevels: {
+      basic: { level: 1, dailyLimit: '$1,000' },
+      standard: { level: 2, dailyLimit: '$10,000' },
+      premium: { level: 3, dailyLimit: '$100,000' },
+      unlimited: { level: 4, dailyLimit: 'Unlimited' },
     },
   })
 }

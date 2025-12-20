@@ -510,8 +510,7 @@ async function handlePaymentIntentFailed(
     UPDATE grain_transactions
     SET
       status = 'failed',
-      error_message = ${errorMessage || errorCode || 'Payment failed'},
-      updated_at = NOW()
+      error = ${errorMessage || errorCode || 'Payment failed'}
     WHERE circle_transfer_id = ${id} AND status = 'pending'
   `
 
@@ -777,8 +776,7 @@ async function processOutgoingTransfer(
     UPDATE grain_transactions
     SET
       status = 'completed',
-      completed_at = NOW(),
-      updated_at = NOW()
+      completed_at = NOW()
     WHERE circle_transfer_id = ${circleEventId}
     RETURNING user_id, amount
   `
@@ -830,8 +828,7 @@ async function handleTransferFailed(
     UPDATE grain_transactions
     SET
       status = 'failed',
-      error_message = ${fullErrorMessage},
-      updated_at = NOW()
+      error = ${fullErrorMessage}
     WHERE circle_transfer_id = ${id}
     RETURNING user_id, amount, type
   `
@@ -895,8 +892,7 @@ async function handlePayoutComplete(
     UPDATE grain_transactions
     SET
       status = 'completed',
-      completed_at = NOW(),
-      updated_at = NOW()
+      completed_at = NOW()
     WHERE (circle_transfer_id = ${id} OR payment_reference = ${id})
       AND type IN ('withdrawal', 'withdraw', 'payout')
     RETURNING user_id, amount, usd_amount
@@ -959,8 +955,7 @@ async function handlePayoutFailed(
     UPDATE grain_transactions
     SET
       status = 'failed',
-      error_message = ${fullErrorMessage},
-      updated_at = NOW()
+      error = ${fullErrorMessage}
     WHERE (circle_transfer_id = ${id} OR payment_reference = ${id})
       AND type IN ('withdrawal', 'withdraw', 'payout')
     RETURNING user_id, amount, usd_amount

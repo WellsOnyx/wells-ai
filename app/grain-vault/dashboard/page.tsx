@@ -32,9 +32,7 @@ import {
   AlertCircle,
   Loader2,
   ArrowDown,
-  ArrowUp,
-  CreditCard,
-  Landmark
+  ArrowUp
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
@@ -106,7 +104,6 @@ export default function DashboardPage() {
   const [walletData, setWalletData] = useState<WalletData | null>(null)
   const [treasuryData, setTreasuryData] = useState<TreasuryData | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [showDepositModal, setShowDepositModal] = useState(false)
 
   // Fetch wallet and treasury data
   const fetchData = async (isRefresh = false) => {
@@ -317,13 +314,13 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowDepositModal(true)}
-                className="px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all flex items-center gap-2"
+              <Link
+                href="/grain-vault/deposit"
+                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center gap-2 shadow-lg shadow-green-500/25 hover:shadow-green-500/40"
               >
                 <ArrowDown className="w-5 h-5" />
-                Deposit USDC
-              </button>
+                Add Funds
+              </Link>
               <button
                 disabled={balance === 0}
                 className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -367,26 +364,26 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-3 gap-3 mb-4">
               {[50, 100, 500].map((amount) => (
-                <button
+                <Link
                   key={amount}
-                  onClick={() => setShowDepositModal(true)}
+                  href={`/grain-vault/deposit?amount=${amount}`}
                   className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-green-500/50 transition-all text-center"
                 >
                   <p className="text-lg font-bold text-white">${amount}</p>
                   <p className="text-xs text-gray-400">
                     ≈ {(amount / (walletData.grain_price || 1)).toFixed(2)} GRAIN
                   </p>
-                </button>
+                </Link>
               ))}
             </div>
 
-            <button
-              onClick={() => setShowDepositModal(true)}
-              className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center justify-center gap-2"
+            <Link
+              href="/grain-vault/deposit"
+              className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
             >
               <ArrowDown className="w-5 h-5" />
-              Deposit Funds
-            </button>
+              Add Funds
+            </Link>
 
             <div className="mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
               <div className="flex items-start gap-2">
@@ -572,100 +569,6 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* Deposit Modal - Buy GRAIN via Circle */}
-      {showDepositModal && walletData?.has_wallet && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full border border-white/10">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-white">Buy GRAIN</h3>
-                <p className="text-xs text-gray-400">Available in 185+ countries via Circle</p>
-              </div>
-              <button
-                onClick={() => setShowDepositModal(false)}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Current GRAIN Price */}
-            <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-400">Current GRAIN Price</span>
-                <span className="text-lg font-bold text-green-400">
-                  ${(walletData.grain_price || 1).toFixed(4)}
-                </span>
-              </div>
-              <p className="text-xs text-green-400/70">
-                GRAIN can only appreciate. Anti-inflationary by design.
-              </p>
-            </div>
-
-            {/* Amount Selection */}
-            <div className="mb-6">
-              <p className="text-sm text-gray-400 mb-3">How much GRAIN do you want to buy?</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[100, 250, 500, 1000].map((amount) => (
-                  <button
-                    key={amount}
-                    className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-green-500/50 transition-all text-center"
-                  >
-                    <p className="text-xl font-bold text-white">${amount}</p>
-                    <p className="text-xs text-gray-400">
-                      ≈ {(amount / (walletData.grain_price || 1)).toFixed(2)} GRAIN
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Payment Methods - Circle Only */}
-            <div className="space-y-3 mb-6">
-              <button className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-blue-400" />
-                </div>
-                <div className="text-left flex-1">
-                  <p className="font-medium text-white">Credit / Debit Card</p>
-                  <p className="text-xs text-gray-400">Instant deposit via Circle</p>
-                </div>
-                <ArrowUpRight className="w-4 h-4 text-gray-500" />
-              </button>
-              <button className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <Landmark className="w-5 h-5 text-green-400" />
-                </div>
-                <div className="text-left flex-1">
-                  <p className="font-medium text-white">Bank Transfer (ACH)</p>
-                  <p className="text-xs text-gray-400">1-3 business days, lower fees</p>
-                </div>
-                <ArrowUpRight className="w-4 h-4 text-gray-500" />
-              </button>
-              <button className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                  <Wallet className="w-5 h-5 text-purple-400" />
-                </div>
-                <div className="text-left flex-1">
-                  <p className="font-medium text-white">Wire Transfer</p>
-                  <p className="text-xs text-gray-400">For larger deposits ($10K+)</p>
-                </div>
-                <ArrowUpRight className="w-4 h-4 text-gray-500" />
-              </button>
-            </div>
-
-            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <div className="flex items-start gap-2">
-                <Shield className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-gray-400">
-                  Powered by Circle. All deposits are USDC-backed and held in our secure treasury. GRAIN only appreciates.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Chat Widget */}
       <WellsAIChatWidget
         brandColor="#22C55E"
@@ -683,14 +586,19 @@ GRAIN PRICE FORMULA: Price = (Total USDC Reserve + Equity Value) / Circulating G
 - Every GRAIN is 100% backed by real assets
 
 HOW TO DEPOSIT:
-1. Click "Buy GRAIN" button in the dashboard
-2. Choose amount ($100, $250, $500, $1000, or custom)
-3. Select payment method:
-   - Card (instant via Circle)
-   - ACH Bank Transfer (1-3 days, lower fees)
-   - Wire Transfer (for $10K+ deposits)
-4. Complete payment through secure Circle checkout
-5. GRAIN is credited to your wallet at current price
+1. Click "Add Funds" button in the dashboard (or use quick deposit buttons for $50, $100, $500)
+2. You'll be taken to the deposit page where you can:
+   - Enter a custom amount or select presets ($50-$2500)
+   - Choose payment method: Card (instant), ACH (1-3 days, lower fees), or USDC on Base
+   - See exactly how much GRAIN you'll receive at current price
+3. Complete payment through secure Circle checkout
+4. GRAIN is credited to your wallet at current price
+
+VERIFICATION LEVELS:
+- Basic (email only): $1,000/day limit
+- Standard (phone + info): $10,000/day limit
+- Verified (full ID): $100,000/day limit
+- Enhanced: Unlimited
 
 The user's balance is shown in the dashboard. Help them understand their balance, how to deposit more GRAIN, how appreciation works, and answer any questions about their account.
 
