@@ -29,14 +29,13 @@ function isGrainVaultDomain(host: string): boolean {
 // ============================================================================
 
 // Public routes that don't require authentication
+// NOTE: Grain Vault routes are public at middleware level - auth is handled client-side
+// This is because Clerk dev instance doesn't work on custom domains
 const isPublicRoute = createRouteMatcher([
   '/',
   '/wells-ai',
   '/grain-vault',
-  '/grain-vault/demo',
-  '/grain-vault/signup(.*)',
-  '/grain-vault/signin(.*)',
-  '/grain-vault/onboarding',
+  '/grain-vault/(.*)',  // All grain-vault routes - auth handled client-side
   '/demo',
   '/onboarding',
   '/suppliers/join',
@@ -47,6 +46,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks/(.*)',
   '/api/widget/(.*)',
   '/api/onboarding/(.*)',
+  '/api/grain-vault/(.*)',  // Grain vault APIs - auth checked in route handlers
   '/sign-in(.*)',
   '/sign-up(.*)',
 ])
@@ -66,6 +66,8 @@ const isPublicApiRoute = createRouteMatcher([
 ])
 
 // Protected routes that require authentication
+// NOTE: Grain Vault routes handle auth client-side due to Clerk domain config
+// Once Clerk is configured for grainandvault.com, re-enable middleware protection
 const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
   '/deals(.*)',
@@ -73,14 +75,6 @@ const isProtectedRoute = createRouteMatcher([
   '/api/deals/(.*)',
   '/api/transactions/(.*)',
   '/api/connect/(.*)',
-  // Grain Vault protected routes
-  '/grain-vault/dashboard(.*)',
-  '/grain-vault/admin(.*)',
-  '/grain-vault/account(.*)',
-  '/api/grain-vault/deposit(.*)',
-  '/api/grain-vault/withdraw(.*)',
-  '/api/grain-vault/transfer(.*)',
-  '/api/grain-vault/account(.*)',
 ])
 
 // ============================================================================
