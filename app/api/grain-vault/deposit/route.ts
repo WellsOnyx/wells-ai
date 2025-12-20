@@ -1,779 +1,331 @@
 /**
- * GRAIN Vault Deposit API - Complete Circle Integration
+ * Grain & Vault Deposit API
  *
- * POST /api/grain-vault/deposit - Create a deposit/payment intent
- * GET /api/grain-vault/deposit - Get deposit status and balance
- *
- * Supports:
- * - Card payments via Circle Payments API
- * - ACH bank transfers
- * - USDC direct transfers
- *
- * Security:
- * - Clerk authentication required
- * - KYC level verification
- * - AML screening for large deposits
- * - Full audit trail logging
- * - Rate limiting
- * - Emergency controls integration
+ * Handles deposits via:
+ * 1. Card (via Circle Payments API)
+ * 2. USDC transfer (via Circle Programmable Wallets)
+ * 3. Bank/ACH (future)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { sql } from '@vercel/postgres'
-import crypto from 'crypto'
+import {
+  createPaymentIntent,
+  CIRCLE_CONFIG,
+  validateCircleConfig,
+} from '@/lib/circle'
 
-// Security services
-import { rateLimitOrRespond } from '@/lib/security/rate-limiter'
-import { isOperationAllowed } from '@/lib/security/emergency-controls'
-import { screenTransaction } from '@/lib/security/aml-screening'
-import { logFinancialEvent } from '@/lib/security/audit-logger'
-import { getIdentityVerificationService, VerificationLevel } from '@/lib/security/identity-verification'
-
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
-const CIRCLE_API_KEY = process.env.CIRCLE_API_KEY || ''
-const CIRCLE_MASTER_WALLET_ID = process.env.CIRCLE_MASTER_WALLET_ID || ''
-const CIRCLE_WALLET_SET_ID = process.env.CIRCLE_WALLET_SET_ID || ''
-const CIRCLE_ENV = (process.env.CIRCLE_ENV || 'sandbox') as 'sandbox' | 'production'
-const CIRCLE_API_BASE = CIRCLE_ENV === 'production'
-  ? 'https://api.circle.com/v1'
-  : 'https://api-sandbox.circle.com/v1'
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://grainandvault.com'
-
-// KYC limits by verification level
-const KYC_LIMITS: Record<number, { daily: number; monthly: number; perTransaction: number }> = {
-  [VerificationLevel.EMAIL_ONLY]: { daily: 1000, monthly: 5000, perTransaction: 500 },
-  [VerificationLevel.PHONE_BASIC]: { daily: 10000, monthly: 50000, perTransaction: 5000 },
-  [VerificationLevel.FULL_KYC]: { daily: 100000, monthly: 500000, perTransaction: 50000 },
-  [VerificationLevel.ENHANCED_DD]: { daily: -1, monthly: -1, perTransaction: -1 }, // Unlimited
-}
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface DepositRequest {
-  amount: number
-  paymentMethod: 'card' | 'ach' | 'usdc'
-  email?: string
-  metadata?: Record<string, string>
-}
-
-interface DepositResponse {
-  success: boolean
-  paymentId: string
-  checkoutUrl?: string
-  clientSecret?: string
-  amount: number
-  estimatedGrain: number
-  grainPrice: number
-  status: 'pending' | 'processing' | 'completed' | 'failed'
-  paymentMethod: string
-  expiresAt?: string
-}
-
-// ============================================================================
-// CIRCLE API HELPERS
-// ============================================================================
-
-/**
- * Make authenticated request to Circle API
- */
-async function circleRequest(
-  endpoint: string,
-  method: 'GET' | 'POST' = 'GET',
-  body?: Record<string, unknown>
-): Promise<any> {
-  if (!CIRCLE_API_KEY) {
-    throw new Error('Circle API key not configured')
-  }
-
-  const response = await fetch(`${CIRCLE_API_BASE}${endpoint}`, {
-    method,
-    headers: {
-      'Authorization': `Bearer ${CIRCLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('[Circle API] Error:', response.status, errorText)
-    throw new Error(`Circle API error: ${response.status} - ${errorText}`)
-  }
-
-  return response.json()
-}
-
-/**
- * Create a Circle payment intent for card payments
- */
-async function createCirclePaymentIntent(params: {
-  amount: number
-  currency: string
-  userId: string
-  sessionId: string
-  email?: string
-  metadata?: Record<string, string>
-}): Promise<{
-  paymentIntentId: string
-  clientSecret: string
-  checkoutUrl: string
-}> {
-  const idempotencyKey = `pi_${params.sessionId}_${Date.now()}`
-
-  // Create payment intent via Circle Payments API
-  const response = await circleRequest('/payments/paymentIntents', 'POST', {
-    idempotencyKey,
-    amount: {
-      amount: params.amount.toFixed(2),
-      currency: params.currency,
-    },
-    settlementCurrency: 'USD',
-    paymentMethods: [{
-      type: 'card',
-      chain: 'BASE', // Settle to USDC on Base
-    }],
-    metadata: {
-      userId: params.userId,
-      sessionId: params.sessionId,
-      ...params.metadata,
-    },
-  })
-
-  const paymentIntent = response.data
-
-  // Build checkout URL
-  const checkoutUrl = `${BASE_URL}/grain-vault/deposit/checkout?` +
-    `paymentIntentId=${paymentIntent.id}&` +
-    `clientSecret=${paymentIntent.clientSecret}&` +
-    `amount=${params.amount}`
-
-  return {
-    paymentIntentId: paymentIntent.id,
-    clientSecret: paymentIntent.clientSecret,
-    checkoutUrl,
-  }
-}
-
-/**
- * Create Circle on-ramp session for ACH/bank transfers
- */
-async function createCircleOnRampSession(params: {
-  amount: number
-  userId: string
-  sessionId: string
-  email?: string
-}): Promise<{
-  sessionId: string
-  checkoutUrl: string
-}> {
-  // Circle hosted on-ramp flow for ACH
-  // In sandbox, we return a demo URL
-  const checkoutUrl = CIRCLE_ENV === 'production'
-    ? `https://pay.circle.com/checkout?` +
-      `amount=${params.amount}&` +
-      `currency=USD&` +
-      `destinationAddress=${CIRCLE_MASTER_WALLET_ID}&` +
-      `blockchain=BASE&` +
-      `metadata[userId]=${params.userId}&` +
-      `metadata[sessionId]=${params.sessionId}&` +
-      `successUrl=${encodeURIComponent(`${BASE_URL}/grain-vault/deposit/success?session=${params.sessionId}`)}&` +
-      `cancelUrl=${encodeURIComponent(`${BASE_URL}/grain-vault/deposit/cancel?session=${params.sessionId}`)}`
-    : `${BASE_URL}/grain-vault/deposit/demo?session=${params.sessionId}&amount=${params.amount}&method=ach`
-
-  return {
-    sessionId: params.sessionId,
-    checkoutUrl,
-  }
-}
-
-// ============================================================================
-// GRAIN PRICE & LIMITS
-// ============================================================================
-
-/**
- * Get current GRAIN price from treasury
- */
-async function getCurrentGrainPrice(): Promise<{
-  price: number
-  treasury: number
-  supply: number
-}> {
-  try {
-    // Try the database function first
-    const priceResult = await sql`SELECT * FROM get_grain_price()`
-    if (priceResult.rows.length > 0) {
-      return {
-        price: parseFloat(priceResult.rows[0].price_usd) || 1.0,
-        treasury: parseFloat(priceResult.rows[0].total_treasury) || 0,
-        supply: parseFloat(priceResult.rows[0].circulating_supply) || 0,
-      }
-    }
-  } catch {
-    // Function might not exist
-  }
-
-  // Fallback: calculate from tables
-  try {
-    const [supplyResult, treasuryResult] = await Promise.all([
-      sql`SELECT COALESCE(SUM(balance), 0) as total FROM user_wallets`,
-      sql`SELECT COALESCE(SUM(amount), 0) as total FROM treasury_backing WHERE status = 'active'`,
-    ])
-
-    const supply = parseFloat(supplyResult.rows[0]?.total) || 1
-    const treasury = parseFloat(treasuryResult.rows[0]?.total) || 0
-    const price = supply > 0 ? Math.max(treasury / supply, 1.0) : 1.0
-
-    return { price, treasury, supply }
-  } catch {
-    return { price: 1.0, treasury: 0, supply: 0 }
-  }
-}
-
-/**
- * Get user's daily deposit total for limit checking
- */
-async function getUserDailyDeposits(userId: string): Promise<number> {
-  try {
-    const result = await sql`
-      SELECT COALESCE(SUM(usd_amount), 0) as total
-      FROM grain_transactions
-      WHERE user_id = ${userId}
-        AND type = 'deposit'
-        AND status IN ('completed', 'pending', 'processing')
-        AND created_at >= NOW() - INTERVAL '24 hours'
-    `
-    return parseFloat(result.rows[0]?.total || '0')
-  } catch {
-    return 0
-  }
-}
-
-/**
- * Get user's monthly deposit total
- */
-async function getUserMonthlyDeposits(userId: string): Promise<number> {
-  try {
-    const result = await sql`
-      SELECT COALESCE(SUM(usd_amount), 0) as total
-      FROM grain_transactions
-      WHERE user_id = ${userId}
-        AND type = 'deposit'
-        AND status IN ('completed', 'pending', 'processing')
-        AND created_at >= NOW() - INTERVAL '30 days'
-    `
-    return parseFloat(result.rows[0]?.total || '0')
-  } catch {
-    return 0
-  }
-}
-
-/**
- * Check if deposit is within KYC limits
- */
-async function checkDepositLimits(
-  userId: string,
-  amount: number,
-  verificationLevel: number
-): Promise<{ allowed: boolean; reason?: string }> {
-  const limits = KYC_LIMITS[verificationLevel] || KYC_LIMITS[VerificationLevel.EMAIL_ONLY]
-
-  // Check per-transaction limit
-  if (limits.perTransaction > 0 && amount > limits.perTransaction) {
-    return {
-      allowed: false,
-      reason: `Amount exceeds per-transaction limit of $${limits.perTransaction.toLocaleString()}. ` +
-        `Upgrade verification to increase limits.`,
-    }
-  }
-
-  // Check daily limit
-  if (limits.daily > 0) {
-    const dailyTotal = await getUserDailyDeposits(userId)
-    if (dailyTotal + amount > limits.daily) {
-      return {
-        allowed: false,
-        reason: `Amount would exceed daily limit of $${limits.daily.toLocaleString()}. ` +
-          `Current daily deposits: $${dailyTotal.toLocaleString()}. ` +
-          `Upgrade verification to increase limits.`,
-      }
-    }
-  }
-
-  // Check monthly limit
-  if (limits.monthly > 0) {
-    const monthlyTotal = await getUserMonthlyDeposits(userId)
-    if (monthlyTotal + amount > limits.monthly) {
-      return {
-        allowed: false,
-        reason: `Amount would exceed monthly limit of $${limits.monthly.toLocaleString()}. ` +
-          `Current monthly deposits: $${monthlyTotal.toLocaleString()}. ` +
-          `Upgrade verification to increase limits.`,
-      }
-    }
-  }
-
-  return { allowed: true }
-}
-
-// ============================================================================
-// POST: CREATE DEPOSIT/PAYMENT INTENT
-// ============================================================================
+// =============================================================================
+// POST - Create Deposit
+// =============================================================================
 
 export async function POST(req: NextRequest) {
-  const startTime = Date.now()
-
   try {
-    // SECURITY: Rate limiting
-    const blocked = await rateLimitOrRespond(req, 'deposit')
-    if (blocked) return blocked
-
-    // SECURITY: Require authentication
+    // Authenticate user
     const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // SECURITY: Emergency controls check
-    const operationCheck = await isOperationAllowed('deposit', userId)
-    if (!operationCheck.allowed) {
-      return NextResponse.json(
-        { error: operationCheck.reason || 'Deposits are temporarily disabled' },
-        { status: 403 }
-      )
+    const user = await currentUser()
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 401 })
     }
 
-    // Parse request body
-    const body: DepositRequest = await req.json().catch(() => ({
-      amount: 0,
-      paymentMethod: 'card' as const,
-    }))
-
-    const { amount, paymentMethod, email, metadata } = body
+    // Parse request
+    const body = await req.json()
+    const { amount, method = 'card' } = body
 
     // Validate amount
-    if (!amount || amount <= 0) {
+    const depositAmount = parseFloat(amount)
+    if (isNaN(depositAmount) || depositAmount < 1) {
       return NextResponse.json(
-        { error: 'Valid amount is required' },
+        { error: 'Minimum deposit is $1' },
+        { status: 400 }
+      )
+    }
+    if (depositAmount > 10000) {
+      return NextResponse.json(
+        { error: 'Maximum deposit is $10,000 per transaction' },
         { status: 400 }
       )
     }
 
-    if (amount < 10) {
+    // Check Circle configuration
+    const configCheck = validateCircleConfig()
+    if (!configCheck.valid) {
+      console.error('[Deposit] Circle not configured:', configCheck.errors)
       return NextResponse.json(
-        { error: 'Minimum deposit is $10' },
+        { error: 'Payment system not configured. Please contact support.' },
+        { status: 503 }
+      )
+    }
+
+    // Ensure user has wallet record
+    await ensureUserWallet(userId)
+
+    // Check KYC limits
+    const limitCheck = await checkDepositLimits(userId, depositAmount)
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: limitCheck.reason, upgradeRequired: limitCheck.upgradeRequired },
         { status: 400 }
       )
     }
 
-    // Card deposits have a maximum (use ACH for larger amounts)
-    if (paymentMethod === 'card' && amount > 10000) {
+    // Create deposit based on method
+    if (method === 'card') {
+      return await handleCardDeposit(userId, depositAmount, user.emailAddresses[0]?.emailAddress)
+    } else if (method === 'usdc') {
+      return await handleUSDCDeposit(userId)
+    } else {
       return NextResponse.json(
-        { error: 'Maximum card deposit is $10,000. Use ACH for larger amounts.' },
+        { error: 'Invalid payment method' },
         { status: 400 }
       )
     }
+  } catch (error: any) {
+    console.error('[Deposit] Error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Failed to create deposit' },
+      { status: 500 }
+    )
+  }
+}
 
-    // Validate payment method
-    if (!['card', 'ach', 'usdc'].includes(paymentMethod)) {
-      return NextResponse.json(
-        { error: 'Invalid payment method. Supported: card, ach, usdc' },
-        { status: 400 }
-      )
-    }
+// =============================================================================
+// CARD DEPOSIT (Circle Payments API)
+// =============================================================================
 
-    // SECURITY: Get user's verification level and check limits
-    const verificationService = getIdentityVerificationService()
-    const levelInfo = await verificationService.getVerificationLevel(userId)
+async function handleCardDeposit(
+  userId: string,
+  amount: number,
+  email?: string
+): Promise<NextResponse> {
+  const sessionId = crypto.randomUUID()
 
-    const limitsCheck = await checkDepositLimits(userId, amount, levelInfo.level)
-    if (!limitsCheck.allowed) {
-      return NextResponse.json({
-        error: 'Deposit limit exceeded',
-        reason: limitsCheck.reason,
-        currentLevel: levelInfo.name,
-        upgradeUrl: '/grain-vault/verify',
-      }, { status: 403 })
-    }
+  // Create payment intent with Circle
+  const result = await createPaymentIntent({
+    amount,
+    userId,
+    sessionId,
+    description: `GRAIN deposit - ${email || userId}`,
+    metadata: {
+      source: 'grain_vault',
+      email: email || '',
+    },
+  })
 
-    // SECURITY: AML screening for deposits >= $3000
-    if (amount >= 3000) {
-      const sessionId = `aml_${userId.substring(0, 8)}_${Date.now().toString(36)}`
-      const amlResult = await screenTransaction({
-        id: sessionId,
-        userId,
-        type: 'deposit',
-        amount,
-        currency: 'USD',
-        createdAt: new Date(),
-      })
+  if (!result.success) {
+    console.error('[Deposit] Failed to create payment intent:', result.error)
+    return NextResponse.json(
+      { error: result.error || 'Failed to create payment' },
+      { status: 500 }
+    )
+  }
 
-      if (!amlResult.passed) {
-        await logFinancialEvent(
-          'financial.deposit.failed',
-          userId,
-          amount,
-          {
-            sessionId,
-            method: paymentMethod,
-            reason: 'AML screening failed',
-            amlAction: amlResult.action,
-            amlFlags: amlResult.flags.map(f => f.code),
-          },
-          { result: 'blocked' }
-        )
-
-        return NextResponse.json({
-          error: 'Transaction under review',
-          reason: 'This deposit requires additional verification. Our compliance team will contact you within 24 hours.',
-          reviewRequired: true,
-          screeningId: amlResult.screeningId,
-        }, { status: 403 })
-      }
-    }
-
-    // Generate unique session/payment ID
-    const paymentId = `dep_${userId.substring(0, 8)}_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`
-
-    // Get current GRAIN price
-    const { price: grainPrice, treasury, supply } = await getCurrentGrainPrice()
-    const estimatedGrain = amount / grainPrice
-
-    // Ensure user has a wallet entry
-    await sql`
-      INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, created_at, updated_at)
-      VALUES (
-        ${userId},
-        ${'grain-ledger-' + userId.substring(0, 8) + '-' + Date.now().toString(36)},
-        'custodial',
-        0,
-        NOW(),
-        NOW()
-      )
-      ON CONFLICT (user_id) DO NOTHING
-    `
-
-    let checkoutUrl: string | undefined
-    let clientSecret: string | undefined
-    let circlePaymentIntentId: string | undefined
-
-    // Create payment based on method
-    try {
-      if (paymentMethod === 'card') {
-        // Create Circle payment intent for card payments
-        const circleResult = await createCirclePaymentIntent({
-          amount,
-          currency: 'USD',
-          userId,
-          sessionId: paymentId,
-          email,
-          metadata,
-        })
-        circlePaymentIntentId = circleResult.paymentIntentId
-        clientSecret = circleResult.clientSecret
-        checkoutUrl = circleResult.checkoutUrl
-      } else if (paymentMethod === 'ach') {
-        // Create Circle on-ramp session for ACH
-        const onRampResult = await createCircleOnRampSession({
-          amount,
-          userId,
-          sessionId: paymentId,
-          email,
-        })
-        checkoutUrl = onRampResult.checkoutUrl
-      } else if (paymentMethod === 'usdc') {
-        // For USDC, provide direct deposit instructions
-        // User sends USDC to master wallet, webhook credits their account
-        checkoutUrl = `${BASE_URL}/grain-vault/deposit/usdc?session=${paymentId}&amount=${amount}`
-      }
-    } catch (circleError: any) {
-      console.error('[Deposit] Circle API error:', circleError)
-      // Fall back to demo mode for development
-      checkoutUrl = `${BASE_URL}/grain-vault/deposit/demo?session=${paymentId}&amount=${amount}&method=${paymentMethod}`
-    }
-
-    // Create pending transaction record
+  // Record pending transaction
+  try {
     await sql`
       INSERT INTO grain_transactions (
         id,
         user_id,
         type,
         usd_amount,
-        grain_amount,
         grain_price,
         payment_method,
-        circle_transfer_id,
+        payment_reference,
         status,
-        description,
+        reason,
         created_at
       ) VALUES (
-        ${paymentId},
+        ${sessionId},
         ${userId},
         'deposit',
         ${amount},
-        ${estimatedGrain},
-        ${grainPrice},
-        ${paymentMethod},
-        ${circlePaymentIntentId || paymentId},
+        1.0,
+        'card',
+        ${result.paymentIntentId},
         'pending',
-        ${`Deposit of $${amount.toFixed(2)} via ${paymentMethod}`},
+        'Card deposit via Circle',
         NOW()
       )
     `
+  } catch (e) {
+    console.warn('[Deposit] Failed to record pending transaction:', e)
+  }
 
-    // Log deposit initiation
-    await logFinancialEvent(
-      'financial.deposit.initiated',
-      userId,
-      amount,
-      {
-        paymentId,
-        paymentMethod,
-        grainPrice,
-        estimatedGrain,
-        circlePaymentIntentId,
-        verificationLevel: levelInfo.name,
-      }
-    )
+  return NextResponse.json({
+    success: true,
+    sessionId,
+    paymentIntentId: result.paymentIntentId,
+    checkoutUrl: result.checkoutUrl,
+    expiresAt: result.expiresAt,
+    method: 'card',
+    amount,
+  })
+}
 
-    // Build response
-    const response: DepositResponse = {
-      success: true,
-      paymentId,
-      checkoutUrl,
-      clientSecret,
-      amount,
-      estimatedGrain,
-      grainPrice,
-      status: 'pending',
-      paymentMethod,
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min expiry
-    }
+// =============================================================================
+// USDC DEPOSIT (Circle Programmable Wallets)
+// =============================================================================
 
-    const processingTime = Date.now() - startTime
+async function handleUSDCDeposit(userId: string): Promise<NextResponse> {
+  // Get or create user's deposit address
+  // For custodial model, this is the master wallet address
+  const masterWalletAddress = CIRCLE_CONFIG.w3s.masterWalletAddress
 
-    return NextResponse.json({
-      ...response,
-      conversion: {
-        currentGrainPrice: grainPrice,
-        depositUsd: amount,
-        estimatedGrainReceived: estimatedGrain,
-        note: 'GRAIN price only goes up. Your purchasing power increases as you hold.',
-      },
-      limits: {
-        verificationLevel: levelInfo.name,
-        dailyLimit: KYC_LIMITS[levelInfo.level]?.daily || 1000,
-        monthlyLimit: KYC_LIMITS[levelInfo.level]?.monthly || 5000,
-        perTransactionLimit: KYC_LIMITS[levelInfo.level]?.perTransaction || 500,
-      },
-      treasury: {
-        totalBacking: treasury,
-        circulatingGrain: supply,
-        backingRatio: supply > 0 ? treasury / supply : 1.0,
-      },
-      _meta: {
-        processingTime: `${processingTime}ms`,
-      },
-    })
-  } catch (error: any) {
-    console.error('[Deposit] Error:', error)
+  if (!masterWalletAddress) {
     return NextResponse.json(
-      { error: 'Failed to create deposit', details: error.message },
-      { status: 500 }
+      { error: 'USDC deposits not configured' },
+      { status: 503 }
     )
+  }
+
+  return NextResponse.json({
+    success: true,
+    method: 'usdc',
+    depositAddress: masterWalletAddress,
+    blockchain: CIRCLE_CONFIG.defaultChain,
+    instructions: `Send USDC on ${CIRCLE_CONFIG.defaultChain} to ${masterWalletAddress}. Your GRAIN balance will be credited after 1 confirmation.`,
+    note: 'Include your user ID in the transaction memo if possible.',
+  })
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+async function ensureUserWallet(userId: string): Promise<void> {
+  try {
+    await sql`
+      INSERT INTO user_wallets (user_id, balance, created_at)
+      VALUES (${userId}, 0, NOW())
+      ON CONFLICT (user_id) DO NOTHING
+    `
+  } catch (e) {
+    // Ignore - wallet may already exist
   }
 }
 
-// ============================================================================
-// GET: CHECK DEPOSIT STATUS / BALANCE
-// ============================================================================
+async function checkDepositLimits(
+  userId: string,
+  amount: number
+): Promise<{ allowed: boolean; reason?: string; upgradeRequired?: boolean }> {
+  try {
+    // Get user's verification level
+    const profileResult = await sql`
+      SELECT verification_level, daily_deposit_limit
+      FROM grain_user_profiles
+      WHERE user_id = ${userId}
+    `
+
+    let dailyLimit = 1000 // Default for unverified users
+    let verificationLevel = 1
+
+    if (profileResult.rows.length > 0) {
+      verificationLevel = profileResult.rows[0].verification_level || 1
+      dailyLimit = parseFloat(profileResult.rows[0].daily_deposit_limit || '1000')
+    }
+
+    // Check amount against daily limit
+    if (amount > dailyLimit) {
+      return {
+        allowed: false,
+        reason: `Amount exceeds your daily limit of $${dailyLimit}. Upgrade your verification to increase limits.`,
+        upgradeRequired: true,
+      }
+    }
+
+    // Check daily usage
+    const usageResult = await sql`
+      SELECT COALESCE(SUM(usd_amount), 0) as daily_total
+      FROM grain_transactions
+      WHERE user_id = ${userId}
+        AND type = 'deposit'
+        AND status IN ('completed', 'pending')
+        AND created_at > NOW() - INTERVAL '24 hours'
+    `
+
+    const dailyUsed = parseFloat(usageResult.rows[0]?.daily_total || '0')
+    const remaining = dailyLimit - dailyUsed
+
+    if (amount > remaining) {
+      return {
+        allowed: false,
+        reason: `Amount exceeds your remaining daily limit of $${remaining.toFixed(2)}. Try again tomorrow or upgrade your verification.`,
+        upgradeRequired: remaining < 100,
+      }
+    }
+
+    return { allowed: true }
+  } catch (e) {
+    console.warn('[Deposit] Failed to check limits:', e)
+    // Allow deposit if we can't check limits (fail open for UX)
+    return { allowed: true }
+  }
+}
+
+// =============================================================================
+// GET - Get Deposit Status
+// =============================================================================
 
 export async function GET(req: NextRequest) {
   try {
-    // SECURITY: Rate limiting
-    const blocked = await rateLimitOrRespond(req, 'deposit')
-    if (blocked) return blocked
-
     const { userId } = await auth()
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // SECURITY: Emergency controls check
-    const operationCheck = await isOperationAllowed('deposit', userId)
-    if (!operationCheck.allowed) {
-      return NextResponse.json({ error: operationCheck.reason }, { status: 403 })
-    }
+    const { searchParams } = new URL(req.url)
+    const sessionId = searchParams.get('sessionId')
 
-    // Check for wallet entry
-    const walletResult = await sql`
-      SELECT user_id, wallet_id, balance, updated_at
-      FROM user_wallets
-      WHERE user_id = ${userId}
-    `
-
-    // Check if user has a profile
-    let hasProfile = false
-    try {
-      const profileResult = await sql`
-        SELECT user_id FROM grain_user_profiles WHERE user_id = ${userId}
-      `
-      hasProfile = profileResult.rows.length > 0
-    } catch {
-      // Table might not exist
-    }
-
-    // Get GRAIN price
-    const { price: grainPrice, treasury, supply } = await getCurrentGrainPrice()
-
-    // Get user's verification level
-    const verificationService = getIdentityVerificationService()
-    const levelInfo = await verificationService.getVerificationLevel(userId)
-
-    // Get daily/monthly totals
-    const [dailyTotal, monthlyTotal] = await Promise.all([
-      getUserDailyDeposits(userId),
-      getUserMonthlyDeposits(userId),
-    ])
-
-    const limits = KYC_LIMITS[levelInfo.level] || KYC_LIMITS[VerificationLevel.EMAIL_ONLY]
-
-    if (walletResult.rows.length === 0) {
-      // Auto-create wallet if user has profile
-      if (hasProfile) {
-        const walletId = `grain-ledger-${userId.substring(0, 8)}-${Date.now().toString(36)}`
-
-        await sql`
-          INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, created_at, updated_at)
-          VALUES (${userId}, ${walletId}, 'custodial', 0, NOW(), NOW())
-        `
-
-        return NextResponse.json({
-          hasWallet: true,
-          hasProfile: true,
-          balance: {
-            grain: 0,
-            usdValue: 0,
-          },
-          grainPrice,
-          verification: {
-            level: levelInfo.level,
-            name: levelInfo.name,
-            dailyLimit: limits.daily,
-            monthlyLimit: limits.monthly,
-            perTransactionLimit: limits.perTransaction,
-          },
-          usage: {
-            dailyDeposits: 0,
-            monthlyDeposits: 0,
-            remainingDaily: limits.daily,
-            remainingMonthly: limits.monthly,
-          },
-          recentTransactions: [],
-          lastUpdated: new Date().toISOString(),
-        })
-      }
-
+    if (!sessionId) {
+      // Return deposit address for USDC deposits
+      const masterWalletAddress = CIRCLE_CONFIG.w3s.masterWalletAddress
       return NextResponse.json({
-        hasWallet: false,
-        hasProfile: false,
-        balance: { grain: 0, usdValue: 0 },
-        grainPrice,
-        message: 'Please complete onboarding to create your account.',
+        depositAddress: masterWalletAddress,
+        blockchain: CIRCLE_CONFIG.defaultChain,
       })
     }
 
-    const wallet = walletResult.rows[0]
-    const grainBalance = parseFloat(wallet.balance || '0')
-    const usdValue = grainBalance * grainPrice
+    // Get transaction status
+    const result = await sql`
+      SELECT
+        id,
+        type,
+        usd_amount,
+        grain_amount,
+        status,
+        payment_reference,
+        created_at,
+        completed_at
+      FROM grain_transactions
+      WHERE id = ${sessionId}
+        AND user_id = ${userId}
+    `
 
-    // Get recent transactions
-    let transactions: any[] = []
-    try {
-      const txResult = await sql`
-        SELECT id, type, usd_amount, grain_amount, grain_price, status, payment_method, created_at, completed_at
-        FROM grain_transactions
-        WHERE user_id = ${userId}
-        ORDER BY created_at DESC
-        LIMIT 10
-      `
-      transactions = txResult.rows.map(tx => ({
-        id: tx.id,
-        type: tx.type,
-        usdAmount: parseFloat(tx.usd_amount || '0'),
-        grainAmount: parseFloat(tx.grain_amount || '0'),
-        grainPriceAtTime: parseFloat(tx.grain_price || '1'),
-        status: tx.status,
-        paymentMethod: tx.payment_method,
-        createdAt: tx.created_at,
-        completedAt: tx.completed_at,
-      }))
-    } catch {
-      // Table might not exist
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
 
+    const tx = result.rows[0]
+
     return NextResponse.json({
-      hasWallet: true,
-      hasProfile,
-      balance: {
-        grain: grainBalance,
-        usdValue,
-      },
-      grainPrice,
-      verification: {
-        level: levelInfo.level,
-        name: levelInfo.name,
-        dailyLimit: limits.daily,
-        monthlyLimit: limits.monthly,
-        perTransactionLimit: limits.perTransaction,
-      },
-      usage: {
-        dailyDeposits: dailyTotal,
-        monthlyDeposits: monthlyTotal,
-        remainingDaily: limits.daily > 0 ? Math.max(0, limits.daily - dailyTotal) : -1,
-        remainingMonthly: limits.monthly > 0 ? Math.max(0, limits.monthly - monthlyTotal) : -1,
-      },
-      appreciation: {
-        currentPrice: grainPrice,
-        note: 'GRAIN only appreciates. Your purchasing power grows as you hold.',
-      },
-      treasury: {
-        totalBacking: treasury,
-        circulatingGrain: supply,
-        backingRatio: supply > 0 ? treasury / supply : 1.0,
-      },
-      recentTransactions: transactions,
-      lastUpdated: wallet.updated_at,
+      id: tx.id,
+      status: tx.status,
+      amount: parseFloat(tx.usd_amount),
+      grainAmount: tx.grain_amount ? parseFloat(tx.grain_amount) : null,
+      paymentReference: tx.payment_reference,
+      createdAt: tx.created_at,
+      completedAt: tx.completed_at,
     })
   } catch (error: any) {
-    console.error('[Deposit] Balance check error:', error)
+    console.error('[Deposit] Get status error:', error)
     return NextResponse.json(
-      { error: 'Failed to check balance', details: error.message },
+      { error: error.message || 'Failed to get deposit status' },
       { status: 500 }
     )
   }
 }
-
-/**
- * SECURITY NOTES - CUSTODIAL MODEL:
- *
- * 1. Master wallet address is NEVER exposed to end users
- * 2. All deposits go through Circle's secure checkout flow
- * 3. User balances are tracked in our internal ledger (user_wallets table)
- * 4. The actual USDC is held in our Circle wallet
- * 5. GRAIN price = (USDC Reserve + Equity) / Circulating Supply
- * 6. GRAIN can only appreciate as treasury grows
- * 7. All transactions require KYC verification based on amount
- * 8. Webhook handler completes transactions when Circle confirms
- *
- * This protects against:
- * - Phishing (users never see raw wallet addresses)
- * - Social engineering
- * - Address manipulation attacks
- * - Clipboard hijacking
- */
