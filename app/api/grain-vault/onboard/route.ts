@@ -195,15 +195,21 @@ export async function POST(req: NextRequest) {
   try {
     // SECURITY: Require authentication
     const { userId } = await auth()
+    console.log('[onboard POST] userId:', userId)
+
     if (!userId) {
+      console.log('[onboard POST] No userId - returning 401')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get Clerk user for email
     const user = await currentUser()
     if (!user) {
+      console.log('[onboard POST] No Clerk user found')
       return NextResponse.json({ error: 'User not found' }, { status: 401 })
     }
+
+    console.log('[onboard POST] Clerk user email:', user.primaryEmailAddress?.emailAddress)
 
     const email = user.primaryEmailAddress?.emailAddress
     const emailVerified = user.primaryEmailAddress?.verification?.status === 'verified'
@@ -469,6 +475,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user already has a wallet
+    console.log('[onboard POST] Checking for existing wallet for userId:', userId)
     const walletResult = await sql`
       SELECT user_id, wallet_id, wallet_address, balance
       FROM user_wallets
@@ -476,16 +483,21 @@ export async function POST(req: NextRequest) {
     `
 
     let wallet = walletResult.rows[0]
+    console.log('[onboard POST] Existing wallet found:', !!wallet)
 
     if (!wallet) {
       // Create wallet
       const walletAddress = generateWalletAddress(userId)
       const walletId = generateWalletId(userId)
 
+      console.log('[onboard POST] Creating new wallet:', { userId, walletId, walletAddress })
+
       await sql`
         INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, created_at, updated_at)
         VALUES (${userId}, ${walletId}, ${walletAddress}, 0, NOW(), NOW())
       `
+
+      console.log('[onboard POST] Wallet created successfully')
 
       wallet = {
         wallet_address: walletAddress,
@@ -501,6 +513,7 @@ export async function POST(req: NextRequest) {
         `
       } catch (e) {
         // Table might not exist yet
+        console.log('[onboard POST] Treasury event insert failed:', e)
       }
     }
 

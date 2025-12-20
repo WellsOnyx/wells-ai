@@ -87,7 +87,10 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()
+    console.log('[deposit GET] userId:', userId)
+
     if (!userId) {
+      console.log('[deposit GET] No userId - returning 401')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -97,11 +100,21 @@ export async function GET(req: NextRequest) {
       WHERE user_id = ${userId}
     `
 
+    console.log('[deposit GET] wallet query result rows:', walletResult.rows.length)
+
     if (walletResult.rows.length === 0) {
+      // Also check if user has a profile (completed onboarding)
+      const profileResult = await sql`
+        SELECT user_id FROM grain_user_profiles WHERE user_id = ${userId}
+      `
+      console.log('[deposit GET] profile exists:', profileResult.rows.length > 0)
+
       return NextResponse.json({
         has_wallet: false,
+        has_profile: profileResult.rows.length > 0,
         balance: 0,
-        message: 'No wallet found. Call POST to create one.'
+        message: 'No wallet found. Call POST to create one.',
+        debug: { userId, checkedAt: new Date().toISOString() }
       })
     }
 
