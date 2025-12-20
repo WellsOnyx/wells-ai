@@ -424,26 +424,24 @@ async function refundFailedWithdrawal(
       WHERE user_id = ${userId}
     `
 
-    // Record refund transaction
+    // Record refund transaction (matches schema-grain.sql)
     await sql`
       INSERT INTO grain_transactions (
         user_id,
         type,
-        grain_amount,
-        grain_price,
-        payment_reference,
-        status,
+        amount,
         reason,
+        circle_transfer_id,
+        status,
         created_at,
         completed_at
       ) VALUES (
         ${userId},
-        'refund',
+        'deposit',
         ${amount},
-        1.0,
+        'Withdrawal failed - refunded',
         ${reference},
         'completed',
-        'Withdrawal failed - refunded',
         NOW(),
         NOW()
       )

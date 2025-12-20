@@ -200,10 +200,28 @@ export async function creditGrainFromDeposit(
   source: 'card' | 'usdc' | 'ach'
 ): Promise<{ success: boolean; grainAmount?: number; error?: string }> {
   try {
+    // Validate inputs
+    if (!userId || typeof userId !== 'string') {
+      return { success: false, error: 'Invalid userId' }
+    }
+    if (!usdAmount || typeof usdAmount !== 'number' || isNaN(usdAmount)) {
+      return { success: false, error: 'Invalid amount' }
+    }
+
     // Get current GRAIN price (for now 1:1 with USD)
     const grainPrice = 1.0 // TODO: Get from price oracle
-
     const grainAmount = usdAmount / grainPrice
+    const reasonText = `${source} deposit via Circle`
+
+    // Ensure user has a wallet (upsert)
+    // wallet_id and wallet_address are placeholders until Circle wallet is created
+    const placeholderWalletId = `pending_${userId}`
+    const placeholderWalletAddress = `pending_${userId}`
+    await sql`
+      INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, created_at, updated_at)
+      VALUES (${userId}, ${placeholderWalletId}, ${placeholderWalletAddress}, 0, NOW(), NOW())
+      ON CONFLICT (user_id) DO NOTHING
+    `
 
     // Update user wallet balance
     await sql`
@@ -214,26 +232,22 @@ export async function creditGrainFromDeposit(
       WHERE user_id = ${userId}
     `
 
-    // Record transaction
+    // Record transaction (matches schema-grain.sql)
     await sql`
       INSERT INTO grain_transactions (
         user_id,
         type,
-        usd_amount,
-        grain_amount,
-        grain_price,
-        payment_method,
-        payment_reference,
+        amount,
+        reason,
+        circle_transfer_id,
         status,
         created_at,
         completed_at
       ) VALUES (
         ${userId},
         'deposit',
-        ${usdAmount},
         ${grainAmount},
-        ${grainPrice},
-        ${source},
+        ${reasonText},
         ${circleReference},
         'completed',
         NOW(),
@@ -241,28 +255,30 @@ export async function creditGrainFromDeposit(
       )
     `
 
-    // Update treasury backing
-    await sql`
-      INSERT INTO treasury_backing (
-        asset_type,
-        asset_name,
-        amount,
-        value_usd,
-        source,
-        circle_reference,
-        status,
-        acquired_at
-      ) VALUES (
-        'usdc',
-        'USDC from ${source} deposit',
-        ${usdAmount},
-        ${usdAmount},
-        ${source},
-        ${circleReference},
-        'active',
-        NOW()
-      )
-    `
+    // Update treasury backing (matches schema-grain-vault.sql)
+    const assetName = 'USDC from ' + source + ' deposit'
+    try {
+      await sql`
+        INSERT INTO treasury_backing (
+          asset_type,
+          asset_name,
+          amount,
+          source,
+          circle_reference_id,
+          status
+        ) VALUES (
+          'stablecoin',
+          ${assetName},
+          ${usdAmount},
+          ${source},
+          ${circleReference},
+          'active'
+        )
+      `
+    } catch (treasuryError: any) {
+      // Log but don't fail - treasury backing is secondary
+      console.warn('[GRAIN] Treasury backing insert failed:', treasuryError.message)
+    }
 
     console.log(`[GRAIN] Credited ${grainAmount} GRAIN to user ${userId} from ${source} deposit`)
 
@@ -315,25 +331,21 @@ export async function debitGrainForWithdrawal(
       WHERE user_id = ${userId}
     `
 
-    // Record transaction
+    // Record transaction (matches schema-grain.sql)
     await sql`
       INSERT INTO grain_transactions (
         user_id,
         type,
-        usd_amount,
-        grain_amount,
-        grain_price,
-        payment_method,
-        payment_reference,
+        amount,
+        reason,
+        circle_transfer_id,
         status,
         created_at
       ) VALUES (
         ${userId},
         'withdraw',
-        ${usdAmount},
         ${grainAmount},
-        ${grainPrice},
-        'bank_withdrawal',
+        'Bank withdrawal via Circle',
         ${circleReference},
         'pending',
         NOW()

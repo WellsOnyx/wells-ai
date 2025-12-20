@@ -69,8 +69,73 @@ export interface W3STransfer {
 // ENTITY SECRET ENCRYPTION
 // =============================================================================
 
+// Cache for the public key
+let cachedPublicKey: string | null = null
+
 /**
- * Encrypt entity secret for Circle API
+ * Fetch Circle's public key for entity secret encryption
+ */
+async function getEntityPublicKey(): Promise<string> {
+  if (cachedPublicKey) {
+    return cachedPublicKey
+  }
+
+  const response = await fetch(`${CIRCLE_CONFIG.baseUrl}/w3s/config/entity/publicKey`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${CIRCLE_CONFIG.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch entity public key: ${response.status}`)
+  }
+
+  const data = await response.json()
+  cachedPublicKey = data.data.publicKey
+  return cachedPublicKey!
+}
+
+/**
+ * Convert PEM to ArrayBuffer
+ */
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const pemHeader = '-----BEGIN PUBLIC KEY-----'
+  const pemFooter = '-----END PUBLIC KEY-----'
+  const pemContents = pem
+    .replace(pemHeader, '')
+    .replace(pemFooter, '')
+    .replace(/\s/g, '')
+  const binaryString = Buffer.from(pemContents, 'base64').toString('binary')
+  const bytes = new Uint8Array(binaryString.length)
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+  return bytes.buffer
+}
+
+/**
+ * Convert hex string to ArrayBuffer
+ */
+function hexToBytes(hex: string): ArrayBuffer {
+  const bytes = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16)
+  }
+  return bytes.buffer
+}
+
+/**
+ * Convert ArrayBuffer to base64 string
+ */
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  return Buffer.from(bytes).toString('base64')
+}
+
+/**
+ * Encrypt entity secret for Circle API using RSA-OAEP
  *
  * Circle requires the entity secret to be encrypted with their public key
  * for sensitive operations like wallet creation and transfers.
@@ -82,21 +147,42 @@ async function encryptEntitySecret(): Promise<string> {
     throw new Error('CIRCLE_ENTITY_SECRET is not configured')
   }
 
-  // For production, you need to encrypt with Circle's public key
-  // For sandbox, we can use the raw entity secret (hex encoded)
-  // Check Circle docs for the exact encryption method
+  try {
+    // Fetch Circle's public key
+    const publicKeyPem = await getEntityPublicKey()
 
-  // In sandbox, Circle accepts the entity secret directly in some cases
-  // For production, implement proper encryption with Circle's RSA public key
-  if (CIRCLE_CONFIG.environment === 'sandbox') {
-    // Return as hex for sandbox
-    return entitySecret
+    // Import the public key
+    const publicKeyBuffer = pemToArrayBuffer(publicKeyPem)
+    const publicKey = await crypto.subtle.importKey(
+      'spki',
+      publicKeyBuffer,
+      {
+        name: 'RSA-OAEP',
+        hash: 'SHA-256',
+      },
+      false,
+      ['encrypt']
+    )
+
+    // Convert hex entity secret to bytes
+    const entitySecretBytes = hexToBytes(entitySecret)
+
+    // Encrypt the entity secret
+    const encryptedData = await crypto.subtle.encrypt(
+      {
+        name: 'RSA-OAEP',
+      },
+      publicKey,
+      entitySecretBytes
+    )
+
+    // Convert to base64
+    const ciphertext = arrayBufferToBase64(encryptedData)
+    return ciphertext
+  } catch (error: any) {
+    console.error('[W3S] Entity secret encryption error:', error)
+    throw new Error(`Failed to encrypt entity secret: ${error.message}`)
   }
-
-  // Production encryption (implement based on Circle docs)
-  // This would use Circle's public key to encrypt the entity secret
-  // For now, return as-is (you'll need to implement proper encryption)
-  return entitySecret
 }
 
 // =============================================================================
