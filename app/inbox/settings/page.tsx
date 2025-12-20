@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -16,7 +16,8 @@ import {
   Sparkles,
   User,
   ChevronRight,
-  Key
+  Key,
+  Loader2
 } from 'lucide-react'
 import { SHORTCUT_DESCRIPTIONS } from '@/lib/inbox/keyboard-shortcuts'
 
@@ -34,7 +35,7 @@ const PROVIDER_INFO = {
     icon: Mail,
     color: 'text-red-400',
     bg: 'bg-red-500/10',
-    connectUrl: '/api/integrations/gmail/auth'
+    connectUrl: '/api/inbox/gmail/auth'
   },
   outlook: {
     name: 'Outlook',
@@ -60,15 +61,8 @@ const PROVIDER_INFO = {
 }
 
 export default function InboxSettingsPage() {
-  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([
-    {
-      id: '1',
-      email: 'wells@example.com',
-      provider: 'gmail',
-      status: 'active',
-      lastSync: new Date().toISOString()
-    }
-  ])
+  const [connecting, setConnecting] = useState<string | null>(null)
+  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([])
 
   const [notifications, setNotifications] = useState({
     email: true,
@@ -86,9 +80,31 @@ export default function InboxSettingsPage() {
 
   const [activeTab, setActiveTab] = useState<'accounts' | 'notifications' | 'shortcuts' | 'ai'>('accounts')
 
-  const handleConnectAccount = (provider: keyof typeof PROVIDER_INFO) => {
+  const handleConnectAccount = async (provider: keyof typeof PROVIDER_INFO) => {
     const info = PROVIDER_INFO[provider]
-    window.location.href = info.connectUrl
+    setConnecting(provider)
+
+    try {
+      // Call the auth API to get the OAuth URL
+      // The API will get userId from Clerk session
+      const response = await fetch(info.connectUrl)
+      const data = await response.json()
+
+      if (data.success && data.authUrl) {
+        // Redirect to OAuth provider
+        window.location.href = data.authUrl
+      } else if (data.error?.includes('Unauthorized') || response.status === 401) {
+        alert('Please sign in first')
+        window.location.href = '/sign-in'
+      } else {
+        alert(data.error || 'Failed to start authentication')
+        setConnecting(null)
+      }
+    } catch (error) {
+      console.error('Connect error:', error)
+      alert('Failed to connect. Please try again.')
+      setConnecting(null)
+    }
   }
 
   const handleDisconnectAccount = (accountId: string) => {

@@ -6,24 +6,30 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { getAuthUrl } from '@/lib/inbox/providers/gmail'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const userId = searchParams.get('userId')
+    // Get userId from Clerk session
+    const { userId } = await auth()
 
     if (!userId) {
       return NextResponse.json(
-        { success: false, error: 'Missing userId parameter' },
-        { status: 400 }
+        { success: false, error: 'Unauthorized - please sign in' },
+        { status: 401 }
       )
     }
 
     // Validate environment variables
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      console.error('[Gmail Auth] Missing credentials:', {
+        hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+        hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+        hasRedirectUri: !!process.env.GOOGLE_REDIRECT_URI
+      })
       return NextResponse.json(
         {
           success: false,
@@ -34,6 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get redirect URI from query or use default
+    const searchParams = request.nextUrl.searchParams
     const redirectUri = searchParams.get('redirect_uri') || process.env.GOOGLE_REDIRECT_URI
 
     // Generate OAuth URL
