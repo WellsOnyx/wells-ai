@@ -155,22 +155,28 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   const host = req.headers.get('host') || ''
   const isGrainVault = GRAIN_VAULT_DOMAINS.some(domain => host.includes(domain))
 
-  // Use Grain Vault paths for grainandvault.com domain
+  // Satellite domain configuration for grainandvault.com
+  // Users sign in on the primary domain (wellsonyx.io) and get redirected back
+  // See: https://clerk.com/docs/advanced-usage/satellite-domains
   if (isGrainVault) {
     return {
-      signInUrl: '/grain-vault/signin',
-      signUpUrl: '/grain-vault/signup',
+      isSatellite: true,
+      domain: host,
+      signInUrl: 'https://wellsonyx.io/sign-in',
+      signUpUrl: 'https://wellsonyx.io/sign-up',
       afterSignInUrl: '/grain-vault/dashboard',
       afterSignUpUrl: '/grain-vault/onboard',
     }
   }
 
-  // Default Wells Onyx paths
+  // Primary domain (wellsonyx.io) configuration
+  // Must allow redirects back to satellite domains
   return {
     signInUrl: '/sign-in',
     signUpUrl: '/sign-up',
     afterSignInUrl: '/dashboard',
     afterSignUpUrl: '/onboarding',
+    allowedRedirectOrigins: ['https://grainandvault.com', 'https://www.grainandvault.com'],
   }
 })
 
