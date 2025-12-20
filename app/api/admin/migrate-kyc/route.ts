@@ -3,6 +3,7 @@
  * KYC Schema Migration Endpoint
  * POST: Run the grain_user_profiles schema migration
  *
+ * Supports: US, CA, MX, AR, GB, AE, JP, SG
  * SECURITY: This should be removed after migration or protected
  */
 
@@ -13,6 +14,28 @@ export async function POST(req: NextRequest) {
   try {
     // Run migration statements one at a time
     const results: { step: string; status: string; error?: string }[] = []
+
+    // 0. Add international columns to grain_user_profiles if they don't exist
+    const intlColumns = [
+      { name: 'nationality', type: 'TEXT' },
+      { name: 'country_of_residence', type: 'TEXT DEFAULT \'US\'' },
+      { name: 'tax_id_type', type: 'TEXT' },
+      { name: 'tax_id_number_encrypted', type: 'TEXT' },
+      { name: 'tax_id_verified', type: 'BOOLEAN DEFAULT FALSE' }
+    ]
+
+    for (const col of intlColumns) {
+      try {
+        await sql.query(`ALTER TABLE grain_user_profiles ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`)
+        results.push({ step: `Add column ${col.name}`, status: 'success' })
+      } catch (e: any) {
+        if (e.message.includes('already exists') || e.message.includes('does not exist')) {
+          results.push({ step: `Add column ${col.name}`, status: 'skipped', error: e.message })
+        } else {
+          results.push({ step: `Add column ${col.name}`, status: 'error', error: e.message })
+        }
+      }
+    }
 
     // 1. Create grain_user_profiles table
     try {

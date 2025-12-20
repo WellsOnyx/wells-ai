@@ -7,6 +7,9 @@
  *
  * SECURITY: Requires Clerk authentication
  *
+ * Supported Countries: US, CA, MX, AR, GB, AE, JP, SG
+ * Blocked: All US-sanctioned countries
+ *
  * Verification Levels:
  * - Level 1: Email verified ($1K daily limit)
  * - Level 2: Phone + Address verified ($10K daily limit)
@@ -18,6 +21,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { sql } from '@vercel/postgres'
 import crypto from 'crypto'
+import {
+  isCountrySupported,
+  isCountrySanctioned,
+  getCountryConfig,
+  validateTaxId,
+  validatePostalCode,
+  IdType
+} from '@/lib/grain-vault/countries'
 
 // ============================================================================
 // TYPES
@@ -30,18 +41,25 @@ interface OnboardingRequest {
   last_name?: string
   date_of_birth: string
   phone?: string
+  nationality?: string
 
-  // Government ID (Optional - for Level 3)
-  ssn_last_four?: string
-  government_id_type?: 'drivers_license' | 'passport' | 'state_id' | 'military_id'
+  // Country of Residence (REQUIRED)
+  country_of_residence: string  // ISO 3166-1 alpha-2: US, CA, MX, AR, GB, AE, JP, SG
+
+  // Government ID
+  government_id_type?: string   // Country-specific ID types
   government_id_expiry?: string
+
+  // Tax ID (Country-specific)
+  tax_id_type?: string          // ssn, sin, curp, cuit, ni_number, my_number, nric
+  tax_id_last_four?: string     // Last 4 digits only (we never store full tax IDs)
 
   // Address
   address_line1?: string
   address_line2?: string
   city?: string
-  state?: string
-  zip_code?: string
+  state?: string                // State/Province/Prefecture/Emirate
+  zip_code?: string             // ZIP/Postal Code/Postcode
   country?: string
 
   // Financial Profile
@@ -75,40 +93,82 @@ function calculateVerificationLevel(data: OnboardingRequest, emailVerified: bool
   // Level 1: Basic info only
   if (!emailVerified) return 1
 
-  // Level 2: Phone + Address
-  const hasAddress = data.address_line1 && data.city && data.state && data.zip_code
-  if (!hasAddress) return 1
+  const countryConfig = getCountryConfig(data.country_of_residence)
 
-  // Level 3: Full KYC with ID
+  // Level 2: Phone + Address
+  const hasAddress = data.address_line1 && data.city && data.zip_code
+  const needsState = countryConfig?.address.hasState ?? true
+  const stateOk = !needsState || data.state
+  if (!hasAddress || !stateOk) return 1
+
+  // Level 3: Full KYC with Tax ID (country-specific)
   const hasFinancialProfile = data.employment_status && data.source_of_funds
-  const hasSSN = data.ssn_last_four && data.ssn_last_four.length === 4
-  if (hasFinancialProfile && hasSSN) return 3
+  const requiresTaxId = countryConfig?.kyc.requiresTaxId ?? false
+  const hasTaxId = !requiresTaxId || (data.tax_id_last_four && data.tax_id_last_four.length >= 3)
+  if (hasFinancialProfile && hasTaxId) return 3
 
   // Level 2: Has address but no full KYC
   return 2
 }
 
 /**
- * Get limits based on verification level
+ * Get limits based on verification level and country
  */
-function getLimitsForLevel(level: number): {
+function getLimitsForLevel(level: number, countryCode: string = 'US'): {
   daily_deposit: number
   daily_withdraw: number
   monthly_deposit: number
   monthly_withdraw: number
   lifetime_deposit: number
 } {
+  const countryConfig = getCountryConfig(countryCode)
+
+  // Country-specific limits from config
+  const level1Daily = countryConfig?.limits.level1Daily || 1000
+  const level2Daily = countryConfig?.limits.level2Daily || 10000
+  const level3Daily = countryConfig?.limits.level3Daily || 100000
+
   switch (level) {
     case 1:
-      return { daily_deposit: 1000, daily_withdraw: 1000, monthly_deposit: 10000, monthly_withdraw: 10000, lifetime_deposit: 50000 }
+      return {
+        daily_deposit: level1Daily,
+        daily_withdraw: level1Daily,
+        monthly_deposit: level1Daily * 10,
+        monthly_withdraw: level1Daily * 10,
+        lifetime_deposit: level1Daily * 50
+      }
     case 2:
-      return { daily_deposit: 10000, daily_withdraw: 10000, monthly_deposit: 100000, monthly_withdraw: 100000, lifetime_deposit: 500000 }
+      return {
+        daily_deposit: level2Daily,
+        daily_withdraw: level2Daily,
+        monthly_deposit: level2Daily * 10,
+        monthly_withdraw: level2Daily * 10,
+        lifetime_deposit: level2Daily * 50
+      }
     case 3:
-      return { daily_deposit: 100000, daily_withdraw: 100000, monthly_deposit: 1000000, monthly_withdraw: 1000000, lifetime_deposit: 5000000 }
+      return {
+        daily_deposit: level3Daily,
+        daily_withdraw: level3Daily,
+        monthly_deposit: level3Daily * 10,
+        monthly_withdraw: level3Daily * 10,
+        lifetime_deposit: level3Daily * 50
+      }
     case 4:
-      return { daily_deposit: 1000000, daily_withdraw: 1000000, monthly_deposit: 10000000, monthly_withdraw: 10000000, lifetime_deposit: 100000000 }
+      return {
+        daily_deposit: 1000000,
+        daily_withdraw: 1000000,
+        monthly_deposit: 10000000,
+        monthly_withdraw: 10000000,
+        lifetime_deposit: 100000000
+      }
     default:
-      return { daily_deposit: 1000, daily_withdraw: 1000, monthly_deposit: 10000, monthly_withdraw: 10000, lifetime_deposit: 50000 }
+      return {
+        daily_deposit: level1Daily,
+        daily_withdraw: level1Daily,
+        monthly_deposit: level1Daily * 10,
+        monthly_withdraw: level1Daily * 10,
+        lifetime_deposit: level1Daily * 50
+      }
   }
 }
 
@@ -150,7 +210,55 @@ export async function POST(req: NextRequest) {
 
     const body: OnboardingRequest = await req.json()
 
-    // Validation
+    // ========================================================================
+    // VALIDATION
+    // ========================================================================
+
+    // Country validation (CRITICAL - must check before anything else)
+    const countryOfResidence = body.country_of_residence?.toUpperCase() || 'US'
+
+    // Check for sanctioned countries FIRST
+    if (isCountrySanctioned(countryOfResidence)) {
+      console.warn(`[SECURITY] Blocked onboarding attempt from sanctioned country: ${countryOfResidence}, userId: ${userId}`)
+      return NextResponse.json(
+        {
+          error: 'Service not available',
+          code: 'SANCTIONED_COUNTRY',
+          message: 'We are unable to provide services in your country at this time due to regulatory requirements.'
+        },
+        { status: 403 }
+      )
+    }
+
+    // Check nationality for sanctioned countries
+    if (body.nationality && isCountrySanctioned(body.nationality.toUpperCase())) {
+      console.warn(`[SECURITY] Blocked onboarding attempt from sanctioned nationality: ${body.nationality}, userId: ${userId}`)
+      return NextResponse.json(
+        {
+          error: 'Service not available',
+          code: 'SANCTIONED_NATIONALITY',
+          message: 'We are unable to provide services to nationals of certain countries at this time due to regulatory requirements.'
+        },
+        { status: 403 }
+      )
+    }
+
+    // Check if country is supported
+    if (!isCountrySupported(countryOfResidence)) {
+      return NextResponse.json(
+        {
+          error: 'Country not supported',
+          code: 'UNSUPPORTED_COUNTRY',
+          message: `We currently support the following countries: US, CA, MX, AR, GB, AE, JP, SG`
+        },
+        { status: 400 }
+      )
+    }
+
+    // Get country-specific config
+    const countryConfig = getCountryConfig(countryOfResidence)
+
+    // Basic validation
     if (!body.full_name) {
       return NextResponse.json(
         { error: 'Full name is required' },
@@ -165,6 +273,21 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Age validation (country-specific)
+    const minAge = countryConfig?.kyc.minAge || 18
+    const dob = new Date(body.date_of_birth)
+    const today = new Date()
+    const age = Math.floor((today.getTime() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+    if (age < minAge) {
+      return NextResponse.json(
+        {
+          error: `Minimum age requirement not met`,
+          message: `You must be at least ${minAge} years old to use this service in ${countryConfig?.name || 'your country'}.`
+        },
+        { status: 400 }
+      )
+    }
+
     if (!body.terms_accepted) {
       return NextResponse.json(
         { error: 'You must accept the terms of service' },
@@ -172,9 +295,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Postal code validation (if provided)
+    if (body.zip_code && !validatePostalCode(body.zip_code, countryOfResidence)) {
+      return NextResponse.json(
+        {
+          error: 'Invalid postal code format',
+          message: `Please enter a valid ${countryConfig?.address.postalCodeLabel || 'postal code'} for ${countryConfig?.name || 'your country'}.`
+        },
+        { status: 400 }
+      )
+    }
+
     // Calculate verification level
     const verificationLevel = calculateVerificationLevel(body, emailVerified)
-    const limits = getLimitsForLevel(verificationLevel)
+    const limits = getLimitsForLevel(verificationLevel, countryOfResidence)
 
     // Check if profile already exists
     let existingProfile = null
@@ -197,7 +331,10 @@ export async function POST(req: NextRequest) {
           last_name = ${body.last_name || null},
           date_of_birth = ${body.date_of_birth},
           phone = ${body.phone || null},
-          ssn_last_four = ${body.ssn_last_four || null},
+          nationality = ${body.nationality || null},
+          country_of_residence = ${countryOfResidence},
+          tax_id_type = ${body.tax_id_type || null},
+          ssn_last_four = ${body.tax_id_last_four || null},
           government_id_type = ${body.government_id_type || null},
           government_id_expiry = ${body.government_id_expiry || null},
           address_line1 = ${body.address_line1 || null},
@@ -205,7 +342,7 @@ export async function POST(req: NextRequest) {
           city = ${body.city || null},
           state = ${body.state || null},
           zip_code = ${body.zip_code || null},
-          country = ${body.country || 'US'},
+          country = ${countryOfResidence},
           employment_status = ${body.employment_status || null},
           employer_name = ${body.employer_name || null},
           occupation = ${body.occupation || null},
@@ -241,6 +378,9 @@ export async function POST(req: NextRequest) {
           last_name,
           date_of_birth,
           phone,
+          nationality,
+          country_of_residence,
+          tax_id_type,
           ssn_last_four,
           government_id_type,
           government_id_expiry,
@@ -286,7 +426,10 @@ export async function POST(req: NextRequest) {
           ${body.last_name || null},
           ${body.date_of_birth},
           ${body.phone || null},
-          ${body.ssn_last_four || null},
+          ${body.nationality || null},
+          ${countryOfResidence},
+          ${body.tax_id_type || null},
+          ${body.tax_id_last_four || null},
           ${body.government_id_type || null},
           ${body.government_id_expiry || null},
           ${body.address_line1 || null},
@@ -294,7 +437,7 @@ export async function POST(req: NextRequest) {
           ${body.city || null},
           ${body.state || null},
           ${body.zip_code || null},
-          ${body.country || 'US'},
+          ${countryOfResidence},
           ${body.employment_status || null},
           ${body.employer_name || null},
           ${body.occupation || null},
@@ -366,6 +509,8 @@ export async function POST(req: NextRequest) {
       message: 'Onboarding complete',
       profile: {
         user_id: userId,
+        country_of_residence: countryOfResidence,
+        country_name: countryConfig?.name || countryOfResidence,
         verification_level: verificationLevel,
         verification_status: 'approved',
         limits: {
