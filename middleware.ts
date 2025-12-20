@@ -73,6 +73,14 @@ const isProtectedRoute = createRouteMatcher([
   '/api/deals/(.*)',
   '/api/transactions/(.*)',
   '/api/connect/(.*)',
+  // Grain Vault protected routes
+  '/grain-vault/dashboard(.*)',
+  '/grain-vault/admin(.*)',
+  '/grain-vault/account(.*)',
+  '/api/grain-vault/deposit(.*)',
+  '/api/grain-vault/withdraw(.*)',
+  '/api/grain-vault/transfer(.*)',
+  '/api/grain-vault/account(.*)',
 ])
 
 // ============================================================================
@@ -149,11 +157,27 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   response.headers.set('Cache-Control', 'no-store, max-age=0')
 
   return response
-}, {
-  signInUrl: '/sign-in',
-  signUpUrl: '/sign-up',
-  afterSignInUrl: '/dashboard',
-  afterSignUpUrl: '/onboarding',
+}, (req) => {
+  const host = req.headers.get('host') || ''
+  const isGrainVault = GRAIN_VAULT_DOMAINS.some(domain => host.includes(domain))
+
+  // Use Grain Vault paths for grainandvault.com domain
+  if (isGrainVault) {
+    return {
+      signInUrl: '/grain-vault/signin',
+      signUpUrl: '/grain-vault/signup',
+      afterSignInUrl: '/grain-vault/dashboard',
+      afterSignUpUrl: '/grain-vault/onboard',
+    }
+  }
+
+  // Default Wells Onyx paths
+  return {
+    signInUrl: '/sign-in',
+    signUpUrl: '/sign-up',
+    afterSignInUrl: '/dashboard',
+    afterSignUpUrl: '/onboarding',
+  }
 })
 
 // ============================================================================
