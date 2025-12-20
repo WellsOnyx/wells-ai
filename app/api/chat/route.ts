@@ -47,7 +47,7 @@ import {
 import { getConstraintsByRFQ, setConstraints, parseConstraintsFromText } from '@/lib/rfq/constraint-service'
 import { getQuotesByRFQ, compareQuotes, getActiveQuotesByRFQ } from '@/lib/rfq/quote-service'
 import { requestQuotesFromSuppliers } from '@/lib/rfq/supplier-ai'
-import { startNegotiation as startRFQNegotiation, runNegotiation as runRFQNegotiation, getNegotiationsByRFQ } from '@/lib/rfq/negotiation-engine'
+import { startNegotiation as startRFQNegotiation, runFullNegotiation as runRFQNegotiation, getNegotiationsByRFQ } from '@/lib/rfq/negotiation-engine'
 import { awardQuote, getAwardByRFQ } from '@/lib/rfq/award-service'
 import { getFulfillmentByRFQ } from '@/lib/rfq/fulfillment-tracker'
 import { sqlQuery as sql } from '@/lib/db'
