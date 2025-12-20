@@ -111,47 +111,28 @@ export default function DashboardPage() {
     else setLoading(true)
 
     try {
-      // Fetch dashboard data (uses Clerk auth via API)
-      // This API auto-creates balance record if user doesn't have one
-      const dashboardRes = await fetch('/api/grain-vault/dashboard')
+      // Fetch wallet data from simple API that uses user_wallets table
+      const walletRes = await fetch('/api/grain-vault/wallet')
 
-      if (!dashboardRes.ok) {
-        if (dashboardRes.status === 401) {
+      if (!walletRes.ok) {
+        if (walletRes.status === 401) {
           router.push('/grain-vault/signin')
           return
         }
-        // Don't redirect to onboarding on error - show error state instead
-        throw new Error('Failed to load dashboard data')
+        throw new Error('Failed to load wallet data')
       }
 
-      const dashboardResult = await dashboardRes.json()
-      console.log('[Dashboard] result:', dashboardResult)
+      const walletResult = await walletRes.json()
+      console.log('[Dashboard] wallet result:', walletResult)
 
-      // Convert dashboard API response to wallet data format for UI
-      const walletData: WalletData = {
-        has_wallet: true, // If we got here, user is authenticated
+      // Set wallet data directly from API response
+      setWalletData({
+        has_wallet: walletResult.has_wallet,
         has_profile: true,
-        balance: {
-          grain: dashboardResult.balances?.grain?.quantity || 0,
-          usd_value: dashboardResult.balances?.grain?.currentValue || 0
-        },
-        grain_price: dashboardResult.balances?.grain?.unitPrice || 1.0,
-        appreciation: dashboardResult.balances?.grain?.appreciationPct
-          ? { current_price: dashboardResult.balances.grain.unitPrice, note: `${dashboardResult.balances.grain.appreciationPct.toFixed(2)}% appreciation` }
-          : undefined,
-        recent_transactions: (dashboardResult.transactions?.groups || [])
-          .flatMap((g: any) => g.transactions)
-          .slice(0, 10)
-          .map((tx: any) => ({
-            id: tx.id,
-            type: tx.type,
-            amount: tx.amount,
-            status: tx.status,
-            created_at: tx.createdAt
-          }))
-      }
-
-      setWalletData(walletData)
+        balance: walletResult.balance || { grain: 0, usd_value: 0 },
+        grain_price: walletResult.grain_price || 1.0,
+        recent_transactions: walletResult.recent_transactions || []
+      })
 
       // Fetch treasury data for GRAIN value
       try {
