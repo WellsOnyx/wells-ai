@@ -111,31 +111,47 @@ export default function DashboardPage() {
     else setLoading(true)
 
     try {
-      // Fetch wallet data (uses Clerk auth via API)
-      const walletRes = await fetch('/api/grain-vault/deposit')
+      // Fetch dashboard data (uses Clerk auth via API)
+      // This API auto-creates balance record if user doesn't have one
+      const dashboardRes = await fetch('/api/grain-vault/dashboard')
 
-      if (!walletRes.ok) {
-        if (walletRes.status === 401) {
+      if (!dashboardRes.ok) {
+        if (dashboardRes.status === 401) {
           router.push('/grain-vault/signin')
           return
         }
-        throw new Error('Failed to load wallet data')
+        // Don't redirect to onboarding on error - show error state instead
+        throw new Error('Failed to load dashboard data')
       }
 
-      const walletResult = await walletRes.json()
-      console.log('[Dashboard] wallet result:', walletResult)
+      const dashboardResult = await dashboardRes.json()
+      console.log('[Dashboard] result:', dashboardResult)
 
-      // Check if user needs to complete onboarding
-      // In custodial model, has_wallet:true means they have a ledger entry
-      if (!walletResult.has_wallet && !walletResult.has_profile) {
-        console.log('[Dashboard] No wallet or profile - redirecting to onboard')
-        router.push('/grain-vault/onboard')
-        return
+      // Convert dashboard API response to wallet data format for UI
+      const walletData: WalletData = {
+        has_wallet: true, // If we got here, user is authenticated
+        has_profile: true,
+        balance: {
+          grain: dashboardResult.balances?.grain?.quantity || 0,
+          usd_value: dashboardResult.balances?.grain?.currentValue || 0
+        },
+        grain_price: dashboardResult.balances?.grain?.unitPrice || 1.0,
+        appreciation: dashboardResult.balances?.grain?.appreciationPct
+          ? { current_price: dashboardResult.balances.grain.unitPrice, note: `${dashboardResult.balances.grain.appreciationPct.toFixed(2)}% appreciation` }
+          : undefined,
+        recent_transactions: (dashboardResult.transactions?.groups || [])
+          .flatMap((g: any) => g.transactions)
+          .slice(0, 10)
+          .map((tx: any) => ({
+            id: tx.id,
+            type: tx.type,
+            amount: tx.amount,
+            status: tx.status,
+            created_at: tx.createdAt
+          }))
       }
 
-      // If has_wallet is true OR has_profile is true, show the dashboard
-      // The API will auto-create a wallet entry for users with profiles
-      setWalletData(walletResult)
+      setWalletData(walletData)
 
       // Fetch treasury data for GRAIN value
       try {
