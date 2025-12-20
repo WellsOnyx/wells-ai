@@ -67,32 +67,133 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_grain_tx_circle ON grain_transactions(circle_transfer_id);
 
 -- ============================================================================
--- CIRCLE WEBHOOK EVENTS
+-- CIRCLE WEBHOOK EVENTS (IDEMPOTENCY TABLE)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS circle_webhook_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
+  -- Circle notification ID (unique per webhook delivery)
+  notification_id TEXT NOT NULL,
+
   -- Event Details
-  event_id TEXT NOT NULL,
   event_type TEXT NOT NULL,
+  circle_event_id TEXT,
 
-  -- Payload
-  payload JSONB NOT NULL,
+  -- Payload (optional - for debugging)
+  payload JSONB,
 
-  -- Processing
+  -- Processing Status
   processed BOOLEAN DEFAULT false,
-  processed_at TIMESTAMP,
-  error TEXT,
+  success BOOLEAN,
+  action_taken TEXT,
+
+  -- Associated data
+  user_id TEXT,
+  amount DECIMAL(20,6),
+
+  -- Error tracking
+  error_message TEXT,
 
   -- Timestamps
+  processed_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
 
-  UNIQUE(event_id)
+  UNIQUE(notification_id)
 );
 
+-- Indexes for webhook processing
+CREATE INDEX IF NOT EXISTS idx_circle_events_notification ON circle_webhook_events(notification_id);
 CREATE INDEX IF NOT EXISTS idx_circle_events_type ON circle_webhook_events(event_type);
 CREATE INDEX IF NOT EXISTS idx_circle_events_processed ON circle_webhook_events(processed);
+CREATE INDEX IF NOT EXISTS idx_circle_events_user ON circle_webhook_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_circle_events_created ON circle_webhook_events(created_at DESC);
+
+-- Add new columns to existing table if they don't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'circle_webhook_events' AND column_name = 'notification_id'
+  ) THEN
+    ALTER TABLE circle_webhook_events ADD COLUMN notification_id TEXT;
+    ALTER TABLE circle_webhook_events ADD CONSTRAINT unique_notification_id UNIQUE (notification_id);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'circle_webhook_events' AND column_name = 'circle_event_id'
+  ) THEN
+    ALTER TABLE circle_webhook_events ADD COLUMN circle_event_id TEXT;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'circle_webhook_events' AND column_name = 'success'
+  ) THEN
+    ALTER TABLE circle_webhook_events ADD COLUMN success BOOLEAN;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'circle_webhook_events' AND column_name = 'action_taken'
+  ) THEN
+    ALTER TABLE circle_webhook_events ADD COLUMN action_taken TEXT;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'circle_webhook_events' AND column_name = 'user_id'
+  ) THEN
+    ALTER TABLE circle_webhook_events ADD COLUMN user_id TEXT;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'circle_webhook_events' AND column_name = 'amount'
+  ) THEN
+    ALTER TABLE circle_webhook_events ADD COLUMN amount DECIMAL(20,6);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'circle_webhook_events' AND column_name = 'error_message'
+  ) THEN
+    ALTER TABLE circle_webhook_events ADD COLUMN error_message TEXT;
+  END IF;
+END $$;
+
+-- Rename 'error' to 'error_message' if it exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'circle_webhook_events' AND column_name = 'error'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'circle_webhook_events' AND column_name = 'error_message'
+  ) THEN
+    ALTER TABLE circle_webhook_events RENAME COLUMN error TO error_message;
+  END IF;
+END $$;
 
 -- ============================================================================
 -- DEPOSIT SESSIONS

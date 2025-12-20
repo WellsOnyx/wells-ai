@@ -1,30 +1,56 @@
-// @ts-nocheck
 /**
- * Circle Webhook Handler - GRAIN Deposit Processing
+ * Circle Webhook Handler - Grain & Vault Production
  *
  * CRITICAL PRODUCTION ENDPOINT
  *
- * Receives webhooks from Circle for USDC deposits on Base L2
- * Credits GRAIN 1:1 to user's balance after treasury validation
+ * Comprehensive webhook handler for Circle payment events:
+ * - Card payments (payment intents)
+ * - Crypto/USDC transfers
+ * - Payouts/withdrawals
+ * - Chargebacks
  *
  * Security:
- * - Verifies webhook signature using Circle's HMAC SHA256
- * - Validates treasury backing ratio before crediting
- * - Records all transactions in grain_transactions table
+ * - HMAC SHA256 signature verification
+ * - Idempotency checks (prevent duplicate processing)
+ * - Emergency controls integration
+ * - Full audit trail logging
  *
  * Register webhook URL in Circle Console:
- * https://wells-ai.vercel.app/api/webhooks/circle
+ * https://wellsai.vercel.app/api/webhooks/circle
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@vercel/postgres'
-import crypto from 'crypto'
+import * as crypto from 'crypto'
+import { logFinancialEvent, logSecurityEvent, logSystemEvent } from '@/lib/security/audit-logger'
+import { isOperationAllowed, freezeAccount } from '@/lib/security/emergency-controls'
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
+/**
+ * Circle webhook event types we handle
+ */
 type CircleEventType =
+  // Payment Intent events (card payments)
+  | 'payments.payment_intent.completed'
+  | 'payments.payment_intent.failed'
+  | 'payments.payment_intent.pending'
+  | 'payments.payment_intent.action_required'
+  // Transfer events (crypto/USDC)
+  | 'transfers.transfer.complete'
+  | 'transfers.transfer.failed'
+  | 'transfers.transfer.pending'
+  // Payout events (withdrawals to bank)
+  | 'payouts.payout.complete'
+  | 'payouts.payout.failed'
+  | 'payouts.payout.pending'
+  // Chargeback events
+  | 'chargebacks.chargeback.created'
+  | 'chargebacks.chargeback.resolved'
+  | 'chargebacks.chargeback.escalated'
+  // Legacy event types (for backwards compatibility)
   | 'transactions.transfer.complete'
   | 'transactions.transfer.failed'
   | 'payment.completed'
@@ -34,51 +60,97 @@ type CircleEventType =
   | 'payout.completed'
   | 'payout.failed'
 
-interface CircleWebhookEvent {
-  Type: CircleEventType
-  Id: string
-  Timestamp: string
-  Data: {
-    id: string
-    status: string
-    amount?: {
-      amount: string
-      currency: string
-    }
-    amounts?: string[]
-    source?: {
-      id: string
-      type: string
-      address?: string
-    }
-    destination?: {
-      id?: string
-      address?: string
-      type: string
-    }
-    destinationAddress?: string
-    walletId?: string
-    metadata?: Record<string, string>
-    errorCode?: string
-    errorMessage?: string
-    transactionHash?: string
-    txHash?: string
-  }
-}
-
+/**
+ * Circle webhook payload structure
+ */
 interface CircleWebhookPayload {
   notificationId: string
   notificationType: CircleEventType
-  notification: CircleWebhookEvent
+  notification: {
+    Type: CircleEventType
+    Id: string
+    Timestamp: string
+    Data: CircleEventData
+  }
 }
+
+/**
+ * Circle event data structure
+ */
+interface CircleEventData {
+  id: string
+  status: string
+  amount?: {
+    amount: string
+    currency: string
+  }
+  amounts?: string[]
+  source?: {
+    id: string
+    type: string
+    address?: string
+    chain?: string
+  }
+  destination?: {
+    id?: string
+    address?: string
+    type: string
+    chain?: string
+  }
+  destinationAddress?: string
+  walletId?: string
+  metadata?: Record<string, string>
+  errorCode?: string
+  errorMessage?: string
+  transactionHash?: string
+  txHash?: string
+  // Payment intent specific
+  paymentIntentId?: string
+  settlementAmount?: {
+    amount: string
+    currency: string
+  }
+  // Chargeback specific
+  chargebackId?: string
+  chargebackAmount?: {
+    amount: string
+    currency: string
+  }
+  reason?: string
+  disputeType?: string
+  paymentId?: string
+}
+
+/**
+ * Processing result
+ */
+interface ProcessingResult {
+  success: boolean
+  action: string
+  userId?: string
+  amount?: number
+  error?: string
+  requiresRetry?: boolean
+}
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+const CIRCLE_ENTITY_SECRET = process.env.CIRCLE_ENTITY_SECRET || process.env.CIRCLE_WEBHOOK_SECRET || ''
+const COMPLIANCE_ALERT_EMAIL = process.env.COMPLIANCE_ALERT_EMAIL || 'compliance@grainvault.com'
+const COMPLIANCE_SLACK_WEBHOOK = process.env.COMPLIANCE_SLACK_WEBHOOK
 
 // ============================================================================
 // SIGNATURE VERIFICATION
 // ============================================================================
 
 /**
- * Verify Circle webhook signature
- * Uses HMAC SHA256 with webhook secret
+ * Verify Circle webhook signature using HMAC SHA256
+ * @param payload - Raw request body
+ * @param signature - Signature from x-circle-signature header
+ * @param secret - CIRCLE_ENTITY_SECRET
+ * @returns boolean indicating if signature is valid
  */
 function verifyWebhookSignature(
   payload: string,
@@ -90,6 +162,11 @@ function verifyWebhookSignature(
     return false
   }
 
+  if (!secret) {
+    console.error('[Circle Webhook] No webhook secret configured')
+    return false
+  }
+
   try {
     // Circle uses HMAC SHA256
     const hmac = crypto.createHmac('sha256', secret)
@@ -97,10 +174,14 @@ function verifyWebhookSignature(
     const expectedSignature = hmac.digest('hex')
 
     // Constant-time comparison to prevent timing attacks
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    )
+    const sigBuffer = Buffer.from(signature.toLowerCase())
+    const expectedBuffer = Buffer.from(expectedSignature.toLowerCase())
+
+    if (sigBuffer.length !== expectedBuffer.length) {
+      return false
+    }
+
+    return crypto.timingSafeEqual(sigBuffer, expectedBuffer)
   } catch (error) {
     console.error('[Circle Webhook] Signature verification error:', error)
     return false
@@ -108,371 +189,1058 @@ function verifyWebhookSignature(
 }
 
 // ============================================================================
-// GRAIN CREDIT OPERATIONS (1:1 USDC → GRAIN)
+// IDEMPOTENCY CHECK
 // ============================================================================
 
 /**
- * Credit GRAIN to user after USDC deposit confirmed
- * CRITICAL: Validates treasury backing ratio before crediting
+ * Check if we've already processed this webhook
+ * @param notificationId - Circle notification ID (unique per webhook)
+ * @returns true if already processed
  */
-async function creditGrainForDeposit(
-  walletAddress: string,
-  usdcAmount: number,
-  circleTransferId: string,
-  transactionHash: string
-): Promise<{ success: boolean; userId?: string; error?: string }> {
+async function isAlreadyProcessed(notificationId: string): Promise<boolean> {
   try {
-    // Find user by wallet address
-    const userResult = await sql`
-      SELECT user_id, balance FROM user_wallets
-      WHERE wallet_address = ${walletAddress}
+    const result = await sql`
+      SELECT id FROM circle_webhook_events
+      WHERE notification_id = ${notificationId}
+      AND processed = true
+      LIMIT 1
+    `
+    return result.rows.length > 0
+  } catch (error) {
+    // Table might not exist, allow processing
+    return false
+  }
+}
+
+/**
+ * Record webhook as processed for idempotency
+ */
+async function recordWebhookProcessed(
+  notificationId: string,
+  eventType: string,
+  circleEventId: string,
+  result: ProcessingResult
+): Promise<void> {
+  try {
+    await sql`
+      INSERT INTO circle_webhook_events (
+        id,
+        notification_id,
+        event_type,
+        circle_event_id,
+        processed,
+        success,
+        action_taken,
+        user_id,
+        amount,
+        error_message,
+        processed_at,
+        created_at
+      ) VALUES (
+        gen_random_uuid(),
+        ${notificationId},
+        ${eventType},
+        ${circleEventId},
+        true,
+        ${result.success},
+        ${result.action},
+        ${result.userId || null},
+        ${result.amount || null},
+        ${result.error || null},
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (notification_id) DO UPDATE SET
+        processed = true,
+        success = ${result.success},
+        action_taken = ${result.action},
+        processed_at = NOW()
+    `
+  } catch (error) {
+    console.error('[Circle Webhook] Failed to record webhook:', error)
+    // Don't throw - this is a non-critical operation
+  }
+}
+
+// ============================================================================
+// GRAIN PRICE CALCULATION
+// ============================================================================
+
+/**
+ * Get current GRAIN price
+ */
+async function getCurrentGrainPrice(): Promise<number> {
+  try {
+    const result = await sql`
+      SELECT price_usd FROM grain_price_history
+      ORDER BY recorded_at DESC
+      LIMIT 1
+    `
+    return result.rows.length > 0 ? parseFloat(result.rows[0].price_usd) : 1.0
+  } catch {
+    // Default to 1:1 if price history not available
+    return 1.0
+  }
+}
+
+/**
+ * Calculate GRAIN amount from USD amount
+ */
+async function calculateGrainAmount(usdAmount: number): Promise<{
+  grainAmount: number
+  grainPrice: number
+}> {
+  const grainPrice = await getCurrentGrainPrice()
+  const grainAmount = usdAmount / grainPrice
+  return { grainAmount, grainPrice }
+}
+
+// ============================================================================
+// DEPOSIT HANDLERS
+// ============================================================================
+
+/**
+ * Handle successful card payment (payment intent completed)
+ */
+async function handlePaymentIntentCompleted(
+  data: CircleEventData,
+  notificationId: string
+): Promise<ProcessingResult> {
+  const { id, amount, metadata, settlementAmount } = data
+
+  console.log(`[Circle Webhook] Payment intent completed: ${id}`)
+
+  // Get amount in USD
+  const depositAmount = settlementAmount?.amount
+    ? parseFloat(settlementAmount.amount)
+    : amount?.amount
+    ? parseFloat(amount.amount)
+    : 0
+
+  if (depositAmount <= 0) {
+    return {
+      success: false,
+      action: 'invalid_amount',
+      error: 'Invalid or missing deposit amount',
+    }
+  }
+
+  // Get user from metadata
+  const userId = metadata?.userId || metadata?.accountId || metadata?.user_id
+  if (!userId) {
+    // Try to find by payment reference
+    const txResult = await sql`
+      SELECT user_id FROM grain_transactions
+      WHERE circle_transfer_id = ${id} OR payment_reference = ${id}
+      LIMIT 1
+    `
+    if (txResult.rows.length === 0) {
+      return {
+        success: false,
+        action: 'user_not_found',
+        error: 'No user found for payment intent',
+      }
+    }
+  }
+
+  // Check if deposits are allowed
+  const operationCheck = await isOperationAllowed('deposit', userId || 'SYSTEM')
+  if (!operationCheck.allowed) {
+    await logSecurityEvent('security.block.applied', 'SYSTEM', {
+      description: 'Deposit blocked by emergency controls',
+      reason: operationCheck.reason,
+      circleEventId: id,
+      amount: depositAmount,
+    }, { targetUserId: userId })
+
+    return {
+      success: false,
+      action: 'blocked_by_controls',
+      error: operationCheck.reason,
+    }
+  }
+
+  try {
+    // Calculate GRAIN amount
+    const { grainAmount, grainPrice } = await calculateGrainAmount(depositAmount)
+
+    // Update user wallet balance
+    const walletUpdate = await sql`
+      UPDATE user_wallets
+      SET
+        balance = balance + ${grainAmount},
+        updated_at = NOW()
+      WHERE user_id = ${userId}
+      RETURNING balance
     `
 
-    if (userResult.rows.length === 0) {
-      console.log(`[Circle Webhook] No user found for wallet: ${walletAddress}`)
-      // Create pending deposit record for manual review
+    if (walletUpdate.rows.length === 0) {
+      // User wallet doesn't exist, create it
       await sql`
-        INSERT INTO grain_treasury_events (
-          type, amount, circle_transfer_id, notes, created_at
-        ) VALUES (
-          'pending_deposit', ${usdcAmount}, ${circleTransferId},
-          'No user wallet found for address: ' || ${walletAddress}, NOW()
-        )
+        INSERT INTO user_wallets (user_id, balance, updated_at, created_at)
+        VALUES (${userId}, ${grainAmount}, NOW(), NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+          balance = user_wallets.balance + ${grainAmount},
+          updated_at = NOW()
       `
-      return { success: false, error: 'No user wallet found' }
     }
 
-    const userId = userResult.rows[0].user_id
-    const currentBalance = parseFloat(userResult.rows[0].balance || 0)
-
-    // Credit GRAIN 1:1 to user balance
-    await sql`
-      UPDATE user_wallets
-      SET balance = balance + ${usdcAmount}, updated_at = NOW()
-      WHERE user_id = ${userId}
-    `
-
-    // Record deposit transaction
+    // Create transaction record
     await sql`
       INSERT INTO grain_transactions (
-        user_id, type, amount, reason, circle_transfer_id, status, created_at, completed_at
+        id,
+        user_id,
+        type,
+        amount,
+        usd_amount,
+        grain_price,
+        reason,
+        circle_transfer_id,
+        payment_method,
+        status,
+        created_at,
+        completed_at
       ) VALUES (
-        ${userId}, 'deposit', ${usdcAmount}, 'USDC deposit via Circle',
-        ${circleTransferId}, 'completed', NOW(), NOW()
+        gen_random_uuid(),
+        ${userId},
+        'deposit',
+        ${grainAmount},
+        ${depositAmount},
+        ${grainPrice},
+        'Card deposit via Circle',
+        ${id},
+        'card',
+        'completed',
+        NOW(),
+        NOW()
       )
     `
 
-    // Record treasury event for USDC backing
+    // Update treasury backing
+    await sql`
+      INSERT INTO treasury_backing (
+        id,
+        asset_type,
+        asset_name,
+        amount,
+        status,
+        source,
+        circle_reference_id,
+        created_at,
+        updated_at
+      ) VALUES (
+        gen_random_uuid(),
+        'usdc',
+        'USDC from card deposit',
+        ${depositAmount},
+        'active',
+        'circle_card_deposit',
+        ${id},
+        NOW(),
+        NOW()
+      )
+    `
+
+    // Log to audit trail
+    await logFinancialEvent(
+      'financial.deposit.completed',
+      userId,
+      depositAmount,
+      {
+        description: 'Card deposit completed via Circle',
+        grainAmount,
+        grainPrice,
+        circleEventId: id,
+        paymentMethod: 'card',
+      },
+      {
+        currency: 'USD',
+        transactionId: id,
+        result: 'success',
+      }
+    )
+
+    console.log(`[Circle Webhook] Deposited ${depositAmount} USD (${grainAmount} GRAIN) for user ${userId}`)
+
+    return {
+      success: true,
+      action: 'deposit_credited',
+      userId,
+      amount: depositAmount,
+    }
+  } catch (error: any) {
+    console.error('[Circle Webhook] Deposit processing error:', error)
+
+    await logFinancialEvent(
+      'financial.deposit.failed',
+      userId || 'UNKNOWN',
+      depositAmount,
+      {
+        description: 'Deposit failed during processing',
+        errorMessage: error.message,
+        circleEventId: id,
+      },
+      { result: 'failure' }
+    )
+
+    return {
+      success: false,
+      action: 'deposit_failed',
+      error: error.message,
+      requiresRetry: true,
+    }
+  }
+}
+
+/**
+ * Handle failed card payment
+ */
+async function handlePaymentIntentFailed(
+  data: CircleEventData,
+  notificationId: string
+): Promise<ProcessingResult> {
+  const { id, errorCode, errorMessage, metadata } = data
+
+  console.log(`[Circle Webhook] Payment intent failed: ${id} - ${errorCode}: ${errorMessage}`)
+
+  const userId = metadata?.userId || metadata?.accountId
+
+  // Update any pending transaction
+  await sql`
+    UPDATE grain_transactions
+    SET
+      status = 'failed',
+      error_message = ${errorMessage || errorCode || 'Payment failed'},
+      updated_at = NOW()
+    WHERE circle_transfer_id = ${id} AND status = 'pending'
+  `
+
+  // Log to audit trail
+  if (userId) {
+    await logFinancialEvent(
+      'financial.deposit.failed',
+      userId,
+      0,
+      {
+        description: 'Card payment failed',
+        errorCode,
+        errorMessage,
+        circleEventId: id,
+      },
+      { result: 'failure' }
+    )
+  }
+
+  return {
+    success: true,
+    action: 'payment_failure_recorded',
+    userId,
+  }
+}
+
+/**
+ * Handle successful USDC/crypto transfer
+ */
+async function handleTransferComplete(
+  data: CircleEventData,
+  notificationId: string
+): Promise<ProcessingResult> {
+  const { id, amounts, amount, destinationAddress, destination, source, txHash, transactionHash, metadata } = data
+
+  console.log(`[Circle Webhook] Transfer complete: ${id}`)
+
+  // Parse amount
+  const transferAmount = amounts?.length
+    ? parseFloat(amounts[0])
+    : amount?.amount
+    ? parseFloat(amount.amount)
+    : 0
+
+  if (transferAmount <= 0) {
+    return {
+      success: false,
+      action: 'invalid_amount',
+      error: 'Invalid or missing transfer amount',
+    }
+  }
+
+  const walletAddress = destinationAddress || destination?.address
+  const txHashValue = txHash || transactionHash || 'unknown'
+
+  // Determine if this is an incoming deposit or outgoing transfer
+  const isIncoming = destination?.type === 'wallet' || (walletAddress && !source?.address)
+
+  if (isIncoming) {
+    // This is an incoming deposit - credit user
+    return await processIncomingTransfer(id, walletAddress || '', transferAmount, txHashValue, metadata)
+  } else {
+    // This is an outgoing transfer - update status
+    return await processOutgoingTransfer(id, transferAmount, txHashValue)
+  }
+}
+
+/**
+ * Process incoming USDC transfer (deposit)
+ */
+async function processIncomingTransfer(
+  circleEventId: string,
+  walletAddress: string,
+  amount: number,
+  txHash: string,
+  metadata?: Record<string, string>
+): Promise<ProcessingResult> {
+  // Find user by wallet address or metadata
+  let userId = metadata?.userId || metadata?.accountId
+
+  if (!userId && walletAddress) {
+    const userResult = await sql`
+      SELECT user_id FROM user_wallets
+      WHERE wallet_address = ${walletAddress}
+      LIMIT 1
+    `
+    if (userResult.rows.length > 0) {
+      userId = userResult.rows[0].user_id
+    }
+  }
+
+  if (!userId) {
+    // Record as pending for manual review
     await sql`
       INSERT INTO grain_treasury_events (
         type, amount, circle_transfer_id, notes, created_at
       ) VALUES (
-        'usdc_deposit', ${usdcAmount}, ${circleTransferId},
-        'USDC deposit credited as GRAIN. User: ' || ${userId} || ' TxHash: ' || ${transactionHash}, NOW()
+        'pending_deposit', ${amount}, ${circleEventId},
+        'No user found for wallet: ' || ${walletAddress} || '. TxHash: ' || ${txHash},
+        NOW()
       )
     `
 
-    const newBalance = currentBalance + usdcAmount
-    console.log(`[Circle Webhook] Credited ${usdcAmount} GRAIN to user ${userId}. New balance: ${newBalance}`)
+    console.log(`[Circle Webhook] No user found for wallet ${walletAddress}, recorded as pending`)
 
-    return { success: true, userId }
-  } catch (error: any) {
-    console.error('[Circle Webhook] Credit GRAIN error:', error)
-    return { success: false, error: error.message }
-  }
-}
-
-/**
- * Update transaction status in database (for outgoing transfers)
- */
-async function updateTransactionStatus(
-  circleTransferId: string,
-  status: 'completed' | 'failed',
-  errorMessage?: string,
-  transactionHash?: string
-): Promise<void> {
-  try {
-    // Update grain_transactions
-    await sql`
-      UPDATE grain_transactions
-      SET
-        status = ${status},
-        error_message = ${status === 'failed' ? errorMessage || 'Unknown error' : null},
-        completed_at = ${status === 'completed' ? new Date() : null}
-      WHERE circle_transfer_id = ${circleTransferId}
-    `
-
-    console.log(`[Circle Webhook] Updated transaction ${circleTransferId} to ${status}`)
-  } catch (error) {
-    console.error('[Circle Webhook] Database update error:', error)
-    throw error
-  }
-}
-
-/**
- * Get transaction details for notification
- */
-async function getTransactionDetails(circleTransferId: string): Promise<{
-  id: string
-  userId: string
-  amount: number
-  currency: string
-  type: string
-  metadata?: Record<string, any>
-} | null> {
-  try {
-    const result = await sql`
-      SELECT id, user_id, amount, currency, transaction_type, metadata
-      FROM treasury_transactions
-      WHERE circle_transfer_id = ${circleTransferId}
-    `
-
-    if (result.rows.length === 0) {
-      return null
-    }
-
-    const row = result.rows[0]
     return {
-      id: row.id,
-      userId: row.user_id,
-      amount: parseFloat(row.amount),
-      currency: row.currency,
-      type: row.transaction_type,
-      metadata: row.metadata,
+      success: true,
+      action: 'pending_manual_review',
+      amount,
     }
-  } catch (error) {
-    console.error('[Circle Webhook] Error fetching transaction:', error)
-    return null
   }
-}
 
-// ============================================================================
-// NOTIFICATION SYSTEM
-// ============================================================================
+  // Check if deposits are allowed
+  const operationCheck = await isOperationAllowed('deposit', userId)
+  if (!operationCheck.allowed) {
+    return {
+      success: false,
+      action: 'blocked_by_controls',
+      error: operationCheck.reason,
+      userId,
+    }
+  }
 
-/**
- * Send notification for payment completion
- */
-async function notifyPaymentCompleted(transaction: {
-  id: string
-  userId: string
-  amount: number
-  currency: string
-  type: string
-}): Promise<void> {
   try {
-    // TODO: Implement notification via Slack/Email
-    // For now, just log
-    console.log(`[Circle Webhook] Payment completed notification:`, {
-      transactionId: transaction.id,
-      userId: transaction.userId,
-      amount: transaction.amount,
-      currency: transaction.currency,
-    })
+    // Calculate GRAIN amount (USDC deposits are 1:1 to GRAIN base, adjusted by price)
+    const { grainAmount, grainPrice } = await calculateGrainAmount(amount)
 
-    // Integration point for Slack webhook
-    const webhookUrl = process.env.SLACK_WEBHOOK_URL
-    if (webhookUrl) {
-      await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: `💰 Payment Completed`,
-          blocks: [
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `*Payment Completed*\nAmount: ${transaction.amount} ${transaction.currency}\nTransaction: ${transaction.id}`,
-              },
-            },
-          ],
-        }),
-      })
+    // Credit user wallet
+    await sql`
+      UPDATE user_wallets
+      SET balance = balance + ${grainAmount}, updated_at = NOW()
+      WHERE user_id = ${userId}
+    `
+
+    // Record transaction
+    await sql`
+      INSERT INTO grain_transactions (
+        id,
+        user_id,
+        type,
+        amount,
+        usd_amount,
+        grain_price,
+        reason,
+        circle_transfer_id,
+        payment_method,
+        status,
+        created_at,
+        completed_at
+      ) VALUES (
+        gen_random_uuid(),
+        ${userId},
+        'deposit',
+        ${grainAmount},
+        ${amount},
+        ${grainPrice},
+        'USDC deposit via Circle',
+        ${circleEventId},
+        'usdc_transfer',
+        'completed',
+        NOW(),
+        NOW()
+      )
+    `
+
+    // Update treasury backing
+    await sql`
+      INSERT INTO treasury_backing (
+        id,
+        asset_type,
+        asset_name,
+        amount,
+        status,
+        source,
+        circle_reference_id,
+        created_at,
+        updated_at
+      ) VALUES (
+        gen_random_uuid(),
+        'usdc',
+        'USDC Transfer',
+        ${amount},
+        'active',
+        'circle_transfer',
+        ${circleEventId},
+        NOW(),
+        NOW()
+      )
+    `
+
+    // Record treasury event
+    await sql`
+      INSERT INTO grain_treasury_events (
+        type, amount, circle_transfer_id, notes, created_at
+      ) VALUES (
+        'usdc_deposit', ${amount}, ${circleEventId},
+        'USDC transfer credited as GRAIN. User: ' || ${userId} || ' TxHash: ' || ${txHash},
+        NOW()
+      )
+    `
+
+    // Log to audit trail
+    await logFinancialEvent(
+      'financial.deposit.completed',
+      userId,
+      amount,
+      {
+        description: 'USDC transfer deposit completed',
+        grainAmount,
+        grainPrice,
+        txHash,
+        circleEventId,
+      },
+      {
+        currency: 'USDC',
+        transactionId: circleEventId,
+        result: 'success',
+      }
+    )
+
+    console.log(`[Circle Webhook] Credited ${amount} USDC (${grainAmount} GRAIN) to user ${userId}`)
+
+    return {
+      success: true,
+      action: 'deposit_credited',
+      userId,
+      amount,
     }
-  } catch (error) {
-    console.error('[Circle Webhook] Notification error:', error)
-    // Don't throw - notification failure shouldn't break webhook processing
-  }
-}
+  } catch (error: any) {
+    console.error('[Circle Webhook] Transfer deposit error:', error)
 
-/**
- * Send notification for payment failure
- */
-async function notifyPaymentFailed(transaction: {
-  id: string
-  userId: string
-  amount: number
-  currency: string
-  type: string
-}, errorMessage?: string): Promise<void> {
-  try {
-    console.log(`[Circle Webhook] Payment failed notification:`, {
-      transactionId: transaction.id,
-      userId: transaction.userId,
-      amount: transaction.amount,
-      currency: transaction.currency,
-      error: errorMessage,
-    })
+    await logFinancialEvent(
+      'financial.deposit.failed',
+      userId,
+      amount,
+      {
+        errorMessage: error.message,
+        circleEventId,
+      },
+      { result: 'failure' }
+    )
 
-    // Integration point for Slack webhook
-    const webhookUrl = process.env.SLACK_WEBHOOK_URL
-    if (webhookUrl) {
-      await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: `❌ Payment Failed`,
-          blocks: [
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `*Payment Failed*\nAmount: ${transaction.amount} ${transaction.currency}\nTransaction: ${transaction.id}\nError: ${errorMessage || 'Unknown error'}`,
-              },
-            },
-          ],
-        }),
-      })
+    return {
+      success: false,
+      action: 'deposit_failed',
+      error: error.message,
+      userId,
+      requiresRetry: true,
     }
-  } catch (error) {
-    console.error('[Circle Webhook] Notification error:', error)
-  }
-}
-
-// ============================================================================
-// EVENT HANDLERS
-// ============================================================================
-
-/**
- * Handle incoming USDC deposit (transactions.transfer.complete)
- * This is the MAIN handler for crediting GRAIN 1:1
- */
-async function handleIncomingDeposit(event: CircleWebhookEvent): Promise<void> {
-  const { id, amounts, destinationAddress, walletId, txHash, transactionHash } = event.Data
-
-  console.log(`[Circle Webhook] Incoming deposit detected:`, {
-    id,
-    amounts,
-    destinationAddress,
-    walletId,
-    txHash
-  })
-
-  // Parse amount (Circle sends as string array)
-  const usdcAmount = amounts && amounts.length > 0 ? parseFloat(amounts[0]) : 0
-
-  if (usdcAmount <= 0) {
-    console.error('[Circle Webhook] Invalid deposit amount:', amounts)
-    return
-  }
-
-  // Get destination wallet address
-  const walletAddress = destinationAddress || event.Data.destination?.address
-
-  if (!walletAddress) {
-    console.error('[Circle Webhook] No destination address in deposit event')
-    return
-  }
-
-  // Credit GRAIN 1:1 to user
-  const result = await creditGrainForDeposit(
-    walletAddress,
-    usdcAmount,
-    id,
-    txHash || transactionHash || 'unknown'
-  )
-
-  if (result.success) {
-    console.log(`[Circle Webhook] Successfully credited ${usdcAmount} GRAIN to ${result.userId}`)
-
-    // Send Slack notification
-    await notifyPaymentCompleted({
-      id,
-      userId: result.userId!,
-      amount: usdcAmount,
-      currency: 'USDC',
-      type: 'deposit'
-    })
-  } else {
-    console.error('[Circle Webhook] Failed to credit GRAIN:', result.error)
   }
 }
 
 /**
- * Handle payment.completed event
+ * Process outgoing transfer completion
  */
-async function handlePaymentCompleted(event: CircleWebhookEvent): Promise<void> {
-  const { id, amount, transactionHash, metadata } = event.Data
+async function processOutgoingTransfer(
+  circleEventId: string,
+  amount: number,
+  txHash: string
+): Promise<ProcessingResult> {
+  // Update existing transaction status
+  const updateResult = await sql`
+    UPDATE grain_transactions
+    SET
+      status = 'completed',
+      completed_at = NOW(),
+      updated_at = NOW()
+    WHERE circle_transfer_id = ${circleEventId}
+    RETURNING user_id, amount
+  `
 
-  console.log(`[Circle Webhook] Payment completed: ${id}`)
+  if (updateResult.rows.length > 0) {
+    const userId = updateResult.rows[0].user_id
 
-  await updateTransactionStatus(id, 'completed', undefined, transactionHash)
+    await logFinancialEvent(
+      'financial.transfer.completed',
+      userId,
+      amount,
+      {
+        description: 'Outgoing transfer completed',
+        txHash,
+        circleEventId,
+      },
+      { result: 'success' }
+    )
 
-  const transaction = await getTransactionDetails(id)
-  if (transaction) {
-    await notifyPaymentCompleted(transaction)
+    return {
+      success: true,
+      action: 'transfer_completed',
+      userId,
+      amount,
+    }
+  }
+
+  return {
+    success: true,
+    action: 'no_matching_transaction',
   }
 }
 
 /**
- * Handle payment.failed event
+ * Handle failed transfer
  */
-async function handlePaymentFailed(event: CircleWebhookEvent): Promise<void> {
-  const { id, errorCode, errorMessage } = event.Data
-
-  console.log(`[Circle Webhook] Payment failed: ${id} - ${errorMessage}`)
-
-  const fullErrorMessage = errorCode
-    ? `${errorCode}: ${errorMessage}`
-    : errorMessage || 'Unknown error'
-
-  await updateTransactionStatus(id, 'failed', fullErrorMessage)
-
-  const transaction = await getTransactionDetails(id)
-  if (transaction) {
-    await notifyPaymentFailed(transaction, fullErrorMessage)
-  }
-}
-
-/**
- * Handle transfer.completed event (outgoing withdrawals)
- */
-async function handleTransferCompleted(event: CircleWebhookEvent): Promise<void> {
-  const { id, amount, transactionHash, metadata } = event.Data
-
-  console.log(`[Circle Webhook] Transfer completed: ${id}`)
-
-  await updateTransactionStatus(id, 'completed', undefined, transactionHash)
-
-  const transaction = await getTransactionDetails(id)
-  if (transaction) {
-    await notifyPaymentCompleted(transaction)
-  }
-}
-
-/**
- * Handle transfer.failed event
- */
-async function handleTransferFailed(event: CircleWebhookEvent): Promise<void> {
-  const { id, errorCode, errorMessage } = event.Data
+async function handleTransferFailed(
+  data: CircleEventData,
+  notificationId: string
+): Promise<ProcessingResult> {
+  const { id, errorCode, errorMessage } = data
 
   console.log(`[Circle Webhook] Transfer failed: ${id} - ${errorMessage}`)
 
-  const fullErrorMessage = errorCode
-    ? `${errorCode}: ${errorMessage}`
-    : errorMessage || 'Unknown error'
+  const fullErrorMessage = errorCode ? `${errorCode}: ${errorMessage}` : errorMessage || 'Unknown error'
 
-  await updateTransactionStatus(id, 'failed', fullErrorMessage)
+  // Update transaction status
+  const updateResult = await sql`
+    UPDATE grain_transactions
+    SET
+      status = 'failed',
+      error_message = ${fullErrorMessage},
+      updated_at = NOW()
+    WHERE circle_transfer_id = ${id}
+    RETURNING user_id, amount, type
+  `
 
-  const transaction = await getTransactionDetails(id)
-  if (transaction) {
-    await notifyPaymentFailed(transaction, fullErrorMessage)
+  if (updateResult.rows.length > 0) {
+    const tx = updateResult.rows[0]
+
+    // If this was a withdrawal, refund the user's balance
+    if (tx.type === 'withdrawal' || tx.type === 'transfer_out') {
+      await sql`
+        UPDATE user_wallets
+        SET balance = balance + ${parseFloat(tx.amount)}, updated_at = NOW()
+        WHERE user_id = ${tx.user_id}
+      `
+    }
+
+    await logFinancialEvent(
+      'financial.transfer.failed',
+      tx.user_id,
+      parseFloat(tx.amount),
+      {
+        description: 'Transfer failed',
+        errorCode,
+        errorMessage,
+        circleEventId: id,
+        refunded: tx.type === 'withdrawal' || tx.type === 'transfer_out',
+      },
+      { result: 'failure' }
+    )
+
+    return {
+      success: true,
+      action: 'transfer_failure_recorded',
+      userId: tx.user_id,
+    }
+  }
+
+  return {
+    success: true,
+    action: 'no_matching_transaction',
   }
 }
 
 // ============================================================================
-// WEBHOOK HANDLER
+// PAYOUT (WITHDRAWAL) HANDLERS
+// ============================================================================
+
+/**
+ * Handle successful payout (withdrawal to bank)
+ */
+async function handlePayoutComplete(
+  data: CircleEventData,
+  notificationId: string
+): Promise<ProcessingResult> {
+  const { id, amount, metadata, transactionHash } = data
+
+  console.log(`[Circle Webhook] Payout complete: ${id}`)
+
+  // Update withdrawal record
+  const updateResult = await sql`
+    UPDATE grain_transactions
+    SET
+      status = 'completed',
+      completed_at = NOW(),
+      updated_at = NOW()
+    WHERE (circle_transfer_id = ${id} OR payment_reference = ${id})
+      AND type IN ('withdrawal', 'withdraw', 'payout')
+    RETURNING user_id, amount, usd_amount
+  `
+
+  if (updateResult.rows.length === 0) {
+    console.log(`[Circle Webhook] No matching withdrawal found for payout ${id}`)
+    return {
+      success: true,
+      action: 'no_matching_withdrawal',
+    }
+  }
+
+  const withdrawal = updateResult.rows[0]
+  const userId = withdrawal.user_id
+  const withdrawalAmount = parseFloat(withdrawal.usd_amount || withdrawal.amount)
+
+  // Log to audit trail
+  await logFinancialEvent(
+    'financial.withdrawal.completed',
+    userId,
+    withdrawalAmount,
+    {
+      description: 'Bank withdrawal completed',
+      circleEventId: id,
+      payoutReference: transactionHash,
+    },
+    {
+      currency: 'USD',
+      transactionId: id,
+      result: 'success',
+    }
+  )
+
+  console.log(`[Circle Webhook] Withdrawal ${id} completed for user ${userId}`)
+
+  return {
+    success: true,
+    action: 'withdrawal_completed',
+    userId,
+    amount: withdrawalAmount,
+  }
+}
+
+/**
+ * Handle failed payout
+ */
+async function handlePayoutFailed(
+  data: CircleEventData,
+  notificationId: string
+): Promise<ProcessingResult> {
+  const { id, errorCode, errorMessage, metadata } = data
+
+  console.log(`[Circle Webhook] Payout failed: ${id} - ${errorMessage}`)
+
+  const fullErrorMessage = errorCode ? `${errorCode}: ${errorMessage}` : errorMessage || 'Unknown error'
+
+  // Find and update the withdrawal record
+  const updateResult = await sql`
+    UPDATE grain_transactions
+    SET
+      status = 'failed',
+      error_message = ${fullErrorMessage},
+      updated_at = NOW()
+    WHERE (circle_transfer_id = ${id} OR payment_reference = ${id})
+      AND type IN ('withdrawal', 'withdraw', 'payout')
+    RETURNING user_id, amount, usd_amount
+  `
+
+  if (updateResult.rows.length > 0) {
+    const withdrawal = updateResult.rows[0]
+    const userId = withdrawal.user_id
+    const refundAmount = parseFloat(withdrawal.amount)
+
+    // Refund the user's balance since withdrawal failed
+    await sql`
+      UPDATE user_wallets
+      SET balance = balance + ${refundAmount}, updated_at = NOW()
+      WHERE user_id = ${userId}
+    `
+
+    await logFinancialEvent(
+      'financial.withdrawal.failed',
+      userId,
+      parseFloat(withdrawal.usd_amount || refundAmount),
+      {
+        description: 'Withdrawal failed, balance refunded',
+        errorCode,
+        errorMessage,
+        circleEventId: id,
+        refundedAmount: refundAmount,
+      },
+      { result: 'failure' }
+    )
+
+    return {
+      success: true,
+      action: 'withdrawal_failed_and_refunded',
+      userId,
+      amount: refundAmount,
+    }
+  }
+
+  return {
+    success: true,
+    action: 'no_matching_withdrawal',
+  }
+}
+
+// ============================================================================
+// CHARGEBACK HANDLERS
+// ============================================================================
+
+/**
+ * Handle chargeback initiated
+ * CRITICAL: Freeze account and alert compliance
+ */
+async function handleChargebackCreated(
+  data: CircleEventData,
+  notificationId: string
+): Promise<ProcessingResult> {
+  const { id, chargebackId, chargebackAmount, paymentId, reason, disputeType, metadata } = data
+
+  console.warn(`[Circle Webhook] CHARGEBACK CREATED: ${chargebackId || id}`)
+
+  const chargebackAmountValue = chargebackAmount?.amount
+    ? parseFloat(chargebackAmount.amount)
+    : 0
+
+  // Find the original payment and user
+  let userId: string | null = null
+
+  // Try to find by payment ID
+  if (paymentId) {
+    const paymentResult = await sql`
+      SELECT user_id FROM grain_transactions
+      WHERE circle_transfer_id = ${paymentId}
+      LIMIT 1
+    `
+    if (paymentResult.rows.length > 0) {
+      userId = paymentResult.rows[0].user_id
+    }
+  }
+
+  // Try metadata
+  if (!userId && metadata) {
+    userId = metadata.userId || metadata.accountId || null
+  }
+
+  if (!userId) {
+    // Log for manual investigation
+    await logSecurityEvent('security.alert.triggered', 'SYSTEM', {
+      alertType: 'chargeback_no_user',
+      description: 'Chargeback received but no user found',
+      chargebackId: chargebackId || id,
+      amount: chargebackAmountValue,
+      paymentId,
+      reason,
+    })
+
+    return {
+      success: true,
+      action: 'chargeback_logged_no_user',
+    }
+  }
+
+  try {
+    // 1. FREEZE USER ACCOUNT
+    const freezeResult = await freezeAccount(
+      userId,
+      `Chargeback initiated: ${reason || 'No reason provided'}. Amount: $${chargebackAmountValue}`,
+      'SYSTEM',
+      { ipAddress: 'circle-webhook' }
+    )
+
+    // 2. CREATE NEGATIVE TRANSACTION
+    await sql`
+      INSERT INTO grain_transactions (
+        id,
+        user_id,
+        type,
+        amount,
+        usd_amount,
+        reason,
+        circle_transfer_id,
+        status,
+        created_at,
+        completed_at
+      ) VALUES (
+        gen_random_uuid(),
+        ${userId},
+        'chargeback',
+        ${-chargebackAmountValue},
+        ${-chargebackAmountValue},
+        ${'Chargeback: ' + (reason || 'Disputed transaction')},
+        ${chargebackId || id},
+        'completed',
+        NOW(),
+        NOW()
+      )
+    `
+
+    // 3. DEBIT USER BALANCE (if they have funds)
+    await sql`
+      UPDATE user_wallets
+      SET
+        balance = GREATEST(balance - ${chargebackAmountValue}, 0),
+        updated_at = NOW()
+      WHERE user_id = ${userId}
+    `
+
+    // 4. LOG TO AUDIT TRAIL
+    await logSecurityEvent('security.alert.triggered', 'SYSTEM', {
+      alertType: 'chargeback',
+      description: 'Chargeback initiated - account frozen',
+      chargebackId: chargebackId || id,
+      amount: chargebackAmountValue,
+      reason,
+      disputeType,
+      paymentId,
+      accountFrozen: freezeResult.success,
+    }, {
+      targetUserId: userId,
+      result: 'success',
+    })
+
+    await logFinancialEvent(
+      'balance.debit.applied',
+      userId,
+      chargebackAmountValue,
+      {
+        description: 'Chargeback debit applied',
+        chargebackId: chargebackId || id,
+        reason,
+      },
+      { result: 'success' }
+    )
+
+    // 5. ALERT COMPLIANCE TEAM
+    await alertComplianceTeam({
+      type: 'CHARGEBACK',
+      userId,
+      amount: chargebackAmountValue,
+      chargebackId: chargebackId || id,
+      reason: reason || 'Unknown',
+      disputeType,
+      paymentId,
+    })
+
+    console.warn(`[Circle Webhook] User ${userId} frozen due to chargeback. Amount: $${chargebackAmountValue}`)
+
+    return {
+      success: true,
+      action: 'chargeback_processed_account_frozen',
+      userId,
+      amount: chargebackAmountValue,
+    }
+  } catch (error: any) {
+    console.error('[Circle Webhook] Chargeback processing error:', error)
+
+    // Still try to alert compliance
+    await alertComplianceTeam({
+      type: 'CHARGEBACK_PROCESSING_ERROR',
+      userId: userId || 'UNKNOWN',
+      amount: chargebackAmountValue,
+      error: error.message,
+    })
+
+    return {
+      success: false,
+      action: 'chargeback_processing_failed',
+      error: error.message,
+      requiresRetry: true,
+    }
+  }
+}
+
+/**
+ * Alert compliance team about critical events
+ */
+async function alertComplianceTeam(alert: {
+  type: string
+  userId?: string
+  amount?: number
+  chargebackId?: string
+  reason?: string
+  disputeType?: string
+  paymentId?: string
+  error?: string
+}): Promise<void> {
+  const timestamp = new Date().toISOString()
+
+  const message = `
+[COMPLIANCE ALERT - ${alert.type}]
+Time: ${timestamp}
+User ID: ${alert.userId || 'N/A'}
+Amount: $${alert.amount?.toFixed(2) || 'N/A'}
+Chargeback ID: ${alert.chargebackId || 'N/A'}
+Reason: ${alert.reason || 'N/A'}
+Dispute Type: ${alert.disputeType || 'N/A'}
+Payment ID: ${alert.paymentId || 'N/A'}
+${alert.error ? `Error: ${alert.error}` : ''}
+
+ACTION REQUIRED: Review and respond within 24 hours.
+  `.trim()
+
+  console.warn(`[COMPLIANCE ALERT]\n${message}`)
+
+  // Send Slack notification
+  if (COMPLIANCE_SLACK_WEBHOOK) {
+    try {
+      await fetch(COMPLIANCE_SLACK_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: `*[COMPLIANCE ALERT - ${alert.type}]*`,
+          attachments: [{
+            color: 'danger',
+            fields: [
+              { title: 'User ID', value: alert.userId || 'N/A', short: true },
+              { title: 'Amount', value: `$${alert.amount?.toFixed(2) || 'N/A'}`, short: true },
+              { title: 'Reason', value: alert.reason || 'N/A', short: true },
+              { title: 'Chargeback ID', value: alert.chargebackId || 'N/A', short: true },
+              { title: 'Time', value: timestamp, short: true },
+            ],
+            footer: 'Grain & Vault Compliance',
+          }],
+        }),
+      })
+    } catch (error) {
+      console.error('[Circle Webhook] Failed to send Slack alert:', error)
+    }
+  }
+
+  // Log the alert
+  await logSystemEvent('security.alert.triggered', {
+    alertType: alert.type,
+    ...alert,
+    notificationsSent: ['console', COMPLIANCE_SLACK_WEBHOOK ? 'slack' : null].filter(Boolean),
+  })
+}
+
+// ============================================================================
+// MAIN WEBHOOK HANDLER
 // ============================================================================
 
 /**
@@ -481,109 +1249,206 @@ async function handleTransferFailed(event: CircleWebhookEvent): Promise<void> {
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
+  const requestId = crypto.randomUUID()
 
   try {
     // Get raw body for signature verification
     const rawBody = await request.text()
     const signature = request.headers.get('x-circle-signature')
 
+    // Log incoming webhook (without sensitive data)
+    console.log(`[Circle Webhook] Received webhook. Request ID: ${requestId}`)
+
     // Verify signature
-    const webhookSecret = process.env.CIRCLE_WEBHOOK_SECRET
-    if (!webhookSecret) {
-      console.error('[Circle Webhook] CIRCLE_WEBHOOK_SECRET not configured')
+    if (!CIRCLE_ENTITY_SECRET) {
+      console.error('[Circle Webhook] CIRCLE_ENTITY_SECRET not configured')
       return NextResponse.json(
-        { error: 'Webhook secret not configured' },
+        { error: 'Webhook secret not configured', requestId },
         { status: 500 }
       )
     }
 
-    if (!verifyWebhookSignature(rawBody, signature, webhookSecret)) {
+    if (!verifyWebhookSignature(rawBody, signature, CIRCLE_ENTITY_SECRET)) {
       console.error('[Circle Webhook] Invalid signature')
+
+      await logSecurityEvent('security.suspicious.activity', 'SYSTEM', {
+        description: 'Invalid Circle webhook signature',
+        requestId,
+        signatureProvided: !!signature,
+      })
+
       return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 401 }
+        { error: 'Invalid signature', requestId },
+        { status: 400 }
       )
     }
 
     // Parse webhook payload
     const payload: CircleWebhookPayload = JSON.parse(rawBody)
-    const { notificationType, notification } = payload
+    const { notificationId, notificationType, notification } = payload
 
-    console.log(`[Circle Webhook] Received event: ${notificationType}`)
+    console.log(`[Circle Webhook] Event: ${notificationType}, Notification ID: ${notificationId}`)
 
-    // Process event asynchronously (don't wait for completion)
-    // This ensures we return 200 OK quickly to Circle
-    setImmediate(async () => {
-      try {
-        switch (notificationType) {
-          // MAIN DEPOSIT HANDLER - Credits GRAIN 1:1
-          case 'transactions.transfer.complete':
-            await handleIncomingDeposit(notification)
-            break
+    // Idempotency check
+    if (await isAlreadyProcessed(notificationId)) {
+      console.log(`[Circle Webhook] Already processed: ${notificationId}`)
+      return NextResponse.json({
+        received: true,
+        status: 'already_processed',
+        notificationId,
+        requestId,
+      })
+    }
 
-          case 'transactions.transfer.failed':
-            console.log(`[Circle Webhook] Transfer failed: ${notification.Data.id}`)
-            await handleTransferFailed(notification)
-            break
+    // Process event based on type
+    let result: ProcessingResult
 
-          case 'payment.completed':
-            await handlePaymentCompleted(notification)
-            break
+    switch (notificationType) {
+      // Card payment events
+      case 'payments.payment_intent.completed':
+        result = await handlePaymentIntentCompleted(notification.Data, notificationId)
+        break
 
-          case 'payment.failed':
-            await handlePaymentFailed(notification)
-            break
+      case 'payments.payment_intent.failed':
+        result = await handlePaymentIntentFailed(notification.Data, notificationId)
+        break
 
-          case 'transfer.completed':
-            await handleTransferCompleted(notification)
-            break
+      // Crypto/USDC transfer events
+      case 'transfers.transfer.complete':
+      case 'transactions.transfer.complete':
+      case 'transfer.completed':
+        result = await handleTransferComplete(notification.Data, notificationId)
+        break
 
-          case 'transfer.failed':
-            await handleTransferFailed(notification)
-            break
+      case 'transfers.transfer.failed':
+      case 'transactions.transfer.failed':
+      case 'transfer.failed':
+        result = await handleTransferFailed(notification.Data, notificationId)
+        break
 
-          case 'payout.completed':
-            console.log(`[Circle Webhook] Payout completed: ${notification.Data.id}`)
-            await handleTransferCompleted(notification)
-            break
+      // Payout (withdrawal) events
+      case 'payouts.payout.complete':
+      case 'payout.completed':
+        result = await handlePayoutComplete(notification.Data, notificationId)
+        break
 
-          case 'payout.failed':
-            console.log(`[Circle Webhook] Payout failed: ${notification.Data.id}`)
-            await handleTransferFailed(notification)
-            break
+      case 'payouts.payout.failed':
+      case 'payout.failed':
+        result = await handlePayoutFailed(notification.Data, notificationId)
+        break
 
-          default:
-            console.log(`[Circle Webhook] Unhandled event type: ${notificationType}`)
+      // Chargeback events
+      case 'chargebacks.chargeback.created':
+        result = await handleChargebackCreated(notification.Data, notificationId)
+        break
+
+      // Legacy event types
+      case 'payment.completed':
+        result = await handlePaymentIntentCompleted(notification.Data, notificationId)
+        break
+
+      case 'payment.failed':
+        result = await handlePaymentIntentFailed(notification.Data, notificationId)
+        break
+
+      // Pending/action required events - just acknowledge
+      case 'payments.payment_intent.pending':
+      case 'payments.payment_intent.action_required':
+      case 'transfers.transfer.pending':
+      case 'payouts.payout.pending':
+        result = {
+          success: true,
+          action: 'status_acknowledged',
         }
-      } catch (error) {
-        console.error('[Circle Webhook] Async processing error:', error)
-      }
+        console.log(`[Circle Webhook] Status acknowledged: ${notificationType}`)
+        break
+
+      // Chargeback resolution
+      case 'chargebacks.chargeback.resolved':
+      case 'chargebacks.chargeback.escalated':
+        result = {
+          success: true,
+          action: 'chargeback_status_update',
+        }
+        await logSystemEvent('security.alert.triggered', {
+          alertType: 'chargeback_update',
+          status: notificationType,
+          eventId: notification.Data.id,
+        })
+        break
+
+      default:
+        console.log(`[Circle Webhook] Unhandled event type: ${notificationType}`)
+        result = {
+          success: true,
+          action: 'unhandled_event_type',
+        }
+    }
+
+    // Record webhook as processed
+    await recordWebhookProcessed(
+      notificationId,
+      notificationType,
+      notification.Id,
+      result
+    )
+
+    // Calculate processing time
+    const processingTime = Date.now() - startTime
+
+    // Determine response status
+    if (result.requiresRetry) {
+      // Return 500 to trigger Circle retry
+      return NextResponse.json({
+        received: true,
+        status: 'processing_error',
+        action: result.action,
+        error: result.error,
+        requestId,
+        processingTime: `${processingTime}ms`,
+      }, { status: 500 })
+    }
+
+    // Return 200 OK for successful processing
+    return NextResponse.json({
+      received: true,
+      status: result.success ? 'processed' : 'acknowledged',
+      action: result.action,
+      notificationId,
+      requestId,
+      processingTime: `${processingTime}ms`,
     })
 
-    // Return 200 OK immediately
-    const processingTime = Date.now() - startTime
-    return NextResponse.json(
-      {
-        received: true,
-        eventType: notificationType,
-        processingTime: `${processingTime}ms`,
-      },
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    )
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Circle Webhook] Error:', error)
 
-    // Return 200 OK even on error to prevent Circle from retrying
-    // Log the error for manual investigation
-    return NextResponse.json(
-      { received: true, error: 'Processing error logged' },
-      { status: 200 }
-    )
+    const processingTime = Date.now() - startTime
+
+    // Log the error
+    await logSystemEvent('security.alert.triggered', {
+      alertType: 'webhook_processing_error',
+      errorMessage: error.message,
+      requestId,
+    }).catch(() => {})
+
+    // For database errors, return 500 to trigger retry
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('database')) {
+      return NextResponse.json({
+        received: true,
+        status: 'database_error',
+        error: 'Temporary processing error',
+        requestId,
+        processingTime: `${processingTime}ms`,
+      }, { status: 500 })
+    }
+
+    // For other errors, return 200 to prevent infinite retries
+    return NextResponse.json({
+      received: true,
+      status: 'error_logged',
+      requestId,
+      processingTime: `${processingTime}ms`,
+    })
   }
 }
 
@@ -592,16 +1457,31 @@ export async function POST(request: NextRequest) {
  * Health check endpoint
  */
 export async function GET() {
-  return NextResponse.json({
-    status: 'active',
+  const status = {
     service: 'Circle Webhook Handler',
+    status: 'active',
+    version: '2.0.0',
     timestamp: new Date().toISOString(),
-  })
-}
+    configuration: {
+      secretConfigured: !!CIRCLE_ENTITY_SECRET,
+      complianceSlackConfigured: !!COMPLIANCE_SLACK_WEBHOOK,
+    },
+  }
 
-// ============================================================================
-// CORS HEADERS
-// ============================================================================
+  // Basic health check - verify database connectivity
+  try {
+    await sql`SELECT 1`
+    return NextResponse.json({
+      ...status,
+      database: 'connected',
+    })
+  } catch {
+    return NextResponse.json({
+      ...status,
+      database: 'disconnected',
+    }, { status: 503 })
+  }
+}
 
 /**
  * OPTIONS /api/webhooks/circle

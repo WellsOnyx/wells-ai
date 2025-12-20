@@ -91,12 +91,39 @@ CREATE TABLE IF NOT EXISTS treasury_backing (
   -- Status
   status TEXT DEFAULT 'active', -- 'active', 'maturing', 'matured', 'withdrawn'
 
+  -- Source tracking
+  source TEXT, -- 'circle_card_deposit', 'circle_transfer', 'wire_transfer', 'manual'
+  circle_reference_id TEXT, -- Circle payment/transfer ID
+
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_treasury_backing_type ON treasury_backing(asset_type);
 CREATE INDEX IF NOT EXISTS idx_treasury_backing_status ON treasury_backing(status);
+CREATE INDEX IF NOT EXISTS idx_treasury_backing_circle_ref ON treasury_backing(circle_reference_id);
+
+-- Add source columns to existing table if they don't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'treasury_backing' AND column_name = 'source'
+  ) THEN
+    ALTER TABLE treasury_backing ADD COLUMN source TEXT;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'treasury_backing' AND column_name = 'circle_reference_id'
+  ) THEN
+    ALTER TABLE treasury_backing ADD COLUMN circle_reference_id TEXT;
+    CREATE INDEX IF NOT EXISTS idx_treasury_backing_circle_ref ON treasury_backing(circle_reference_id);
+  END IF;
+END $$;
 
 -- ============================================================================
 -- GRAIN PRICE HISTORY (Track GRAIN appreciation over time)

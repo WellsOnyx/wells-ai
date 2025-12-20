@@ -634,6 +634,120 @@ export async function POST(request: NextRequest) {
           asset_purchase_id UUID,
           created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )`
+      },
+      // Security Infrastructure Tables
+      {
+        name: 'grain_system_controls',
+        sql: `CREATE TABLE IF NOT EXISTS grain_system_controls (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          operation_type VARCHAR(50) NOT NULL UNIQUE,
+          is_paused BOOLEAN DEFAULT FALSE,
+          pause_reason TEXT,
+          paused_by TEXT,
+          paused_at TIMESTAMPTZ,
+          resumed_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'grain_frozen_accounts',
+        sql: `CREATE TABLE IF NOT EXISTS grain_frozen_accounts (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL,
+          freeze_reason TEXT NOT NULL,
+          frozen_by TEXT NOT NULL,
+          frozen_at TIMESTAMPTZ DEFAULT NOW(),
+          unfrozen_at TIMESTAMPTZ,
+          review_notes TEXT,
+          status VARCHAR(20) DEFAULT 'frozen',
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'grain_emergency_audit_log',
+        sql: `CREATE TABLE IF NOT EXISTS grain_emergency_audit_log (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          action_type VARCHAR(50) NOT NULL,
+          operation_type VARCHAR(50),
+          user_id TEXT,
+          admin_id TEXT NOT NULL,
+          reason TEXT,
+          metadata JSONB DEFAULT '{}',
+          ip_address TEXT,
+          user_agent TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'grain_audit_logs',
+        sql: `CREATE TABLE IF NOT EXISTS grain_audit_logs (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          event_type VARCHAR(100) NOT NULL,
+          event_category VARCHAR(50) NOT NULL,
+          actor_id TEXT,
+          target_user_id TEXT,
+          ip_address TEXT,
+          user_agent TEXT,
+          action_details JSONB DEFAULT '{}',
+          result VARCHAR(20) DEFAULT 'success',
+          risk_level VARCHAR(20) DEFAULT 'low',
+          request_id TEXT,
+          session_id TEXT,
+          previous_hash TEXT,
+          hash TEXT,
+          retention_expires_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'aml_screening_results',
+        sql: `CREATE TABLE IF NOT EXISTS aml_screening_results (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL,
+          screening_type VARCHAR(50) NOT NULL,
+          passed BOOLEAN NOT NULL,
+          risk_score INTEGER,
+          risk_level VARCHAR(20),
+          action_taken VARCHAR(50),
+          flags JSONB DEFAULT '[]',
+          details JSONB DEFAULT '{}',
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'aml_alerts',
+        sql: `CREATE TABLE IF NOT EXISTS aml_alerts (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL,
+          alert_type VARCHAR(50) NOT NULL,
+          severity VARCHAR(20) NOT NULL,
+          status VARCHAR(20) DEFAULT 'pending',
+          description TEXT,
+          details JSONB DEFAULT '{}',
+          assigned_to TEXT,
+          resolved_at TIMESTAMPTZ,
+          resolved_by TEXT,
+          resolution_notes TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'grain_verification_sessions',
+        sql: `CREATE TABLE IF NOT EXISTS grain_verification_sessions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL,
+          provider VARCHAR(50) NOT NULL,
+          provider_session_id TEXT,
+          status VARCHAR(30) DEFAULT 'pending',
+          verification_url TEXT,
+          result JSONB DEFAULT '{}',
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW(),
+          expires_at TIMESTAMPTZ
+        )`
       }
     ]
 
@@ -698,6 +812,21 @@ export async function POST(request: NextRequest) {
       'CREATE INDEX IF NOT EXISTS idx_grain_escrow_deal ON grain_escrow(deal_id)',
       'CREATE INDEX IF NOT EXISTS idx_grain_escrow_buyer ON grain_escrow(buyer_user_id)',
       'CREATE INDEX IF NOT EXISTS idx_grain_escrow_status ON grain_escrow(status)',
+      // Security infrastructure indexes
+      'CREATE INDEX IF NOT EXISTS idx_grain_audit_logs_actor ON grain_audit_logs(actor_id)',
+      'CREATE INDEX IF NOT EXISTS idx_grain_audit_logs_timestamp ON grain_audit_logs(timestamp DESC)',
+      'CREATE INDEX IF NOT EXISTS idx_grain_audit_logs_event_type ON grain_audit_logs(event_type)',
+      'CREATE INDEX IF NOT EXISTS idx_aml_screening_user ON aml_screening_results(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_aml_screening_created ON aml_screening_results(created_at DESC)',
+      'CREATE INDEX IF NOT EXISTS idx_aml_alerts_status ON aml_alerts(status)',
+      'CREATE INDEX IF NOT EXISTS idx_aml_alerts_user ON aml_alerts(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_aml_alerts_severity ON aml_alerts(severity)',
+      'CREATE INDEX IF NOT EXISTS idx_verification_sessions_user ON grain_verification_sessions(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_verification_sessions_status ON grain_verification_sessions(status)',
+      'CREATE INDEX IF NOT EXISTS idx_frozen_accounts_user ON grain_frozen_accounts(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_frozen_accounts_status ON grain_frozen_accounts(status)',
+      'CREATE INDEX IF NOT EXISTS idx_emergency_audit_admin ON grain_emergency_audit_log(admin_id)',
+      'CREATE INDEX IF NOT EXISTS idx_emergency_audit_created ON grain_emergency_audit_log(created_at DESC)',
     ]
 
     for (const indexSql of indexes) {
@@ -706,6 +835,35 @@ export async function POST(request: NextRequest) {
         results.push({ statement: indexSql.substring(0, 60) + '...', success: true })
       } catch (error: any) {
         results.push({ statement: indexSql.substring(0, 60) + '...', success: false, error: error.message })
+      }
+    }
+
+    // Add security columns to existing tables
+    const alterStatements = [
+      // grain_transactions columns
+      { table: 'grain_transactions', column: 'circle_reference_id', sql: 'ALTER TABLE grain_transactions ADD COLUMN IF NOT EXISTS circle_reference_id TEXT' },
+      { table: 'grain_transactions', column: 'screening_id', sql: 'ALTER TABLE grain_transactions ADD COLUMN IF NOT EXISTS screening_id TEXT' },
+      { table: 'grain_transactions', column: 'metadata', sql: "ALTER TABLE grain_transactions ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'" },
+      // user_wallets columns
+      { table: 'user_wallets', column: 'verification_level', sql: 'ALTER TABLE user_wallets ADD COLUMN IF NOT EXISTS verification_level INTEGER DEFAULT 1' },
+      { table: 'user_wallets', column: 'daily_limit', sql: 'ALTER TABLE user_wallets ADD COLUMN IF NOT EXISTS daily_limit DECIMAL(20,2) DEFAULT 1000' },
+      { table: 'user_wallets', column: 'daily_used', sql: 'ALTER TABLE user_wallets ADD COLUMN IF NOT EXISTS daily_used DECIMAL(20,2) DEFAULT 0' },
+      { table: 'user_wallets', column: 'daily_reset_at', sql: 'ALTER TABLE user_wallets ADD COLUMN IF NOT EXISTS daily_reset_at TIMESTAMPTZ DEFAULT NOW()' },
+    ]
+
+    for (const alter of alterStatements) {
+      try {
+        await sql.query(alter.sql)
+        results.push({ statement: `ALTER ${alter.table}.${alter.column}`, success: true })
+        console.log(`✅ Added column: ${alter.table}.${alter.column}`)
+      } catch (error: any) {
+        // Column might already exist, which is fine
+        if (error.message?.includes('already exists')) {
+          results.push({ statement: `ALTER ${alter.table}.${alter.column}`, success: true, error: 'Already exists' })
+        } else {
+          results.push({ statement: `ALTER ${alter.table}.${alter.column}`, success: false, error: error.message })
+          console.error(`❌ Failed to add column ${alter.table}.${alter.column}:`, error.message)
+        }
       }
     }
 
@@ -728,7 +886,7 @@ export async function POST(request: NextRequest) {
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
-        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name LIKE 'coldstart_%' OR table_name LIKE 'grain_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
+        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name LIKE 'coldstart_%' OR table_name LIKE 'grain_%' OR table_name LIKE 'aml_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
       ORDER BY table_name
     `
 
@@ -759,7 +917,7 @@ export async function GET() {
       SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
-        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name LIKE 'coldstart_%' OR table_name LIKE 'grain_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
+        AND (table_name LIKE 'treasury_%' OR table_name LIKE 'inbox_%' OR table_name LIKE 'coldstart_%' OR table_name LIKE 'grain_%' OR table_name LIKE 'aml_%' OR table_name IN ('user_wallets', 'circle_webhook_events'))
       ORDER BY table_name
     `
 

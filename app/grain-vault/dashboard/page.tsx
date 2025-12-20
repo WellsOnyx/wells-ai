@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs'
 import Link from 'next/link'
+import WellsAIChatWidget from '@/components/WellsAIChatWidget'
 import {
   TrendingUp,
   TrendingDown,
@@ -30,11 +31,10 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
-  Copy,
-  Check,
-  QrCode,
   ArrowDown,
-  ArrowUp
+  ArrowUp,
+  CreditCard,
+  Landmark
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
@@ -63,18 +63,23 @@ ChartJS.register(
 // Types for GRAIN wallet data
 interface WalletData {
   has_wallet: boolean
-  wallet?: {
-    address: string
-    network: string
-  }
+  has_profile?: boolean
   balance: {
     grain: number
     usd_value: number
   }
+  grain_price: number
+  appreciation?: {
+    current_price: number
+    note: string
+  }
   recent_transactions: Array<{
     id: string
     type: string
-    amount: number
+    usd_amount?: number
+    grain_amount?: number
+    grain_price_at_time?: number
+    amount?: number
     status: string
     created_at: string
   }>
@@ -101,7 +106,6 @@ export default function DashboardPage() {
   const [walletData, setWalletData] = useState<WalletData | null>(null)
   const [treasuryData, setTreasuryData] = useState<TreasuryData | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
   const [showDepositModal, setShowDepositModal] = useState(false)
 
   // Fetch wallet and treasury data
@@ -122,13 +126,29 @@ export default function DashboardPage() {
       }
 
       const walletResult = await walletRes.json()
+      console.log('[Dashboard] wallet result:', walletResult)
+
+      // Check if user needs to complete onboarding
+      // In custodial model, has_wallet:true means they have a ledger entry
+      if (!walletResult.has_wallet && !walletResult.has_profile) {
+        console.log('[Dashboard] No wallet or profile - redirecting to onboard')
+        router.push('/grain-vault/onboard')
+        return
+      }
+
+      // If has_wallet is true OR has_profile is true, show the dashboard
+      // The API will auto-create a wallet entry for users with profiles
       setWalletData(walletResult)
 
       // Fetch treasury data for GRAIN value
-      const treasuryRes = await fetch('/api/grain-vault/treasury')
-      if (treasuryRes.ok) {
-        const treasuryResult = await treasuryRes.json()
-        setTreasuryData(treasuryResult)
+      try {
+        const treasuryRes = await fetch('/api/grain-vault/treasury')
+        if (treasuryRes.ok) {
+          const treasuryResult = await treasuryRes.json()
+          setTreasuryData(treasuryResult)
+        }
+      } catch (e) {
+        // Treasury API might not exist - ignore
       }
 
       setError(null)
@@ -141,30 +161,24 @@ export default function DashboardPage() {
     }
   }
 
-  // Create wallet if user doesn't have one
+  // Create ledger entry for user (custodial model - no individual wallets)
   const createWallet = async () => {
     try {
       setLoading(true)
+      // In custodial model, POST creates a ledger entry and returns master wallet address
       const res = await fetch('/api/grain-vault/deposit', { method: 'POST' })
 
       if (!res.ok) {
-        throw new Error('Failed to create wallet')
+        throw new Error('Failed to create account')
       }
 
       const result = await res.json()
+      console.log('[Dashboard] Created ledger entry:', result)
       await fetchData()
     } catch (err: any) {
       setError(err.message)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const copyAddress = async () => {
-    if (walletData?.wallet?.address) {
-      await navigator.clipboard.writeText(walletData.wallet.address)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
     }
   }
 
@@ -321,63 +335,84 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Deposit Address Card */}
-        {walletData?.wallet?.address ? (
+        {/* Deposit Card - Secure checkout flow, NO wallet address exposed */}
+        {walletData?.has_wallet ? (
           <div className="mb-8 p-6 rounded-2xl bg-white/5 border border-white/10">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <QrCode className="w-5 h-5 text-green-400" />
+                  <DollarSign className="w-5 h-5 text-green-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Deposit Address</h3>
-                  <p className="text-sm text-gray-400">Send USDC on Base network</p>
+                  <h3 className="text-lg font-semibold text-white">Fund Your Account</h3>
+                  <p className="text-sm text-gray-400">Deposit USD to receive GRAIN</p>
                 </div>
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400">
-                Base L2
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400">
+                Secure Checkout
               </span>
             </div>
 
-            <div className="p-4 rounded-xl bg-black/30 flex items-center justify-between mb-4">
-              <p className="text-sm text-gray-300 font-mono break-all">
-                {walletData.wallet.address}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-gray-400">Current GRAIN Price</span>
+                <span className="text-lg font-bold text-green-400">
+                  ${(walletData.grain_price || 1).toFixed(4)}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">
+                GRAIN only appreciates. As our treasury grows, your purchasing power increases.
               </p>
-              <button
-                onClick={copyAddress}
-                className="ml-4 p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
-              >
-                {copied ? (
-                  <Check className="w-5 h-5 text-green-400" />
-                ) : (
-                  <Copy className="w-5 h-5 text-gray-400" />
-                )}
-              </button>
             </div>
 
-            <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
-              <p className="text-sm text-green-400 font-medium mb-2">Deposit Instructions</p>
-              <ul className="text-sm text-gray-400 space-y-1">
-                <li>• Send USDC on Base network to the address above</li>
-                <li>• Minimum deposit: $10 USDC</li>
-                <li>• GRAIN credited 1:1 after 1 confirmation (~2 seconds)</li>
-                <li>• Do NOT send from an exchange - use a self-custody wallet</li>
-              </ul>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[50, 100, 500].map((amount) => (
+                <button
+                  key={amount}
+                  onClick={() => setShowDepositModal(true)}
+                  className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-green-500/50 transition-all text-center"
+                >
+                  <p className="text-lg font-bold text-white">${amount}</p>
+                  <p className="text-xs text-gray-400">
+                    ≈ {(amount / (walletData.grain_price || 1)).toFixed(2)} GRAIN
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowDepositModal(true)}
+              className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center justify-center gap-2"
+            >
+              <ArrowDown className="w-5 h-5" />
+              Deposit Funds
+            </button>
+
+            <div className="mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <div className="flex items-start gap-2">
+                <Shield className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-400">
+                  Powered by Circle. Deposits convert to USDC and are held in our fully-backed treasury.
+                </p>
+              </div>
             </div>
           </div>
         ) : (
           <div className="mb-8 p-8 rounded-2xl bg-white/5 border border-white/10 text-center">
             <Wallet className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">Create Your Wallet</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">Activate Your Account</h3>
             <p className="text-gray-400 mb-6">
-              Generate a deposit address to start receiving USDC and earning GRAIN
+              Complete setup to start depositing and earning GRAIN
             </p>
             <button
               onClick={createWallet}
               className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all"
             >
-              Create Wallet
+              Activate Account
             </button>
+            <p className="text-xs text-gray-500 mt-4">
+              100% backed by USDC and appreciating assets
+            </p>
           </div>
         )}
 
@@ -518,31 +553,34 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">2</div>
-                <p className="font-medium text-white">Get GRAIN 1:1</p>
+                <p className="font-medium text-white">Receive GRAIN</p>
               </div>
               <p className="text-sm text-gray-400 pl-10">
-                Receive GRAIN credited instantly to your balance. 1 USDC = 1 GRAIN.
+                Your USD converts to GRAIN at current market price. GRAIN is our appreciating stablecoin.
               </p>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">3</div>
-                <p className="font-medium text-white">Appreciate</p>
+                <p className="font-medium text-white">Anti-Inflationary</p>
               </div>
               <p className="text-sm text-gray-400 pl-10">
-                GRAIN value grows as treasury earns yield. All holders benefit equally.
+                GRAIN only appreciates. Your purchasing power grows while you hold.
               </p>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Deposit Modal */}
-      {showDepositModal && walletData?.wallet?.address && (
+      {/* Deposit Modal - Buy GRAIN via Circle */}
+      {showDepositModal && walletData?.has_wallet && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full border border-white/10">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Deposit USDC</h3>
+              <div>
+                <h3 className="text-xl font-bold text-white">Buy GRAIN</h3>
+                <p className="text-xs text-gray-400">Available in 185+ countries via Circle</p>
+              </div>
               <button
                 onClick={() => setShowDepositModal(false)}
                 className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400"
@@ -551,32 +589,119 @@ export default function DashboardPage() {
               </button>
             </div>
 
+            {/* Current GRAIN Price */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-400">Current GRAIN Price</span>
+                <span className="text-lg font-bold text-green-400">
+                  ${(walletData.grain_price || 1).toFixed(4)}
+                </span>
+              </div>
+              <p className="text-xs text-green-400/70">
+                GRAIN can only appreciate. Anti-inflationary by design.
+              </p>
+            </div>
+
+            {/* Amount Selection */}
             <div className="mb-6">
-              <p className="text-sm text-gray-400 mb-3">Send USDC to this address on Base L2:</p>
-              <div className="p-4 rounded-xl bg-black/30 border border-white/10">
-                <p className="text-sm text-green-400 font-mono break-all">
-                  {walletData.wallet.address}
-                </p>
+              <p className="text-sm text-gray-400 mb-3">How much GRAIN do you want to buy?</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[100, 250, 500, 1000].map((amount) => (
+                  <button
+                    key={amount}
+                    className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-green-500/50 transition-all text-center"
+                  >
+                    <p className="text-xl font-bold text-white">${amount}</p>
+                    <p className="text-xs text-gray-400">
+                      ≈ {(amount / (walletData.grain_price || 1)).toFixed(2)} GRAIN
+                    </p>
+                  </button>
+                ))}
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                copyAddress()
-                setShowDepositModal(false)
-              }}
-              className="w-full py-4 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all flex items-center justify-center gap-2"
-            >
-              <Copy className="w-5 h-5" />
-              Copy Address
-            </button>
+            {/* Payment Methods - Circle Only */}
+            <div className="space-y-3 mb-6">
+              <button className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium text-white">Credit / Debit Card</p>
+                  <p className="text-xs text-gray-400">Instant deposit via Circle</p>
+                </div>
+                <ArrowUpRight className="w-4 h-4 text-gray-500" />
+              </button>
+              <button className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                  <Landmark className="w-5 h-5 text-green-400" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium text-white">Bank Transfer (ACH)</p>
+                  <p className="text-xs text-gray-400">1-3 business days, lower fees</p>
+                </div>
+                <ArrowUpRight className="w-4 h-4 text-gray-500" />
+              </button>
+              <button className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium text-white">Wire Transfer</p>
+                  <p className="text-xs text-gray-400">For larger deposits ($10K+)</p>
+                </div>
+                <ArrowUpRight className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
 
-            <p className="text-xs text-gray-500 mt-4 text-center">
-              GRAIN will be credited 1:1 after 1 confirmation (~2 seconds)
-            </p>
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <div className="flex items-start gap-2">
+                <Shield className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-gray-400">
+                  Powered by Circle. All deposits are USDC-backed and held in our secure treasury. GRAIN only appreciates.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Chat Widget */}
+      <WellsAIChatWidget
+        brandColor="#22C55E"
+        accentColor="#10B981"
+        brandName="GRAIN Support"
+        context={`You are a support assistant for Grain & Vault dashboard users. The user is logged in and viewing their GRAIN wallet.
+
+WHAT IS GRAIN?
+GRAIN is our proprietary stablecoin that is ANTI-INFLATIONARY by design. Unlike traditional currencies that lose value over time, GRAIN is engineered to appreciate.
+
+GRAIN PRICE FORMULA: Price = (Total USDC Reserve + Equity Value) / Circulating GRAIN Supply
+- As treasury grows, GRAIN's price increases
+- Your purchasing power grows while you hold
+- GRAIN can ONLY go up in value
+- Every GRAIN is 100% backed by real assets
+
+HOW TO DEPOSIT:
+1. Click "Buy GRAIN" button in the dashboard
+2. Choose amount ($100, $250, $500, $1000, or custom)
+3. Select payment method:
+   - Card (instant via Circle)
+   - ACH Bank Transfer (1-3 days, lower fees)
+   - Wire Transfer (for $10K+ deposits)
+4. Complete payment through secure Circle checkout
+5. GRAIN is credited to your wallet at current price
+
+The user's balance is shown in the dashboard. Help them understand their balance, how to deposit more GRAIN, how appreciation works, and answer any questions about their account.
+
+IMPORTANT: We NEVER display wallet addresses to users. All deposits go through Circle's secure checkout. This protects against phishing and theft.
+
+Be helpful, enthusiastic about GRAIN's anti-inflationary design, and encourage users to hold for appreciation.`}
+        journey="support"
+        greeting="Need help with your GRAIN wallet? I can explain how appreciation works, help you make a deposit, or answer any questions!"
+        placeholder="Ask about deposits, balance, or GRAIN..."
+        position="bottom-right"
+      />
     </div>
   )
 }

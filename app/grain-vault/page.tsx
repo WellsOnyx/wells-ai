@@ -24,13 +24,15 @@ import {
   Building2,
   DollarSign,
   TrendingUp,
+  TrendingDown,
   Sparkles,
   BarChart3,
   FileCheck,
   Clock,
   Play,
   Download,
-  ExternalLink
+  ExternalLink,
+  Layers
 } from 'lucide-react'
 import {
   GlassCard,
@@ -278,10 +280,10 @@ export default function GrainVaultLanding() {
             </div>
 
             {/* Trust Bar */}
-            <div className="flex items-center justify-center gap-8 text-sm text-gray-500 mb-16">
+            <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8 text-sm text-gray-500 mb-12">
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>SOC 2 Type II</span>
+                <span>185+ Countries</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
@@ -290,6 +292,25 @@ export default function GrainVaultLanding() {
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 <span>Real-time Audits</span>
+              </div>
+            </div>
+
+            {/* Powered By Banner */}
+            <div className="flex items-center justify-center gap-8 mb-16">
+              <div className="text-xs text-gray-500 uppercase tracking-wider">Powered by</div>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-white">C</span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-300">Circle</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
+                  <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                    <Layers className="w-3 h-3 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-300">Base</span>
+                </div>
               </div>
             </div>
 
@@ -324,6 +345,195 @@ export default function GrainVaultLanding() {
                 />
               </BentoItem>
             </BentoGrid>
+          </div>
+        </section>
+
+        {/* How GRAIN Works - Consumer Focus */}
+        <section id="how-it-works" className="py-24 px-6 lg:px-8 relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-green-950/20 via-transparent to-transparent pointer-events-none" />
+
+          <div className="relative max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <FloatingBadge color="green">
+                <TrendingUp className="w-4 h-4" />
+                Anti-Inflationary
+              </FloatingBadge>
+              <h2 className="text-4xl md:text-5xl font-bold mt-6 mb-4">
+                Money that works <span className="text-green-400">for you</span>
+              </h2>
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+                Unlike traditional currencies that lose value over time, GRAIN is designed to appreciate.
+                Your purchasing power grows while you hold.
+              </p>
+            </div>
+
+            {/* The Problem / Solution */}
+            <div className="grid md:grid-cols-2 gap-8 mb-16">
+              {/* The Problem */}
+              <GlassCard hover={false} padding="lg" className="border-red-500/20">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
+                    <TrendingDown className="w-6 h-6 text-red-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-red-400">Traditional Money</h3>
+                    <p className="text-sm text-gray-500">Loses value every year</p>
+                  </div>
+                </div>
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-red-400 text-sm">✕</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-300">Inflation erodes your savings</p>
+                      <p className="text-sm text-gray-500">$100 today buys less next year</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-red-400 text-sm">✕</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-300">Banks profit from your deposits</p>
+                      <p className="text-sm text-gray-500">They earn interest, you get almost nothing</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-red-400 text-sm">✕</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-300">Hidden fees everywhere</p>
+                      <p className="text-sm text-gray-500">Transfer fees, exchange fees, ATM fees</p>
+                    </div>
+                  </li>
+                </ul>
+              </GlassCard>
+
+              {/* The Solution */}
+              <GlassCard hover glow="green" padding="lg">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-black" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-green-400">GRAIN</h3>
+                    <p className="text-sm text-gray-400">Designed to appreciate</p>
+                  </div>
+                </div>
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">Your purchasing power grows</p>
+                      <p className="text-sm text-gray-400">GRAIN only goes up in value</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">You benefit from treasury growth</p>
+                      <p className="text-sm text-gray-400">As our reserves grow, so does your GRAIN value</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">100% backed, always</p>
+                      <p className="text-sm text-gray-400">Every GRAIN is fully backed by real assets</p>
+                    </div>
+                  </li>
+                </ul>
+              </GlassCard>
+            </div>
+
+            {/* How It Works - Visual Steps */}
+            <div className="mb-16">
+              <h3 className="text-2xl font-bold text-center mb-12">How it works</h3>
+              <div className="grid md:grid-cols-4 gap-6">
+                {[
+                  {
+                    step: '1',
+                    icon: Wallet,
+                    title: 'Deposit',
+                    desc: 'Add funds instantly with card or bank transfer. Available in 185+ countries.',
+                    color: 'blue'
+                  },
+                  {
+                    step: '2',
+                    icon: Sparkles,
+                    title: 'Convert to GRAIN',
+                    desc: 'Your deposit converts to GRAIN at the current market price.',
+                    color: 'green'
+                  },
+                  {
+                    step: '3',
+                    icon: TrendingUp,
+                    title: 'Watch it Grow',
+                    desc: 'As our treasury grows, GRAIN appreciates. Your balance gains value.',
+                    color: 'purple'
+                  },
+                  {
+                    step: '4',
+                    icon: Globe,
+                    title: 'Use Anywhere',
+                    desc: 'Spend, send, or withdraw anytime. Your money, your control.',
+                    color: 'amber'
+                  }
+                ].map((item, i) => (
+                  <div key={i} className="relative">
+                    {i < 3 && (
+                      <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-white/20 to-transparent" />
+                    )}
+                    <GlassCard hover className="h-full text-center relative">
+                      <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-${item.color}-500/20 flex items-center justify-center relative`}>
+                        <item.icon className={`w-8 h-8 text-${item.color}-400`} />
+                        <div className={`absolute -top-2 -right-2 w-6 h-6 rounded-full bg-${item.color}-500 text-black text-xs font-bold flex items-center justify-center`}>
+                          {item.step}
+                        </div>
+                      </div>
+                      <h4 className="text-lg font-bold mb-2">{item.title}</h4>
+                      <p className="text-sm text-gray-400">{item.desc}</p>
+                    </GlassCard>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Value Proposition Banner */}
+            <GlassCard hover={false} glow="green" padding="lg" className="text-center">
+              <div className="max-w-3xl mx-auto">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/20 text-green-400 text-sm font-medium mb-6">
+                  <TrendingUp className="w-4 h-4" />
+                  Anti-Inflationary by Design
+                </div>
+                <h3 className="text-3xl md:text-4xl font-bold mb-4">
+                  Stop losing money to inflation.
+                  <br />
+                  <span className="text-green-400">Start growing with GRAIN.</span>
+                </h3>
+                <p className="text-lg text-gray-400 mb-8">
+                  While traditional money loses purchasing power year after year,
+                  GRAIN is engineered to appreciate. Every holder benefits equally as our treasury grows.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <ShimmerButton size="lg" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/signup'}>
+                    Get Started Free
+                    <ArrowRight className="w-5 h-5" />
+                  </ShimmerButton>
+                  <div className="text-sm text-gray-500">
+                    No minimum deposit · Available worldwide
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
           </div>
         </section>
 
@@ -694,11 +904,40 @@ export default function GrainVaultLanding() {
       <WellsAIChatWidget
         brandColor="#22C55E"
         accentColor="#10B981"
-        brandName="Grain & Vault Support"
-        context="You are a support assistant for Grain & Vault, a treasury infrastructure platform. Help with GRAIN payments, VAULT reserves, Treasury SDK integration, and account setup."
+        brandName="Grain & Vault"
+        context={`You are a support assistant for Grain & Vault, a treasury infrastructure platform.
+
+WHAT IS GRAIN?
+GRAIN is our proprietary stablecoin that is ANTI-INFLATIONARY by design. Unlike traditional currencies that lose value over time, GRAIN is engineered to appreciate. Here's how it works:
+
+1. GRAIN PRICE FORMULA: Price = (Total USDC Reserve + Equity Value) / Circulating GRAIN Supply
+2. As our treasury grows, GRAIN's price increases - your purchasing power grows while you hold
+3. GRAIN can ONLY go up in value - it's mathematically impossible for it to decrease
+4. Every GRAIN is 100% backed by real assets (USDC + equity stakes)
+
+HOW DEPOSITS WORK:
+- Users deposit USD via Circle (card, bank transfer, wire) - available in 185+ countries
+- Deposit converts to GRAIN at current market price
+- Example: If GRAIN = $1.10 and you deposit $110, you receive 100 GRAIN
+- Later if GRAIN rises to $1.20, your 100 GRAIN is now worth $120
+
+WHY GRAIN IS BETTER:
+- Traditional money: Loses purchasing power to inflation every year
+- Banks profit from your deposits; you earn almost nothing
+- Hidden fees for transfers, exchanges, ATMs
+
+GRAIN:
+- Your purchasing power INCREASES as you hold
+- You benefit directly from treasury growth
+- 100% backed, always - full transparency
+- Powered by Circle (185+ countries) and Base blockchain
+
+VAULT: Our protected reserves product - 100% collateralized, real-time blockchain audits, complete transparency.
+
+Be enthusiastic about GRAIN's anti-inflationary design. Help users understand they're not just storing money - they're growing it. Answer questions about deposits, the GRAIN price formula, how appreciation works, and account setup.`}
         journey="support"
-        greeting="Hi! Ask me about GRAIN payments, VAULT reserves, or the Treasury SDK."
-        placeholder="Ask about treasury, payments, SDK..."
+        greeting="Hi! I'm here to help you understand GRAIN - the anti-inflationary stablecoin. Ask me how your money can actually grow instead of losing value!"
+        placeholder="How does GRAIN appreciation work?"
         position="bottom-right"
       />
     </div>

@@ -172,19 +172,15 @@ function getLimitsForLevel(level: number, countryCode: string = 'US'): {
   }
 }
 
-/**
- * Generate a secure wallet address
- */
-function generateWalletAddress(userId: string): string {
-  const hash = crypto.createHash('sha256').update(userId + Date.now().toString()).digest('hex')
-  return `0x${hash.substring(0, 40)}`
-}
+// WELLS MASTER WALLET - All deposits go here for custodial management
+const WELLS_MASTER_WALLET_ADDRESS = process.env.WELLS_MASTER_WALLET_ADDRESS || ''
 
 /**
- * Generate wallet ID
+ * Generate ledger wallet ID (unique identifier for user's ledger entry)
+ * Note: In custodial model, all users share the same deposit address (master wallet)
  */
 function generateWalletId(userId: string): string {
-  return `grain-wallet-${userId.substring(0, 8)}-${Date.now().toString(36)}`
+  return `grain-ledger-${userId.substring(0, 8)}-${Date.now().toString(36)}`
 }
 
 // ============================================================================
@@ -474,8 +470,8 @@ export async function POST(req: NextRequest) {
       `
     }
 
-    // Check if user already has a wallet
-    console.log('[onboard POST] Checking for existing wallet for userId:', userId)
+    // Check if user already has a wallet entry in the ledger
+    console.log('[onboard POST] Checking for existing wallet ledger entry for userId:', userId)
     const walletResult = await sql`
       SELECT user_id, wallet_id, wallet_address, balance
       FROM user_wallets
@@ -483,24 +479,27 @@ export async function POST(req: NextRequest) {
     `
 
     let wallet = walletResult.rows[0]
-    console.log('[onboard POST] Existing wallet found:', !!wallet)
+    console.log('[onboard POST] Existing wallet entry found:', !!wallet)
+
+    // Get master wallet address - all users share this for deposits
+    const masterWalletAddress = WELLS_MASTER_WALLET_ADDRESS || 'pending-config'
 
     if (!wallet) {
-      // Create wallet
-      const walletAddress = generateWalletAddress(userId)
+      // Create ledger entry for this user
+      // In custodial model, all users share the same deposit address (master wallet)
       const walletId = generateWalletId(userId)
 
-      console.log('[onboard POST] Creating new wallet:', { userId, walletId, walletAddress })
+      console.log('[onboard POST] Creating ledger entry:', { userId, walletId, masterWalletAddress })
 
       await sql`
         INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, created_at, updated_at)
-        VALUES (${userId}, ${walletId}, ${walletAddress}, 0, NOW(), NOW())
+        VALUES (${userId}, ${walletId}, ${masterWalletAddress}, 0, NOW(), NOW())
       `
 
-      console.log('[onboard POST] Wallet created successfully')
+      console.log('[onboard POST] Ledger entry created successfully')
 
       wallet = {
-        wallet_address: walletAddress,
+        wallet_address: masterWalletAddress,
         wallet_id: walletId,
         balance: 0
       }
@@ -509,11 +508,22 @@ export async function POST(req: NextRequest) {
       try {
         await sql`
           INSERT INTO grain_treasury_events (type, amount, user_id, notes, created_at)
-          VALUES ('system_adjustment', 0, ${userId}, 'Wallet created during onboarding', NOW())
+          VALUES ('system_adjustment', 0, ${userId}, 'Ledger entry created during onboarding (custodial model)', NOW())
         `
       } catch (e) {
         // Table might not exist yet
         console.log('[onboard POST] Treasury event insert failed:', e)
+      }
+    } else {
+      // Update existing wallet entry to use master wallet address if needed
+      if (WELLS_MASTER_WALLET_ADDRESS && wallet.wallet_address !== WELLS_MASTER_WALLET_ADDRESS) {
+        await sql`
+          UPDATE user_wallets
+          SET wallet_address = ${WELLS_MASTER_WALLET_ADDRESS}, updated_at = NOW()
+          WHERE user_id = ${userId}
+        `
+        wallet.wallet_address = WELLS_MASTER_WALLET_ADDRESS
+        console.log('[onboard POST] Updated wallet entry to use master wallet address')
       }
     }
 
