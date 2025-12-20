@@ -64,7 +64,7 @@ export default function GrainVaultSigninPage() {
           routing="path"
           path="/grain-vault/signin"
           signUpUrl="/grain-vault/signup"
-          forceRedirectUrl="/grain-vault/account"
+          forceRedirectUrl="/grain-vault/dashboard"
         />
 
         <p className="mt-6 text-center text-sm text-gray-500">

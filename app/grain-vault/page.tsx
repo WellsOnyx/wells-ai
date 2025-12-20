@@ -217,6 +217,9 @@ export default function GrainVaultLanding() {
                   <Link href="/grain-vault/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors">
                     Dashboard
                   </Link>
+                  <Link href="/grain-vault/signin" className="text-sm text-gray-400 hover:text-white transition-colors">
+                    Sign In
+                  </Link>
                   <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/onboard'}>
                     Open Account
                   </ShimmerButton>

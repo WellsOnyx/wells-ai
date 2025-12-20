@@ -57,7 +57,7 @@ export default function GrainVaultAccountPage() {
 
   useEffect(() => {
     if (isLoaded && !user) {
-      router.push('/signin')
+      router.push('/grain-vault/signin')
       return
     }
 
@@ -73,7 +73,7 @@ export default function GrainVaultAccountPage() {
 
       // Check for 404 or needsOnboarding flag
       if (!response.ok || data.needsOnboarding) {
-        router.push('/onboarding')
+        router.push('/grain-vault/onboard')
         return
       }
 
@@ -83,7 +83,7 @@ export default function GrainVaultAccountPage() {
     } catch (error) {
       console.error('Error fetching account:', error)
       // On error, redirect to onboarding
-      router.push('/onboarding')
+      router.push('/grain-vault/onboard')
     } finally {
       setIsLoading(false)
     }

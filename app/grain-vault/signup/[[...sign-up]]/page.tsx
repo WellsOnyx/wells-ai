@@ -246,7 +246,7 @@ function SignupContent() {
             routing="path"
             path="/grain-vault/signup"
             signInUrl="/grain-vault/signin"
-            forceRedirectUrl="/grain-vault/onboarding"
+            forceRedirectUrl="/grain-vault/onboard"
           />
 
           <p className="mt-6 text-center text-sm text-gray-500">
