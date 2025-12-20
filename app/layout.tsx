@@ -73,7 +73,7 @@ export default async function RootLayout({
     return (
       <ClerkProvider
         isSatellite
-        domain={(url) => url.host}
+        domain={host}
         signInUrl={`https://${PRIMARY_DOMAIN}/sign-in`}
         signUpUrl={`https://${PRIMARY_DOMAIN}/sign-up`}
         afterSignInUrl="/grain-vault/dashboard"
