@@ -307,17 +307,8 @@ export default function OnboardingPage() {
         throw new Error(onboardResult.message || onboardResult.error || 'Failed to save profile')
       }
 
-      // Create wallet
-      const walletRes = await fetch('/api/grain-vault/deposit', {
-        method: 'POST'
-      })
-
-      const walletResult = await walletRes.json()
-
-      if (!walletRes.ok) {
-        throw new Error(walletResult.error || 'Failed to create wallet')
-      }
-
+      // Wallet is created by the onboard API, no need to call deposit API
+      // Just redirect to dashboard
       router.push('/grain-vault/dashboard')
     } catch (err: any) {
       setError(err.message)
