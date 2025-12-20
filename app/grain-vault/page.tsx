@@ -282,8 +282,8 @@ export default function GrainVaultLanding() {
             {/* Trust Bar */}
             <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8 text-sm text-gray-500 mb-12">
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>185+ Countries</span>
+                <Globe className="w-4 h-4 text-green-500" />
+                <span className="font-medium text-white">180+ Countries</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
@@ -292,6 +292,10 @@ export default function GrainVaultLanding() {
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 <span>Real-time Audits</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-yellow-500" />
+                <span>Instant Settlement</span>
               </div>
             </div>
 
@@ -463,7 +467,7 @@ export default function GrainVaultLanding() {
                     step: '1',
                     icon: Wallet,
                     title: 'Deposit',
-                    desc: 'Add funds instantly with card or bank transfer. Available in 185+ countries.',
+                    desc: 'Add funds instantly with card or bank transfer. Available in 180+ countries.',
                     color: 'blue'
                   },
                   {
@@ -916,7 +920,7 @@ GRAIN is our proprietary stablecoin that is ANTI-INFLATIONARY by design. Unlike 
 4. Every GRAIN is 100% backed by real assets (USDC + equity stakes)
 
 HOW DEPOSITS WORK:
-- Users deposit USD via Circle (card, bank transfer, wire) - available in 185+ countries
+- Users deposit USD via Circle (card, bank transfer, wire) - available in 180+ countries
 - Deposit converts to GRAIN at current market price
 - Example: If GRAIN = $1.10 and you deposit $110, you receive 100 GRAIN
 - Later if GRAIN rises to $1.20, your 100 GRAIN is now worth $120
@@ -930,7 +934,7 @@ GRAIN:
 - Your purchasing power INCREASES as you hold
 - You benefit directly from treasury growth
 - 100% backed, always - full transparency
-- Powered by Circle (185+ countries) and Base blockchain
+- Powered by Circle (180+ countries) and Base blockchain
 
 VAULT: Our protected reserves product - 100% collateralized, real-time blockchain audits, complete transparency.
 
