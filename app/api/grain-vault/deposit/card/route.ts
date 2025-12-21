@@ -15,8 +15,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { sql } from '@vercel/postgres'
-import crypto from 'crypto'
 import { CIRCLE_CONFIG, circleRequest, generateIdempotencyKey } from '@/lib/circle'
+import * as openpgp from 'openpgp'
 
 // Check if Circle is configured
 function isCircleConfigured(): boolean {
@@ -359,39 +359,51 @@ async function handleCirclePayment(
   }
 }
 
-// Encrypt card data for Circle (simplified version)
-// In production, use Circle's official encryption library: @circle-fin/w3s-pw-web-sdk
+// Encrypt card data for Circle using OpenPGP
 async function encryptCardData(
   card: { number: string; cvv: string; expMonth: number; expYear: number },
   keyId: string,
   publicKey: string
 ): Promise<{ encryptedMessage: string; encryptedCvv: string }> {
-  // Note: This is a simplified placeholder
-  // In production, you MUST use Circle's official encryption
-  // The public key from Circle is a PGP key that must be used with OpenPGP.js
+  try {
+    // Decode the base64 public key from Circle
+    const decodedPublicKey = Buffer.from(publicKey, 'base64').toString('utf-8')
 
-  // For now, we'll base64 encode as a placeholder
-  // This will NOT work in production - you need proper PGP encryption
-  const cardData = JSON.stringify({
-    number: card.number,
-    cvv: card.cvv
-  })
+    // Read the PGP public key
+    const pgpPublicKey = await openpgp.readKey({ armoredKey: decodedPublicKey })
 
-  const encryptedMessage = Buffer.from(cardData).toString('base64')
-  const encryptedCvv = Buffer.from(card.cvv).toString('base64')
+    // Format card data as Circle expects
+    const cardDataObj = {
+      number: card.number.replace(/\s/g, ''),
+      cvv: card.cvv
+    }
+    const cardDataString = JSON.stringify(cardDataObj)
 
-  // TODO: Implement proper PGP encryption using OpenPGP.js
-  // Example:
-  // import * as openpgp from 'openpgp'
-  // const publicKeyArmored = publicKey
-  // const message = await openpgp.createMessage({ text: cardData })
-  // const encrypted = await openpgp.encrypt({
-  //   message,
-  //   encryptionKeys: await openpgp.readKey({ armoredKey: publicKeyArmored })
-  // })
-  // return { encryptedMessage: encrypted, encryptedCvv: ... }
+    // Encrypt the card data
+    const cardMessage = await openpgp.createMessage({ text: cardDataString })
+    const encryptedCard = await openpgp.encrypt({
+      message: cardMessage,
+      encryptionKeys: pgpPublicKey
+    })
 
-  console.warn('[Card Deposit] Using placeholder encryption - implement proper PGP for production!')
+    // Circle expects base64 encoded encrypted data
+    const encryptedMessage = Buffer.from(encryptedCard as string).toString('base64')
 
-  return { encryptedMessage, encryptedCvv }
+    // Encrypt CVV separately for payment verification
+    const cvvDataObj = { cvv: card.cvv }
+    const cvvDataString = JSON.stringify(cvvDataObj)
+    const cvvMessage = await openpgp.createMessage({ text: cvvDataString })
+    const encryptedCvvData = await openpgp.encrypt({
+      message: cvvMessage,
+      encryptionKeys: pgpPublicKey
+    })
+    const encryptedCvv = Buffer.from(encryptedCvvData as string).toString('base64')
+
+    console.log('[Card Deposit] Card data encrypted successfully with PGP')
+
+    return { encryptedMessage, encryptedCvv }
+  } catch (error: any) {
+    console.error('[Card Deposit] Encryption error:', error)
+    throw new Error('Failed to encrypt card data: ' + error.message)
+  }
 }
