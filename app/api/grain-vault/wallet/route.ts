@@ -40,6 +40,17 @@ export async function GET(req: NextRequest) {
     const wallet = walletResult.rows[0]
     const balance = parseFloat(wallet?.balance || '0')
 
+    // Check for profile
+    let hasProfile = false
+    try {
+      const profileResult = await sql`
+        SELECT user_id FROM grain_user_profiles WHERE user_id = ${userId}
+      `
+      hasProfile = profileResult.rows.length > 0
+    } catch (e) {
+      // Profile table might not exist
+    }
+
     // Get recent transactions
     let transactions: any[] = []
     try {
@@ -70,6 +81,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       has_wallet: true,
+      has_profile: hasProfile,
       balance: {
         grain: balance,
         usd_value: balance * grainPrice

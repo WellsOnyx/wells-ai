@@ -160,7 +160,7 @@ function DepositPageContent() {
     try {
       // Fetch wallet data, price, and verification level in parallel
       const [walletRes, priceRes] = await Promise.all([
-        fetch('/api/grain-vault/deposit'),
+        fetch('/api/grain-vault/wallet'),
         fetch('/api/grain-vault/price')
       ])
 
@@ -175,7 +175,9 @@ function DepositPageContent() {
       const walletResult = await walletRes.json()
 
       // Check if user needs to complete onboarding
-      if (!walletResult.has_wallet && !walletResult.has_profile) {
+      // Only redirect if they have NEITHER wallet NOR profile
+      // Having either one means they've started the process
+      if (!walletResult.has_wallet && !walletResult.has_profile && !walletResult.success) {
         router.push('/grain-vault/onboard')
         return
       }
@@ -254,9 +256,15 @@ function DepositPageContent() {
 
       setDepositSession(result)
 
-      // For card payments, redirect to Circle checkout
-      if (paymentMethod === 'card' && result.deposit?.checkout_url) {
-        window.location.href = result.deposit.checkout_url
+      // For card payments, redirect to checkout
+      if (paymentMethod === 'card' && result.checkoutUrl) {
+        window.location.href = result.checkoutUrl
+        return
+      }
+
+      // Fallback: redirect to our demo checkout page
+      if (paymentMethod === 'card' && result.sessionId) {
+        window.location.href = `/grain-vault/deposit/checkout?session=${result.sessionId}&amount=${numAmount}&paymentIntentId=${result.paymentIntentId || ''}`
         return
       }
 
