@@ -64,10 +64,23 @@ export async function POST(req: NextRequest) {
     }
 
     // SECURITY: Check if user is approved before allowing deposits
-    const approvalCheck = await sql`
-      SELECT approved FROM user_wallets WHERE user_id = ${userId}
-    `
-    if (approvalCheck.rows.length > 0 && approvalCheck.rows[0].approved !== true) {
+    // Handle case where approved column may not exist yet
+    let isApproved = true // Default to approved if column doesn't exist
+    try {
+      const approvalCheck = await sql`
+        SELECT approved FROM user_wallets WHERE user_id = ${userId}
+      `
+      if (approvalCheck.rows.length > 0 && approvalCheck.rows[0].approved === false) {
+        isApproved = false
+      }
+    } catch (e: any) {
+      // Column doesn't exist - allow deposits (backwards compatibility)
+      if (!e.message?.includes('approved')) {
+        throw e
+      }
+    }
+
+    if (!isApproved) {
       return NextResponse.json(
         {
           error: 'Account pending approval',
