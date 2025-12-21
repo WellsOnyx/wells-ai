@@ -19,22 +19,9 @@ import {
   validateCircleConfig,
 } from '@/lib/circle'
 
-// Check if we're in demo/sandbox mode
-// Force demo mode until Circle Payments API is fully configured and tested
+// Demo mode is OFF - always use real Circle payments
 function isDemoMode(): boolean {
-  // Check for explicit demo mode override
-  if (process.env.GRAIN_VAULT_DEMO_MODE === 'true') {
-    return true
-  }
-
-  // Default to demo mode - Circle Payments needs more setup
-  // Set GRAIN_VAULT_DEMO_MODE=false to use real Circle
-  if (process.env.GRAIN_VAULT_DEMO_MODE !== 'false') {
-    return true
-  }
-
-  const configCheck = validateCircleConfig()
-  return !configCheck.valid
+  return false
 }
 
 // =============================================================================
