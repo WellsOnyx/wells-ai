@@ -17,8 +17,9 @@ interface GlassCardProps {
   children: ReactNode
   className?: string
   hover?: boolean
-  glow?: 'amber' | 'blue' | 'purple' | 'green' | 'none'
-  padding?: 'none' | 'sm' | 'md' | 'lg'
+  glow?: 'amber' | 'blue' | 'purple' | 'green' | 'cyan' | 'none'
+  padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl'
+  variant?: 'default' | 'elevated' | 'subtle'
 }
 
 export function GlassCard({
@@ -26,13 +27,15 @@ export function GlassCard({
   className = '',
   hover = true,
   glow = 'none',
-  padding = 'md'
+  padding = 'md',
+  variant = 'default'
 }: GlassCardProps) {
   const glowColors = {
     amber: 'hover:shadow-amber-500/20 hover:border-amber-500/30',
     blue: 'hover:shadow-blue-500/20 hover:border-blue-500/30',
     purple: 'hover:shadow-purple-500/20 hover:border-purple-500/30',
     green: 'hover:shadow-green-500/20 hover:border-green-500/30',
+    cyan: 'hover:shadow-cyan-500/20 hover:border-cyan-500/30',
     none: ''
   }
 
@@ -40,22 +43,30 @@ export function GlassCard({
     none: '',
     sm: 'p-4',
     md: 'p-6',
-    lg: 'p-8'
+    lg: 'p-8',
+    xl: 'p-10'
+  }
+
+  const variants = {
+    default: 'bg-white/[0.03] border-white/[0.08]',
+    elevated: 'bg-white/[0.05] border-white/[0.12] shadow-xl',
+    subtle: 'bg-white/[0.02] border-white/[0.05]'
   }
 
   return (
     <div
       className={`
         relative overflow-hidden rounded-2xl
-        bg-white/[0.03] backdrop-blur-xl
-        border border-white/[0.08]
-        ${hover ? `transition-all duration-500 hover:bg-white/[0.06] hover:border-white/[0.15] ${glowColors[glow]}` : ''}
+        ${variants[variant]} backdrop-blur-xl border
+        ${hover ? `transition-all duration-500 hover:bg-white/[0.06] hover:border-white/[0.15] hover:-translate-y-0.5 ${glowColors[glow]}` : ''}
         ${paddings[padding]}
         ${className}
       `}
     >
       {/* Subtle gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] via-transparent to-transparent pointer-events-none" />
+      {/* Inner glow effect */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-amber-500/5 to-transparent pointer-events-none" />
       <div className="relative z-10">{children}</div>
     </div>
   )
@@ -181,9 +192,11 @@ export function GlowOrb({
 interface ShimmerButtonProps {
   children: ReactNode
   className?: string
-  variant?: 'primary' | 'secondary' | 'ghost'
-  size?: 'sm' | 'md' | 'lg'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   onClick?: () => void
+  disabled?: boolean
+  loading?: boolean
 }
 
 export function ShimmerButton({
@@ -191,32 +204,48 @@ export function ShimmerButton({
   className = '',
   variant = 'primary',
   size = 'md',
-  onClick
+  onClick,
+  disabled = false,
+  loading = false
 }: ShimmerButtonProps) {
   const variants = {
-    primary: 'bg-gradient-to-r from-amber-500 to-amber-600 text-black hover:from-amber-400 hover:to-amber-500',
+    primary: 'bg-gradient-to-r from-amber-500 to-amber-600 text-black hover:from-amber-400 hover:to-amber-500 shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40',
     secondary: 'bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20',
-    ghost: 'bg-transparent text-white hover:bg-white/5'
+    ghost: 'bg-transparent text-white hover:bg-white/5',
+    outline: 'bg-transparent border-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500',
+    danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-400 hover:to-red-500'
   }
 
   const sizes = {
+    xs: 'px-3 py-1.5 text-xs',
     sm: 'px-4 py-2 text-sm',
     md: 'px-6 py-3 text-base',
-    lg: 'px-8 py-4 text-lg'
+    lg: 'px-8 py-4 text-lg',
+    xl: 'px-10 py-5 text-xl'
   }
 
   return (
     <button
       onClick={onClick}
+      disabled={disabled || loading}
       className={`
         relative overflow-hidden rounded-xl font-semibold
-        transition-all duration-300 hover:scale-105 active:scale-95
+        transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]
+        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
         ${variants[variant]} ${sizes[size]} ${className}
       `}
     >
       {/* Shimmer effect */}
-      <div className="absolute inset-0 -translate-x-full hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-      <span className="relative z-10 flex items-center gap-2">{children}</span>
+      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      {/* Loading spinner */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-inherit">
+          <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+      <span className={`relative z-10 flex items-center justify-center gap-2 ${loading ? 'opacity-0' : ''}`}>
+        {children}
+      </span>
     </button>
   )
 }
@@ -389,6 +418,222 @@ export function NoiseOverlay() {
         backgroundRepeat: 'repeat'
       }}
     />
+  )
+}
+
+// ============================================
+// STAT CARD - Enhanced metric display
+// ============================================
+interface StatCardProps {
+  value: string
+  label: string
+  change?: string
+  changeType?: 'positive' | 'negative' | 'neutral'
+  icon?: ReactNode
+  gradient?: string
+}
+
+export function StatCard({
+  value,
+  label,
+  change,
+  changeType = 'neutral',
+  icon,
+  gradient = 'from-amber-500 to-amber-600'
+}: StatCardProps) {
+  const changeColors = {
+    positive: 'text-green-400 bg-green-500/10',
+    negative: 'text-red-400 bg-red-500/10',
+    neutral: 'text-gray-400 bg-gray-500/10'
+  }
+
+  return (
+    <GlassCard hover glow="amber" className="group">
+      <div className="flex items-start justify-between mb-4">
+        {icon && (
+          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+            {icon}
+          </div>
+        )}
+        {change && (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${changeColors[changeType]}`}>
+            {change}
+          </span>
+        )}
+      </div>
+      <div className="text-3xl font-bold mb-1 text-gradient-silver">{value}</div>
+      <div className="text-sm text-gray-400">{label}</div>
+    </GlassCard>
+  )
+}
+
+// ============================================
+// NAVIGATION ITEM - Sidebar/nav link
+// ============================================
+interface NavItemProps {
+  icon: ReactNode
+  label: string
+  href: string
+  active?: boolean
+  badge?: string | number
+}
+
+export function NavItem({ icon, label, href, active = false, badge }: NavItemProps) {
+  return (
+    <a
+      href={href}
+      className={`
+        flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
+        ${active
+          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+          : 'text-gray-400 hover:text-white hover:bg-white/5'}
+      `}
+    >
+      <span className={active ? 'text-amber-400' : ''}>{icon}</span>
+      <span className="font-medium">{label}</span>
+      {badge && (
+        <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500 text-black">
+          {badge}
+        </span>
+      )}
+    </a>
+  )
+}
+
+// ============================================
+// AVATAR GROUP - Overlapping avatars
+// ============================================
+interface AvatarGroupProps {
+  avatars: { src?: string; name: string }[]
+  max?: number
+  size?: 'sm' | 'md' | 'lg'
+}
+
+export function AvatarGroup({ avatars, max = 4, size = 'md' }: AvatarGroupProps) {
+  const sizes = {
+    sm: 'w-8 h-8 text-xs',
+    md: 'w-10 h-10 text-sm',
+    lg: 'w-12 h-12 text-base'
+  }
+
+  const displayed = avatars.slice(0, max)
+  const remaining = avatars.length - max
+
+  return (
+    <div className="flex -space-x-2">
+      {displayed.map((avatar, i) => (
+        <div
+          key={i}
+          className={`${sizes[size]} rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-black font-semibold border-2 border-black ring-2 ring-black`}
+          title={avatar.name}
+        >
+          {avatar.src ? (
+            <img src={avatar.src} alt={avatar.name} className="w-full h-full rounded-full object-cover" />
+          ) : (
+            avatar.name.charAt(0).toUpperCase()
+          )}
+        </div>
+      ))}
+      {remaining > 0 && (
+        <div className={`${sizes[size]} rounded-full bg-white/10 flex items-center justify-center text-white font-semibold border-2 border-black`}>
+          +{remaining}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// PROGRESS BAR - Animated progress
+// ============================================
+interface ProgressBarProps {
+  value: number
+  max?: number
+  label?: string
+  showValue?: boolean
+  color?: 'amber' | 'green' | 'blue' | 'purple'
+  size?: 'sm' | 'md' | 'lg'
+}
+
+export function ProgressBar({
+  value,
+  max = 100,
+  label,
+  showValue = true,
+  color = 'amber',
+  size = 'md'
+}: ProgressBarProps) {
+  const percentage = Math.min((value / max) * 100, 100)
+
+  const colors = {
+    amber: 'from-amber-400 to-amber-600',
+    green: 'from-green-400 to-green-600',
+    blue: 'from-blue-400 to-blue-600',
+    purple: 'from-purple-400 to-purple-600'
+  }
+
+  const sizes = {
+    sm: 'h-1.5',
+    md: 'h-2.5',
+    lg: 'h-4'
+  }
+
+  return (
+    <div>
+      {(label || showValue) && (
+        <div className="flex justify-between items-center mb-2 text-sm">
+          {label && <span className="text-gray-400">{label}</span>}
+          {showValue && <span className="text-white font-medium">{Math.round(percentage)}%</span>}
+        </div>
+      )}
+      <div className={`w-full ${sizes[size]} bg-white/10 rounded-full overflow-hidden`}>
+        <div
+          className={`h-full bg-gradient-to-r ${colors[color]} rounded-full transition-all duration-500 ease-out`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// DIVIDER - Stylish separator
+// ============================================
+interface DividerProps {
+  label?: string
+  className?: string
+}
+
+export function Divider({ label, className = '' }: DividerProps) {
+  return (
+    <div className={`flex items-center gap-4 ${className}`}>
+      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      {label && <span className="text-xs text-gray-500 uppercase tracking-wider">{label}</span>}
+      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+    </div>
+  )
+}
+
+// ============================================
+// EMPTY STATE - No data placeholder
+// ============================================
+interface EmptyStateProps {
+  icon: ReactNode
+  title: string
+  description: string
+  action?: ReactNode
+}
+
+export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 text-gray-500">
+        {icon}
+      </div>
+      <h3 className="text-xl font-semibold mb-2">{title}</h3>
+      <p className="text-gray-400 max-w-sm mb-6">{description}</p>
+      {action}
+    </div>
   )
 }
 

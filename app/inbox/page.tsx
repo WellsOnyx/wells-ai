@@ -296,11 +296,17 @@ export default function InboxPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex">
+    <div className="min-h-screen bg-black flex relative">
+      {/* Ambient background glow */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-1/4 left-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }} />
+      </div>
+
       {/* Sidebar - Conversation List */}
-      <div className="w-96 border-r border-gray-800 flex flex-col">
+      <div className="w-96 border-r border-white/10 flex flex-col relative z-10 bg-black/50 backdrop-blur-sm">
         {/* Header */}
-        <div className="p-4 border-b border-gray-800">
+        <div className="p-4 border-b border-white/10">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Link href="/" className="text-gray-400 hover:text-white">
@@ -334,7 +340,7 @@ export default function InboxPage() {
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:border-amber-500"
+              className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 transition-all"
             />
           </div>
 
@@ -344,10 +350,10 @@ export default function InboxPage() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                   filter === f
-                    ? 'bg-amber-500 text-black'
-                    : 'bg-gray-800 text-gray-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-lg shadow-amber-500/25'
+                    : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -377,8 +383,8 @@ export default function InboxPage() {
                 <button
                   key={conv.id}
                   onClick={() => setSelectedId(conv.id)}
-                  className={`w-full p-4 text-left border-b border-gray-800 hover:bg-gray-900/50 transition-colors ${
-                    selectedId === conv.id ? 'bg-gray-900' : ''
+                  className={`w-full p-4 text-left border-b border-white/5 hover:bg-white/5 transition-all ${
+                    selectedId === conv.id ? 'bg-white/10 border-l-2 border-l-amber-500' : ''
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -422,11 +428,11 @@ export default function InboxPage() {
       </div>
 
       {/* Main Content - Messages */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col relative z-10">
         {selectedId && selectedConversation ? (
           <>
             {/* Conversation Header */}
-            <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/30 backdrop-blur-sm">
               <div className="flex items-center gap-4">
                 <div className={`p-2 rounded-lg ${CHANNEL_COLORS[selectedConversation.channel]}`}>
                   {(() => {
@@ -454,7 +460,7 @@ export default function InboxPage() {
                 <select
                   value={selectedConversation.status}
                   onChange={(e) => handleStatusChange(e.target.value)}
-                  className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500"
+                  className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 transition-all"
                 >
                   <option value="open">Open</option>
                   <option value="pending">Pending</option>
@@ -545,14 +551,14 @@ export default function InboxPage() {
             )}
 
             {/* Compose */}
-            <div className="p-4 border-t border-gray-800">
-              <div className="flex items-end gap-2">
+            <div className="p-4 border-t border-white/10 bg-black/30 backdrop-blur-sm">
+              <div className="flex items-end gap-3">
                 <div className="flex-1">
                   <textarea
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Type a message..."
-                    className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white placeholder:text-gray-500 resize-none focus:outline-none focus:border-amber-500"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder:text-gray-500 resize-none focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 transition-all"
                     rows={2}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
@@ -566,7 +572,7 @@ export default function InboxPage() {
                   <button
                     onClick={handleGenerateAI}
                     disabled={isGeneratingAI || !!pendingAIMessage}
-                    className="p-3 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-3 bg-purple-500/20 text-purple-400 rounded-xl hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
                     title="Generate AI response"
                   >
                     {isGeneratingAI ? (
@@ -578,7 +584,7 @@ export default function InboxPage() {
                   <button
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim() || isSending}
-                    className="p-3 bg-amber-500 text-black rounded-lg hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black rounded-xl hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 shadow-lg shadow-amber-500/25"
                   >
                     {isSending ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -592,9 +598,11 @@ export default function InboxPage() {
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-white mb-2">Select a conversation</h2>
+            <div className="text-center animate-slide-up">
+              <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6">
+                <MessageSquare className="w-10 h-10 text-gray-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gradient-silver mb-3">Select a conversation</h2>
               <p className="text-gray-400">Choose from the list to view messages</p>
             </div>
           </div>

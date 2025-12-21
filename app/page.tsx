@@ -161,17 +161,23 @@ export default function WellsOnyxHome() {
 
         {/* Hero Section */}
         <section className="pt-32 pb-20 md:pt-40 md:pb-32 px-4 lg:px-8 relative">
-          <div className="max-w-5xl mx-auto text-center">
+          {/* Animated background shapes */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl animate-float" />
+            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }} />
+          </div>
+
+          <div className="max-w-5xl mx-auto text-center relative">
             {/* Badge */}
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-8 animate-slide-up">
               <FloatingBadge color="amber">
                 AI That Actually Does Things
               </FloatingBadge>
             </div>
 
             {/* Headline */}
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight">
-              <span className="block bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight animate-slide-up" style={{ animationDelay: '100ms' }}>
+              <span className="block text-gradient-silver">
                 Talk to Wells.
               </span>
               <span className="block">
@@ -185,15 +191,15 @@ export default function WellsOnyxHome() {
             </h1>
 
             {/* Subheadline */}
-            <p className="text-xl md:text-2xl text-gray-400 mb-4 max-w-3xl mx-auto">
+            <p className="text-xl md:text-2xl text-gray-400 mb-4 max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '200ms' }}>
               Need to hire? Source suppliers? Find customers? Close deals?
             </p>
-            <p className="text-2xl md:text-3xl text-white font-semibold mb-12">
+            <p className="text-2xl md:text-3xl text-white font-semibold mb-12 animate-slide-up" style={{ animationDelay: '300ms' }}>
               Just tell Wells what you need.
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-slide-up" style={{ animationDelay: '400ms' }}>
               <ShimmerButton size="lg" onClick={() => window.location.href = '/founder/chat'}>
                 Talk to Wells Now
                 <ArrowRight className="w-5 h-5" />

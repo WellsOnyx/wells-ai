@@ -358,8 +358,9 @@ export default function DashboardPage() {
     <div className="min-h-screen text-white relative">
       {/* Ambient background glow */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-gold-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-gold-500/3 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-amber-500/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }} />
+        <div className="absolute top-1/2 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl animate-glow-pulse" />
       </div>
 
       {/* Header */}
@@ -590,13 +591,13 @@ export default function DashboardPage() {
                 <>
                   {/* Welcome Banner - Only show when no messages */}
                   {messages.length <= 1 && (
-                    <div className={`rounded-2xl p-6 bg-gradient-to-br ${config.gradient}/10 border border-white/20 mb-6 shadow-xl backdrop-blur-sm`}>
+                    <div className={`rounded-2xl p-6 bg-gradient-to-br ${config.gradient}/10 border border-white/20 mb-6 shadow-xl backdrop-blur-sm animate-slide-up`}>
                       <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center flex-shrink-0 shadow-lg`}>
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20`}>
                           <Sparkles className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                          <h2 className="text-xl font-bold mb-2">Wells is ready to work</h2>
+                          <h2 className="text-xl font-bold mb-2 text-gradient-silver">Wells is ready to work</h2>
                           <p className="text-gray-400 leading-relaxed">
                             Just type what you need. I'll find matches, negotiate deals, and only charge 1% when something closes.
                           </p>
