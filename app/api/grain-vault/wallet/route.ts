@@ -18,29 +18,74 @@ export async function GET(req: NextRequest) {
     }
 
     // Get or create user wallet
-    let walletResult = await sql`
-      SELECT user_id, balance, wallet_id, wallet_address, approved, approved_at, approved_by, created_at, updated_at
-      FROM user_wallets
-      WHERE user_id = ${userId}
-    `
+    // Try with approved column first, fall back to without it if column doesn't exist
+    let walletResult
+    let hasApprovedColumn = true
 
-    // Auto-create wallet if doesn't exist (with approved = false by default)
-    if (walletResult.rows.length === 0) {
-      await sql`
-        INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, approved, created_at, updated_at)
-        VALUES (${userId}, ${`ledger_${userId}`}, ${`ledger_${userId}`}, 0, FALSE, NOW(), NOW())
-        ON CONFLICT (user_id) DO NOTHING
-      `
+    try {
       walletResult = await sql`
-        SELECT user_id, balance, wallet_id, wallet_address, approved, approved_at, approved_by, created_at, updated_at
+        SELECT user_id, balance, wallet_id, wallet_address, approved, approved_at, created_at, updated_at
         FROM user_wallets
         WHERE user_id = ${userId}
       `
+    } catch (e: any) {
+      // approved column might not exist yet
+      if (e.message?.includes('approved')) {
+        hasApprovedColumn = false
+        walletResult = await sql`
+          SELECT user_id, balance, wallet_id, wallet_address, created_at, updated_at
+          FROM user_wallets
+          WHERE user_id = ${userId}
+        `
+      } else {
+        throw e
+      }
+    }
+
+    // Auto-create wallet if doesn't exist
+    if (walletResult.rows.length === 0) {
+      try {
+        if (hasApprovedColumn) {
+          await sql`
+            INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, approved, created_at, updated_at)
+            VALUES (${userId}, ${`ledger_${userId}`}, ${`ledger_${userId}`}, 0, FALSE, NOW(), NOW())
+            ON CONFLICT (user_id) DO NOTHING
+          `
+        } else {
+          await sql`
+            INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, created_at, updated_at)
+            VALUES (${userId}, ${`ledger_${userId}`}, ${`ledger_${userId}`}, 0, NOW(), NOW())
+            ON CONFLICT (user_id) DO NOTHING
+          `
+        }
+      } catch (insertErr) {
+        console.warn('[Wallet API] Insert warning:', insertErr)
+      }
+
+      try {
+        walletResult = await sql`
+          SELECT user_id, balance, wallet_id, wallet_address, created_at, updated_at
+          FROM user_wallets
+          WHERE user_id = ${userId}
+        `
+      } catch (e) {
+        // Return empty wallet state
+        return NextResponse.json({
+          success: true,
+          has_wallet: false,
+          has_profile: false,
+          approved: true, // Default to approved if we can't check
+          balance: { grain: 0, usd_value: 0 },
+          grain_price: 1.0,
+          recent_transactions: []
+        })
+      }
     }
 
     const wallet = walletResult.rows[0]
     const balance = parseFloat(wallet?.balance || '0')
-    const approved = wallet?.approved === true
+    // Default to approved=true if column doesn't exist (backwards compatibility)
+    const approved = hasApprovedColumn ? (wallet?.approved === true) : true
 
     // Check for profile
     let hasProfile = false
