@@ -18,6 +18,24 @@ import {
 
 type Channel = 'sms' | 'imessage' | 'gmail' | 'outlook' | 'email' | 'slack' | 'discord' | 'twitter' | 'instagram' | 'linkedin' | 'whatsapp' | 'chat' | 'teams' | 'telegram'
 
+// HONEST STATUS: What actually works vs what's vaporware
+const INTEGRATION_STATUS: Record<Channel, 'working' | 'partial' | 'coming_soon'> = {
+  sms: 'working',        // Full Twilio integration
+  gmail: 'working',      // Full OAuth + sync
+  slack: 'working',      // Full event API
+  teams: 'working',      // Full Bot Framework
+  whatsapp: 'working',   // Twilio integration
+  email: 'working',      // Resend API
+  chat: 'working',       // Website widget
+  twitter: 'partial',    // OAuth works but sync incomplete
+  discord: 'partial',    // Webhook only, no events
+  imessage: 'coming_soon',   // Not implemented
+  outlook: 'coming_soon',    // OAuth exists but no provider
+  instagram: 'coming_soon',  // Requires Meta Business
+  linkedin: 'coming_soon',   // Requires Partner Program
+  telegram: 'coming_soon',   // Not implemented
+}
+
 interface Integration {
   id: string
   channel: Channel
@@ -214,13 +232,11 @@ export default function IntegrationsPage() {
     }
   }
 
-  // Get all channels grouped by category
+  // Get all channels grouped by category - WORKING FIRST
   const channelCategories = {
-    'Messaging': ['sms', 'imessage', 'whatsapp', 'telegram'] as Channel[],
-    'Email': ['gmail', 'outlook', 'email'] as Channel[],
-    'Social': ['twitter', 'instagram', 'linkedin'] as Channel[],
-    'Workplace': ['slack', 'discord', 'teams'] as Channel[],
-    'Website': ['chat'] as Channel[],
+    'Available Now': ['sms', 'gmail', 'slack', 'teams', 'whatsapp', 'email', 'chat'] as Channel[],
+    'Beta': ['twitter', 'discord'] as Channel[],
+    'Coming Soon': ['imessage', 'outlook', 'instagram', 'linkedin', 'telegram'] as Channel[],
   }
 
   if (isLoading) {
@@ -250,25 +266,31 @@ export default function IntegrationsPage() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Connected Summary */}
+        {/* Status Summary */}
         <div className="mb-8 p-4 bg-white/5 rounded-xl border border-white/10">
           <div className="flex items-center gap-3 mb-4">
             <CheckCircle2 className="w-5 h-5 text-green-400" />
             <span className="font-medium">
-              {integrations.filter(i => i.status === 'connected').length} channels connected
+              {integrations.filter(i => i.status === 'connected').length} of 7 available channels connected
             </span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {integrations.filter(i => i.status === 'connected').map(int => (
-              <span
-                key={int.channel}
-                className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm flex items-center gap-2"
-              >
-                <span>{channelInfo[int.channel]?.icon}</span>
-                {channelInfo[int.channel]?.name}
-              </span>
-            ))}
-          </div>
+          {integrations.filter(i => i.status === 'connected').length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {integrations.filter(i => i.status === 'connected').map(int => (
+                <span
+                  key={int.channel}
+                  className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm flex items-center gap-2"
+                >
+                  <span>{channelInfo[int.channel]?.icon}</span>
+                  {channelInfo[int.channel]?.name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">
+              Connect SMS, Gmail, Slack, Teams, WhatsApp, Email, or Website Chat to start receiving messages.
+            </p>
+          )}
         </div>
 
         {/* Channel Categories */}
@@ -282,6 +304,9 @@ export default function IntegrationsPage() {
                 const integration = getIntegrationStatus(channel)
                 const isConnected = integration?.status === 'connected'
                 const isConnecting = connectingChannel === channel
+                const status = INTEGRATION_STATUS[channel]
+                const isComingSoon = status === 'coming_soon'
+                const isBeta = status === 'partial'
 
                 if (!info) return null
 
@@ -291,12 +316,14 @@ export default function IntegrationsPage() {
                     className={`p-4 rounded-xl border transition ${
                       isConnected
                         ? 'bg-green-500/10 border-green-500/30'
-                        : 'bg-white/5 border-white/10 hover:border-white/20'
+                        : isComingSoon
+                          ? 'bg-white/[0.02] border-white/5 opacity-60'
+                          : 'bg-white/5 border-white/10 hover:border-white/20'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl ${info.bgColor} flex items-center justify-center text-2xl`}>
+                        <div className={`w-12 h-12 rounded-xl ${info.bgColor} flex items-center justify-center text-2xl ${isComingSoon ? 'grayscale' : ''}`}>
                           {info.icon}
                         </div>
                         <div>
@@ -307,11 +334,23 @@ export default function IntegrationsPage() {
                                 Connected
                               </span>
                             )}
+                            {isBeta && !isConnected && (
+                              <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">
+                                Beta
+                              </span>
+                            )}
+                            {isComingSoon && (
+                              <span className="text-xs bg-gray-500/20 text-gray-400 px-2 py-0.5 rounded-full">
+                                Coming Soon
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-gray-400">
-                            {isConnected && integration.account_name
-                              ? integration.account_name
-                              : config?.setupInstructions.slice(0, 60) + '...'
+                            {isComingSoon
+                              ? 'This integration is not yet available'
+                              : isConnected && integration.account_name
+                                ? integration.account_name
+                                : config?.setupInstructions.slice(0, 60) + '...'
                             }
                           </div>
                           {integration?.status === 'error' && (
@@ -334,11 +373,19 @@ export default function IntegrationsPage() {
                               <Unlink className="w-5 h-5" />
                             </button>
                           </>
+                        ) : isComingSoon ? (
+                          <span className="px-4 py-2 text-gray-500 text-sm">
+                            Not Available
+                          </span>
                         ) : (
                           <button
                             onClick={() => handleConnect(channel)}
                             disabled={isConnecting}
-                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded-lg transition flex items-center gap-2 disabled:opacity-50"
+                            className={`px-4 py-2 font-medium rounded-lg transition flex items-center gap-2 disabled:opacity-50 ${
+                              isBeta
+                                ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 border border-yellow-500/30'
+                                : 'bg-amber-500 hover:bg-amber-600 text-black'
+                            }`}
                           >
                             {isConnecting ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
