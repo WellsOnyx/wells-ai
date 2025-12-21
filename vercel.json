@@ -155,6 +155,26 @@
       ]
     },
     {
+      "source": "/blog",
+      "destination": "/grain-vault/blog",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/blog/:slug*",
+      "destination": "/grain-vault/blog/:slug*",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*",
       "has": [
