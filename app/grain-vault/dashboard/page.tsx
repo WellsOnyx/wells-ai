@@ -11,11 +11,10 @@
  * - Real-time treasury backing data
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs'
 import Link from 'next/link'
-import WellsAIChatWidget from '@/components/WellsAIChatWidget'
 import {
   TrendingUp,
   TrendingDown,
@@ -32,7 +31,8 @@ import {
   AlertCircle,
   Loader2,
   ArrowDown,
-  ArrowUp
+  ArrowUp,
+  Send
 } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import {
@@ -564,49 +564,180 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Inline Chat with Wells */}
+        <div className="mt-8 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+          <div className="p-4 border-b border-white/10 bg-gradient-to-r from-green-500/10 to-blue-500/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                <span className="text-white font-bold">W</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Chat with Wells</h3>
+                <p className="text-xs text-gray-400">Your treasury assistant • Ask about payments, deposits, or SDK integration</p>
+              </div>
+            </div>
+          </div>
+          <InlineWellsChat
+            grainBalance={balance}
+            grainPrice={grainValue}
+            userName={user?.firstName || 'there'}
+          />
+        </div>
       </main>
+    </div>
+  )
+}
 
-      {/* Chat Widget */}
-      <WellsAIChatWidget
-        brandColor="#22C55E"
-        accentColor="#10B981"
-        brandName="GRAIN Support"
-        context={`You are a support assistant for Grain & Vault dashboard users. The user is logged in and viewing their GRAIN wallet.
+// Inline Wells Chat Component - embedded directly in dashboard
+function InlineWellsChat({
+  grainBalance,
+  grainPrice,
+  userName
+}: {
+  grainBalance: number
+  grainPrice: number
+  userName: string
+}) {
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
+    {
+      role: 'assistant',
+      content: `Hey ${userName}! I'm Wells, your treasury assistant. I can help you send payments, check your balance, deposit funds, or answer questions about GRAIN. What would you like to do?`
+    }
+  ])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-WHAT IS GRAIN?
-GRAIN is our proprietary stablecoin that is ANTI-INFLATIONARY by design. Unlike traditional currencies that lose value over time, GRAIN is engineered to appreciate.
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
-GRAIN PRICE FORMULA: Price = (Total USDC Reserve + Equity Value) / Circulating GRAIN Supply
-- As treasury grows, GRAIN's price increases
-- Your purchasing power grows while you hold
-- GRAIN can ONLY go up in value
-- Every GRAIN is 100% backed by real assets
+  const quickActions = [
+    { label: 'Check Balance', prompt: "What's my current GRAIN balance?" },
+    { label: 'Send Payment', prompt: 'I want to send a payment' },
+    { label: 'Deposit Funds', prompt: 'How do I deposit more funds?' },
+    { label: 'SDK Help', prompt: 'How do I integrate the Treasury SDK?' }
+  ]
 
-HOW TO DEPOSIT:
-1. Click "Add Funds" button in the dashboard (or use quick deposit buttons for $50, $100, $500)
-2. You'll be taken to the deposit page where you can:
-   - Enter a custom amount or select presets ($50-$2500)
-   - Choose payment method: Card (instant), ACH (1-3 days, lower fees), or USDC on Base
-   - See exactly how much GRAIN you'll receive at current price
-3. Complete payment through secure Circle checkout
-4. GRAIN is credited to your wallet at current price
+  const sendMessage = async (messageText?: string) => {
+    const text = messageText || input.trim()
+    if (!text || isLoading) return
 
-VERIFICATION LEVELS:
-- Basic (email only): $1,000/day limit
-- Standard (phone + info): $10,000/day limit
-- Verified (full ID): $100,000/day limit
-- Enhanced: Unlimited
+    setInput('')
+    setIsLoading(true)
 
-The user's balance is shown in the dashboard. Help them understand their balance, how to deposit more GRAIN, how appreciation works, and answer any questions about their account.
+    const updatedMessages = [
+      ...messages,
+      { role: 'user' as const, content: text }
+    ]
+    setMessages(updatedMessages)
 
-IMPORTANT: We NEVER display wallet addresses to users. All deposits go through Circle's secure checkout. This protects against phishing and theft.
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: updatedMessages,
+          journey: 'treasury',
+          context: {
+            grainBalance,
+            grainPrice,
+            userName,
+            contextInfo: `User is on the Grain & Vault dashboard. Current GRAIN balance: ${grainBalance.toLocaleString()} GRAIN (worth $${(grainBalance * grainPrice).toLocaleString()}). Current GRAIN price: $${grainPrice.toFixed(4)}. GRAIN is an anti-inflationary stablecoin that only appreciates in value. Help the user with payments, deposits, withdrawals, or SDK integration questions.`
+          }
+        })
+      })
 
-Be helpful, enthusiastic about GRAIN's anti-inflationary design, and encourage users to hold for appreciation.`}
-        journey="support"
-        greeting="Need help with your GRAIN wallet? I can explain how appreciation works, help you make a deposit, or answer any questions!"
-        placeholder="Ask about deposits, balance, or GRAIN..."
-        position="bottom-right"
-      />
+      if (!response.ok) throw new Error('Failed to send message')
+
+      const data = await response.json()
+      setMessages([
+        ...updatedMessages,
+        { role: 'assistant', content: data.message }
+      ])
+    } catch (error) {
+      console.error('Chat error:', error)
+      setMessages([
+        ...updatedMessages,
+        { role: 'assistant', content: "I'm having trouble connecting right now. Please try again in a moment." }
+      ])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
+
+  return (
+    <div className="flex flex-col h-[400px]">
+      {/* Quick Actions */}
+      <div className="flex gap-2 p-3 border-b border-white/10 overflow-x-auto">
+        {quickActions.map((action) => (
+          <button
+            key={action.label}
+            onClick={() => sendMessage(action.prompt)}
+            disabled={isLoading}
+            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 rounded-full text-xs text-gray-300 hover:bg-white/10 whitespace-nowrap disabled:opacity-50"
+          >
+            {action.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((message, index) => (
+          <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[85%] rounded-2xl px-4 py-2 ${
+                message.role === 'user'
+                  ? 'bg-green-500 text-black'
+                  : 'bg-white/5 border border-white/10 text-white'
+              }`}
+            >
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+            </div>
+          </div>
+        ))}
+
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2">
+              <Loader2 className="w-5 h-5 text-green-400 animate-spin" />
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-3 border-t border-white/10">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyPress}
+            placeholder="Ask Wells anything..."
+            disabled={isLoading}
+            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 text-sm disabled:opacity-50"
+          />
+          <button
+            onClick={() => sendMessage()}
+            disabled={!input.trim() || isLoading}
+            className="px-4 py-2.5 bg-green-500 hover:bg-green-600 text-black rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

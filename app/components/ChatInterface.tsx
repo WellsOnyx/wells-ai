@@ -106,7 +106,8 @@ export default function ChatInterface({
           negotiation: data.negotiation || undefined,
         },
       ])
-    } catch {
+    } catch (error) {
+      console.error('Chat error:', error)
       setMessages([
         ...updatedMessages,
         {
@@ -253,22 +254,26 @@ export default function ChatInterface({
             {/* Input */}
             <div className="border-t border-gray-800 pt-4">
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  placeholder={placeholder}
-                  disabled={isLoading}
-                  className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 disabled:opacity-50"
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim() || isLoading}
-                  className={`${colors.accent} ${colors.accentHover} text-black px-4 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  <Send className="w-5 h-5" />
-                </button>
+                <label htmlFor="chat-input" className="sr-only">Type your message</label>
+              <input
+                id="chat-input"
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder={placeholder}
+                disabled={isLoading}
+                aria-label="Chat message input"
+                className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 disabled:opacity-50"
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || isLoading}
+                aria-label="Send message"
+                className={`${colors.accent} ${colors.accentHover} text-black px-4 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <Send className="w-5 h-5" aria-hidden="true" />
+              </button>
               </div>
               <p className="text-center text-xs text-gray-500 mt-2">
                 Your AI negotiates with their AI. You just approve. 1% on closed deals.

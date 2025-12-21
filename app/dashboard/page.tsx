@@ -280,7 +280,8 @@ export default function DashboardPage() {
           ...updatedMessages,
           { role: 'assistant', content: data.message },
         ])
-      } catch {
+      } catch (error) {
+        console.error('Dashboard chat error:', error)
         setMessages([
           ...updatedMessages,
           { role: 'assistant', content: "I'm having trouble connecting. Please try again." },
@@ -737,7 +738,11 @@ export default function DashboardPage() {
             <div className="max-w-3xl mx-auto">
               <div className="flex gap-3 items-end">
                 <div className="flex-1 relative">
+                  <label htmlFor="dashboard-chat-input" className="sr-only">
+                    {viewMode === 'ai' ? 'Talk to Wells AI' : 'Type a message'}
+                  </label>
                   <input
+                    id="dashboard-chat-input"
                     ref={inputRef}
                     type="text"
                     value={input}
@@ -751,15 +756,17 @@ export default function DashboardPage() {
                           : 'Select a conversation first'
                     }
                     disabled={isLoading || (viewMode === 'inbox' && !selectedConvId)}
+                    aria-label={viewMode === 'ai' ? 'Talk to Wells AI' : 'Type a message'}
                     className="w-full input-premium disabled:opacity-50 disabled:cursor-not-allowed text-base shadow-lg"
                   />
                 </div>
                 <button
                   onClick={() => sendMessage()}
                   disabled={!input.trim() || isLoading || (viewMode === 'inbox' && !selectedConvId)}
+                  aria-label="Send message"
                   className={`bg-gradient-to-r ${config.gradient} text-white px-6 py-3.5 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 shadow-lg`}
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
               <div className="flex items-center justify-center gap-2 mt-3">

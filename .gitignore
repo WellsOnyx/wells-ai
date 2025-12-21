@@ -11,6 +11,8 @@ out/
 # Environment
 .env
 .env*.local
+.env.vercel
+.env.vercel-check
 
 # IDE
 .idea/

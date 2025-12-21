@@ -4,17 +4,21 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { createCreditApplication } from '@/lib/underwriting/decision';
 import { createLinkToken } from '@/lib/underwriting/plaid';
 import { createCompany, getLinkUrl } from '@/lib/underwriting/codat';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, requestedAmount, connectAccounting } = await req.json();
+    // SECURITY FIX: Authenticate user via Clerk instead of accepting userId from body
+    const { userId } = await auth();
 
     if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const { requestedAmount, connectAccounting } = await req.json();
 
     // Create Plaid Link token
     const plaidLinkToken = await createLinkToken(userId);

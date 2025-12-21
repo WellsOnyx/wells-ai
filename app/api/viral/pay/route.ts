@@ -7,6 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 import { notifyPaymentReceived } from '@/lib/notifications/service';
 
@@ -17,9 +18,18 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY FIX: Authenticate the user sending the payment
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
-      sender_id,
       recipient_email,
       recipient_phone,
       recipient_company,
@@ -28,9 +38,20 @@ export async function POST(request: NextRequest) {
       invoice_id
     } = body;
 
-    if (!sender_id || !amount) {
+    // Use authenticated userId as sender_id
+    const sender_id = userId;
+
+    if (!amount) {
       return NextResponse.json(
-        { error: 'sender_id and amount are required' },
+        { error: 'amount is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate amount is a positive number
+    if (typeof amount !== 'number' || amount <= 0) {
+      return NextResponse.json(
+        { error: 'amount must be a positive number' },
         { status: 400 }
       );
     }

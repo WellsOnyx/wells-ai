@@ -2,19 +2,23 @@
  * Credit Draw API
  * POST /api/credit/draw - Draw funds from credit line
  * GET /api/credit/draw - Get available credit info
+ *
+ * SECURITY: All endpoints require Clerk authentication
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { drawOnCredit, getCreditLine } from '@/lib/underwriting/decision';
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.nextUrl.searchParams.get('userId');
-
+    // SECURITY: Require authentication
+    const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // User can only access their own credit line
     const creditLine = await getCreditLine(userId);
 
     if (!creditLine) {
@@ -40,6 +44,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY: Require authentication
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { creditLineId, amount, purpose, disbursementAccountId } = await req.json();
 
     if (!creditLineId || !amount) {
@@ -51,6 +61,15 @@ export async function POST(req: NextRequest) {
 
     if (amount <= 0) {
       return NextResponse.json({ error: 'Amount must be positive' }, { status: 400 });
+    }
+
+    // SECURITY: Verify the user owns this credit line
+    const creditLine = await getCreditLine(userId);
+    if (!creditLine || creditLine.id !== creditLineId) {
+      return NextResponse.json(
+        { error: 'Credit line not found or access denied' },
+        { status: 403 }
+      );
     }
 
     // Draw on credit

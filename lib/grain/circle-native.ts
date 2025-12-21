@@ -215,24 +215,44 @@ export async function creditGrain(
 
 /**
  * Debit GRAIN from user (before USDC withdrawal)
+ *
+ * CRITICAL FIX: Uses atomic conditional update to prevent race conditions.
+ * The previous implementation had a TOCTOU (time-of-check-to-time-of-use)
+ * vulnerability where multiple concurrent requests could pass the balance
+ * check but all proceed to debit, resulting in negative balances.
+ *
+ * This fix uses a single atomic UPDATE with a WHERE clause that ensures
+ * the balance is sufficient at the moment of update.
  */
 export async function debitGrain(
   userId: string,
   amount: number,
   reason: string
 ): Promise<boolean> {
-  // Check balance first
-  const balance = await getGrainBalance(userId)
-  if (balance.grainBalance < amount) {
-    return false
-  }
-
-  await sql`
+  // CRITICAL: Use atomic conditional update to prevent double-spending
+  // This single query atomically checks balance AND updates in one operation
+  const result = await sql`
     UPDATE user_wallets
     SET
       balance = balance - ${amount},
       updated_at = NOW()
     WHERE user_id = ${userId}
+      AND balance >= ${amount}
+    RETURNING user_id, balance as new_balance
+  `
+
+  // If no rows were updated, either user doesn't exist or insufficient balance
+  if (result.rows.length === 0) {
+    return false
+  }
+
+  // Log the debit transaction
+  await sql`
+    INSERT INTO grain_transactions (
+      user_id, type, amount, reason, status, created_at
+    ) VALUES (
+      ${userId}, 'debit', ${amount}, ${reason}, 'completed', NOW()
+    )
   `
 
   return true
@@ -336,13 +356,41 @@ export async function processDeposit(
 
 /**
  * Initiate USDC withdrawal
+ *
+ * CRITICAL FIX: Uses a pending withdrawal pattern to handle Circle API failures.
+ * If Circle transfer fails after GRAIN is debited, we automatically re-credit
+ * the user's balance. This prevents fund loss due to API failures.
  */
 export async function initiateWithdraw(
   userId: string,
   grainAmount: number,
-  destinationAddress: string
+  destinationAddress: string,
+  idempotencyKey?: string
 ): Promise<WithdrawResult> {
-  // Debit GRAIN first
+  // Generate idempotency key if not provided
+  const effectiveIdempotencyKey = idempotencyKey || `withdraw-${userId}-${Date.now()}`
+
+  // Check for existing withdrawal with same idempotency key
+  const existingResult = await sql`
+    SELECT id, circle_transfer_id, status
+    FROM grain_transactions
+    WHERE idempotency_key = ${effectiveIdempotencyKey}
+      AND user_id = ${userId}
+      AND type = 'withdraw'
+  `
+
+  if (existingResult.rows.length > 0) {
+    const existing = existingResult.rows[0]
+    return {
+      success: true,
+      grainAmount,
+      usdcAmount: grainAmount,
+      circleTransferId: existing.circle_transfer_id || '',
+      estimatedArrival: '~2 minutes (Base L2)',
+    }
+  }
+
+  // Debit GRAIN first using atomic operation
   const debited = await debitGrain(userId, grainAmount, 'USDC withdrawal')
   if (!debited) {
     throw new Error('Insufficient GRAIN balance')
@@ -351,24 +399,53 @@ export async function initiateWithdraw(
   // Get user's Circle wallet
   const wallet = await getOrCreateWallet(userId)
 
-  // Transfer USDC from master wallet to destination
-  // (In production, this would use Circle's transfer API)
-  const result = await circleRequest('/w3s/developer/transactions/transfer', 'POST', {
-    idempotencyKey: `withdraw-${userId}-${Date.now()}`,
-    entitySecretCiphertext: process.env.CIRCLE_ENTITY_SECRET,
-    amounts: [grainAmount.toString()], // USDC amount
-    destinationAddress,
-    tokenId: process.env.CIRCLE_USDC_TOKEN_ID,
-    walletId: CIRCLE_MASTER_WALLET_ID,
-    blockchain: 'BASE',
-  })
+  // Attempt Circle transfer with error recovery
+  let circleTransferId: string
+  try {
+    const result = await circleRequest('/w3s/developer/transactions/transfer', 'POST', {
+      idempotencyKey: effectiveIdempotencyKey,
+      entitySecretCiphertext: process.env.CIRCLE_ENTITY_SECRET,
+      amounts: [grainAmount.toString()],
+      destinationAddress,
+      tokenId: process.env.CIRCLE_USDC_TOKEN_ID,
+      walletId: CIRCLE_MASTER_WALLET_ID,
+      blockchain: 'BASE',
+    })
+    circleTransferId = result.data.id
+  } catch (circleError) {
+    // CRITICAL: Circle API failed after GRAIN was debited
+    // Re-credit the user's balance to prevent fund loss
+    console.error('Circle transfer failed, reversing GRAIN debit:', circleError)
 
-  // Log transaction
+    await sql`
+      UPDATE user_wallets
+      SET balance = balance + ${grainAmount}, updated_at = NOW()
+      WHERE user_id = ${userId}
+    `
+
+    // Log the failed attempt
+    await sql`
+      INSERT INTO grain_transactions (
+        user_id, type, amount, reason, status, idempotency_key, created_at, metadata
+      ) VALUES (
+        ${userId}, 'withdraw_failed', ${grainAmount},
+        ${'Circle API failed: ' + (circleError instanceof Error ? circleError.message : 'Unknown error')},
+        'failed', ${effectiveIdempotencyKey}, NOW(),
+        ${JSON.stringify({ destinationAddress: destinationAddress.substring(0, 10) + '...' })}::jsonb
+      )
+    `
+
+    throw new Error('Withdrawal failed due to payment processor error. Your balance has been restored. Please try again.')
+  }
+
+  // Log successful transaction
   await sql`
     INSERT INTO grain_transactions (
-      user_id, type, amount, reason, circle_transfer_id, status, created_at
+      user_id, type, amount, reason, circle_transfer_id, status, idempotency_key, created_at
     ) VALUES (
-      ${userId}, 'withdraw', ${grainAmount}, 'USDC withdrawal to ' || ${destinationAddress.substring(0, 10)} || '...', ${result.data.id}, 'pending', NOW()
+      ${userId}, 'withdraw', ${grainAmount},
+      ${'USDC withdrawal to ' + destinationAddress.substring(0, 10) + '...'},
+      ${circleTransferId}, 'pending', ${effectiveIdempotencyKey}, NOW()
     )
   `
 
@@ -376,7 +453,7 @@ export async function initiateWithdraw(
     success: true,
     grainAmount,
     usdcAmount: grainAmount, // 1:1
-    circleTransferId: result.data.id,
+    circleTransferId,
     estimatedArrival: '~2 minutes (Base L2)',
   }
 }

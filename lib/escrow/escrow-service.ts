@@ -7,6 +7,7 @@
 
 import { Circle, CircleEnvironments } from '@circle-fin/circle-sdk'
 import { sql } from '@vercel/postgres'
+import { withTransaction } from '@/lib/db'
 import {
   EscrowDeal,
   EscrowMilestone,

@@ -4,11 +4,13 @@
  * POST /api/deals/accept
  *
  * Accepts a deal and creates escrow with USDC payment
+ * Uses database transactions for atomic operations
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { sql } from '@vercel/postgres'
+import { withTransaction } from '@/lib/db'
 import { TransactionEngine } from '@/lib/transactions'
 import { createEscrow, getEscrowByDealId } from '@/lib/escrow/escrow-service'
 

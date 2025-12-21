@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { rateLimit, RateLimitType } from '@/lib/security/rate-limiter';
 import {
   getAccountByClerkId,
   transfer,
@@ -26,6 +27,22 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { action, ...params } = body;
+
+    // SECURITY FIX: Apply rate limiting based on action type
+    let rateLimitType: RateLimitType = 'general';
+    if (action === 'deposit') {
+      rateLimitType = 'deposit';
+    } else if (action === 'withdraw') {
+      rateLimitType = 'withdrawal';
+    }
+
+    const rateLimitResult = await rateLimit(request, rateLimitType);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: rateLimitResult.error },
+        { status: 429, headers: rateLimitResult.headers }
+      );
+    }
 
     // Get user's account
     const account = await getAccountByClerkId(userId);

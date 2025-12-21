@@ -30,7 +30,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { sql } from '@vercel/postgres'
+import { sql, db } from '@vercel/postgres'
 import { rateLimit, rateLimitResponse } from '@/lib/security/rate-limiter'
 import { isOperationAllowed, isAccountFrozen } from '@/lib/security/emergency-controls'
 import { screenTransaction, AML_THRESHOLDS } from '@/lib/security/aml-screening'
@@ -71,6 +71,7 @@ interface WithdrawalRequest {
   bank_account_id?: string
   crypto_address?: string
   two_fa_code?: string
+  idempotency_key?: string // Client-provided key for safe retries
 }
 
 interface WithdrawalResponse {
@@ -287,13 +288,50 @@ export async function POST(req: NextRequest): Promise<NextResponse<WithdrawalRes
     // 5. PARSE AND VALIDATE REQUEST
     // -------------------------------------------------------------------------
     const body: WithdrawalRequest = await req.json().catch(() => ({ grain_amount: 0 }))
-    const { grain_amount, destination_method = 'ach', two_fa_code } = body
+    const { grain_amount, destination_method = 'ach', two_fa_code, idempotency_key } = body
 
     if (!grain_amount || grain_amount <= 0) {
       return NextResponse.json({
         success: false,
         error: 'Invalid withdrawal amount. Please specify a positive GRAIN amount.',
       }, { status: 400 })
+    }
+
+    // -------------------------------------------------------------------------
+    // 5.1. IDEMPOTENCY CHECK - Prevent duplicate withdrawals
+    // -------------------------------------------------------------------------
+    if (idempotency_key) {
+      const existingResult = await sql`
+        SELECT id, status, usd_amount, grain_amount, fee_usd, grain_price, created_at
+        FROM grain_transactions
+        WHERE idempotency_key = ${idempotency_key}
+          AND user_id = ${userId}
+          AND type = 'withdrawal'
+      `
+
+      if (existingResult.rows.length > 0) {
+        const existing = existingResult.rows[0]
+        // Return the existing withdrawal - safe retry
+        await logSecurityEvent('financial.idempotency.hit', userId, {
+          idempotency_key,
+          existing_withdrawal_id: existing.id,
+        }, { ipAddress, userAgent, result: 'success', requestId })
+
+        return NextResponse.json({
+          success: true,
+          withdrawal: {
+            id: existing.id,
+            grain_amount: parseFloat(existing.grain_amount),
+            grain_price: parseFloat(existing.grain_price),
+            usd_amount: parseFloat(existing.usd_amount),
+            fee: parseFloat(existing.fee_usd || 0),
+            net_amount: parseFloat(existing.usd_amount) - parseFloat(existing.fee_usd || 0),
+            status: existing.status,
+            estimated_arrival: ESTIMATED_ARRIVAL[destination_method] || '2-3 business days',
+            created_at: existing.created_at,
+          },
+        })
+      }
     }
 
     // -------------------------------------------------------------------------
@@ -438,58 +476,89 @@ export async function POST(req: NextRequest): Promise<NextResponse<WithdrawalRes
     const netAmount = usdAmount - fee
 
     // -------------------------------------------------------------------------
-    // 13. CREATE WITHDRAWAL TRANSACTION
+    // 13. CREATE WITHDRAWAL TRANSACTION (ATOMIC)
     // -------------------------------------------------------------------------
     const withdrawalId = generateWithdrawalId()
     const status = requiresReview ? 'requires_review' : 'pending'
     const estimatedArrival = ESTIMATED_ARRIVAL[destination_method] || '2-3 business days'
 
-    // Create grain_transactions record
-    await sql`
-      INSERT INTO grain_transactions (
-        id,
-        user_id,
-        type,
-        usd_amount,
-        grain_amount,
-        grain_price,
-        fee_usd,
-        payment_method,
-        status,
-        description,
-        metadata,
-        created_at,
-        updated_at
-      ) VALUES (
-        ${withdrawalId},
-        ${userId},
-        'withdrawal',
-        ${usdAmount},
-        ${grain_amount},
-        ${grainPrice},
-        ${fee},
-        ${destination_method},
-        ${status},
-        ${`Withdrawal of ${grain_amount.toFixed(6)} GRAIN ($${netAmount.toFixed(2)} after $${fee.toFixed(2)} fee)`},
-        ${JSON.stringify({
-          screeningId,
-          requiresReview,
-          estimatedArrival,
-          kycLevel: kycInfo.level,
-        })}::jsonb,
-        NOW(),
-        NOW()
+    // CRITICAL FIX: Use atomic CTE transaction to prevent double-spending
+    // This ensures both the transaction record creation AND balance deduction
+    // happen atomically - if either fails, both are rolled back.
+    const atomicResult = await sql`
+      WITH balance_check AS (
+        SELECT balance FROM user_wallets WHERE user_id = ${userId} FOR UPDATE
+      ),
+      balance_update AS (
+        UPDATE user_wallets
+        SET
+          balance = balance - ${grain_amount},
+          updated_at = NOW()
+        WHERE user_id = ${userId}
+          AND balance >= ${grain_amount}
+          AND EXISTS (SELECT 1 FROM balance_check WHERE balance >= ${grain_amount})
+        RETURNING user_id, balance as new_balance
+      ),
+      transaction_insert AS (
+        INSERT INTO grain_transactions (
+          id,
+          user_id,
+          type,
+          usd_amount,
+          grain_amount,
+          grain_price,
+          fee_usd,
+          payment_method,
+          status,
+          description,
+          metadata,
+          idempotency_key,
+          created_at,
+          updated_at
+        )
+        SELECT
+          ${withdrawalId},
+          ${userId},
+          'withdrawal',
+          ${usdAmount},
+          ${grain_amount},
+          ${grainPrice},
+          ${fee},
+          ${destination_method},
+          ${status},
+          ${`Withdrawal of ${grain_amount.toFixed(6)} GRAIN ($${netAmount.toFixed(2)} after $${fee.toFixed(2)} fee)`},
+          ${JSON.stringify({
+            screeningId,
+            requiresReview,
+            estimatedArrival,
+            kycLevel: kycInfo.level,
+          })}::jsonb,
+          ${idempotency_key || null},
+          NOW(),
+          NOW()
+        WHERE EXISTS (SELECT 1 FROM balance_update)
+        RETURNING id
       )
+      SELECT
+        ti.id as transaction_id,
+        bu.new_balance
+      FROM balance_update bu
+      CROSS JOIN transaction_insert ti
     `
 
-    // Deduct from user's GRAIN balance
-    await sql`
-      UPDATE user_wallets
-      SET
-        balance = balance - ${grain_amount},
-        updated_at = NOW()
-      WHERE user_id = ${userId}
-    `
+    // Verify the atomic operation succeeded
+    if (atomicResult.rows.length === 0) {
+      // This means either balance was insufficient or a race condition occurred
+      await logSecurityEvent('financial.withdrawal.atomic_failure', userId, {
+        grain_amount,
+        reason: 'Atomic transaction failed - possible race condition or insufficient balance',
+      }, { ipAddress, userAgent, result: 'failure', requestId })
+
+      return NextResponse.json({
+        success: false,
+        error: 'Withdrawal failed. Please check your balance and try again.',
+      }, { status: 400 })
+    }
 
     // -------------------------------------------------------------------------
     // 14. INITIATE CIRCLE PAYOUT (or queue for manual processing)

@@ -2,19 +2,40 @@
  * Grain & Vault Deposit API
  *
  * Handles deposits via:
- * 1. Card (via Circle Payments API)
+ * 1. Card (via Circle Payments API or Demo Mode)
  * 2. USDC transfer (via Circle Programmable Wallets)
  * 3. Bank/ACH (future)
+ *
+ * DEMO MODE: When Circle is not configured, uses sandbox checkout
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { sql } from '@vercel/postgres'
+import { rateLimit } from '@/lib/security/rate-limiter'
 import {
   createPaymentIntent,
   CIRCLE_CONFIG,
   validateCircleConfig,
 } from '@/lib/circle'
+
+// Check if we're in demo/sandbox mode
+// Force demo mode until Circle Payments API is fully configured and tested
+function isDemoMode(): boolean {
+  // Check for explicit demo mode override
+  if (process.env.GRAIN_VAULT_DEMO_MODE === 'true') {
+    return true
+  }
+
+  // Default to demo mode - Circle Payments needs more setup
+  // Set GRAIN_VAULT_DEMO_MODE=false to use real Circle
+  if (process.env.GRAIN_VAULT_DEMO_MODE !== 'false') {
+    return true
+  }
+
+  const configCheck = validateCircleConfig()
+  return !configCheck.valid
+}
 
 // =============================================================================
 // POST - Create Deposit
@@ -22,6 +43,15 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
+    // SECURITY: Apply rate limiting for deposits
+    const rateLimitResult = await rateLimit(req, 'deposit')
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: rateLimitResult.error },
+        { status: 429, headers: rateLimitResult.headers }
+      )
+    }
+
     // Authenticate user
     const { userId } = await auth()
     if (!userId) {
@@ -35,7 +65,9 @@ export async function POST(req: NextRequest) {
 
     // Parse request
     const body = await req.json()
-    const { amount, method = 'card' } = body
+    // Accept both 'method' and 'paymentMethod' from frontend
+    const { amount, method, paymentMethod } = body
+    const depositMethod = method || paymentMethod || 'card'
 
     // Validate amount
     const depositAmount = parseFloat(amount)
@@ -52,33 +84,37 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check Circle configuration
-    const configCheck = validateCircleConfig()
-    if (!configCheck.valid) {
-      console.error('[Deposit] Circle not configured:', configCheck.errors)
-      return NextResponse.json(
-        { error: 'Payment system not configured. Please contact support.' },
-        { status: 503 }
-      )
-    }
-
     // Ensure user has wallet record
     await ensureUserWallet(userId)
 
-    // Check KYC limits
-    const limitCheck = await checkDepositLimits(userId, depositAmount)
-    if (!limitCheck.allowed) {
-      return NextResponse.json(
-        { error: limitCheck.reason, upgradeRequired: limitCheck.upgradeRequired },
-        { status: 400 }
-      )
+    // Check KYC limits (skip in demo mode for simplicity)
+    const demoMode = isDemoMode()
+    if (!demoMode) {
+      const limitCheck = await checkDepositLimits(userId, depositAmount)
+      if (!limitCheck.allowed) {
+        return NextResponse.json(
+          { error: limitCheck.reason, upgradeRequired: limitCheck.upgradeRequired },
+          { status: 400 }
+        )
+      }
     }
 
     // Create deposit based on method
-    if (method === 'card') {
-      return await handleCardDeposit(userId, depositAmount, user.emailAddresses[0]?.emailAddress)
-    } else if (method === 'usdc') {
-      return await handleUSDCDeposit(userId)
+    if (depositMethod === 'card') {
+      if (demoMode) {
+        // Demo mode: Skip Circle, go straight to sandbox checkout
+        return await handleDemoDeposit(userId, depositAmount, user.emailAddresses[0]?.emailAddress)
+      } else {
+        return await handleCardDeposit(userId, depositAmount, user.emailAddresses[0]?.emailAddress)
+      }
+    } else if (depositMethod === 'usdc' || depositMethod === 'crypto') {
+      return await handleUSDCDeposit(userId, demoMode)
+    } else if (depositMethod === 'ach') {
+      // ACH not implemented yet - return helpful message
+      return NextResponse.json({
+        success: false,
+        error: 'ACH deposits coming soon. Please use card or crypto for now.',
+      }, { status: 400 })
     } else {
       return NextResponse.json(
         { error: 'Invalid payment method' },
@@ -92,6 +128,67 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// =============================================================================
+// DEMO DEPOSIT (Sandbox Mode - No Circle)
+// =============================================================================
+
+async function handleDemoDeposit(
+  userId: string,
+  amount: number,
+  email?: string
+): Promise<NextResponse> {
+  const sessionId = `demo_${Date.now()}_${Math.random().toString(36).substring(7)}`
+
+  // Record pending transaction
+  try {
+    await sql`
+      INSERT INTO grain_transactions (
+        user_id,
+        type,
+        amount,
+        reason,
+        circle_transfer_id,
+        status,
+        created_at
+      ) VALUES (
+        ${userId},
+        'deposit',
+        ${amount},
+        'Demo deposit (sandbox mode)',
+        ${sessionId},
+        'pending',
+        NOW()
+      )
+    `
+  } catch (e) {
+    console.warn('[Demo Deposit] Failed to record pending transaction:', e)
+  }
+
+  // Build checkout URL for our demo checkout page
+  // Priority: NEXT_PUBLIC_APP_URL > VERCEL_URL > localhost
+  let baseUrl = 'http://localhost:3000'
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    baseUrl = process.env.NEXT_PUBLIC_APP_URL
+  } else if (process.env.VERCEL_URL) {
+    baseUrl = `https://${process.env.VERCEL_URL}`
+  }
+  // Remove trailing slash if present
+  baseUrl = baseUrl.replace(/\/$/, '')
+  const checkoutUrl = `${baseUrl}/grain-vault/deposit/checkout?session=${sessionId}&amount=${amount}&paymentIntentId=${sessionId}`
+
+  console.log(`[Demo Deposit] Created demo session ${sessionId} for $${amount}`)
+
+  return NextResponse.json({
+    success: true,
+    sessionId,
+    paymentIntentId: sessionId,
+    checkoutUrl,
+    method: 'card',
+    amount,
+    demo: true,
+  })
 }
 
 // =============================================================================
@@ -171,25 +268,32 @@ async function handleCardDeposit(
 // USDC DEPOSIT (Circle Programmable Wallets)
 // =============================================================================
 
-async function handleUSDCDeposit(userId: string): Promise<NextResponse> {
+async function handleUSDCDeposit(userId: string, demoMode: boolean = false): Promise<NextResponse> {
   // Get or create user's deposit address
   // For custodial model, this is the master wallet address
   const masterWalletAddress = CIRCLE_CONFIG.w3s.masterWalletAddress
 
-  if (!masterWalletAddress) {
+  if (!masterWalletAddress && !demoMode) {
     return NextResponse.json(
       { error: 'USDC deposits not configured' },
       { status: 503 }
     )
   }
 
+  // Demo mode: show placeholder address
+  const displayAddress = masterWalletAddress || '0x1234...demo_mode'
+  const chain = CIRCLE_CONFIG.defaultChain || 'Base'
+
   return NextResponse.json({
     success: true,
     method: 'usdc',
-    depositAddress: masterWalletAddress,
-    blockchain: CIRCLE_CONFIG.defaultChain,
-    instructions: `Send USDC on ${CIRCLE_CONFIG.defaultChain} to ${masterWalletAddress}. Your GRAIN balance will be credited after 1 confirmation.`,
+    depositAddress: displayAddress,
+    blockchain: chain,
+    instructions: demoMode
+      ? 'DEMO MODE: USDC deposits are simulated. In production, send USDC to the displayed address.'
+      : `Send USDC on ${chain} to ${displayAddress}. Your GRAIN balance will be credited after 1 confirmation.`,
     note: 'Include your user ID in the transaction memo if possible.',
+    demo: demoMode,
   })
 }
 
@@ -199,13 +303,15 @@ async function handleUSDCDeposit(userId: string): Promise<NextResponse> {
 
 async function ensureUserWallet(userId: string): Promise<void> {
   try {
+    const walletId = `grain_${userId.substring(0, 8)}_${Date.now().toString(36)}`
     await sql`
-      INSERT INTO user_wallets (user_id, balance, created_at)
-      VALUES (${userId}, 0, NOW())
+      INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, created_at, updated_at)
+      VALUES (${userId}, ${walletId}, 'custodial', 0, NOW(), NOW())
       ON CONFLICT (user_id) DO NOTHING
     `
   } catch (e) {
     // Ignore - wallet may already exist
+    console.warn('[Deposit] ensureUserWallet error (ignored):', e)
   }
 }
 

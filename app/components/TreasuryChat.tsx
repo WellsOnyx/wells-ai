@@ -107,7 +107,8 @@ export default function TreasuryChat({
       if (data.treasuryAction) {
         setPendingAction(data.treasuryAction)
       }
-    } catch {
+    } catch (error) {
+      console.error('Treasury chat error:', error)
       setMessages([
         ...updatedMessages,
         {
@@ -157,6 +158,7 @@ export default function TreasuryChat({
         ])
       }
     } catch (error) {
+      console.error('Treasury authorize error:', error)
       setMessages(prev => [
         ...prev,
         {
@@ -184,9 +186,10 @@ export default function TreasuryChat({
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
+          aria-label="Open treasury assistant chat"
           className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center z-50"
         >
-          <MessageSquare className="w-6 h-6 text-white" />
+          <MessageSquare className="w-6 h-6 text-white" aria-hidden="true" />
         </button>
       )}
 
@@ -206,9 +209,10 @@ export default function TreasuryChat({
             </div>
             <button
               onClick={() => setIsOpen(false)}
+              aria-label="Close chat"
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-gray-400" aria-hidden="true" />
             </button>
           </div>
 
@@ -333,21 +337,25 @@ export default function TreasuryChat({
           {/* Input */}
           <div className="p-3 border-t border-white/10">
             <div className="flex gap-2">
+              <label htmlFor="treasury-chat-input" className="sr-only">Ask Wells anything</label>
               <input
+                id="treasury-chat-input"
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Ask Wells anything..."
                 disabled={isLoading}
+                aria-label="Treasury chat message input"
                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 text-sm disabled:opacity-50"
               />
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || isLoading}
+                aria-label="Send message"
                 className="px-4 py-2.5 bg-green-500 hover:bg-green-600 text-black rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           </div>

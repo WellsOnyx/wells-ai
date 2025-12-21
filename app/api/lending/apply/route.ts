@@ -4,7 +4,8 @@
  * POST /api/lending/apply - Submit full loan application
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -12,8 +13,18 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
 );
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // SECURITY FIX: Authenticate the user submitting the loan application
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       // Personal info
@@ -86,10 +97,12 @@ export async function POST(request: Request) {
     }
 
     // Create or update borrower profile
+    // SECURITY: Associate with authenticated userId
     const { data: borrowerProfile, error: borrowerError } = await supabase
       .from('borrower_profiles')
       .upsert(
         {
+          clerk_user_id: userId, // Associate with authenticated user
           email,
           first_name: firstName,
           last_name: lastName,

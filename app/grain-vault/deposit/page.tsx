@@ -257,18 +257,22 @@ function DepositPageContent() {
       setDepositSession(result)
 
       // For card payments, redirect to checkout
-      if (paymentMethod === 'card' && result.checkoutUrl) {
-        window.location.href = result.checkoutUrl
-        return
+      if (paymentMethod === 'card') {
+        // Use sessionId to build checkout URL - always use relative path for reliability
+        const sessionId = result.sessionId || result.paymentIntentId
+        if (sessionId) {
+          const checkoutPath = `/grain-vault/deposit/checkout?session=${sessionId}&amount=${numAmount}&paymentIntentId=${result.paymentIntentId || sessionId}`
+          console.log('[Deposit] Redirecting to checkout:', checkoutPath)
+          window.location.href = checkoutPath
+          return
+        } else {
+          // No session ID returned - API issue
+          console.error('[Deposit] No sessionId in response:', result)
+          throw new Error('Failed to create payment session. Please try again.')
+        }
       }
 
-      // Fallback: redirect to our demo checkout page
-      if (paymentMethod === 'card' && result.sessionId) {
-        window.location.href = `/grain-vault/deposit/checkout?session=${result.sessionId}&amount=${numAmount}&paymentIntentId=${result.paymentIntentId || ''}`
-        return
-      }
-
-      // For ACH, show success and instructions
+      // For ACH/crypto, show success and instructions
       setSuccess(true)
 
     } catch (err: any) {

@@ -10,6 +10,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useUser, SignedIn, SignedOut } from '@clerk/nextjs'
 import WellsAIChatWidget from '@/components/WellsAIChatWidget'
 import {
   Zap,
@@ -214,22 +215,38 @@ export default function GrainVaultLanding() {
                   <Link href="#treasury-sdk" className="text-sm text-purple-400 hover:text-purple-300 transition-colors font-medium">
                     Treasury SDK
                   </Link>
-                  <Link href="/grain-vault/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors">
-                    Dashboard
-                  </Link>
-                  <Link href="/grain-vault/signin" className="text-sm text-gray-400 hover:text-white transition-colors">
-                    Sign In
-                  </Link>
-                  <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/onboard'}>
-                    Open Account
-                  </ShimmerButton>
+
+                  <SignedIn>
+                    <Link href="/grain-vault/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors">
+                      Dashboard
+                    </Link>
+                    <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/dashboard'}>
+                      Dashboard
+                    </ShimmerButton>
+                  </SignedIn>
+
+                  <SignedOut>
+                    <Link href="/grain-vault/signin" className="text-sm text-gray-400 hover:text-white transition-colors">
+                      Sign In
+                    </Link>
+                    <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/signup'}>
+                      Open Account
+                    </ShimmerButton>
+                  </SignedOut>
                 </nav>
 
                 {/* Mobile */}
                 <div className="md:hidden">
-                  <ShimmerButton size="sm" className="bg-green-500" onClick={() => window.location.href = '/grain-vault/signup'}>
-                    Start
-                  </ShimmerButton>
+                  <SignedIn>
+                    <ShimmerButton size="sm" className="bg-green-500" onClick={() => window.location.href = '/grain-vault/dashboard'}>
+                      Dashboard
+                    </ShimmerButton>
+                  </SignedIn>
+                  <SignedOut>
+                    <ShimmerButton size="sm" className="bg-green-500" onClick={() => window.location.href = '/grain-vault/signup'}>
+                      Start
+                    </ShimmerButton>
+                  </SignedOut>
                 </div>
               </div>
             </div>
@@ -882,6 +899,7 @@ export default function GrainVaultLanding() {
                 <div>
                   <h4 className="font-semibold mb-4 text-sm">Company</h4>
                   <ul className="space-y-3 text-sm text-gray-400">
+                    <li><Link href="/grain-vault/blog" className="text-green-400 hover:text-green-300 transition-colors">Blog</Link></li>
                     <li><Link href="/about" className="hover:text-white transition-colors">About</Link></li>
                     <li><Link href="/security" className="hover:text-white transition-colors">Security</Link></li>
                     <li><Link href="https://wellsonyx.io" className="text-amber-400 hover:text-amber-300 transition-colors">Wells Onyx</Link></li>

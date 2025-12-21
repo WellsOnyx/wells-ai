@@ -9,6 +9,7 @@
 
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { SignedIn, SignedOut } from '@clerk/nextjs'
 import {
   ArrowLeft,
   Clock,
@@ -110,9 +111,21 @@ export default function BlogPost() {
                   <Link href="/grain-vault/blog" className="text-sm text-green-400 font-medium">
                     Blog
                   </Link>
-                  <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/onboard'}>
-                    Open Account
-                  </ShimmerButton>
+
+                  <SignedIn>
+                    <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/dashboard'}>
+                      Dashboard
+                    </ShimmerButton>
+                  </SignedIn>
+
+                  <SignedOut>
+                    <Link href="/grain-vault/signin" className="text-sm text-gray-400 hover:text-white transition-colors">
+                      Sign In
+                    </Link>
+                    <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/signup'}>
+                      Open Account
+                    </ShimmerButton>
+                  </SignedOut>
                 </nav>
               </div>
             </div>

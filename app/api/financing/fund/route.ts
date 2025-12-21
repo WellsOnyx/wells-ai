@@ -4,13 +4,22 @@
  *
  * Execute funding - transfer money to supplier.
  * POST /api/financing/fund
+ *
+ * SECURITY: All endpoints require Clerk authentication
  */
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { sql } from '@vercel/postgres'
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Require authentication
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { invoice_id } = body
 
@@ -18,6 +27,19 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'invoice_id is required' },
         { status: 400 }
+      )
+    }
+
+    // SECURITY: Verify user has permission to fund this invoice
+    const accessCheck = await sql`
+      SELECT fi.id FROM financeable_invoices fi
+      WHERE fi.id = ${invoice_id}::UUID
+        AND (fi.buyer_user_id = ${userId} OR fi.created_by = ${userId})
+    `
+    if (accessCheck.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Invoice not found or access denied' },
+        { status: 403 }
       )
     }
 
@@ -95,8 +117,14 @@ export async function POST(request: Request) {
 }
 
 // GET: Get funding status and transaction history
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    // SECURITY: Require authentication
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const invoice_id = searchParams.get('invoice_id')
 
@@ -104,6 +132,19 @@ export async function GET(request: Request) {
       return NextResponse.json(
         { error: 'invoice_id required' },
         { status: 400 }
+      )
+    }
+
+    // SECURITY: Verify user has permission to view this invoice
+    const accessCheck = await sql`
+      SELECT fi.id FROM financeable_invoices fi
+      WHERE fi.id = ${invoice_id}::UUID
+        AND (fi.buyer_user_id = ${userId} OR fi.supplier_user_id = ${userId} OR fi.created_by = ${userId})
+    `
+    if (accessCheck.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Invoice not found or access denied' },
+        { status: 403 }
       )
     }
 
