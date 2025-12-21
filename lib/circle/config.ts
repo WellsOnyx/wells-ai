@@ -71,6 +71,10 @@ export const CIRCLE_CONFIG = {
 // VALIDATION
 // =============================================================================
 
+/**
+ * Validate Circle config for card payments (minimal requirements)
+ * Only API key is required for card deposits via Payments API
+ */
 export function validateCircleConfig(): { valid: boolean; errors: string[] } {
   const errors: string[] = []
 
@@ -78,13 +82,8 @@ export function validateCircleConfig(): { valid: boolean; errors: string[] } {
     errors.push('CIRCLE_API_KEY is required')
   }
 
-  if (!CIRCLE_CONFIG.w3s.entitySecret) {
-    errors.push('CIRCLE_ENTITY_SECRET is required for Programmable Wallets')
-  }
-
-  if (!CIRCLE_CONFIG.w3s.walletSetId) {
-    errors.push('CIRCLE_WALLET_SET_ID is required for Programmable Wallets')
-  }
+  // Entity secret is optional - only needed for W3S operations
+  // Wallet set ID is optional - only needed for USDC deposits
 
   return {
     valid: errors.length === 0,
