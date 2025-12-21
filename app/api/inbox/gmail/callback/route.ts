@@ -38,11 +38,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Decode state to get userId
+    // Decode state to get userId and returnTo
     let userId: string
+    let returnTo: string = '/inbox'
     try {
       const stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'))
       userId = stateData.userId
+      returnTo = stateData.returnTo || '/inbox'
 
       if (!userId) {
         throw new Error('userId not found in state')
@@ -79,10 +81,10 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Redirect back to inbox with success
+    // Redirect back to returnTo page with success
     return NextResponse.redirect(
       new URL(
-        `/inbox?gmail_connected=${encodeURIComponent(account.email)}`,
+        `${returnTo}?gmail_connected=${encodeURIComponent(account.email)}`,
         request.url
       )
     )
@@ -92,7 +94,7 @@ export async function GET(request: NextRequest) {
     // Redirect with error message
     return NextResponse.redirect(
       new URL(
-        `/inbox?error=${encodeURIComponent('Failed to connect Gmail: ' + error.message)}`,
+        `${returnTo}?error=${encodeURIComponent('Failed to connect Gmail: ' + error.message)}`,
         request.url
       )
     )

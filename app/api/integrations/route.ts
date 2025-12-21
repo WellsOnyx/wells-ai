@@ -84,9 +84,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For OAuth channels, return the OAuth URL
+    // For OAuth channels, use channel-specific OAuth endpoints
     if (config.authType === 'oauth') {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://wellsonyx.io'
+      // Gmail uses its own dedicated OAuth flow with proper scopes
+      if (channel === 'gmail') {
+        const { getAuthUrl } = await import('@/lib/inbox/providers/gmail')
+        const oauthUrl = getAuthUrl(userId, undefined, '/settings/integrations')
+
+        return NextResponse.json({
+          success: true,
+          authType: 'oauth',
+          oauthUrl
+        })
+      }
+
+      // Other OAuth channels use generic flow
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.wellsonyx.io'
       const redirectUri = `${baseUrl}/api/integrations/callback/${channel}`
       const oauthUrl = generateOAuthUrl(channel as Channel, userId, redirectUri)
 

@@ -118,11 +118,15 @@ function getOAuth2Client(): OAuth2Client {
 /**
  * Get authorization URL for OAuth flow
  */
-export function getAuthUrl(userId: string, redirectUri?: string): string {
+export function getAuthUrl(userId: string, redirectUri?: string, returnTo?: string): string {
   const oauth2Client = getOAuth2Client()
 
-  // Include userId in state for callback
-  const state = Buffer.from(JSON.stringify({ userId, timestamp: Date.now() })).toString('base64')
+  // Include userId and returnTo in state for callback
+  const state = Buffer.from(JSON.stringify({
+    userId,
+    timestamp: Date.now(),
+    returnTo: returnTo || '/inbox'
+  })).toString('base64')
 
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline', // Required to get refresh token
