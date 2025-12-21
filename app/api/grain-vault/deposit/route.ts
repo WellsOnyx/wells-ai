@@ -63,6 +63,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 })
     }
 
+    // SECURITY: Check if user is approved before allowing deposits
+    const approvalCheck = await sql`
+      SELECT approved FROM user_wallets WHERE user_id = ${userId}
+    `
+    if (approvalCheck.rows.length > 0 && approvalCheck.rows[0].approved !== true) {
+      return NextResponse.json(
+        {
+          error: 'Account pending approval',
+          reason: 'Your account is currently under review. Deposits will be enabled once your account is approved.',
+          pending_approval: true
+        },
+        { status: 403 }
+      )
+    }
+
     // Parse request
     const body = await req.json()
     // Accept both 'method' and 'paymentMethod' from frontend

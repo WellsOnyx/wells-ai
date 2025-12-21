@@ -40,6 +40,8 @@ import {
 interface WalletData {
   has_wallet: boolean
   has_profile?: boolean
+  approved?: boolean
+  approved_at?: string | null
   balance: {
     grain: number
     usd_value: number
@@ -179,6 +181,12 @@ function DepositPageContent() {
       // Having either one means they've started the process
       if (!walletResult.has_wallet && !walletResult.has_profile && !walletResult.success) {
         router.push('/grain-vault/onboard')
+        return
+      }
+
+      // Check if user is approved - if not, redirect to dashboard (which shows pending screen)
+      if (walletResult.approved === false) {
+        router.push('/grain-vault/dashboard')
         return
       }
 

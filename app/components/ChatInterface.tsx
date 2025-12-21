@@ -89,6 +89,10 @@ export default function ChatInterface({
         body: JSON.stringify({
           messages: updatedMessages,
           journey,
+          context: {
+            // Product identifier for unified memory system
+            product: 'wellsai',
+          },
         }),
       })
 

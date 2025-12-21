@@ -51,6 +51,13 @@ import { startNegotiation as startRFQNegotiation, runFullNegotiation as runRFQNe
 import { awardQuote, getAwardByRFQ } from '@/lib/rfq/award-service'
 import { getFulfillmentByRFQ } from '@/lib/rfq/fulfillment-tracker'
 import { sqlQuery as sql } from '@/lib/db'
+import {
+  getOrCreateWellsMemory,
+  buildMemoryContextForPrompt,
+  learnFromConversation,
+  updateWellsMemory,
+  type ProductType,
+} from '@/lib/wells-memory'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -2699,6 +2706,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ========================================================================
+    // LOAD WELLS MEMORY
+    // Get unified user context that persists across WellsAI and Grain & Vault
+    // ========================================================================
+    let wellsMemoryContext: { systemContextAddition: string; recentConversationContext: string; learnedPreferences: Record<string, any> } | null = null
+    if (userId) {
+      try {
+        // Determine product context from journey or request context
+        const currentProduct: ProductType = journey === 'treasury' ? 'grainvault' : 'wellsai'
+
+        // Get or create memory for this user
+        await getOrCreateWellsMemory(userId, {
+          firstName: profile?.firstName,
+          lastName: profile?.lastName,
+          email: profile?.email,
+        })
+
+        // Build memory context for the system prompt
+        wellsMemoryContext = await buildMemoryContextForPrompt(userId, currentProduct, journey)
+      } catch (error) {
+        console.error('[WellsMemory] Error loading memory context:', error)
+        // Continue without memory - better than failing
+      }
+    }
+
     // Handle master mode specially
     const isMasterMode = journey === 'master'
     const masterKey = process.env.COLD_START_MASTER_KEY
@@ -2852,6 +2884,25 @@ export async function POST(request: NextRequest) {
       enhancedSystemPrompt += `\n\nThe user is authenticated but profile data is incomplete. You can take actions on their behalf.`
     } else {
       enhancedSystemPrompt += `\n\nThe user is not logged in yet. You can still help them understand what Wells can do, but let them know they'll need to sign up to take actions.`
+    }
+
+    // ========================================================================
+    // INJECT WELLS MEMORY CONTEXT
+    // This adds learned preferences, cross-product context, and conversation history
+    // ========================================================================
+    if (wellsMemoryContext) {
+      // Add system context (learned facts, cross-product awareness, entities)
+      if (wellsMemoryContext.systemContextAddition) {
+        enhancedSystemPrompt += wellsMemoryContext.systemContextAddition
+      }
+
+      // Add recent conversation context if available
+      if (wellsMemoryContext.recentConversationContext) {
+        enhancedSystemPrompt += wellsMemoryContext.recentConversationContext
+      }
+
+      // Add instruction about memory
+      enhancedSystemPrompt += `\n\nMEMORY: You remember past conversations with this user. Reference relevant history naturally when appropriate, but don't force it.`
     }
 
     enhancedSystemPrompt += `
@@ -5060,6 +5111,18 @@ Reply "Yes, go ahead" to approve, or let me know what to change.`,
     // No tool use - just return the text response
     const textBlock = response.content.find(block => block.type === 'text')
     const assistantMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+    // ========================================================================
+    // LEARN FROM CONVERSATION (async, non-blocking)
+    // Extracts topics, entities, and facts from the conversation
+    // ========================================================================
+    if (userId && messages.length >= 2) {
+      const currentProduct: ProductType = journey === 'treasury' ? 'grainvault' : 'wellsai'
+      // Run learning asynchronously - don't block the response
+      learnFromConversation(userId, messages, currentProduct, journey).catch(err => {
+        console.error('[WellsMemory] Error learning from conversation:', err)
+      })
+    }
 
     return NextResponse.json({
       message: assistantMessage,

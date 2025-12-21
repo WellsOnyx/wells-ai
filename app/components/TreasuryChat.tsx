@@ -83,6 +83,9 @@ export default function TreasuryChat({
           messages: updatedMessages,
           journey: 'treasury',
           context: {
+            // Product identifier for unified memory system
+            product: 'grainvault',
+            // Treasury-specific context
             accountId,
             companyName,
             grainBalance,

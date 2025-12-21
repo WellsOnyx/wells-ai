@@ -270,6 +270,10 @@ export default function DashboardPage() {
           body: JSON.stringify({
             messages: updatedMessages,
             journey,
+            context: {
+              // Product identifier for unified memory system
+              product: 'wellsai',
+            },
           }),
         })
 

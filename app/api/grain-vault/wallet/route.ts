@@ -3,6 +3,7 @@
  *
  * Returns user's GRAIN balance and recent transactions
  * Uses existing user_wallets and grain_transactions tables
+ * Includes approval status for manual approval flow
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,20 +19,20 @@ export async function GET(req: NextRequest) {
 
     // Get or create user wallet
     let walletResult = await sql`
-      SELECT user_id, balance, wallet_id, wallet_address, created_at, updated_at
+      SELECT user_id, balance, wallet_id, wallet_address, approved, approved_at, approved_by, created_at, updated_at
       FROM user_wallets
       WHERE user_id = ${userId}
     `
 
-    // Auto-create wallet if doesn't exist
+    // Auto-create wallet if doesn't exist (with approved = false by default)
     if (walletResult.rows.length === 0) {
       await sql`
-        INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, created_at, updated_at)
-        VALUES (${userId}, ${`ledger_${userId}`}, ${`ledger_${userId}`}, 0, NOW(), NOW())
+        INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, approved, created_at, updated_at)
+        VALUES (${userId}, ${`ledger_${userId}`}, ${`ledger_${userId}`}, 0, FALSE, NOW(), NOW())
         ON CONFLICT (user_id) DO NOTHING
       `
       walletResult = await sql`
-        SELECT user_id, balance, wallet_id, wallet_address, created_at, updated_at
+        SELECT user_id, balance, wallet_id, wallet_address, approved, approved_at, approved_by, created_at, updated_at
         FROM user_wallets
         WHERE user_id = ${userId}
       `
@@ -39,6 +40,7 @@ export async function GET(req: NextRequest) {
 
     const wallet = walletResult.rows[0]
     const balance = parseFloat(wallet?.balance || '0')
+    const approved = wallet?.approved === true
 
     // Check for profile
     let hasProfile = false
@@ -82,6 +84,8 @@ export async function GET(req: NextRequest) {
       success: true,
       has_wallet: true,
       has_profile: hasProfile,
+      approved: approved,
+      approved_at: wallet?.approved_at || null,
       balance: {
         grain: balance,
         usd_value: balance * grainPrice
