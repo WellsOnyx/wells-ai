@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { Inter } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
+import Script from 'next/script'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -53,6 +54,21 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
         <meta name="base:app_id" content="694972c8d77c069a945be5d0" />
       </head>
       <body className={`${inter.className} bg-black text-white antialiased`}>
+        {/* Inject Base meta tag early via script */}
+        <Script
+          id="base-meta-inject"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (!document.querySelector('meta[name="base:app_id"]')) {
+                var meta = document.createElement('meta');
+                meta.name = 'base:app_id';
+                meta.content = '694972c8d77c069a945be5d0';
+                document.head.insertBefore(meta, document.head.firstChild);
+              }
+            `
+          }}
+        />
         {children}
       </body>
     </html>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
-export const dynamic = 'force-dynamic'
+// Force static generation so metadata is in initial HTML
+export const dynamic = 'force-static'
 
 export const metadata: Metadata = {
   title: 'Grain & Vault | Treasury Infrastructure for Modern Finance',
