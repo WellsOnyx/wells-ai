@@ -48,6 +48,10 @@ const GRAIN_VAULT_DOMAINS = ['grainandvault.com', 'www.grainandvault.com']
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        {/* Base verification - must be in initial HTML head for crawler */}
+        <meta name="base:app_id" content="694972c8d77c069a945be5d0" />
+      </head>
       <body className={`${inter.className} bg-black text-white antialiased`}>
         {children}
       </body>
