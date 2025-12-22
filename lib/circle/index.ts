@@ -1,10 +1,11 @@
 /**
  * Circle Integration - Unified Entry Point
  *
- * Three Circle Products:
+ * Four Circle Products:
  * 1. Payments API - Card deposits to USDC
  * 2. Programmable Wallets (W3S) - Developer-controlled wallets
  * 3. Payouts API - Bank withdrawals
+ * 4. CCTP Bridge - Cross-chain USDC transfers
  */
 
 // Configuration
@@ -58,6 +59,27 @@ export type {
   WithdrawalRequest,
   WithdrawalResult,
 } from './payouts'
+
+// CCTP Bridge (Cross-Chain Transfers)
+export {
+  CCTP_CHAINS,
+  getAttestation,
+  getTransferFees,
+  estimateBridgeTransfer,
+  getSupportedChains,
+  getChainConfig,
+  isRoutSupported,
+  getDefaultDestinationChain,
+} from './bridge'
+export type {
+  ChainIdentifier,
+  ChainConfig,
+  TransferSpeed,
+  BridgeEstimate,
+  BridgeTransfer,
+  BridgeParams,
+  BridgeResult,
+} from './bridge'
 
 // =============================================================================
 // UNIFIED WEBHOOK HANDLER

@@ -33,6 +33,10 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.ico',
   },
+  // Base verification meta tag
+  other: {
+    'base:app_id': '694972c8d77c069a945be5d0',
+  },
 }
 
 // Check if Clerk is configured
@@ -56,15 +60,15 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // If Clerk is not configured, render without it
-  if (!clerkPublishableKey) {
-    return <RootLayoutContent>{children}</RootLayoutContent>
-  }
-
   // Get the current host for domain-specific configuration
   const headersList = await headers()
   const host = headersList.get('host') || ''
   const isGrainVault = GRAIN_VAULT_DOMAINS.some(d => host.includes(d))
+
+  // If Clerk is not configured, render without it
+  if (!clerkPublishableKey) {
+    return <RootLayoutContent>{children}</RootLayoutContent>
+  }
 
   // Configure ClerkProvider with domain-specific paths
   // Clerk is configured to work directly on both domains

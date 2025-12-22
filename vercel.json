@@ -175,6 +175,76 @@
       ]
     },
     {
+      "source": "/deposit",
+      "destination": "/grain-vault/deposit",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/deposit/:path*",
+      "destination": "/grain-vault/deposit/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/bridge",
+      "destination": "/grain-vault/bridge",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/withdraw",
+      "destination": "/grain-vault/withdraw",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/chat",
+      "destination": "/grain-vault/chat",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/admin",
+      "destination": "/grain-vault/admin",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/grain-vault/admin/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "grainandvault.com"
+        }
+      ]
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*",
       "has": [

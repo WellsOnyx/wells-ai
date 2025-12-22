@@ -455,8 +455,9 @@ export default function WellsOnyxHome() {
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-4 text-sm">Platform</h4>
+                  <h4 className="font-semibold mb-4 text-sm">Resources</h4>
                   <ul className="space-y-3 text-sm text-gray-400">
+                    <li><Link href="/wells-ai/blog" className="text-amber-400 hover:text-amber-300 transition-colors">Blog</Link></li>
                     <li><Link href="#how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
                     <li><Link href="/demo" className="hover:text-white transition-colors">See Demo</Link></li>
                   </ul>
@@ -467,6 +468,7 @@ export default function WellsOnyxHome() {
                   <ul className="space-y-3 text-sm text-gray-400">
                     <li><Link href="/founder/chat" className="hover:text-white transition-colors">Talk to Wells</Link></li>
                     <li><Link href="/sign-in" className="hover:text-white transition-colors">Sign In</Link></li>
+                    <li><Link href="/grain-vault" className="text-green-400 hover:text-green-300 transition-colors">Grain & Vault</Link></li>
                   </ul>
                 </div>
               </div>

@@ -19,9 +19,17 @@ import {
   validateCircleConfig,
 } from '@/lib/circle'
 
-// Demo mode is OFF - always use real Circle payments
+// Demo mode: ON when Circle Payments API is not available
+// Circle Mint API key doesn't have access to Payments API (card deposits)
+// Use demo checkout flow until Payments API is enabled
 function isDemoMode(): boolean {
-  return false
+  // Check if we have a Payments-enabled API key (would need separate Circle Payments account)
+  // For now, use demo mode for all card deposits since we only have Circle Mint
+  const env = process.env.CIRCLE_ENV || 'sandbox'
+
+  // Always use demo mode for card deposits
+  // The Mint API key (LIVE_API_KEY:xxx) doesn't have Payments access
+  return true
 }
 
 // =============================================================================

@@ -404,16 +404,32 @@ export default function OnboardingPage() {
         throw new Error(result.error || 'Failed to start verification')
       }
 
-      setData(prev => ({
-        ...prev,
-        kyc_session_id: result.sessionId,
-        kyc_status: 'in_progress'
-      }))
-      setKycUrl(result.verificationUrl)
-      setPollingKyc(true)
-
-      // Open Veriff in new tab
-      window.open(result.verificationUrl, '_blank')
+      // Handle simplified KYC flow
+      if (result.status === 'approved' || !result.verificationRequired) {
+        // Auto-approved (basic or standard tier)
+        setData(prev => ({
+          ...prev,
+          kyc_session_id: result.sessionId || null,
+          kyc_status: 'approved'
+        }))
+      } else if (result.status === 'pending') {
+        // Pending manual review (premium/unlimited)
+        setData(prev => ({
+          ...prev,
+          kyc_session_id: result.sessionId,
+          kyc_status: 'in_progress'
+        }))
+      } else if (result.verificationUrl) {
+        // External verification URL (future: Circle Compliance Engine)
+        setData(prev => ({
+          ...prev,
+          kyc_session_id: result.sessionId,
+          kyc_status: 'in_progress'
+        }))
+        setKycUrl(result.verificationUrl)
+        setPollingKyc(true)
+        window.open(result.verificationUrl, '_blank')
+      }
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -608,82 +624,121 @@ export default function OnboardingPage() {
         )
 
       case 'details':
+        // Calculate max date for DOB (18 years ago)
+        const maxDobDate = new Date()
+        maxDobDate.setFullYear(maxDobDate.getFullYear() - (countryConfig?.kyc.minAge || 18))
+        const maxDobString = maxDobDate.toISOString().split('T')[0]
+        // Min date (100 years ago)
+        const minDobDate = new Date()
+        minDobDate.setFullYear(minDobDate.getFullYear() - 100)
+        const minDobString = minDobDate.toISOString().split('T')[0]
+
         return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-8">
+            {/* Country & DOB Section */}
+            <div className="space-y-6">
+              {/* Country Selection - Full Width with Flag */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Country of Residence *
+                <label className="block text-sm font-medium text-white mb-3">
+                  Country of Residence <span className="text-green-400">*</span>
                 </label>
-                <select
-                  value={data.country_of_residence}
-                  onChange={(e) => updateData('country_of_residence', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
-                >
-                  {enabledCountries.map(country => (
-                    <option key={country.code} value={country.code}>
-                      {country.flag} {country.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={data.country_of_residence}
+                    onChange={(e) => updateData('country_of_residence', e.target.value)}
+                    className="w-full px-4 py-4 bg-white/[0.03] border border-white/10 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none text-white appearance-none cursor-pointer hover:bg-white/[0.05] transition-colors text-base"
+                  >
+                    {enabledCountries.map(country => (
+                      <option key={country.code} value={country.code} className="bg-zinc-900 text-white py-2">
+                        {country.flag} {country.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
 
+              {/* Date of Birth - Improved styling */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Date of Birth *
+                <label className="block text-sm font-medium text-white mb-3">
+                  Date of Birth <span className="text-green-400">*</span>
                 </label>
                 <input
                   type="date"
                   value={data.date_of_birth}
                   onChange={(e) => updateData('date_of_birth', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
+                  max={maxDobString}
+                  min={minDobString}
+                  className="w-full px-4 py-4 bg-white/[0.03] border border-white/10 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none text-white hover:bg-white/[0.05] transition-colors text-base [color-scheme:dark]"
+                  placeholder="Select your date of birth"
                 />
+                <p className="mt-2 text-xs text-gray-500">
+                  You must be at least {countryConfig?.kyc.minAge || 18} years old
+                </p>
+              </div>
+
+              {/* Phone Number with country prefix */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-3">
+                  Phone Number
+                </label>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 px-4 py-4 bg-white/[0.03] border border-white/10 rounded-xl text-gray-400 min-w-[80px] text-center">
+                    {countryConfig?.phone.prefix || '+1'}
+                  </div>
+                  <input
+                    type="tel"
+                    value={data.phone}
+                    onChange={(e) => updateData('phone', e.target.value)}
+                    className="flex-1 px-4 py-4 bg-white/[0.03] border border-white/10 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none text-white hover:bg-white/[0.05] transition-colors text-base"
+                    placeholder={countryConfig?.phone.example || '(555) 123-4567'}
+                  />
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Phone Number ({countryConfig?.phone.prefix || '+1'})
-              </label>
-              <input
-                type="tel"
-                value={data.phone}
-                onChange={(e) => updateData('phone', e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
-                placeholder={countryConfig?.phone.example || '(555) 123-4567'}
-              />
-            </div>
+            {/* Address Section - Collapsible Style */}
+            <div className="bg-white/[0.02] border border-white/10 rounded-2xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-white">Address</h3>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    Optional - enables higher transaction limits
+                  </p>
+                </div>
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-400 text-xs font-medium rounded-full">
+                  Recommended
+                </span>
+              </div>
 
-            <div className="border-t border-white/10 pt-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Address (Optional)</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                Providing your address enables higher transaction limits.
-              </p>
-
-              <div className="space-y-4">
+              <div className="p-6 space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Address Line 1
+                    Street Address
                   </label>
                   <input
                     type="text"
                     value={data.address_line1}
                     onChange={(e) => updateData('address_line1', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
-                    placeholder="Street address"
+                    className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none text-white hover:bg-white/[0.05] transition-colors"
+                    placeholder="123 Main Street"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Address Line 2
+                    Apt, Suite, Unit <span className="text-gray-500">(optional)</span>
                   </label>
                   <input
                     type="text"
                     value={data.address_line2}
                     onChange={(e) => updateData('address_line2', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
-                    placeholder="Apt, suite, etc."
+                    className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none text-white hover:bg-white/[0.05] transition-colors"
+                    placeholder="Apt 4B"
                   />
                 </div>
 
@@ -696,8 +751,8 @@ export default function OnboardingPage() {
                       type="text"
                       value={data.city}
                       onChange={(e) => updateData('city', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
-                      placeholder="City"
+                      className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none text-white hover:bg-white/[0.05] transition-colors"
+                      placeholder="New York"
                     />
                   </div>
 
@@ -706,16 +761,23 @@ export default function OnboardingPage() {
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         {countryConfig.address.stateLabel}
                       </label>
-                      <select
-                        value={data.state}
-                        onChange={(e) => updateData('state', e.target.value)}
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
-                      >
-                        <option value="">Select...</option>
-                        {statesForCountry.map(s => (
-                          <option key={s.code} value={s.code}>{s.name}</option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <select
+                          value={data.state}
+                          onChange={(e) => updateData('state', e.target.value)}
+                          className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none text-white appearance-none cursor-pointer hover:bg-white/[0.05] transition-colors"
+                        >
+                          <option value="" className="bg-zinc-900">Select...</option>
+                          {statesForCountry.map(s => (
+                            <option key={s.code} value={s.code} className="bg-zinc-900">{s.name}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
                     </div>
                   ) : countryConfig?.address.hasState ? (
                     <div>
@@ -726,14 +788,14 @@ export default function OnboardingPage() {
                         type="text"
                         value={data.state}
                         onChange={(e) => updateData('state', e.target.value)}
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
+                        className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none text-white hover:bg-white/[0.05] transition-colors"
                         placeholder={countryConfig.address.stateLabel}
                       />
                     </div>
                   ) : null}
                 </div>
 
-                <div>
+                <div className="w-1/2">
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     {countryConfig?.address.postalCodeLabel || 'Postal Code'}
                   </label>
@@ -741,8 +803,8 @@ export default function OnboardingPage() {
                     type="text"
                     value={data.zip_code}
                     onChange={(e) => updateData('zip_code', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none text-white"
-                    placeholder={data.country_of_residence === 'US' ? '12345' : 'Enter postal code'}
+                    className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none text-white hover:bg-white/[0.05] transition-colors"
+                    placeholder={data.country_of_residence === 'US' ? '10001' : 'Enter postal code'}
                   />
                 </div>
               </div>
