@@ -80,7 +80,7 @@ interface DepositSession {
   }
 }
 
-type PaymentMethod = 'card' | 'ach' | 'crypto'
+type PaymentMethod = 'card' | 'ach' | 'crypto' | 'base'
 
 const PRESET_AMOUNTS = [50, 100, 250, 500, 1000, 2500]
 
@@ -127,6 +127,7 @@ function DepositPageContent() {
   const [amount, setAmount] = useState<string>(initialAmount)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [basePayProcessing, setBasePayProcessing] = useState(false)
 
   // Calculate GRAIN to receive
   const grainToReceive = useMemo(() => {
@@ -224,6 +225,24 @@ function DepositPageContent() {
     }
   }, [isLoaded, isSignedIn, fetchData, router])
 
+  // Load Base Account SDK
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !(window as any).base) {
+      const script = document.createElement('script')
+      script.src = 'https://unpkg.com/@base-org/account/dist/base-account.min.js'
+      script.async = true
+      script.onload = () => {
+        if ((window as any).createBaseAccountSDK) {
+          (window as any).createBaseAccountSDK({
+            appName: 'Grain & Vault',
+            appLogoUrl: 'https://grainandvault.com/grain-vault-logo.png',
+          })
+        }
+      }
+      document.body.appendChild(script)
+    }
+  }, [])
+
   // Handle deposit submission
   const handleDeposit = async () => {
     const numAmount = parseFloat(amount)
@@ -288,6 +307,87 @@ function DepositPageContent() {
       setError(err.message)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // Handle Base Pay deposit
+  const handleBasePay = async () => {
+    const numAmount = parseFloat(amount)
+
+    if (!numAmount || numAmount < 10) {
+      setError('Minimum deposit is $10')
+      return
+    }
+
+    setBasePayProcessing(true)
+    setError(null)
+
+    try {
+      // Check if Base SDK is available
+      if (typeof window !== 'undefined' && (window as any).base) {
+        const base = (window as any).base
+
+        // Treasury wallet address - this is where deposits go
+        const treasuryAddress = process.env.NEXT_PUBLIC_TREASURY_ADDRESS || '0x2211d1D0020DAEA8039E46Cf1367962070d77DA9'
+
+        // Initiate Base Pay
+        const result = await base.pay({
+          amount: numAmount.toFixed(2),
+          to: treasuryAddress,
+          testnet: true, // Set to false for mainnet
+        })
+
+        // Check payment status
+        const status = await base.getPaymentStatus({
+          id: result.id,
+          testnet: true,
+        })
+
+        if (status.status === 'completed' || status.status === 'success') {
+          // Record the deposit in our backend
+          const res = await fetch('/api/grain-vault/deposit/base-pay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: numAmount,
+              basePaymentId: result.id,
+              txHash: status.txHash || result.txHash,
+            })
+          })
+
+          if (!res.ok) {
+            const errorData = await res.json()
+            throw new Error(errorData.error || 'Failed to record deposit')
+          }
+
+          setSuccess(true)
+        } else {
+          throw new Error(`Payment ${status.status}: ${status.message || 'Please try again'}`)
+        }
+      } else {
+        // Load Base SDK dynamically if not loaded
+        setError('Base Pay is initializing. Please try again in a moment.')
+
+        // Dynamically load the SDK
+        const script = document.createElement('script')
+        script.src = 'https://unpkg.com/@base-org/account/dist/base-account.min.js'
+        script.async = true
+        script.onload = () => {
+          // Initialize SDK after loading
+          if ((window as any).createBaseAccountSDK) {
+            (window as any).createBaseAccountSDK({
+              appName: 'Grain & Vault',
+              appLogoUrl: 'https://grainandvault.com/grain-vault-logo.png',
+            })
+          }
+        }
+        document.body.appendChild(script)
+      }
+    } catch (err: any) {
+      console.error('Base Pay error:', err)
+      setError(err.message || 'Base Pay failed. Please try another payment method.')
+    } finally {
+      setBasePayProcessing(false)
     }
   }
 
@@ -542,6 +642,39 @@ function DepositPageContent() {
                 </div>
               </button>
 
+              {/* Base Pay - New Primary Option */}
+              <button
+                onClick={() => setPaymentMethod('base')}
+                className={`w-full p-4 rounded-xl border transition-all flex items-center gap-4 ${
+                  paymentMethod === 'base'
+                    ? 'bg-blue-500/10 border-blue-500/50'
+                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                  paymentMethod === 'base' ? 'bg-blue-500/20' : 'bg-blue-500/20'
+                }`}>
+                  <svg className={`w-6 h-6 ${paymentMethod === 'base' ? 'text-blue-400' : 'text-blue-400'}`} viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.2"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-white">Pay with Base</p>
+                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full font-medium">
+                      Instant
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-400">Pay with USDC on Base - zero fees</p>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  paymentMethod === 'base' ? 'border-blue-500 bg-blue-500' : 'border-gray-500'
+                }`}>
+                  {paymentMethod === 'base' && <CheckCircle className="w-3 h-3 text-white" />}
+                </div>
+              </button>
+
               {/* ACH - Secondary */}
               <button
                 onClick={() => setPaymentMethod('ach')}
@@ -628,11 +761,15 @@ function DepositPageContent() {
 
           {/* Submit Button */}
           <button
-            onClick={handleDeposit}
-            disabled={submitting || !amount || parseFloat(amount) < 10 || exceedsLimit}
-            className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-bold text-lg hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            onClick={paymentMethod === 'base' ? handleBasePay : handleDeposit}
+            disabled={submitting || basePayProcessing || !amount || parseFloat(amount) < 10 || exceedsLimit}
+            className={`w-full py-4 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 ${
+              paymentMethod === 'base'
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+            }`}
           >
-            {submitting ? (
+            {submitting || basePayProcessing ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Processing...
@@ -642,6 +779,12 @@ function DepositPageContent() {
                 {paymentMethod === 'card' && <CreditCard className="w-5 h-5" />}
                 {paymentMethod === 'ach' && <Landmark className="w-5 h-5" />}
                 {paymentMethod === 'crypto' && <Wallet className="w-5 h-5" />}
+                {paymentMethod === 'base' && (
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.3"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
+                  </svg>
+                )}
                 Deposit {amount ? formatUSD(parseFloat(amount)) : '$0.00'}
                 <ArrowRight className="w-5 h-5" />
               </>
@@ -747,7 +890,7 @@ function DepositPageContent() {
         </div>
 
         {/* Payment Method Info */}
-        <div className="mt-6 grid sm:grid-cols-3 gap-4">
+        <div className="mt-6 grid sm:grid-cols-4 gap-4">
           <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="w-4 h-4 text-yellow-400" />
@@ -755,6 +898,18 @@ function DepositPageContent() {
             </div>
             <p className="text-sm text-gray-400">
               Instant deposit. 2.9% + $0.30 fee. Visa, Mastercard, Amex accepted.
+            </p>
+          </div>
+          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.3"/>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
+              </svg>
+              <p className="font-medium text-white">Base Pay</p>
+            </div>
+            <p className="text-sm text-gray-400">
+              Instant. Zero fees. Pay with USDC from your Base wallet.
             </p>
           </div>
           <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
