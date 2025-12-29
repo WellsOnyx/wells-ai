@@ -82,7 +82,98 @@ export interface BuyerProfile {
   purchaseVolume: 'under-10k' | '10k-100k' | '100k-1m' | '1m-plus'
   categories: string[]
   preferredPaymentTerms: string[]
-  erpSystem?: string
+  erpSystem?: ERPSystemChoice
+  useWellsAsErp?: boolean // True if user chooses WellsAI as their ERP
+}
+
+// ============================================================================
+// ERP SYSTEM CHOICES
+// ============================================================================
+
+export type ERPSystemChoice =
+  | 'wells_native'  // Use WellsAI as your ERP (AI-native, conversational)
+  | 'sap'
+  | 'netsuite'
+  | 'oracle'
+  | 'dynamics365'
+  | 'quickbooks'
+  | 'xero'
+  | 'sage'
+  | 'other'
+  | 'none'
+
+export interface ERPChoice {
+  system: ERPSystemChoice
+  useWellsAsErp: boolean
+  willConnect: boolean // True if they plan to connect their existing ERP
+}
+
+export const ERP_OPTIONS: Record<ERPSystemChoice, {
+  name: string
+  description: string
+  isWellsNative: boolean
+  requiresConnection: boolean
+}> = {
+  wells_native: {
+    name: 'WellsAI (Recommended)',
+    description: 'Use WellsAI as your ERP. No forms, no dashboards - just talk to Wells.',
+    isWellsNative: true,
+    requiresConnection: false,
+  },
+  sap: {
+    name: 'SAP',
+    description: 'Connect to SAP S/4HANA or SAP Business One',
+    isWellsNative: false,
+    requiresConnection: true,
+  },
+  netsuite: {
+    name: 'Oracle NetSuite',
+    description: 'Connect to NetSuite ERP',
+    isWellsNative: false,
+    requiresConnection: true,
+  },
+  oracle: {
+    name: 'Oracle Cloud',
+    description: 'Connect to Oracle Fusion Cloud ERP',
+    isWellsNative: false,
+    requiresConnection: true,
+  },
+  dynamics365: {
+    name: 'Microsoft Dynamics 365',
+    description: 'Connect to Dynamics 365 Finance & Operations',
+    isWellsNative: false,
+    requiresConnection: true,
+  },
+  quickbooks: {
+    name: 'QuickBooks',
+    description: 'Connect to QuickBooks Online or Desktop',
+    isWellsNative: false,
+    requiresConnection: true,
+  },
+  xero: {
+    name: 'Xero',
+    description: 'Connect to Xero accounting',
+    isWellsNative: false,
+    requiresConnection: true,
+  },
+  sage: {
+    name: 'Sage',
+    description: 'Connect to Sage Intacct or Sage 50',
+    isWellsNative: false,
+    requiresConnection: true,
+  },
+  other: {
+    name: 'Other ERP',
+    description: 'Using a different ERP system',
+    isWellsNative: false,
+    requiresConnection: true,
+  },
+  none: {
+    name: 'No ERP Yet',
+    description: 'Not using an ERP system - WellsAI can be your first!',
+    isWellsNative: false,
+    requiresConnection: false,
+  },
 }
 
 export interface SellerProfile {

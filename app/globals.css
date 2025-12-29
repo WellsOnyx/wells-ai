@@ -3,10 +3,26 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 5, 5, 8;
-    --background-end-rgb: 0, 0, 0;
+  /* ============================================
+     LIGHT MODE (Default for WellsAI)
+     ============================================ */
+  :root,
+  .light {
+    --foreground-rgb: 17, 24, 39;
+    --background-start-rgb: 255, 255, 255;
+    --background-end-rgb: 249, 250, 251;
+
+    /* Brand Colors - Wells Blue */
+    --primary-50: #eff6ff;
+    --primary-100: #dbeafe;
+    --primary-200: #bfdbfe;
+    --primary-300: #93c5fd;
+    --primary-400: #60a5fa;
+    --primary-500: #3b82f6;
+    --primary-600: #2563eb;
+    --primary-700: #1d4ed8;
+    --primary-800: #1e40af;
+    --primary-900: #1e3a8a;
 
     /* Brand Colors - Wells Gold */
     --gold-50: #FFFBEB;
@@ -26,7 +42,49 @@
     --violet-500: #8B5CF6;
     --rose-500: #F43F5E;
 
-    /* Semantic Colors */
+    /* Semantic Colors - Light Mode */
+    --surface: rgba(0, 0, 0, 0.02);
+    --surface-hover: rgba(0, 0, 0, 0.04);
+    --surface-elevated: rgba(255, 255, 255, 1);
+    --surface-active: rgba(0, 0, 0, 0.06);
+    --border: rgba(0, 0, 0, 0.08);
+    --border-hover: rgba(0, 0, 0, 0.15);
+    --border-focus: rgba(59, 130, 246, 0.5);
+
+    /* Text Colors - Light Mode */
+    --text-primary: rgba(17, 24, 39, 0.95);
+    --text-secondary: rgba(17, 24, 39, 0.65);
+    --text-tertiary: rgba(17, 24, 39, 0.45);
+    --text-muted: rgba(17, 24, 39, 0.30);
+
+    /* Light mode backgrounds */
+    --bg-page: #ffffff;
+    --bg-card: #ffffff;
+    --bg-muted: #f9fafb;
+    --bg-hover: #f3f4f6;
+  }
+
+  /* ============================================
+     DARK MODE
+     ============================================ */
+  .dark {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 10, 15, 26;
+    --background-end-rgb: 0, 0, 0;
+
+    /* Primary for dark mode */
+    --primary-50: #1e3a8a;
+    --primary-100: #1e40af;
+    --primary-200: #1d4ed8;
+    --primary-300: #2563eb;
+    --primary-400: #3b82f6;
+    --primary-500: #60a5fa;
+    --primary-600: #93c5fd;
+    --primary-700: #bfdbfe;
+    --primary-800: #dbeafe;
+    --primary-900: #eff6ff;
+
+    /* Semantic Colors - Dark Mode */
     --surface: rgba(255, 255, 255, 0.02);
     --surface-hover: rgba(255, 255, 255, 0.04);
     --surface-elevated: rgba(255, 255, 255, 0.06);
@@ -35,13 +93,19 @@
     --border-hover: rgba(255, 255, 255, 0.12);
     --border-focus: rgba(245, 158, 11, 0.4);
 
-    /* Text Colors */
+    /* Text Colors - Dark Mode */
     --text-primary: rgba(255, 255, 255, 0.95);
     --text-secondary: rgba(255, 255, 255, 0.65);
     --text-tertiary: rgba(255, 255, 255, 0.45);
     --text-muted: rgba(255, 255, 255, 0.30);
 
-    /* Shadows - More sophisticated */
+    /* Dark mode backgrounds */
+    --bg-page: #0a0f1a;
+    --bg-card: rgba(255, 255, 255, 0.03);
+    --bg-muted: rgba(255, 255, 255, 0.02);
+    --bg-hover: rgba(255, 255, 255, 0.05);
+
+    /* Shadows - Dark Mode */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -70,6 +134,26 @@
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
+  /* Shared shadows/glows for light mode */
+  :root,
+  .light {
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+    --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.15);
+
+    /* Light mode blur/timing */
+    --blur-sm: 8px;
+    --blur-md: 16px;
+    --blur-lg: 24px;
+    --blur-xl: 40px;
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
   * {
     border-color: var(--border);
   }
@@ -83,13 +167,25 @@
 
   body {
     color: var(--text-primary);
-    background: linear-gradient(180deg, rgb(var(--background-start-rgb)) 0%, rgb(var(--background-end-rgb)) 100%);
+    background: var(--bg-page);
     min-height: 100vh;
     position: relative;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  /* Refined background grain/noise texture */
-  body::before {
+  /* Light mode - clean white background */
+  .light body,
+  :root body {
+    background: linear-gradient(180deg, rgb(var(--background-start-rgb)) 0%, rgb(var(--background-end-rgb)) 100%);
+  }
+
+  /* Dark mode - gradient background */
+  .dark body {
+    background: linear-gradient(180deg, rgb(var(--background-start-rgb)) 0%, rgb(var(--background-end-rgb)) 100%);
+  }
+
+  /* Refined background grain/noise texture - dark mode only */
+  .dark body::before {
     content: '';
     position: fixed;
     top: 0;
@@ -102,8 +198,8 @@
     opacity: 0.4;
   }
 
-  /* Subtle radial gradient overlay for depth */
-  body::after {
+  /* Subtle radial gradient overlay for depth - dark mode only */
+  .dark body::after {
     content: '';
     position: fixed;
     top: 0;
@@ -111,6 +207,20 @@
     width: 100%;
     height: 100%;
     background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245, 158, 11, 0.08) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Light mode - subtle blue accent gradient */
+  .light body::after,
+  :root body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.03) 0%, transparent 60%);
     pointer-events: none;
     z-index: 0;
   }

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
-// Force static generation so metadata is in initial HTML
-export const dynamic = 'force-static'
+// Force dynamic rendering - uses Clerk components
+export const dynamic = 'force-dynamic'
 
 // Metadata moved to page.tsx for Base verification
 

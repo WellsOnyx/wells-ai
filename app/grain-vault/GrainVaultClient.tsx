@@ -226,11 +226,11 @@ export default function GrainVaultLanding() {
                   </SignedIn>
 
                   <SignedOut>
-                    <Link href="/grain-vault/signin" className="text-sm text-gray-400 hover:text-white transition-colors">
-                      Sign In
+                    <Link href="/grain-vault/waitlist" className="text-sm text-amber-400 hover:text-amber-300 transition-colors font-medium">
+                      Join Waitlist
                     </Link>
-                    <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/signup'}>
-                      Open Account
+                    <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => window.location.href = '/grain-vault/waitlist'}>
+                      Get Early Access
                     </ShimmerButton>
                   </SignedOut>
                 </nav>
@@ -243,8 +243,8 @@ export default function GrainVaultLanding() {
                     </ShimmerButton>
                   </SignedIn>
                   <SignedOut>
-                    <ShimmerButton size="sm" className="bg-green-500" onClick={() => window.location.href = '/grain-vault/signup'}>
-                      Start
+                    <ShimmerButton size="sm" className="bg-amber-500" onClick={() => window.location.href = '/grain-vault/waitlist'}>
+                      Waitlist
                     </ShimmerButton>
                   </SignedOut>
                 </div>
@@ -285,15 +285,15 @@ export default function GrainVaultLanding() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-              <ShimmerButton size="lg" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/onboard'}>
-                Open Account
+              <ShimmerButton size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => window.location.href = '/grain-vault/waitlist'}>
+                Join the Waitlist
                 <ArrowRight className="w-5 h-5" />
               </ShimmerButton>
-              <ShimmerButton variant="secondary" size="lg" onClick={() => window.location.href = '/grain-vault/dashboard'}>
-                <Wallet className="w-5 h-5" />
-                View Dashboard
+              <ShimmerButton variant="secondary" size="lg" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
+                <Sparkles className="w-5 h-5" />
+                How It Works
               </ShimmerButton>
-              <ShimmerButton variant="ghost" size="lg" onClick={() => document.getElementById('treasury-sdk')?.scrollIntoView()}>
+              <ShimmerButton variant="ghost" size="lg" onClick={() => document.getElementById('treasury-sdk')?.scrollIntoView({ behavior: 'smooth' })}>
                 <Code className="w-5 h-5" />
                 Treasury SDK
               </ShimmerButton>
@@ -548,12 +548,12 @@ export default function GrainVaultLanding() {
                   GRAIN is engineered to appreciate. Every holder benefits equally as our treasury grows.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <ShimmerButton size="lg" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/signup'}>
-                    Get Started Free
+                  <ShimmerButton size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => window.location.href = '/grain-vault/waitlist'}>
+                    Join the Waitlist
                     <ArrowRight className="w-5 h-5" />
                   </ShimmerButton>
                   <div className="text-sm text-gray-500">
-                    No minimum deposit · Available worldwide
+                    Limited early access · Enterprise priority
                   </div>
                 </div>
               </div>
@@ -781,14 +781,14 @@ export default function GrainVaultLanding() {
 
             {/* CTA */}
             <div className="text-center">
-              <a
-                href="mailto:sdk@grainandvault.com?subject=Treasury SDK Access Request"
+              <Link
+                href="/grain-vault/sdk-waitlist"
                 className="group inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50"
               >
                 <Code className="w-5 h-5" />
-                Get SDK Access
+                Join SDK Waitlist
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </a>
+              </Link>
             </div>
           </div>
         </section>
@@ -847,10 +847,10 @@ export default function GrainVaultLanding() {
                 </p>
 
                 <button
-                  onClick={() => window.location.href = '/grain-vault/onboard'}
+                  onClick={() => window.location.href = '/grain-vault/waitlist'}
                   className="inline-flex items-center gap-3 px-8 py-4 bg-black text-white rounded-xl font-bold text-lg hover:bg-gray-900 transition-all hover:scale-105"
                 >
-                  Open Account
+                  Join the Waitlist
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>

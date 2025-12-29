@@ -1,15 +1,16 @@
-// @ts-nocheck
 'use client'
 
 /**
- * Grain & Vault - Add Funds / Deposit Page
+ * Grain & Vault - Enterprise Deposit Page
  *
- * Production-ready deposit UI with:
- * - Current GRAIN balance display
- * - Amount input with live GRAIN conversion
- * - Payment method selection (Card, ACH, Crypto)
- * - KYC status and limit display
- * - Proper loading states and error handling
+ * Circle-native ACH/Wire deposits only.
+ * No cards, no Base Pay - enterprise grade.
+ *
+ * Flow:
+ * 1. User gets unique Virtual Account Number (VAN) from Circle
+ * 2. User initiates ACH/wire from their ERP/bank
+ * 3. Circle receives funds, credits USDC to master wallet
+ * 4. We credit GRAIN to user's ledger
  */
 
 import { useEffect, useState, useMemo, useCallback, Suspense } from 'react'
@@ -19,21 +20,18 @@ import Link from 'next/link'
 import {
   ArrowLeft,
   ArrowRight,
-  CreditCard,
   Landmark,
-  Wallet,
   Shield,
   AlertCircle,
   CheckCircle,
   Loader2,
   Info,
-  Lock,
   TrendingUp,
-  Zap,
   Clock,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp
+  Copy,
+  Building2,
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react'
 
 // Types
@@ -41,7 +39,6 @@ interface WalletData {
   has_wallet: boolean
   has_profile?: boolean
   approved?: boolean
-  approved_at?: string | null
   balance: {
     grain: number
     usd_value: number
@@ -53,38 +50,30 @@ interface PriceData {
   grain: {
     price_usd: number
     change_24h: number
-    change_7d: number
-    change_30d: number
-  }
-  treasury: {
-    total_usd: number
-    backing_ratio: number
+    treasury_value: number
+    total_supply: number
   }
 }
 
-interface VerificationLevel {
-  level: number
-  name: string
-  description: string
-  dailyLimit: number
-  monthlyLimit: number
-  requirements: string[]
+interface BankInstructions {
+  method: 'wire' | 'ach'
+  bankName: string
+  routingNumber: string
+  accountNumber: string  // Virtual Account Number - unique per customer
+  accountName: string
+  reference: string
+  swiftCode?: string     // For international wire
 }
 
 interface DepositSession {
-  session_id: string
-  checkout_url?: string
-  conversion: {
-    current_grain_price: number
-    example_grain_received: number
-  }
+  sessionId: string
+  bankInstructions: BankInstructions
+  estimatedCrediting: string
 }
 
-type PaymentMethod = 'card' | 'ach' | 'crypto' | 'base'
+type DepositMethod = 'ach' | 'wire'
 
-const PRESET_AMOUNTS = [50, 100, 250, 500, 1000, 2500]
-
-// Loading fallback for Suspense
+// Loading fallback
 function DepositPageLoading() {
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -96,7 +85,6 @@ function DepositPageLoading() {
   )
 }
 
-// Main export wrapped in Suspense
 export default function DepositPage() {
   return (
     <Suspense fallback={<DepositPageLoading />}>
@@ -114,46 +102,28 @@ function DepositPageContent() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
 
   // Data
   const [walletData, setWalletData] = useState<WalletData | null>(null)
   const [priceData, setPriceData] = useState<PriceData | null>(null)
-  const [verificationLevel, setVerificationLevel] = useState<VerificationLevel | null>(null)
   const [depositSession, setDepositSession] = useState<DepositSession | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
 
-  // Form - initialize with URL param if present
+  // Form
   const initialAmount = searchParams.get('amount') || ''
   const [amount, setAmount] = useState<string>(initialAmount)
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card')
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [basePayProcessing, setBasePayProcessing] = useState(false)
+  const [depositMethod, setDepositMethod] = useState<DepositMethod>('ach')
 
-  // Calculate GRAIN to receive
+  // Calculate GRAIN to receive based on oracle price
   const grainToReceive = useMemo(() => {
     const numAmount = parseFloat(amount) || 0
     const price = priceData?.grain?.price_usd || walletData?.grain_price || 1
     return numAmount / price
   }, [amount, priceData, walletData])
 
-  // Current price
   const currentPrice = priceData?.grain?.price_usd || walletData?.grain_price || 1
 
-  // Check if amount exceeds limits
-  const exceedsLimit = useMemo(() => {
-    const numAmount = parseFloat(amount) || 0
-    if (!verificationLevel) return false
-    if (verificationLevel.dailyLimit === -1) return false
-    return numAmount > verificationLevel.dailyLimit
-  }, [amount, verificationLevel])
-
-  // Needs KYC verification
-  const needsVerification = useMemo(() => {
-    if (!verificationLevel) return false
-    return verificationLevel.level === 1 && parseFloat(amount) > 1000
-  }, [amount, verificationLevel])
-
-  // Fetch all data
+  // Fetch data
   const fetchData = useCallback(async () => {
     if (!isSignedIn) return
 
@@ -161,7 +131,6 @@ function DepositPageContent() {
     setError(null)
 
     try {
-      // Fetch wallet data, price, and verification level in parallel
       const [walletRes, priceRes] = await Promise.all([
         fetch('/api/grain-vault/wallet'),
         fetch('/api/grain-vault/price')
@@ -177,15 +146,11 @@ function DepositPageContent() {
 
       const walletResult = await walletRes.json()
 
-      // Check if user needs to complete onboarding
-      // Only redirect if they have NEITHER wallet NOR profile
-      // Having either one means they've started the process
       if (!walletResult.has_wallet && !walletResult.has_profile && !walletResult.success) {
         router.push('/grain-vault/onboard')
         return
       }
 
-      // Check if user is approved - if not, redirect to dashboard (which shows pending screen)
       if (walletResult.approved === false) {
         router.push('/grain-vault/dashboard')
         return
@@ -197,17 +162,6 @@ function DepositPageContent() {
         const priceResult = await priceRes.json()
         setPriceData(priceResult)
       }
-
-      // Get verification level - mock for now since endpoint might not exist
-      // In production, this would call a real endpoint
-      setVerificationLevel({
-        level: 1,
-        name: 'Basic',
-        description: 'Email verified only',
-        dailyLimit: 1000,
-        monthlyLimit: 10000,
-        requirements: ['Verified email address']
-      })
 
     } catch (err: any) {
       console.error('Deposit page error:', err)
@@ -225,35 +179,12 @@ function DepositPageContent() {
     }
   }, [isLoaded, isSignedIn, fetchData, router])
 
-  // Load Base Account SDK
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !(window as any).base) {
-      const script = document.createElement('script')
-      script.src = 'https://unpkg.com/@base-org/account/dist/base-account.min.js'
-      script.async = true
-      script.onload = () => {
-        if ((window as any).createBaseAccountSDK) {
-          (window as any).createBaseAccountSDK({
-            appName: 'Grain & Vault',
-            appLogoUrl: 'https://grainandvault.com/grain-vault-logo.png',
-          })
-        }
-      }
-      document.body.appendChild(script)
-    }
-  }, [])
-
-  // Handle deposit submission
-  const handleDeposit = async () => {
+  // Get bank instructions for deposit
+  const getDepositInstructions = async () => {
     const numAmount = parseFloat(amount)
 
-    if (!numAmount || numAmount < 10) {
-      setError('Minimum deposit is $10')
-      return
-    }
-
-    if (exceedsLimit) {
-      setError(`Amount exceeds your daily limit of $${verificationLevel?.dailyLimit.toLocaleString()}. Please verify your identity to increase limits.`)
+    if (!numAmount || numAmount < 100) {
+      setError('Minimum deposit is $100 for ACH/wire transfers')
       return
     }
 
@@ -261,46 +192,22 @@ function DepositPageContent() {
     setError(null)
 
     try {
-      const res = await fetch('/api/grain-vault/deposit', {
+      const res = await fetch('/api/grain-vault/deposit/bank-instructions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: numAmount,
-          paymentMethod
+          method: depositMethod
         })
       })
 
       const result = await res.json()
 
       if (!res.ok) {
-        if (result.upgradeUrl) {
-          // Needs verification upgrade
-          router.push(result.upgradeUrl)
-          return
-        }
-        throw new Error(result.error || result.reason || 'Failed to create deposit')
+        throw new Error(result.error || 'Failed to get deposit instructions')
       }
 
       setDepositSession(result)
-
-      // For card payments, redirect to checkout
-      if (paymentMethod === 'card') {
-        // Use sessionId to build checkout URL - always use relative path for reliability
-        const sessionId = result.sessionId || result.paymentIntentId
-        if (sessionId) {
-          const checkoutPath = `/grain-vault/deposit/checkout?session=${sessionId}&amount=${numAmount}&paymentIntentId=${result.paymentIntentId || sessionId}`
-          console.log('[Deposit] Redirecting to checkout:', checkoutPath)
-          window.location.href = checkoutPath
-          return
-        } else {
-          // No session ID returned - API issue
-          console.error('[Deposit] No sessionId in response:', result)
-          throw new Error('Failed to create payment session. Please try again.')
-        }
-      }
-
-      // For ACH/crypto, show success and instructions
-      setSuccess(true)
 
     } catch (err: any) {
       console.error('Deposit error:', err)
@@ -310,85 +217,11 @@ function DepositPageContent() {
     }
   }
 
-  // Handle Base Pay deposit
-  const handleBasePay = async () => {
-    const numAmount = parseFloat(amount)
-
-    if (!numAmount || numAmount < 10) {
-      setError('Minimum deposit is $10')
-      return
-    }
-
-    setBasePayProcessing(true)
-    setError(null)
-
-    try {
-      // Check if Base SDK is available
-      if (typeof window !== 'undefined' && (window as any).base) {
-        const base = (window as any).base
-
-        // Treasury wallet address - this is where deposits go
-        const treasuryAddress = process.env.NEXT_PUBLIC_TREASURY_ADDRESS || '0x2211d1D0020DAEA8039E46Cf1367962070d77DA9'
-
-        // Initiate Base Pay
-        const result = await base.pay({
-          amount: numAmount.toFixed(2),
-          to: treasuryAddress,
-          testnet: true, // Set to false for mainnet
-        })
-
-        // Check payment status
-        const status = await base.getPaymentStatus({
-          id: result.id,
-          testnet: true,
-        })
-
-        if (status.status === 'completed' || status.status === 'success') {
-          // Record the deposit in our backend
-          const res = await fetch('/api/grain-vault/deposit/base-pay', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              amount: numAmount,
-              basePaymentId: result.id,
-              txHash: status.txHash || result.txHash,
-            })
-          })
-
-          if (!res.ok) {
-            const errorData = await res.json()
-            throw new Error(errorData.error || 'Failed to record deposit')
-          }
-
-          setSuccess(true)
-        } else {
-          throw new Error(`Payment ${status.status}: ${status.message || 'Please try again'}`)
-        }
-      } else {
-        // Load Base SDK dynamically if not loaded
-        setError('Base Pay is initializing. Please try again in a moment.')
-
-        // Dynamically load the SDK
-        const script = document.createElement('script')
-        script.src = 'https://unpkg.com/@base-org/account/dist/base-account.min.js'
-        script.async = true
-        script.onload = () => {
-          // Initialize SDK after loading
-          if ((window as any).createBaseAccountSDK) {
-            (window as any).createBaseAccountSDK({
-              appName: 'Grain & Vault',
-              appLogoUrl: 'https://grainandvault.com/grain-vault-logo.png',
-            })
-          }
-        }
-        document.body.appendChild(script)
-      }
-    } catch (err: any) {
-      console.error('Base Pay error:', err)
-      setError(err.message || 'Base Pay failed. Please try another payment method.')
-    } finally {
-      setBasePayProcessing(false)
-    }
+  // Copy to clipboard
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(field)
+    setTimeout(() => setCopied(null), 2000)
   }
 
   // Format helpers
@@ -410,73 +243,162 @@ function DepositPageContent() {
 
   // Loading state
   if (!isLoaded || loading) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-green-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading deposit page...</p>
-        </div>
-      </div>
-    )
+    return <DepositPageLoading />
   }
 
-  // Success state
-  if (success && depositSession) {
+  // Show bank instructions
+  if (depositSession) {
+    const { bankInstructions } = depositSession
     return (
       <div className="min-h-screen bg-black text-white">
         <Header user={user} />
 
-        <main className="max-w-lg mx-auto px-6 py-12">
-          <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-green-500/20 flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-green-400" />
-            </div>
+        <main className="max-w-2xl mx-auto px-6 py-8">
+          <Link
+            href="/grain-vault/dashboard"
+            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Link>
 
-            <h2 className="text-2xl font-bold text-white mb-3">
-              Deposit Initiated
-            </h2>
-
-            <p className="text-gray-400 mb-6">
-              {paymentMethod === 'ach'
-                ? 'Your bank transfer has been initiated. Funds will arrive in 1-3 business days.'
-                : paymentMethod === 'crypto'
-                ? 'Send USDC to complete your deposit. GRAIN will be credited upon confirmation.'
-                : 'Your deposit is being processed.'}
-            </p>
-
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-400">Amount</span>
-                <span className="text-white font-semibold">{formatUSD(parseFloat(amount))}</span>
+          {/* Success Banner */}
+          <div className="mb-8 p-6 bg-green-500/10 border border-green-500/20 rounded-2xl">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-6 h-6 text-green-400" />
               </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-400">GRAIN Price</span>
-                <span className="text-white font-semibold">{formatUSD(currentPrice)}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                <span className="text-gray-400">You will receive</span>
-                <span className="text-green-400 font-bold">{formatGRAIN(grainToReceive)} GRAIN</span>
+              <div>
+                <h2 className="text-xl font-bold text-white mb-2">
+                  Deposit Instructions Ready
+                </h2>
+                <p className="text-gray-400">
+                  Use the bank details below to initiate your {depositMethod.toUpperCase()} transfer.
+                  Your GRAIN will be credited upon receipt.
+                </p>
               </div>
             </div>
+          </div>
 
-            <div className="flex gap-3">
-              <Link
-                href="/grain-vault/dashboard"
-                className="flex-1 px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all text-center"
-              >
-                Go to Dashboard
-              </Link>
-              <button
-                onClick={() => {
-                  setSuccess(false)
-                  setAmount('')
-                  setDepositSession(null)
-                }}
-                className="flex-1 px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all"
-              >
-                Make Another Deposit
-              </button>
+          {/* Deposit Summary */}
+          <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-xl">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-400">Amount to Deposit</span>
+              <span className="text-xl font-bold text-white">{formatUSD(parseFloat(amount))}</span>
             </div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-400">Current GRAIN Price</span>
+              <span className="text-white font-semibold">{formatUSD(currentPrice)}</span>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-white/10">
+              <span className="text-gray-400">You will receive</span>
+              <span className="text-green-400 font-bold">{formatGRAIN(grainToReceive)} GRAIN</span>
+            </div>
+          </div>
+
+          {/* Bank Instructions Card */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">
+                  {bankInstructions.method === 'wire' ? 'Wire Transfer' : 'ACH Transfer'} Details
+                </h3>
+                <p className="text-sm text-gray-400">Send funds to this account</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <InstructionRow
+                label="Bank Name"
+                value={bankInstructions.bankName}
+                onCopy={() => copyToClipboard(bankInstructions.bankName, 'bank')}
+                copied={copied === 'bank'}
+              />
+              <InstructionRow
+                label="Routing Number"
+                value={bankInstructions.routingNumber}
+                onCopy={() => copyToClipboard(bankInstructions.routingNumber, 'routing')}
+                copied={copied === 'routing'}
+              />
+              <InstructionRow
+                label="Account Number"
+                value={bankInstructions.accountNumber}
+                onCopy={() => copyToClipboard(bankInstructions.accountNumber, 'account')}
+                copied={copied === 'account'}
+                highlight
+              />
+              <InstructionRow
+                label="Account Name"
+                value={bankInstructions.accountName}
+                onCopy={() => copyToClipboard(bankInstructions.accountName, 'name')}
+                copied={copied === 'name'}
+              />
+              {bankInstructions.swiftCode && (
+                <InstructionRow
+                  label="SWIFT Code"
+                  value={bankInstructions.swiftCode}
+                  onCopy={() => copyToClipboard(bankInstructions.swiftCode!, 'swift')}
+                  copied={copied === 'swift'}
+                />
+              )}
+              <InstructionRow
+                label="Reference/Memo"
+                value={bankInstructions.reference}
+                onCopy={() => copyToClipboard(bankInstructions.reference, 'reference')}
+                copied={copied === 'reference'}
+                highlight
+              />
+            </div>
+          </div>
+
+          {/* Important Notes */}
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-yellow-400 font-medium mb-2">Important</p>
+                <ul className="text-sm text-gray-400 space-y-1">
+                  <li>Include the reference code in your transfer memo</li>
+                  <li>ACH transfers typically arrive in 1-3 business days</li>
+                  <li>Wire transfers typically arrive same day or next business day</li>
+                  <li>Your GRAIN will be credited at the price when funds arrive</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Timing Info */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm text-gray-400">Estimated Credit Time</p>
+                <p className="text-white font-medium">{depositSession.estimatedCrediting}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <Link
+              href="/grain-vault/dashboard"
+              className="flex-1 px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all text-center"
+            >
+              Back to Dashboard
+            </Link>
+            <button
+              onClick={() => {
+                setDepositSession(null)
+                setAmount('')
+              }}
+              className="flex-1 px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              New Deposit
+            </button>
           </div>
         </main>
       </div>
@@ -500,24 +422,14 @@ function DepositPageContent() {
         {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Add Funds</h1>
-          <p className="text-gray-400">Deposit USD to receive GRAIN tokens</p>
+          <p className="text-gray-400">Deposit USD via ACH or wire transfer to receive GRAIN</p>
         </div>
 
         {/* Error Alert */}
         {error && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-red-400 font-medium">{error}</p>
-              {exceedsLimit && (
-                <Link
-                  href="/grain-vault/verify"
-                  className="text-sm text-red-300 hover:text-red-200 underline mt-1 inline-block"
-                >
-                  Verify your identity to increase limits
-                </Link>
-              )}
-            </div>
+            <p className="text-red-400 font-medium">{error}</p>
           </div>
         )}
 
@@ -546,6 +458,24 @@ function DepositPageContent() {
           </div>
         </div>
 
+        {/* GRAIN Price Oracle Info */}
+        {priceData?.grain?.treasury_value && priceData?.grain?.total_supply && (
+          <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+            <div className="flex items-start gap-3">
+              <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-blue-400 font-medium mb-1">GRAIN Price Oracle</p>
+                <p className="text-sm text-gray-400">
+                  Price = Treasury ({formatUSD(priceData.grain.treasury_value)}) / Supply ({formatGRAIN(priceData.grain.total_supply)})
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  GRAIN only appreciates. Monitored by VAULT autonomous auditor.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Deposit Form */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
           {/* Amount Input */}
@@ -554,9 +484,9 @@ function DepositPageContent() {
               Amount to Deposit (USD)
             </label>
 
-            {/* Preset Amounts */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4">
-              {PRESET_AMOUNTS.map((preset) => (
+            {/* Preset Amounts - Enterprise focused */}
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {[1000, 5000, 10000, 25000].map((preset) => (
                 <button
                   key={preset}
                   onClick={() => setAmount(preset.toString())}
@@ -566,7 +496,7 @@ function DepositPageContent() {
                       : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
                   }`}
                 >
-                  ${preset}
+                  ${(preset / 1000).toFixed(0)}K
                 </button>
               ))}
             </div>
@@ -579,16 +509,16 @@ function DepositPageContent() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="Enter amount"
-                min="10"
-                step="0.01"
+                min="100"
+                step="1"
                 className="w-full pl-10 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-2xl font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all"
               />
             </div>
-            <p className="mt-2 text-sm text-gray-500">Minimum deposit: $10</p>
+            <p className="mt-2 text-sm text-gray-500">Minimum deposit: $100</p>
           </div>
 
           {/* GRAIN Conversion Preview */}
-          {parseFloat(amount) > 0 && (
+          {parseFloat(amount) >= 100 && (
             <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-gray-400">You will receive</span>
@@ -599,339 +529,180 @@ function DepositPageContent() {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500">At current price of {formatUSD(currentPrice)}</span>
                 <span className="text-gray-400">
-                  ≈ {formatUSD(grainToReceive * currentPrice)}
+                  {formatUSD(grainToReceive * currentPrice)}
                 </span>
               </div>
             </div>
           )}
 
-          {/* Payment Method Selection */}
+          {/* Transfer Method Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-3">
-              Payment Method
+              Transfer Method
             </label>
 
-            <div className="space-y-3">
-              {/* Card - Primary */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* ACH */}
               <button
-                onClick={() => setPaymentMethod('card')}
-                className={`w-full p-4 rounded-xl border transition-all flex items-center gap-4 ${
-                  paymentMethod === 'card'
+                onClick={() => setDepositMethod('ach')}
+                className={`p-4 rounded-xl border transition-all text-left ${
+                  depositMethod === 'ach'
                     ? 'bg-green-500/10 border-green-500/50'
                     : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
                 }`}
               >
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                  paymentMethod === 'card' ? 'bg-green-500/20' : 'bg-blue-500/20'
-                }`}>
-                  <CreditCard className={`w-6 h-6 ${paymentMethod === 'card' ? 'text-green-400' : 'text-blue-400'}`} />
-                </div>
-                <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-white">Credit / Debit Card</p>
-                    <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full font-medium">
-                      Recommended
-                    </span>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    depositMethod === 'ach' ? 'bg-green-500/20' : 'bg-purple-500/20'
+                  }`}>
+                    <Landmark className={`w-5 h-5 ${depositMethod === 'ach' ? 'text-green-400' : 'text-purple-400'}`} />
                   </div>
-                  <p className="text-sm text-gray-400">Instant deposit via Circle</p>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    depositMethod === 'ach' ? 'border-green-500 bg-green-500' : 'border-gray-500'
+                  }`}>
+                    {depositMethod === 'ach' && <CheckCircle className="w-3 h-3 text-white" />}
+                  </div>
                 </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  paymentMethod === 'card' ? 'border-green-500 bg-green-500' : 'border-gray-500'
-                }`}>
-                  {paymentMethod === 'card' && <CheckCircle className="w-3 h-3 text-white" />}
-                </div>
+                <p className="font-semibold text-white">ACH Transfer</p>
+                <p className="text-sm text-gray-400">1-3 business days</p>
+                <p className="text-xs text-gray-500 mt-1">No fees</p>
               </button>
 
-              {/* Base Pay - New Primary Option */}
+              {/* Wire */}
               <button
-                onClick={() => setPaymentMethod('base')}
-                className={`w-full p-4 rounded-xl border transition-all flex items-center gap-4 ${
-                  paymentMethod === 'base'
-                    ? 'bg-blue-500/10 border-blue-500/50'
-                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-                }`}
-              >
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                  paymentMethod === 'base' ? 'bg-blue-500/20' : 'bg-blue-500/20'
-                }`}>
-                  <svg className={`w-6 h-6 ${paymentMethod === 'base' ? 'text-blue-400' : 'text-blue-400'}`} viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.2"/>
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
-                  </svg>
-                </div>
-                <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-white">Pay with Base</p>
-                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full font-medium">
-                      Instant
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-400">Pay with USDC on Base - zero fees</p>
-                </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  paymentMethod === 'base' ? 'border-blue-500 bg-blue-500' : 'border-gray-500'
-                }`}>
-                  {paymentMethod === 'base' && <CheckCircle className="w-3 h-3 text-white" />}
-                </div>
-              </button>
-
-              {/* ACH - Secondary */}
-              <button
-                onClick={() => setPaymentMethod('ach')}
-                className={`w-full p-4 rounded-xl border transition-all flex items-center gap-4 ${
-                  paymentMethod === 'ach'
+                onClick={() => setDepositMethod('wire')}
+                className={`p-4 rounded-xl border transition-all text-left ${
+                  depositMethod === 'wire'
                     ? 'bg-green-500/10 border-green-500/50'
                     : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
                 }`}
               >
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                  paymentMethod === 'ach' ? 'bg-green-500/20' : 'bg-purple-500/20'
-                }`}>
-                  <Landmark className={`w-6 h-6 ${paymentMethod === 'ach' ? 'text-green-400' : 'text-purple-400'}`} />
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    depositMethod === 'wire' ? 'bg-green-500/20' : 'bg-blue-500/20'
+                  }`}>
+                    <Building2 className={`w-5 h-5 ${depositMethod === 'wire' ? 'text-green-400' : 'text-blue-400'}`} />
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    depositMethod === 'wire' ? 'border-green-500 bg-green-500' : 'border-gray-500'
+                  }`}>
+                    {depositMethod === 'wire' && <CheckCircle className="w-3 h-3 text-white" />}
+                  </div>
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="font-semibold text-white">Bank Transfer (ACH)</p>
-                  <p className="text-sm text-gray-400">1-3 business days, lower fees</p>
-                </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  paymentMethod === 'ach' ? 'border-green-500 bg-green-500' : 'border-gray-500'
-                }`}>
-                  {paymentMethod === 'ach' && <CheckCircle className="w-3 h-3 text-white" />}
-                </div>
+                <p className="font-semibold text-white">Wire Transfer</p>
+                <p className="text-sm text-gray-400">Same/next business day</p>
+                <p className="text-xs text-gray-500 mt-1">Bank fees may apply</p>
               </button>
-
-              {/* Crypto - Advanced */}
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="w-full p-3 text-sm text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-2"
-              >
-                Advanced payment options
-                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-
-              {showAdvanced && (
-                <>
-                  <button
-                    onClick={() => setPaymentMethod('crypto')}
-                    className={`w-full p-4 rounded-xl border transition-all flex items-center gap-4 ${
-                      paymentMethod === 'crypto'
-                        ? 'bg-green-500/10 border-green-500/50'
-                        : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-                    }`}
-                  >
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                      paymentMethod === 'crypto' ? 'bg-green-500/20' : 'bg-blue-500/20'
-                    }`}>
-                      <Wallet className={`w-6 h-6 ${paymentMethod === 'crypto' ? 'text-green-400' : 'text-blue-400'}`} />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="font-semibold text-white">USDC on Base</p>
-                      <p className="text-sm text-gray-400">Send USDC directly, instant</p>
-                    </div>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      paymentMethod === 'crypto' ? 'border-green-500 bg-green-500' : 'border-gray-500'
-                    }`}>
-                      {paymentMethod === 'crypto' && <CheckCircle className="w-3 h-3 text-white" />}
-                    </div>
-                  </button>
-
-                  {/* Cross-Chain Bridge Option */}
-                  <Link
-                    href="/grain-vault/bridge"
-                    className="w-full p-4 rounded-xl border bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20 hover:border-purple-500/40 transition-all flex items-center gap-4"
-                  >
-                    <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                      <ArrowRight className="w-6 h-6 text-purple-400" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-white">Cross-Chain Bridge</p>
-                        <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full font-medium">
-                          CCTP
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-400">Bridge USDC from Ethereum, Arbitrum, Polygon & more</p>
-                    </div>
-                    <ExternalLink className="w-5 h-5 text-purple-400" />
-                  </Link>
-                </>
-              )}
             </div>
           </div>
 
           {/* Submit Button */}
           <button
-            onClick={paymentMethod === 'base' ? handleBasePay : handleDeposit}
-            disabled={submitting || basePayProcessing || !amount || parseFloat(amount) < 10 || exceedsLimit}
-            className={`w-full py-4 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 ${
-              paymentMethod === 'base'
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
-                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
-            }`}
+            onClick={getDepositInstructions}
+            disabled={submitting || !amount || parseFloat(amount) < 100}
+            className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
           >
-            {submitting || basePayProcessing ? (
+            {submitting ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Processing...
+                Getting Instructions...
               </>
             ) : (
               <>
-                {paymentMethod === 'card' && <CreditCard className="w-5 h-5" />}
-                {paymentMethod === 'ach' && <Landmark className="w-5 h-5" />}
-                {paymentMethod === 'crypto' && <Wallet className="w-5 h-5" />}
-                {paymentMethod === 'base' && (
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.3"/>
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
-                  </svg>
-                )}
-                Deposit {amount ? formatUSD(parseFloat(amount)) : '$0.00'}
+                <Landmark className="w-5 h-5" />
+                Get Deposit Instructions
                 <ArrowRight className="w-5 h-5" />
               </>
             )}
           </button>
         </div>
 
-        {/* KYC Status & Limits */}
+        {/* Enterprise Features */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Shield className="w-5 h-5 text-green-400" />
-              Verification & Limits
-            </h3>
-            {verificationLevel && verificationLevel.level < 3 && (
-              <Link
-                href="/grain-vault/verify"
-                className="text-sm text-green-400 hover:text-green-300 transition-colors flex items-center gap-1"
-              >
-                Upgrade Limits
-                <ExternalLink className="w-3 h-3" />
-              </Link>
-            )}
-          </div>
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-green-400" />
+            Enterprise Features
+          </h3>
 
-          {verificationLevel && (
-            <div className="space-y-4">
-              {/* Current Level */}
-              <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    verificationLevel.level >= 3 ? 'bg-green-500/20' : 'bg-yellow-500/20'
-                  }`}>
-                    {verificationLevel.level >= 3 ? (
-                      <CheckCircle className="w-5 h-5 text-green-400" />
-                    ) : (
-                      <Info className="w-5 h-5 text-yellow-400" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">{verificationLevel.name} Verification</p>
-                    <p className="text-sm text-gray-400">{verificationLevel.description}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Limits */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-white/5 rounded-lg">
-                  <p className="text-sm text-gray-400 mb-1">Daily Limit</p>
-                  <p className="text-lg font-semibold text-white">
-                    {verificationLevel.dailyLimit === -1 ? 'Unlimited' : formatUSD(verificationLevel.dailyLimit)}
-                  </p>
-                </div>
-                <div className="p-3 bg-white/5 rounded-lg">
-                  <p className="text-sm text-gray-400 mb-1">Monthly Limit</p>
-                  <p className="text-lg font-semibold text-white">
-                    {verificationLevel.monthlyLimit === -1 ? 'Unlimited' : formatUSD(verificationLevel.monthlyLimit)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Upgrade Prompt */}
-              {verificationLevel.level < 3 && (
-                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <Lock className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-yellow-400 font-medium mb-1">
-                        Increase your limits
-                      </p>
-                      <p className="text-sm text-gray-400 mb-3">
-                        Complete identity verification to unlock higher deposit limits up to $100,000/day.
-                      </p>
-                      <Link
-                        href="/grain-vault/verify"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm font-medium hover:bg-yellow-500/30 transition-colors"
-                      >
-                        <Shield className="w-4 h-4" />
-                        Verify Identity
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Security & Info */}
-        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-          <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-blue-400 font-medium mb-1">Secure Deposits</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="p-4 bg-white/5 rounded-lg">
+              <p className="font-medium text-white mb-1">ERP Integration</p>
               <p className="text-sm text-gray-400">
-                All deposits are processed through Circle, a licensed money transmitter.
-                Your funds are converted to USDC and held in our fully-backed treasury.
-                GRAIN only appreciates in value.
+                Connect SAP, NetSuite, QuickBooks for automated treasury sync
+              </p>
+            </div>
+            <div className="p-4 bg-white/5 rounded-lg">
+              <p className="font-medium text-white mb-1">Virtual Account Numbers</p>
+              <p className="text-sm text-gray-400">
+                Unique account number for auto-attribution of deposits
+              </p>
+            </div>
+            <div className="p-4 bg-white/5 rounded-lg">
+              <p className="font-medium text-white mb-1">No Limits</p>
+              <p className="text-sm text-gray-400">
+                Deposit any amount. Wire unlimited. ACH up to $1M/day.
+              </p>
+            </div>
+            <div className="p-4 bg-white/5 rounded-lg">
+              <p className="font-medium text-white mb-1">Treasury Reporting</p>
+              <p className="text-sm text-gray-400">
+                Real-time balance tracking and audit-ready reports
               </p>
             </div>
           </div>
         </div>
 
-        {/* Payment Method Info */}
-        <div className="mt-6 grid sm:grid-cols-4 gap-4">
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="w-4 h-4 text-yellow-400" />
-              <p className="font-medium text-white">Card</p>
+        {/* Security Info */}
+        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+          <div className="flex items-start gap-3">
+            <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-blue-400 font-medium mb-1">Bank-Grade Security</p>
+              <p className="text-sm text-gray-400">
+                All deposits processed through Circle, a licensed money transmitter with
+                $100B+ in transaction volume. Your funds are converted to USDC and held
+                in our fully-backed treasury. GRAIN only appreciates.
+              </p>
             </div>
-            <p className="text-sm text-gray-400">
-              Instant deposit. 2.9% + $0.30 fee. Visa, Mastercard, Amex accepted.
-            </p>
-          </div>
-          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-            <div className="flex items-center gap-2 mb-2">
-              <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
-                <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.3"/>
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
-              </svg>
-              <p className="font-medium text-white">Base Pay</p>
-            </div>
-            <p className="text-sm text-gray-400">
-              Instant. Zero fees. Pay with USDC from your Base wallet.
-            </p>
-          </div>
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-purple-400" />
-              <p className="font-medium text-white">ACH</p>
-            </div>
-            <p className="text-sm text-gray-400">
-              1-3 business days. 0.5% fee (max $5). US bank accounts only.
-            </p>
-          </div>
-          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-            <div className="flex items-center gap-2 mb-2">
-              <Wallet className="w-4 h-4 text-blue-400" />
-              <p className="font-medium text-white">Crypto</p>
-            </div>
-            <p className="text-sm text-gray-400">
-              Instant. No fee. Send USDC on Base network directly.
-            </p>
           </div>
         </div>
       </main>
+    </div>
+  )
+}
+
+// Instruction Row Component
+function InstructionRow({
+  label,
+  value,
+  onCopy,
+  copied,
+  highlight = false
+}: {
+  label: string
+  value: string
+  onCopy: () => void
+  copied: boolean
+  highlight?: boolean
+}) {
+  return (
+    <div className={`p-3 rounded-lg ${highlight ? 'bg-green-500/10 border border-green-500/20' : 'bg-white/5'}`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-gray-500 mb-1">{label}</p>
+          <p className={`font-mono ${highlight ? 'text-green-400 font-bold' : 'text-white'}`}>
+            {value}
+          </p>
+        </div>
+        <button
+          onClick={onCopy}
+          className={`p-2 rounded-lg transition-colors ${
+            copied ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400 hover:text-white'
+          }`}
+        >
+          {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+        </button>
+      </div>
     </div>
   )
 }
