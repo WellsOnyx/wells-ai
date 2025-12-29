@@ -851,6 +851,280 @@ function parseJson(value: unknown): unknown {
 }
 
 // ============================================================================
+// COMPETITION-AWARE PRICING
+// ============================================================================
+
+export interface CompetitionContext {
+  competitorCount: number;
+  estimatedCompetitorPrices: number[];
+  marketPosition: 'premium' | 'competitive' | 'budget';
+  urgencyLevel: 'low' | 'medium' | 'high';
+  buyerHistory?: {
+    previousOrders: number;
+    averageOrderValue: number;
+    paymentHistory: 'excellent' | 'good' | 'poor';
+  };
+}
+
+/**
+ * Calculate competitive price adjustments
+ * Factors in market position, buyer history, and estimated competition
+ */
+export async function calculateCompetitivePrice(
+  basePrice: number,
+  rfq: RFQRequest,
+  config: SellerAIConfig,
+  competitionContext?: CompetitionContext
+): Promise<{
+  adjustedPrice: number;
+  adjustment: number;
+  adjustmentReason: string;
+  competitiveScore: number;
+}> {
+  const { pricingStrategy } = config;
+  let adjustment = 0;
+  const adjustmentReasons: string[] = [];
+
+  // Default competition context if not provided
+  const competition = competitionContext || await estimateCompetition(rfq);
+
+  // Competition-based adjustment
+  if (competition.competitorCount > 5) {
+    // Highly competitive - need to be aggressive
+    const targetPosition = competition.marketPosition === 'budget' ? 0.85 : 0.92;
+    const avgCompetitorPrice = competition.estimatedCompetitorPrices.length > 0
+      ? competition.estimatedCompetitorPrices.reduce((a, b) => a + b, 0) / competition.estimatedCompetitorPrices.length
+      : basePrice;
+
+    if (basePrice > avgCompetitorPrice * targetPosition) {
+      adjustment -= Math.min(0.15, (basePrice - avgCompetitorPrice * targetPosition) / basePrice);
+      adjustmentReasons.push(`Competitive pressure (${competition.competitorCount} competitors)`);
+    }
+  } else if (competition.competitorCount <= 2) {
+    // Low competition - can maintain or increase price
+    if (rfq.urgency === 'critical') {
+      adjustment += pricingStrategy.urgencyPremium / 100;
+      adjustmentReasons.push('Limited competition + urgent need');
+    }
+  }
+
+  // Buyer loyalty adjustment
+  if (competition.buyerHistory) {
+    if (competition.buyerHistory.previousOrders >= 5) {
+      adjustment -= pricingStrategy.repeatCustomerDiscount / 100;
+      adjustmentReasons.push(`Repeat customer discount (${competition.buyerHistory.previousOrders} previous orders)`);
+    } else if (competition.buyerHistory.previousOrders === 0) {
+      adjustment -= pricingStrategy.firstOrderDiscount / 100;
+      adjustmentReasons.push('First order discount');
+    }
+  }
+
+  // Buyer target price anchoring
+  if (rfq.targetPrice && rfq.targetPrice < basePrice) {
+    const targetGap = (basePrice - rfq.targetPrice) / basePrice;
+    // Try to get closer to target while protecting margin
+    const maxAdjust = (pricingStrategy.targetMargin - pricingStrategy.minMargin) / 100;
+    const targetAdjust = Math.min(targetGap * 0.5, maxAdjust);
+    adjustment -= targetAdjust;
+    adjustmentReasons.push(`Anchored toward buyer target ($${rfq.targetPrice})`);
+  }
+
+  // Calculate final adjusted price
+  const adjustedPrice = basePrice * (1 + adjustment);
+
+  // Ensure minimum margin is protected
+  const costPrice = basePrice * (1 - pricingStrategy.targetMargin / 100);
+  const minPrice = costPrice / (1 - pricingStrategy.minMargin / 100);
+  const finalPrice = Math.max(adjustedPrice, minPrice);
+  const finalAdjustment = (finalPrice - basePrice) / basePrice;
+
+  // Calculate competitive score (0-100)
+  const competitiveScore = calculateCompetitiveScore(finalPrice, competition, rfq);
+
+  return {
+    adjustedPrice: finalPrice,
+    adjustment: finalAdjustment,
+    adjustmentReason: adjustmentReasons.join('; ') || 'Standard pricing',
+    competitiveScore,
+  };
+}
+
+/**
+ * Estimate competition for an RFQ
+ */
+async function estimateCompetition(rfq: RFQRequest): Promise<CompetitionContext> {
+  // Check how many other sellers might be quoting
+  const result = await sql`
+    SELECT COUNT(DISTINCT seller_id) as count
+    FROM seller_catalog
+    WHERE category = ${rfq.category || 'General'}
+    AND is_active = true
+  `;
+
+  const competitorCount = parseInt(result.rows[0]?.count as string) || 3;
+
+  // Check buyer history
+  const buyerResult = await sql`
+    SELECT
+      COUNT(*) as order_count,
+      COALESCE(AVG(total), 0) as avg_value
+    FROM seller_quotes
+    WHERE status = 'accepted'
+    LIMIT 1
+  `;
+
+  const buyerHistory = buyerResult.rows.length > 0 && parseInt(buyerResult.rows[0]?.order_count as string) > 0
+    ? {
+        previousOrders: parseInt(buyerResult.rows[0].order_count as string),
+        averageOrderValue: parseFloat(buyerResult.rows[0].avg_value as string) || 0,
+        paymentHistory: 'good' as const,
+      }
+    : undefined;
+
+  return {
+    competitorCount,
+    estimatedCompetitorPrices: [], // Would need market data integration
+    marketPosition: 'competitive',
+    urgencyLevel: rfq.urgency === 'critical' ? 'high' : rfq.urgency === 'urgent' ? 'medium' : 'low',
+    buyerHistory,
+  };
+}
+
+/**
+ * Calculate how competitive a price is (0-100)
+ */
+function calculateCompetitiveScore(
+  price: number,
+  competition: CompetitionContext,
+  rfq: RFQRequest
+): number {
+  let score = 50; // Base score
+
+  // Compare to target price if available
+  if (rfq.targetPrice) {
+    const priceDiff = (price - rfq.targetPrice) / rfq.targetPrice;
+    if (priceDiff <= 0) {
+      score += 30; // At or below target
+    } else if (priceDiff <= 0.1) {
+      score += 20; // Within 10% of target
+    } else if (priceDiff <= 0.2) {
+      score += 10; // Within 20% of target
+    } else {
+      score -= 10; // More than 20% above target
+    }
+  }
+
+  // Compare to competitor prices if available
+  if (competition.estimatedCompetitorPrices.length > 0) {
+    const avgCompetitor = competition.estimatedCompetitorPrices.reduce((a, b) => a + b, 0) /
+      competition.estimatedCompetitorPrices.length;
+    const compDiff = (price - avgCompetitor) / avgCompetitor;
+
+    if (compDiff <= -0.1) {
+      score += 20; // 10%+ below competition
+    } else if (compDiff <= 0) {
+      score += 10; // Below competition
+    } else if (compDiff > 0.1) {
+      score -= 15; // 10%+ above competition
+    }
+  }
+
+  // Adjust for competition level
+  if (competition.competitorCount > 5) {
+    score -= 10; // Tough market
+  } else if (competition.competitorCount <= 2) {
+    score += 10; // Low competition
+  }
+
+  // Buyer relationship bonus
+  if (competition.buyerHistory && competition.buyerHistory.previousOrders > 0) {
+    score += Math.min(10, competition.buyerHistory.previousOrders * 2);
+  }
+
+  return Math.max(0, Math.min(100, score));
+}
+
+/**
+ * Get market insights for a product category
+ */
+export async function getMarketInsights(
+  sellerId: string,
+  category: string
+): Promise<{
+  avgMarketPrice: number;
+  priceRange: { min: number; max: number };
+  competitorCount: number;
+  marketTrend: 'up' | 'stable' | 'down';
+  recentWinRate: number;
+  recommendations: string[];
+}> {
+  // Get seller's pricing in category
+  const sellerResult = await sql`
+    SELECT AVG((pricing->>'basePrice')::numeric) as avg_price
+    FROM seller_catalog
+    WHERE seller_id = ${sellerId}
+    AND category = ${category}
+    AND is_active = true
+  `;
+
+  // Get market pricing (all sellers)
+  const marketResult = await sql`
+    SELECT
+      AVG((pricing->>'basePrice')::numeric) as avg_price,
+      MIN((pricing->>'basePrice')::numeric) as min_price,
+      MAX((pricing->>'basePrice')::numeric) as max_price,
+      COUNT(DISTINCT seller_id) as competitor_count
+    FROM seller_catalog
+    WHERE category = ${category}
+    AND is_active = true
+  `;
+
+  // Get recent win rate
+  const winRateResult = await sql`
+    SELECT
+      COUNT(*) FILTER (WHERE status = 'accepted') * 100.0 / NULLIF(COUNT(*), 0) as win_rate
+    FROM seller_quotes
+    WHERE seller_id = ${sellerId}
+    AND created_at > NOW() - INTERVAL '30 days'
+  `;
+
+  const sellerAvgPrice = parseFloat(sellerResult.rows[0]?.avg_price as string) || 0;
+  const marketAvgPrice = parseFloat(marketResult.rows[0]?.avg_price as string) || 0;
+  const minPrice = parseFloat(marketResult.rows[0]?.min_price as string) || 0;
+  const maxPrice = parseFloat(marketResult.rows[0]?.max_price as string) || 0;
+  const competitorCount = parseInt(marketResult.rows[0]?.competitor_count as string) || 0;
+  const winRate = parseFloat(winRateResult.rows[0]?.win_rate as string) || 0;
+
+  const recommendations: string[] = [];
+
+  // Generate recommendations
+  if (sellerAvgPrice > marketAvgPrice * 1.2) {
+    recommendations.push(`Your prices are ${Math.round((sellerAvgPrice / marketAvgPrice - 1) * 100)}% above market average - consider adjusting for competitiveness`);
+  } else if (sellerAvgPrice < marketAvgPrice * 0.8) {
+    recommendations.push(`Your prices are ${Math.round((1 - sellerAvgPrice / marketAvgPrice) * 100)}% below market - you may have room to increase margins`);
+  }
+
+  if (winRate < 20) {
+    recommendations.push('Your win rate is below 20% - consider more aggressive pricing or faster response times');
+  } else if (winRate > 60) {
+    recommendations.push('Your high win rate suggests you might be able to increase prices slightly');
+  }
+
+  if (competitorCount > 10) {
+    recommendations.push('This is a highly competitive category - focus on differentiation and fast response times');
+  }
+
+  return {
+    avgMarketPrice: marketAvgPrice,
+    priceRange: { min: minPrice, max: maxPrice },
+    competitorCount,
+    marketTrend: 'stable', // Would need historical data
+    recentWinRate: winRate,
+    recommendations,
+  };
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -861,6 +1135,8 @@ export const QuoteGenerator = {
   counterQuote,
   getQuote,
   getSellerQuotes,
+  calculateCompetitivePrice,
+  getMarketInsights,
 };
 
 export default QuoteGenerator;

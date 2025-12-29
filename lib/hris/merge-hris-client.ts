@@ -1438,6 +1438,421 @@ function mapRowToApplication(row: Record<string, unknown>): CandidateApplication
   };
 }
 
+// ============================================================================
+// MERGEHRIS CLIENT CLASS
+// Object-oriented interface for HRIS operations
+// ============================================================================
+
+export interface JobSearchParams {
+  status?: MergeJobPosting['status'];
+  search?: string;
+  skills?: string[];
+  location?: string;
+  locationType?: 'remote' | 'onsite' | 'hybrid';
+  salaryMin?: number;
+  salaryMax?: number;
+  department?: string;
+  experienceLevel?: string;
+  employerId?: string;
+  connectionId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ApplicationInput {
+  candidateId: string;
+  coverLetter?: string;
+  resumeUrl?: string;
+}
+
+export interface ApplicationResult {
+  success: boolean;
+  message: string;
+  applicationId?: string;
+  remoteId?: string;
+  status?: ApplicationStage;
+}
+
+export interface CandidateProfileInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  resumeUrl?: string;
+  resumeText?: string;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
+  currentTitle?: string;
+  currentCompany?: string;
+  locations?: string[];
+  timezone?: string;
+  skills?: string[];
+  yearsExperience?: number;
+  workerProfileId?: string;
+  userId: string;
+}
+
+/**
+ * MergeHRISClient - Object-oriented interface for HRIS operations
+ *
+ * Provides a class-based interface for interacting with HRIS systems via Merge.dev.
+ * Use this for job seeker operations like listing jobs, submitting applications,
+ * and managing candidate profiles.
+ */
+export class MergeHRISClient {
+  private accountToken?: string;
+  private connectionId?: string;
+
+  constructor(accountToken?: string, connectionId?: string) {
+    this.accountToken = accountToken;
+    this.connectionId = connectionId;
+  }
+
+  /**
+   * Set account token for API calls
+   */
+  setAccountToken(token: string): void {
+    this.accountToken = token;
+  }
+
+  /**
+   * Set connection ID for database operations
+   */
+  setConnectionId(id: string): void {
+    this.connectionId = id;
+  }
+
+  // ==========================================================================
+  // JOB LISTINGS
+  // ==========================================================================
+
+  /**
+   * List jobs from connected HRIS systems
+   */
+  async listJobs(params?: JobSearchParams): Promise<MergeJobPosting[]> {
+    const result = await getJobPostings({
+      connectionId: params?.connectionId || this.connectionId,
+      employerId: params?.employerId,
+      status: params?.status,
+      search: params?.search,
+      skills: params?.skills,
+      location: params?.location,
+      locationType: params?.locationType,
+      salaryMin: params?.salaryMin,
+      limit: params?.limit,
+      offset: params?.offset,
+    });
+
+    return result.jobs;
+  }
+
+  /**
+   * Get a specific job by ID
+   */
+  async getJob(jobId: string): Promise<MergeJobPosting | null> {
+    const result = await query(
+      `SELECT * FROM hris_job_postings WHERE id = $1 OR remote_id = $1`,
+      [jobId]
+    );
+
+    if (result.rows.length === 0) return null;
+    return mapRowToJobPosting(result.rows[0]);
+  }
+
+  // ==========================================================================
+  // APPLICATIONS
+  // ==========================================================================
+
+  /**
+   * Submit an application to a job
+   */
+  async submitApplication(
+    jobId: string,
+    application: ApplicationInput
+  ): Promise<ApplicationResult> {
+    const result = await submitApplication(
+      application.candidateId,
+      jobId,
+      application.coverLetter
+    );
+
+    return {
+      success: result.success,
+      message: result.message,
+      applicationId: result.applicationId,
+      status: 'applied',
+    };
+  }
+
+  /**
+   * List applications for a candidate or user
+   */
+  async listApplications(
+    candidateId?: string
+  ): Promise<Array<CandidateApplication & { job: MergeJobPosting }>> {
+    if (!candidateId) {
+      // Return empty if no candidate specified
+      return [];
+    }
+
+    // Get candidate's user ID first
+    const candidateResult = await query(
+      `SELECT user_id FROM hris_candidates WHERE id = $1`,
+      [candidateId]
+    );
+
+    if (candidateResult.rows.length === 0) {
+      return [];
+    }
+
+    const userId = candidateResult.rows[0].user_id;
+    const result = await getCandidateApplications(userId);
+    return result.applications;
+  }
+
+  /**
+   * Get application status
+   */
+  async getApplicationStatus(applicationId: string): Promise<{
+    status: ApplicationStage;
+    message: string;
+    application?: CandidateApplication;
+  }> {
+    const result = await query(
+      `SELECT a.*, j.title as job_title, j.employer_name
+       FROM hris_applications a
+       JOIN hris_job_postings j ON a.job_posting_id = j.id
+       WHERE a.id = $1`,
+      [applicationId]
+    );
+
+    if (result.rows.length === 0) {
+      return {
+        status: 'withdrawn',
+        message: "I couldn't find that application.",
+      };
+    }
+
+    const app = result.rows[0];
+    const application = mapRowToApplication(app);
+
+    const statusMessages: Record<ApplicationStage, string> = {
+      applied: `Your application to ${app.job_title} at ${app.employer_name} is submitted.`,
+      screening: `${app.employer_name} is reviewing your application for ${app.job_title}.`,
+      phone_screen: `${app.employer_name} wants to schedule a phone screen!`,
+      interview: `You have an interview scheduled for ${app.job_title}!`,
+      final_interview: `Final interview stage! You're close.`,
+      offer: `${app.employer_name} made you an offer!`,
+      offer_accepted: `Congratulations! You've accepted the offer!`,
+      hired: `You're officially hired at ${app.employer_name}!`,
+      rejected: `${app.employer_name} decided to go another direction.`,
+      withdrawn: `Application was withdrawn.`,
+    };
+
+    return {
+      status: application.status,
+      message: statusMessages[application.status],
+      application,
+    };
+  }
+
+  // ==========================================================================
+  // CANDIDATES
+  // ==========================================================================
+
+  /**
+   * Create a candidate in the HRIS
+   */
+  async createCandidate(
+    candidate: CandidateProfileInput
+  ): Promise<MergeCandidate | null> {
+    if (!this.connectionId) {
+      console.error('Connection ID required to create candidate');
+      return null;
+    }
+
+    const result = await createCandidate(this.connectionId, {
+      firstName: candidate.firstName,
+      lastName: candidate.lastName,
+      email: candidate.email,
+      phone: candidate.phone,
+      resumeUrl: candidate.resumeUrl,
+      resumeText: candidate.resumeText,
+      workerProfileId: candidate.workerProfileId || '',
+      userId: candidate.userId,
+    });
+
+    if (!result.success || !result.candidateId) {
+      return null;
+    }
+
+    return {
+      id: result.candidateId,
+      remoteId: result.remoteId,
+      firstName: candidate.firstName,
+      lastName: candidate.lastName,
+      email: candidate.email,
+      phone: candidate.phone,
+      resumeUrl: candidate.resumeUrl,
+      resumeText: candidate.resumeText,
+      locations: candidate.locations,
+      timezone: candidate.timezone,
+      workerProfileId: candidate.workerProfileId || '',
+      userId: candidate.userId,
+      applications: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Update a candidate's profile
+   */
+  async updateCandidate(
+    candidateId: string,
+    updates: Partial<CandidateProfileInput>
+  ): Promise<MergeCandidate | null> {
+    try {
+      const result = await query(
+        `UPDATE hris_candidates SET
+          first_name = COALESCE($1, first_name),
+          last_name = COALESCE($2, last_name),
+          email = COALESCE($3, email),
+          phone = COALESCE($4, phone),
+          resume_url = COALESCE($5, resume_url),
+          resume_text = COALESCE($6, resume_text),
+          updated_at = NOW()
+        WHERE id = $7
+        RETURNING *`,
+        [
+          updates.firstName,
+          updates.lastName,
+          updates.email,
+          updates.phone,
+          updates.resumeUrl,
+          updates.resumeText,
+          candidateId,
+        ]
+      );
+
+      if (result.rows.length === 0) return null;
+
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        remoteId: row.remote_id,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        email: row.email,
+        phone: row.phone,
+        resumeUrl: row.resume_url,
+        resumeText: row.resume_text,
+        workerProfileId: row.worker_profile_id,
+        userId: row.user_id,
+        applications: [],
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at),
+      };
+    } catch (error) {
+      console.error('Error updating candidate:', error);
+      return null;
+    }
+  }
+
+  // ==========================================================================
+  // STATIC FACTORY METHODS
+  // ==========================================================================
+
+  /**
+   * Generate a link token for OAuth connection
+   */
+  static async generateLinkToken(
+    employerId: string,
+    employerName: string,
+    email?: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    linkToken?: string;
+    magicLinkUrl?: string;
+  }> {
+    return generateLinkToken(employerId, employerName);
+  }
+
+  /**
+   * Exchange public token for account token after OAuth
+   */
+  static async exchangeToken(
+    publicToken: string,
+    employerId: string,
+    employerName: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    connection?: HRISConnection;
+  }> {
+    return exchangeToken(publicToken, employerId, employerName);
+  }
+
+  /**
+   * Get connection by ID
+   */
+  static async getConnection(connectionId: string): Promise<HRISConnection | null> {
+    return getConnection(connectionId);
+  }
+
+  /**
+   * Sync job postings from HRIS
+   */
+  async syncJobPostings(): Promise<{
+    success: boolean;
+    message: string;
+    jobCount: number;
+    newJobs: number;
+  }> {
+    if (!this.connectionId) {
+      return {
+        success: false,
+        message: "Connection not configured for syncing.",
+        jobCount: 0,
+        newJobs: 0,
+      };
+    }
+
+    return syncJobPostings(this.connectionId);
+  }
+}
+
+// ============================================================================
+// FACTORY FUNCTIONS
+// ============================================================================
+
+/**
+ * Create an HRIS client for a specific connection
+ */
+export function createHRISClient(
+  accountToken?: string,
+  connectionId?: string
+): MergeHRISClient {
+  return new MergeHRISClient(accountToken, connectionId);
+}
+
+/**
+ * Create an HRIS client from a connection ID (auto-loads account token)
+ */
+export async function createHRISClientFromConnection(
+  connectionId: string
+): Promise<MergeHRISClient | null> {
+  const connection = await getConnection(connectionId);
+  if (!connection) return null;
+
+  return new MergeHRISClient(connection.accountToken, connectionId);
+}
+
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
 export default {
   // Connection
   generateLinkToken,
@@ -1461,4 +1876,9 @@ export default {
   submitCounterOffer,
   acceptOffer,
   rejectOffer,
+
+  // Class
+  MergeHRISClient,
+  createHRISClient,
+  createHRISClientFromConnection,
 };

@@ -1,7 +1,18 @@
 // @ts-nocheck
 /**
- * Unified Chat API
- * Handles chat requests from both Wells AI and Grain & Vault
+ * Unified Chat API v2.0
+ *
+ * The NEW unified chat endpoint that uses the Unified Orchestrator.
+ * This makes WellsAI feel like ONE intelligent assistant that handles anything.
+ *
+ * Features:
+ * - Routes messages to correct handler (RFQ, Jobs, Payments, Negotiation, Seller, Founder, ERP)
+ * - Handles multi-intent messages ("Find suppliers AND start negotiations")
+ * - Maintains conversation context across journey switches
+ * - Provides fallback handling for unclear intents
+ * - Supports journey-specific personality adjustments
+ * - Coordinates cross-handler operations (e.g., payment after RFQ acceptance)
+ * - Tracks user preferences and autonomy levels
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -29,6 +40,11 @@ import {
   getCreditLine,
   getTransactions,
 } from '@/lib/treasury-db'
+import {
+  getUnifiedOrchestrator,
+  UnifiedOrchestratorResponse,
+  JourneyType,
+} from '@/lib/chat/unified-orchestrator'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -66,6 +82,17 @@ export async function POST(request: NextRequest) {
     // Get user auth (optional for anonymous)
     const { userId } = await auth().catch(() => ({ userId: null }))
 
+    // Check for orchestrated mode (v2.0)
+    const { searchParams } = new URL(request.url)
+    const useOrchestrator = searchParams.get('orchestrated') === 'true' || searchParams.get('v2') === 'true'
+
+    if (useOrchestrator && userId) {
+      // Use the new Unified Orchestrator
+      const body = await request.json()
+      return handleOrchestratedMessage(userId, body)
+    }
+
+    // Legacy path - original unified chat handler
     const body = await request.json() as UnifiedChatRequest
     const { messages, product, journey, conversationId, treasuryContext, masterKey } = body
 
@@ -267,8 +294,68 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
+    const action = searchParams.get('action')
     const conversationId = searchParams.get('conversationId')
     const product = searchParams.get('product') as ProductType | null
+
+    // NEW v2.0 actions
+    if (action) {
+      const orchestrator = getUnifiedOrchestrator()
+
+      switch (action) {
+        case 'digest':
+          const digest = await orchestrator.generateDailyDigest(userId)
+          return NextResponse.json({ success: true, data: digest })
+
+        case 'preferences':
+          const preferences = await orchestrator.getPreferences(userId)
+          return NextResponse.json({ success: true, data: preferences })
+
+        case 'status':
+          return NextResponse.json({
+            success: true,
+            data: {
+              service: 'wells-ai-unified-chat',
+              version: '2.0.0',
+              features: [
+                'multi-intent-handling',
+                'cross-journey-context',
+                'autonomous-actions',
+                'daily-digests',
+                'personality-adjustment',
+                'cross-handler-operations',
+              ],
+              handlers: [
+                'rfq',
+                'jobs',
+                'payments',
+                'negotiation',
+                'seller',
+                'founder',
+                'erp',
+                'inbox',
+                'universal',
+              ],
+            },
+          })
+
+        case 'help':
+          return NextResponse.json({
+            success: true,
+            data: {
+              message: 'Wells AI Unified Chat API v2.0',
+              endpoints: {
+                'POST /?orchestrated=true': 'Send a message using the Unified Orchestrator (v2.0)',
+                'POST /': 'Legacy chat endpoint',
+                'GET /?action=digest': 'Get daily digest across all journeys',
+                'GET /?action=preferences': 'Get user preferences',
+                'GET /?action=status': 'Get API status',
+                'PUT /': 'Update user preferences',
+              },
+            },
+          })
+      }
+    }
 
     if (conversationId) {
       // Get specific conversation with messages
@@ -412,6 +499,119 @@ function getToolsForContext(product: ProductType, journey?: string): Anthropic.T
 }
 
 // ============================================================================
+// PUT - UPDATE USER PREFERENCES (NEW v2.0)
+// ============================================================================
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const orchestrator = getUnifiedOrchestrator()
+
+    await orchestrator.updatePreferences(userId, body)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Preferences updated',
+    })
+
+  } catch (error) {
+    console.error('[Unified Chat API] PUT Error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// ============================================================================
+// NEW V2 ORCHESTRATED HANDLER
+// ============================================================================
+
+/**
+ * NEW: Orchestrated message handler using the Unified Orchestrator
+ * Use ?orchestrated=true query param to enable
+ */
+async function handleOrchestratedMessage(
+  userId: string,
+  body: {
+    message: string
+    sessionId?: string
+    journey?: JourneyType
+    previousMessages?: Array<{ role: string; content: string }>
+    options?: {
+      enableAutonomousActions?: boolean
+      maxAutonomousAmount?: number
+      communicationStyle?: 'formal' | 'casual' | 'direct' | 'detailed'
+      forceHandler?: JourneyType
+    }
+  }
+): Promise<NextResponse> {
+  try {
+    if (!body.message || typeof body.message !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Message is required' },
+        { status: 400 }
+      )
+    }
+
+    // Generate session ID if not provided
+    const sessionId = body.sessionId || `session_${userId}_${Date.now()}`
+
+    // Get orchestrator instance with optional config
+    const orchestrator = getUnifiedOrchestrator({
+      enableAutonomousActions: body.options?.enableAutonomousActions,
+      maxAutonomousAmount: body.options?.maxAutonomousAmount,
+      communicationStyle: body.options?.communicationStyle,
+    })
+
+    // Handle the message through the unified orchestrator
+    const response = await orchestrator.handleMessage(
+      userId,
+      body.message,
+      sessionId,
+      {
+        journey: body.journey,
+        previousMessages: body.previousMessages,
+        forceHandler: body.options?.forceHandler,
+      }
+    )
+
+    return NextResponse.json({
+      success: true,
+      // Map to standard response format
+      message: response.message,
+      conversationId: sessionId,
+      // Include rich response data
+      actions: response.actions,
+      suggestions: response.suggestions,
+      quickActions: response.quickActions,
+      displayData: response.displayData,
+      crossHandlerNotices: response.crossHandlerNotices,
+      journeyContext: response.journeyContext,
+      metadata: response.metadata,
+    })
+
+  } catch (error) {
+    console.error('[Orchestrated Handler] Error:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error',
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// ============================================================================
 // OPTIONS - CORS
 // ============================================================================
 
@@ -420,7 +620,7 @@ export async function OPTIONS() {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
     },

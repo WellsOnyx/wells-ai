@@ -7,12 +7,59 @@
  */
 
 // ============================================================================
+// MASTER ORCHESTRATOR
+// ============================================================================
+
+// Wells Orchestrator - The master brain that makes everything conversational
+export {
+  WellsOrchestrator,
+  getWellsOrchestrator,
+  type WellsResponse,
+  type ExecutedAction,
+  type QuickAction,
+  type OrchestratorConfig,
+} from './wells-orchestrator'
+
+// ============================================================================
+// UNIFIED ORCHESTRATOR v2.0
+// ============================================================================
+
+// Unified Orchestrator - The NEW master orchestrator for ALL handlers
+export {
+  UnifiedOrchestrator,
+  getUnifiedOrchestrator,
+  type UnifiedOrchestratorResponse,
+  type ExecutedAction as UnifiedExecutedAction,
+  type QuickAction as UnifiedQuickAction,
+  type CrossHandlerNotice,
+  type UnifiedOrchestratorConfig,
+  type JourneyType,
+} from './unified-orchestrator'
+
+// Cross-Journey Context Manager
+export {
+  CrossJourneyContextManager,
+  getCrossJourneyContextManager,
+  type JourneyContext,
+  type JourneySwitch,
+  type JourneyState,
+  type SharedContext,
+  type UnifiedUserPreferences,
+  type CrossHandlerOperation,
+  type DailyDigest,
+  type DailyDigestSection,
+  type DigestActionItem,
+  type DigestHighlight,
+} from './context-manager'
+
+// ============================================================================
 // CORE ROUTER COMPONENTS
 // ============================================================================
 
 // Intent Router - Classifies user messages and routes to handlers
 export {
   classifyIntent,
+  classifyMultipleIntents,
   routeIntent,
   type IntentClassification,
   type RouteResult,
@@ -22,6 +69,9 @@ export {
   type FounderIntent,
   type JobSeekerIntent,
   type TreasuryIntent,
+  type NegotiationIntent,
+  type ERPIntent,
+  type InboxIntent,
   type UniversalIntent,
   type Intent,
   type ExtractedEntities,
@@ -149,6 +199,57 @@ export {
   getGrainStatus,
   getPaymentHistory,
 } from './tools/payment-tools'
+
+// Negotiation Tools
+export {
+  negotiationTools,
+  startNegotiation,
+  sendCounterOffer,
+  getNegotiationStatus,
+  acceptOffer as acceptNegotiationOffer,
+  rejectNegotiation,
+  setNegotiationLimits,
+} from './tools/negotiation-tools'
+
+// Scheduling Tools
+export {
+  schedulingTools,
+  scheduleMeeting,
+  checkAvailability,
+  getUpcomingMeetings,
+  rescheduleMeeting,
+  cancelMeeting,
+  sendMeetingReminder,
+  findMutualAvailability,
+} from './tools/scheduling-tools'
+
+// ============================================================================
+// INTENT HANDLERS
+// ============================================================================
+
+// Negotiation Handler - Conversational negotiation handling
+export {
+  negotiationHandler,
+  handleNegotiation,
+  startNegotiation as startConversationalNegotiation,
+  checkNegotiationStatus as checkConversationalNegotiationStatus,
+  setNegotiationConstraints,
+  makeCounterOffer,
+  acceptNegotiationOffer as acceptConversationalOffer,
+  rejectNegotiationOffer as rejectConversationalOffer,
+  enableAutonomousNegotiation,
+  getNegotiationStrategy,
+  reviewCurrentOffer,
+  approvePendingAction,
+  rejectPendingAction,
+  pauseNegotiation,
+  resumeNegotiation,
+  type NegotiationHandlerParams,
+  type NegotiationHandlerResult,
+} from './handlers/negotiation-handler'
+
+// All handlers
+export { handlers } from './handlers'
 
 // ============================================================================
 // SUPPORTING MODULES

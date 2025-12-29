@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs'
+import { auth } from '@clerk/nextjs/server'
 import { query } from '@/lib/db'
 import { markInsightActedUpon, dismissInsight } from '@/lib/companion/insight-engine'
 import { recordTrustEvent } from '@/lib/companion/trust-builder'

@@ -103,6 +103,15 @@ export {
 } from './financial-overview'
 
 // ============================================================================
+// CHAT TOOLS FOR CLAUDE INTEGRATION
+// ============================================================================
+export {
+  WELLS_ERP_TOOLS,
+  WELLS_ERP_SYSTEM_PROMPT,
+  formatToolResultForChat,
+} from './chat-tools'
+
+// ============================================================================
 // UNIFIED CONVERSATIONAL PARSER
 // ============================================================================
 

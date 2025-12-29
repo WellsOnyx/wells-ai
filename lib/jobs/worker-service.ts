@@ -2122,3 +2122,597 @@ function mapRowToEarnings(row: any): WorkerEarnings {
     updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
   };
 }
+
+// =====================================================
+// JOB MATCHING AND APPLICATION TYPES
+// =====================================================
+
+export interface JobMatch {
+  job: {
+    id: string;
+    title: string;
+    description?: string;
+    company: string;
+    location?: string;
+    locationType?: 'remote' | 'onsite' | 'hybrid';
+    salary?: {
+      min?: number;
+      max?: number;
+      currency: string;
+      period: 'hourly' | 'annual';
+    };
+    skills?: string[];
+    benefits?: string[];
+    connectionId: string;
+  };
+  matchScore: number; // 0-100
+  matchReasons: string[];
+  skillMatches: string[];
+  skillGaps: string[];
+  salaryMatch: boolean;
+  locationMatch: boolean;
+  remoteMatch: boolean;
+}
+
+export interface JobApplication {
+  id: string;
+  workerId: string;
+  jobId: string;
+  status: 'applied' | 'screening' | 'phone_screen' | 'interview' | 'final_interview' | 'offer' | 'offer_accepted' | 'hired' | 'rejected' | 'withdrawn';
+  coverLetter?: string;
+  resumeUrl?: string;
+  appliedAt: Date;
+  updatedAt: Date;
+}
+
+export interface InterviewPrep {
+  companyInfo: string;
+  roleOverview: string;
+  keyRequirements: string[];
+  suggestedTalkingPoints: string[];
+  commonQuestions: Array<{
+    question: string;
+    suggestedAnswer: string;
+    tips: string;
+  }>;
+  questionsToAsk: string[];
+  salaryNegotiationTips?: string;
+  dressCode?: string;
+  interviewFormat?: string;
+}
+
+// =====================================================
+// WORKERSERVICE CLASS
+// Object-oriented interface for job seeker operations
+// =====================================================
+
+/**
+ * WorkerService - Centralized service for job seeker operations
+ *
+ * Provides comprehensive job seeker functionality:
+ * - Profile management
+ * - Job matching with AI scoring
+ * - Application submission
+ * - AI-powered resume generation
+ * - Interview preparation
+ */
+export class WorkerService {
+  // ==========================================================================
+  // PROFILE MANAGEMENT
+  // ==========================================================================
+
+  /**
+   * Create a new worker profile
+   */
+  async createProfile(
+    userId: string,
+    profile: Partial<WorkerProfile>
+  ): Promise<WorkerProfile> {
+    const result = await createWorkerProfile(userId, profile);
+    if (!result.success || !result.profile) {
+      throw new Error(result.message || 'Failed to create profile');
+    }
+    return result.profile;
+  }
+
+  /**
+   * Update an existing worker profile
+   */
+  async updateProfile(
+    workerId: string,
+    updates: Partial<WorkerProfile>
+  ): Promise<WorkerProfile> {
+    const result = await updateWorkerProfile(workerId, updates);
+    if (!result.success || !result.profile) {
+      throw new Error(result.message || 'Failed to update profile');
+    }
+    return result.profile;
+  }
+
+  /**
+   * Get a worker profile by ID
+   */
+  async getProfile(workerId: string): Promise<WorkerProfile | null> {
+    return getWorkerProfile(workerId);
+  }
+
+  /**
+   * Get a worker profile by user ID
+   */
+  async getProfileByUserId(userId: string): Promise<WorkerProfile | null> {
+    const result = await getWorkerProfileByUserId(userId);
+    return result.profile || null;
+  }
+
+  // ==========================================================================
+  // JOB MATCHING
+  // ==========================================================================
+
+  /**
+   * Find matching jobs for a worker
+   */
+  async findMatchingJobs(workerId: string): Promise<JobMatch[]> {
+    const worker = await getWorkerProfile(workerId);
+    if (!worker) {
+      throw new Error('Worker profile not found');
+    }
+
+    // Get all open jobs from HRIS
+    const jobsResult = await sql`
+      SELECT * FROM hris_job_postings
+      WHERE status = 'open'
+      ORDER BY created_at DESC
+      LIMIT 100
+    `;
+
+    const matches: JobMatch[] = [];
+
+    for (const job of jobsResult.rows) {
+      const match = this.calculateJobMatch(worker, job);
+      if (match.matchScore >= 50) { // Only return jobs with 50%+ match
+        matches.push(match);
+      }
+    }
+
+    // Sort by match score
+    matches.sort((a, b) => b.matchScore - a.matchScore);
+
+    return matches.slice(0, 20); // Return top 20 matches
+  }
+
+  /**
+   * Calculate match score between worker and job
+   */
+  private calculateJobMatch(worker: WorkerProfile, job: any): JobMatch {
+    let score = 0;
+    const matchReasons: string[] = [];
+    const skillMatches: string[] = [];
+    const skillGaps: string[] = [];
+
+    const workerSkills = (worker.skills || []).map(s => s.toLowerCase());
+    const jobSkills = (job.skills || []).map((s: string) => s.toLowerCase());
+
+    // Skill matching (40% weight)
+    if (jobSkills.length > 0) {
+      const matchedSkills = workerSkills.filter(ws =>
+        jobSkills.some((js: string) =>
+          js.includes(ws) || ws.includes(js)
+        )
+      );
+      skillMatches.push(...matchedSkills.map(s =>
+        worker.skills?.find(ws => ws.toLowerCase() === s) || s
+      ));
+
+      const missingSkills = jobSkills.filter((js: string) =>
+        !workerSkills.some(ws => js.includes(ws) || ws.includes(js))
+      );
+      skillGaps.push(...missingSkills);
+
+      const skillScore = matchedSkills.length / jobSkills.length;
+      score += skillScore * 40;
+
+      if (skillScore >= 0.7) {
+        matchReasons.push(`Strong skill match: ${matchedSkills.length}/${jobSkills.length} required skills`);
+      } else if (skillScore >= 0.5) {
+        matchReasons.push(`Good skill match: ${matchedSkills.length}/${jobSkills.length} required skills`);
+      }
+    } else {
+      score += 20; // No skills specified, give partial credit
+    }
+
+    // Salary matching (25% weight)
+    let salaryMatch = false;
+    if (job.salary_min && worker.hourlyRateMin) {
+      const workerAnnual = worker.preferredRate
+        ? worker.preferredRate * 2080 // hourly to annual
+        : worker.hourlyRateMin * 2080;
+
+      if (job.salary_period === 'annual') {
+        if (workerAnnual >= job.salary_min * 0.8 && (!job.salary_max || workerAnnual <= job.salary_max * 1.2)) {
+          score += 25;
+          salaryMatch = true;
+          matchReasons.push('Salary range aligns with your expectations');
+        } else if (workerAnnual < job.salary_min) {
+          score += 15; // Partial credit - job pays more
+          matchReasons.push('Job pays above your target range');
+        }
+      }
+    } else {
+      score += 15; // No salary info, partial credit
+    }
+
+    // Location matching (20% weight)
+    let locationMatch = false;
+    let remoteMatch = false;
+
+    if (job.location_type === 'remote' && worker.remoteOnly) {
+      score += 20;
+      locationMatch = true;
+      remoteMatch = true;
+      matchReasons.push('Remote position matches your preference');
+    } else if (job.location_type === 'hybrid' && !worker.remoteOnly) {
+      score += 15;
+      locationMatch = true;
+      matchReasons.push('Hybrid position available');
+    } else if (job.location_type === 'onsite') {
+      if (worker.locations?.length) {
+        const jobLocation = (job.location || '').toLowerCase();
+        const locationMatches = worker.locations.some(l =>
+          jobLocation.includes(l.toLowerCase()) || l.toLowerCase().includes(jobLocation)
+        );
+        if (locationMatches) {
+          score += 20;
+          locationMatch = true;
+          matchReasons.push(`Location matches: ${job.location}`);
+        }
+      }
+    } else if (!job.location_type) {
+      score += 10; // No location info
+    }
+
+    // Experience level matching (15% weight)
+    if (job.experience_level && worker.experienceYears) {
+      const levelYears: Record<string, number> = {
+        'entry': 0,
+        'junior': 1,
+        'mid': 3,
+        'senior': 5,
+        'lead': 7,
+        'principal': 10,
+        'director': 10,
+        'executive': 15
+      };
+
+      const requiredYears = levelYears[job.experience_level.toLowerCase()] || 0;
+      if (worker.experienceYears >= requiredYears) {
+        score += 15;
+        matchReasons.push(`Experience level matches: ${worker.experienceYears} years`);
+      } else if (worker.experienceYears >= requiredYears - 1) {
+        score += 10;
+        matchReasons.push(`Close to required experience level`);
+      }
+    } else {
+      score += 10; // No experience requirement
+    }
+
+    return {
+      job: {
+        id: job.id,
+        title: job.title,
+        description: job.description,
+        company: job.employer_name,
+        location: job.location,
+        locationType: job.location_type,
+        salary: job.salary_min ? {
+          min: job.salary_min,
+          max: job.salary_max,
+          currency: job.salary_currency || 'USD',
+          period: job.salary_period || 'annual'
+        } : undefined,
+        skills: job.skills || [],
+        benefits: job.benefits || [],
+        connectionId: job.connection_id,
+      },
+      matchScore: Math.round(Math.min(100, Math.max(0, score))),
+      matchReasons,
+      skillMatches,
+      skillGaps,
+      salaryMatch,
+      locationMatch,
+      remoteMatch,
+    };
+  }
+
+  /**
+   * Apply to a job
+   */
+  async applyToJob(
+    workerId: string,
+    jobId: string,
+    coverLetter?: string
+  ): Promise<JobApplication> {
+    const worker = await getWorkerProfile(workerId);
+    if (!worker) {
+      throw new Error('Worker profile not found');
+    }
+
+    // Get or create candidate in HRIS
+    const candidateResult = await sql`
+      SELECT c.* FROM hris_candidates c
+      JOIN hris_job_postings j ON c.connection_id = j.connection_id
+      WHERE c.user_id = ${worker.userId} AND j.id = ${jobId}
+      LIMIT 1
+    `;
+
+    let candidateId: string;
+
+    if (candidateResult.rows.length === 0) {
+      // Get job to find connection
+      const jobResult = await sql`
+        SELECT * FROM hris_job_postings WHERE id = ${jobId}
+      `;
+
+      if (jobResult.rows.length === 0) {
+        throw new Error('Job not found');
+      }
+
+      const job = jobResult.rows[0];
+
+      // Create candidate
+      const newCandidateId = `cand_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      await sql`
+        INSERT INTO hris_candidates (
+          id, connection_id, first_name, last_name, email,
+          worker_profile_id, user_id
+        ) VALUES (
+          ${newCandidateId}, ${job.connection_id}, ${worker.displayName.split(' ')[0]},
+          ${worker.displayName.split(' ').slice(1).join(' ') || ''}, ${worker.userId + '@wellsai.com'},
+          ${worker.id}, ${worker.userId}
+        )
+      `;
+
+      candidateId = newCandidateId;
+    } else {
+      candidateId = candidateResult.rows[0].id;
+    }
+
+    // Create application
+    const applicationId = `app_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    await sql`
+      INSERT INTO hris_applications (
+        id, candidate_id, job_posting_id, status, source, cover_letter, applied_at
+      ) VALUES (
+        ${applicationId}, ${candidateId}, ${jobId}, 'applied', 'wells_ai', ${coverLetter || null}, NOW()
+      )
+    `;
+
+    return {
+      id: applicationId,
+      workerId,
+      jobId,
+      status: 'applied',
+      coverLetter,
+      appliedAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
+
+  // ==========================================================================
+  // AI REPRESENTATION
+  // ==========================================================================
+
+  /**
+   * Generate an AI-tailored resume for a specific job
+   */
+  async generateAIResume(workerId: string, jobId: string): Promise<string> {
+    const worker = await getWorkerProfile(workerId);
+    if (!worker) {
+      throw new Error('Worker profile not found');
+    }
+
+    const jobResult = await sql`
+      SELECT * FROM hris_job_postings WHERE id = ${jobId}
+    `;
+
+    if (jobResult.rows.length === 0) {
+      throw new Error('Job not found');
+    }
+
+    const job = jobResult.rows[0];
+    const jobSkills = (job.skills || []) as string[];
+
+    // Generate tailored resume content
+    const resume = `
+# ${worker.displayName}
+${worker.headline || 'Experienced Professional'}
+
+## Contact
+- Location: ${worker.locations?.join(', ') || 'Open to opportunities'}
+- Timezone: ${worker.timezone || 'Flexible'}
+${worker.linkedinUrl ? `- LinkedIn: ${worker.linkedinUrl}` : ''}
+${worker.portfolioUrl ? `- Portfolio: ${worker.portfolioUrl}` : ''}
+${worker.githubUrl ? `- GitHub: ${worker.githubUrl}` : ''}
+
+## Professional Summary
+${worker.bio || `Results-driven professional with ${worker.experienceYears || 'several'} years of experience. Seeking to leverage expertise in ${worker.skills?.slice(0, 3).join(', ') || 'my field'} to contribute to ${job.employer_name || 'a growing organization'}.`}
+
+## Skills
+${this.formatSkillsForResume(worker.skills || [], jobSkills)}
+
+## Why I'm a Great Fit for ${job.title}
+${this.generateFitStatement(worker, job)}
+
+## Experience
+${worker.experienceYears ? `${worker.experienceYears}+ years of professional experience` : 'Relevant professional experience'}
+
+## Availability
+- ${worker.availability === 'full_time' ? 'Full-time' : worker.availability === 'part_time' ? 'Part-time' : 'Flexible'}
+- ${worker.hoursPerWeek ? `${worker.hoursPerWeek} hours/week` : 'As needed'}
+- ${worker.remoteOnly ? 'Remote only' : 'Open to on-site or remote'}
+
+---
+Generated by Wells AI - Tailored for ${job.title} at ${job.employer_name}
+    `.trim();
+
+    return resume;
+  }
+
+  /**
+   * Prepare a worker for an interview
+   */
+  async prepareForInterview(
+    workerId: string,
+    jobId: string
+  ): Promise<InterviewPrep> {
+    const worker = await getWorkerProfile(workerId);
+    if (!worker) {
+      throw new Error('Worker profile not found');
+    }
+
+    const jobResult = await sql`
+      SELECT * FROM hris_job_postings WHERE id = ${jobId}
+    `;
+
+    if (jobResult.rows.length === 0) {
+      throw new Error('Job not found');
+    }
+
+    const job = jobResult.rows[0];
+    const jobSkills = (job.skills || []) as string[];
+    const workerSkills = worker.skills || [];
+
+    // Find skill gaps and strengths
+    const matchedSkills = workerSkills.filter(ws =>
+      jobSkills.some(js => js.toLowerCase().includes(ws.toLowerCase()) || ws.toLowerCase().includes(js.toLowerCase()))
+    );
+
+    const skillGaps = jobSkills.filter(js =>
+      !workerSkills.some(ws => js.toLowerCase().includes(ws.toLowerCase()) || ws.toLowerCase().includes(js.toLowerCase()))
+    );
+
+    const prep: InterviewPrep = {
+      companyInfo: `${job.employer_name} - ${job.departments?.join(', ') || 'Technology'}`,
+
+      roleOverview: `${job.title} - ${job.location_type === 'remote' ? 'Remote Position' : job.location_type === 'hybrid' ? 'Hybrid Position' : 'On-site'} ${job.location ? `in ${job.location}` : ''}`,
+
+      keyRequirements: jobSkills.slice(0, 5).map(skill =>
+        matchedSkills.some(ms => ms.toLowerCase() === skill.toLowerCase())
+          ? `${skill} - You have this skill!`
+          : `${skill} - Highlight related experience`
+      ),
+
+      suggestedTalkingPoints: [
+        `Highlight your ${worker.experienceYears || 'several'} years of experience`,
+        ...matchedSkills.slice(0, 3).map(skill =>
+          `Discuss your experience with ${skill}`
+        ),
+        worker.completedTasks > 0 ? `Mention your track record: ${worker.completedTasks} completed projects` : '',
+        worker.averageRating ? `Reference your ${worker.averageRating.toFixed(1)}-star rating` : '',
+      ].filter(Boolean),
+
+      commonQuestions: [
+        {
+          question: `Tell me about your experience with ${jobSkills[0] || 'this field'}`,
+          suggestedAnswer: `I have ${worker.experienceYears || 'extensive'} experience working with ${matchedSkills.slice(0, 2).join(' and ') || 'relevant technologies'}. In my recent work, I...`,
+          tips: 'Use specific examples and quantify results when possible'
+        },
+        {
+          question: 'Why are you interested in this role?',
+          suggestedAnswer: `I'm excited about the ${job.title} role at ${job.employer_name} because it aligns with my expertise in ${matchedSkills[0] || 'this area'} and offers the opportunity to...`,
+          tips: 'Research the company beforehand and mention specific aspects that appeal to you'
+        },
+        {
+          question: `How do you handle ${skillGaps[0] || 'challenges'}?`,
+          suggestedAnswer: `While I'm always learning, my approach is to leverage my strong foundation in ${workerSkills[0] || 'problem-solving'} to quickly adapt and grow...`,
+          tips: 'Turn skill gaps into learning opportunities and show growth mindset'
+        },
+        {
+          question: 'What are your salary expectations?',
+          suggestedAnswer: worker.preferredRate
+            ? `Based on my experience and market research, I'm targeting ${worker.preferredRate * 2080 >= 100000 ? '$' + Math.round(worker.preferredRate * 2080 / 1000) + 'k' : '$' + (worker.preferredRate * 2080).toLocaleString()} annually, but I'm open to discussing the complete compensation package.`
+            : `I'm flexible and open to discussing a competitive package based on the full role and responsibilities.`,
+          tips: 'Always research market rates beforehand'
+        },
+      ],
+
+      questionsToAsk: [
+        'What does success look like in this role after 90 days?',
+        'Can you tell me about the team I would be working with?',
+        'What are the biggest challenges facing the team right now?',
+        'How does the company support professional development?',
+        'What is the typical career path for someone in this role?',
+      ],
+
+      salaryNegotiationTips: job.salary_min
+        ? `The posted salary range is $${job.salary_min.toLocaleString()}-$${(job.salary_max || job.salary_min * 1.3).toLocaleString()}. ${worker.preferredRate && worker.preferredRate * 2080 > job.salary_min ? 'Your target is within range - focus on value proposition.' : 'Consider highlighting unique value you bring.'}`
+        : 'Research market rates for this role and location before discussing compensation.',
+
+      dressCode: 'Business casual recommended for video interviews. Professional attire for in-person.',
+
+      interviewFormat: job.location_type === 'remote'
+        ? 'Likely video interview. Ensure good lighting, stable internet, and quiet environment.'
+        : 'May include in-person rounds. Plan for 2-4 interview stages.',
+    };
+
+    return prep;
+  }
+
+  // ==========================================================================
+  // HELPER METHODS
+  // ==========================================================================
+
+  private formatSkillsForResume(workerSkills: string[], jobSkills: string[]): string {
+    const jobSkillsLower = jobSkills.map(s => s.toLowerCase());
+
+    // Prioritize skills that match job requirements
+    const prioritized = workerSkills.sort((a, b) => {
+      const aMatch = jobSkillsLower.some(js => js.includes(a.toLowerCase()) || a.toLowerCase().includes(js));
+      const bMatch = jobSkillsLower.some(js => js.includes(b.toLowerCase()) || b.toLowerCase().includes(js));
+      if (aMatch && !bMatch) return -1;
+      if (!aMatch && bMatch) return 1;
+      return 0;
+    });
+
+    // Format as bullet points
+    return prioritized.map(skill => {
+      const isMatch = jobSkillsLower.some(js =>
+        js.includes(skill.toLowerCase()) || skill.toLowerCase().includes(js)
+      );
+      return `- ${skill}${isMatch ? ' (Key requirement)' : ''}`;
+    }).join('\n');
+  }
+
+  private generateFitStatement(worker: WorkerProfile, job: any): string {
+    const statements: string[] = [];
+
+    const workerSkills = (worker.skills || []).map(s => s.toLowerCase());
+    const jobSkills = (job.skills || []).map((s: string) => s.toLowerCase());
+
+    const matchedSkills = workerSkills.filter(ws =>
+      jobSkills.some((js: string) => js.includes(ws) || ws.includes(js))
+    );
+
+    if (matchedSkills.length > 0) {
+      statements.push(`My expertise in ${matchedSkills.slice(0, 3).join(', ')} directly aligns with this role's requirements.`);
+    }
+
+    if (worker.experienceYears) {
+      statements.push(`With ${worker.experienceYears} years of experience, I bring proven expertise to contribute immediately.`);
+    }
+
+    if (worker.averageRating && worker.averageRating >= 4.0) {
+      statements.push(`My ${worker.averageRating.toFixed(1)}-star rating demonstrates consistent delivery of high-quality work.`);
+    }
+
+    if (job.location_type === 'remote' && worker.remoteOnly) {
+      statements.push(`As an experienced remote professional, I excel in distributed team environments.`);
+    }
+
+    return statements.join(' ') || `I'm excited to bring my skills and experience to this opportunity at ${job.employer_name}.`;
+  }
+}
+
+// Create singleton instance
+export const workerService = new WorkerService();

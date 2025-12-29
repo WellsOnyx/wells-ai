@@ -888,6 +888,138 @@ function mapRowToPlacementFee(row: Record<string, unknown>): PlacementFee {
   };
 }
 
+// ============================================================================
+// CONVENIENCE FUNCTION FOR APPLICATION FLOW
+// ============================================================================
+
+/**
+ * Record a placement fee when an offer is accepted
+ * Convenience wrapper for the full createPlacementFee function
+ */
+export async function recordPlacementFee(params: {
+  workerId: string;
+  jobId: string;
+  applicationId: string;
+  employerId: string;
+  employerName: string;
+  salary: number;
+  startDate?: Date;
+}): Promise<{
+  success: boolean;
+  message: string;
+  feeId?: string;
+}> {
+  try {
+    // Get worker info
+    const workerResult = await query(
+      `SELECT w.id, w.user_id, w.display_name
+       FROM worker_profiles w
+       WHERE w.id = $1`,
+      [params.workerId]
+    );
+
+    if (workerResult.rows.length === 0) {
+      return {
+        success: false,
+        message: 'Worker profile not found',
+      };
+    }
+
+    const worker = workerResult.rows[0];
+
+    // Get job info
+    const jobResult = await query(
+      `SELECT title FROM hris_job_postings WHERE id = $1`,
+      [params.jobId]
+    );
+
+    const jobTitle = jobResult.rows.length > 0
+      ? jobResult.rows[0].title
+      : 'Position';
+
+    // Create placement ID
+    const placementId = `plc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Record in hris_placements table if it exists
+    try {
+      await query(
+        `INSERT INTO hris_placements (
+          id, candidate_id, job_posting_id, application_id,
+          employer_id, employer_name, salary, start_date, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'accepted')
+        ON CONFLICT DO NOTHING`,
+        [
+          placementId,
+          worker.id,
+          params.jobId,
+          params.applicationId,
+          params.employerId,
+          params.employerName,
+          params.salary,
+          params.startDate || new Date(),
+        ]
+      );
+    } catch (e) {
+      // Table might not exist, continue anyway
+    }
+
+    // Create placement fee
+    const result = await createPlacementFee({
+      id: placementId,
+      candidateUserId: worker.user_id,
+      candidateName: worker.display_name,
+      employerId: params.employerId,
+      employerName: params.employerName,
+      jobTitle,
+      annualSalary: params.salary,
+      startDate: params.startDate,
+    });
+
+    if (!result.success || !result.fee) {
+      return {
+        success: false,
+        message: result.message,
+      };
+    }
+
+    // Also record in wells_fees if that table exists
+    try {
+      await query(
+        `INSERT INTO wells_fees (
+          id, type, entity_id, entity_type, amount, currency,
+          description, status, due_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT DO NOTHING`,
+        [
+          `wfee_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          'placement',
+          placementId,
+          'placement',
+          result.fee.totalFeeAmount,
+          'USD',
+          `1% placement fee for ${jobTitle} at ${params.employerName}`,
+          'pending',
+          result.fee.candidatePaymentDue,
+        ]
+      );
+    } catch (e) {
+      // Table might not exist, continue anyway
+    }
+
+    return {
+      success: true,
+      message: result.message,
+      feeId: result.fee.id,
+    };
+  } catch (error) {
+    console.error('Error recording placement fee:', error);
+    return {
+      success: false,
+      message: 'Failed to record placement fee',
+    };
+  }
+}
+
 export default {
   // Calculation
   calculatePlacementFee,
@@ -897,6 +1029,7 @@ export default {
   getPlacementFee,
   getCandidateFees,
   getEmployerFees,
+  recordPlacementFee,
 
   // Status updates
   markCandidateStarted,

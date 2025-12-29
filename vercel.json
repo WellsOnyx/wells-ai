@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/erp-sync",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/companion/worker",
+      "schedule": "0 * * * *"
     }
   ],
   "redirects": [

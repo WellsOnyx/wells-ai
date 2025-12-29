@@ -728,6 +728,293 @@ function parseJson(value: unknown): unknown {
 }
 
 // ============================================================================
+// PRICING RULES INFERENCE
+// ============================================================================
+
+export interface InferredPricingRules {
+  volumeDiscounts: VolumeDiscount[];
+  priceRange: { min: number; max: number };
+  averagePrice: number;
+  suggestedMinMargin: number;
+  suggestedTargetMargin: number;
+  pricingTiers: PricingTier[];
+  confidence: number;
+}
+
+export interface PricingTier {
+  name: string;
+  priceRange: { min: number; max: number };
+  productCount: number;
+  suggestedDiscount: number;
+}
+
+/**
+ * Infer pricing rules from catalog data
+ * Analyzes existing products to suggest volume discounts and margins
+ */
+export async function inferPricingRules(sellerId: string): Promise<InferredPricingRules> {
+  const catalog = await getSellerCatalog(sellerId);
+
+  if (catalog.length === 0) {
+    return {
+      volumeDiscounts: [
+        { minQuantity: 100, maxQuantity: 499, discountPercent: 5, discountType: 'percentage' },
+        { minQuantity: 500, maxQuantity: 999, discountPercent: 10, discountType: 'percentage' },
+        { minQuantity: 1000, maxQuantity: undefined, discountPercent: 15, discountType: 'percentage' },
+      ],
+      priceRange: { min: 0, max: 0 },
+      averagePrice: 0,
+      suggestedMinMargin: 15,
+      suggestedTargetMargin: 30,
+      pricingTiers: [],
+      confidence: 0.5,
+    };
+  }
+
+  // Analyze price distribution
+  const prices = catalog.map(p => p.pricing.basePrice).sort((a, b) => a - b);
+  const minPrice = prices[0];
+  const maxPrice = prices[prices.length - 1];
+  const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+
+  // Create pricing tiers based on price distribution
+  const pricingTiers: PricingTier[] = [];
+  const tierBoundaries = [10, 50, 100, 500];
+  let lastBoundary = 0;
+
+  for (const boundary of tierBoundaries) {
+    const tierProducts = catalog.filter(
+      p => p.pricing.basePrice > lastBoundary && p.pricing.basePrice <= boundary
+    );
+    if (tierProducts.length > 0) {
+      pricingTiers.push({
+        name: `$${lastBoundary}-$${boundary}`,
+        priceRange: { min: lastBoundary, max: boundary },
+        productCount: tierProducts.length,
+        suggestedDiscount: lastBoundary === 0 ? 5 : boundary >= 100 ? 15 : 10,
+      });
+    }
+    lastBoundary = boundary;
+  }
+
+  // High value tier
+  const highValueProducts = catalog.filter(p => p.pricing.basePrice > 500);
+  if (highValueProducts.length > 0) {
+    pricingTiers.push({
+      name: '$500+',
+      priceRange: { min: 500, max: maxPrice },
+      productCount: highValueProducts.length,
+      suggestedDiscount: 20,
+    });
+  }
+
+  // Detect existing volume discounts in catalog
+  const existingDiscounts: VolumeDiscount[] = [];
+  const discountCounts = new Map<number, number>();
+
+  for (const product of catalog) {
+    for (const discount of product.pricing.volumeDiscounts || []) {
+      const key = discount.minQuantity;
+      discountCounts.set(key, (discountCounts.get(key) || 0) + 1);
+    }
+  }
+
+  // Use most common discount tiers or suggest defaults
+  const suggestedDiscounts: VolumeDiscount[] = [];
+
+  if (discountCounts.size > 0) {
+    // Use existing patterns
+    const sortedTiers = Array.from(discountCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+
+    for (const [minQty, _count] of sortedTiers) {
+      const matchingDiscounts = catalog
+        .flatMap(p => p.pricing.volumeDiscounts || [])
+        .filter(d => d.minQuantity === minQty);
+      const avgDiscount = matchingDiscounts.reduce((a, b) => a + b.discountPercent, 0) / matchingDiscounts.length;
+
+      suggestedDiscounts.push({
+        minQuantity: minQty,
+        discountPercent: Math.round(avgDiscount),
+        discountType: 'percentage',
+      });
+    }
+  } else {
+    // Suggest defaults based on average price
+    suggestedDiscounts.push(
+      { minQuantity: 100, discountPercent: 5, discountType: 'percentage' },
+      { minQuantity: 500, discountPercent: 10, discountType: 'percentage' },
+      { minQuantity: 1000, discountPercent: 15, discountType: 'percentage' }
+    );
+  }
+
+  // Calculate suggested margins based on price range
+  const suggestedMinMargin = avgPrice < 50 ? 20 : avgPrice < 200 ? 15 : 10;
+  const suggestedTargetMargin = avgPrice < 50 ? 35 : avgPrice < 200 ? 30 : 25;
+
+  // Confidence based on catalog size
+  const confidence = Math.min(0.95, 0.5 + (catalog.length / 100) * 0.4);
+
+  return {
+    volumeDiscounts: suggestedDiscounts.sort((a, b) => a.minQuantity - b.minQuantity),
+    priceRange: { min: minPrice, max: maxPrice },
+    averagePrice: avgPrice,
+    suggestedMinMargin,
+    suggestedTargetMargin,
+    pricingTiers,
+    confidence,
+  };
+}
+
+/**
+ * Analyze catalog for AI insights
+ */
+export async function analyzeCatalog(sellerId: string): Promise<{
+  summary: CatalogSummary;
+  insights: string[];
+  recommendations: string[];
+  pricingRules: InferredPricingRules;
+}> {
+  const summary = await getCatalogSummary(sellerId);
+  const pricingRules = await inferPricingRules(sellerId);
+  const catalog = await getSellerCatalog(sellerId);
+
+  const insights: string[] = [];
+  const recommendations: string[] = [];
+
+  // Analyze category distribution
+  const categoryCount = new Map<string, number>();
+  for (const product of catalog) {
+    categoryCount.set(product.category, (categoryCount.get(product.category) || 0) + 1);
+  }
+
+  const topCategories = Array.from(categoryCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+
+  if (topCategories.length > 0) {
+    insights.push(`Your top categories are: ${topCategories.map(([cat, count]) => `${cat} (${count} products)`).join(', ')}`);
+  }
+
+  // Price range insights
+  if (pricingRules.priceRange.max / pricingRules.priceRange.min > 100) {
+    insights.push('You have a very wide price range - consider separate strategies for different tiers');
+  }
+
+  // Volume discount insights
+  const productsWithDiscounts = catalog.filter(p => (p.pricing.volumeDiscounts?.length || 0) > 0);
+  if (productsWithDiscounts.length < catalog.length * 0.5) {
+    recommendations.push(`Only ${Math.round(productsWithDiscounts.length / catalog.length * 100)}% of products have volume discounts. Consider adding discounts to win more bulk orders.`);
+  }
+
+  // Lead time insights
+  const avgLeadTime = catalog.reduce((a, p) => a + p.leadTime.standardDays, 0) / catalog.length;
+  if (avgLeadTime > 10) {
+    recommendations.push(`Your average lead time is ${avgLeadTime.toFixed(1)} days. Consider offering rush options to win time-sensitive orders.`);
+  }
+
+  // Stock insights
+  const outOfStock = catalog.filter(p => !p.availability.inStock);
+  if (outOfStock.length > 0) {
+    insights.push(`${outOfStock.length} products are currently out of stock`);
+  }
+
+  return {
+    summary,
+    insights,
+    recommendations,
+    pricingRules,
+  };
+}
+
+// ============================================================================
+// SHOPIFY SYNC HELPERS
+// ============================================================================
+
+/**
+ * Prepare Shopify import configuration
+ */
+export function getShopifyImportConfig(): {
+  requiredScopes: string[];
+  webhooks: string[];
+  syncFields: string[];
+} {
+  return {
+    requiredScopes: ['read_products', 'read_inventory'],
+    webhooks: ['products/create', 'products/update', 'products/delete', 'inventory_levels/update'],
+    syncFields: ['title', 'body_html', 'vendor', 'product_type', 'tags', 'variants', 'images'],
+  };
+}
+
+/**
+ * Map Shopify product to catalog product
+ */
+export function mapShopifyToCatalog(
+  shopifyProduct: {
+    id: number;
+    title: string;
+    body_html?: string;
+    vendor?: string;
+    product_type?: string;
+    tags?: string;
+    variants: Array<{
+      id: number;
+      title: string;
+      price: string;
+      sku?: string;
+      inventory_quantity?: number;
+    }>;
+    images?: Array<{ src: string }>;
+  },
+  sellerId: string
+): Partial<CatalogProduct> {
+  const variant = shopifyProduct.variants[0];
+  const price = parseFloat(variant?.price || '0');
+
+  return {
+    sellerId,
+    name: shopifyProduct.title,
+    description: stripHtml(shopifyProduct.body_html || ''),
+    sku: variant?.sku,
+    category: shopifyProduct.product_type || 'General',
+    tags: shopifyProduct.tags?.split(',').map(t => t.trim()).filter(Boolean) || [],
+    pricing: {
+      basePrice: price,
+      currency: 'USD',
+      priceUnit: 'unit',
+      volumeDiscounts: [],
+      minOrderQuantity: 1,
+    },
+    leadTime: { standardDays: 7 },
+    availability: {
+      inStock: (variant?.inventory_quantity || 0) > 0,
+      stockQuantity: variant?.inventory_quantity,
+      madeToOrder: false,
+    },
+    images: shopifyProduct.images?.map(img => img.src) || [],
+    searchKeywords: generateSearchKeywords(
+      shopifyProduct.title,
+      shopifyProduct.body_html || '',
+      shopifyProduct.product_type || 'General',
+      shopifyProduct.tags?.split(',') || []
+    ),
+    matchingWeight: 1.0,
+    sourceType: 'shopify',
+    sourceId: shopifyProduct.id.toString(),
+    lastSyncedAt: new Date(),
+    isActive: true,
+  };
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -743,6 +1030,10 @@ export const CatalogService = {
   deleteProduct,
   bulkUpdatePrices,
   addGlobalVolumeDiscount,
+  inferPricingRules,
+  analyzeCatalog,
+  getShopifyImportConfig,
+  mapShopifyToCatalog,
 };
 
 export default CatalogService;

@@ -111,3 +111,88 @@ CREATE TABLE IF NOT EXISTS payment_methods (
 );
 
 CREATE INDEX IF NOT EXISTS idx_payment_methods_user ON payment_methods(user_id);
+
+-- ============================================================================
+-- CONVERSATIONAL ONBOARDING
+-- Stores the full onboarding conversation state for chat-based onboarding
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS onboarding_conversations (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE,
+
+  -- Current state
+  current_phase TEXT NOT NULL DEFAULT 'greeting',
+
+  -- Conversation data (JSONB for flexibility)
+  messages JSONB DEFAULT '[]',
+  collected_data JSONB DEFAULT '{}',
+  preferences JSONB DEFAULT '{}',
+  phase_progress JSONB DEFAULT '{}',
+
+  -- Timestamps
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_onboarding_conv_user ON onboarding_conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_onboarding_conv_phase ON onboarding_conversations(current_phase);
+
+-- ============================================================================
+-- USER AUTONOMY SETTINGS
+-- Stores autonomy and negotiation limits set during onboarding
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS user_autonomy_settings (
+  user_id TEXT PRIMARY KEY,
+
+  -- Autonomy level
+  autonomy_level TEXT DEFAULT 'supervised', -- 'supervised', 'semi-autonomous', 'autonomous'
+  autonomy_description TEXT,
+
+  -- Negotiation limits
+  max_discount_percent DECIMAL(5,2) DEFAULT 0,
+  max_auto_approve_amount DECIMAL(12,2) DEFAULT 0,
+  require_approval_above DECIMAL(12,2) DEFAULT 0,
+  currency TEXT DEFAULT 'USD',
+
+  -- Approval thresholds
+  purchase_order_limit DECIMAL(12,2) DEFAULT 0,
+  payment_limit DECIMAL(12,2) DEFAULT 0,
+  hiring_approval BOOLEAN DEFAULT TRUE,
+  contract_signing BOOLEAN DEFAULT TRUE,
+
+  -- Metadata
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================================
+-- USER NOTIFICATION PREFERENCES
+-- Stores notification settings from onboarding
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS user_notification_preferences (
+  user_id TEXT PRIMARY KEY,
+
+  -- Channels
+  email_enabled BOOLEAN DEFAULT TRUE,
+  sms_enabled BOOLEAN DEFAULT FALSE,
+  push_enabled BOOLEAN DEFAULT TRUE,
+  slack_enabled BOOLEAN DEFAULT FALSE,
+
+  -- Frequency
+  digest_frequency TEXT DEFAULT 'realtime', -- 'realtime', 'hourly', 'daily', 'weekly'
+
+  -- Category-specific overrides (JSONB)
+  category_overrides JSONB DEFAULT '{}',
+
+  -- Quiet hours
+  quiet_hours_start TIME,
+  quiet_hours_end TIME,
+  quiet_hours_timezone TEXT,
+
+  -- Metadata
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);

@@ -886,6 +886,362 @@ export async function buildEnhancedContext(
 }
 
 // ============================================================================
+// CHAT CONTEXT INJECTION - RICH CONTEXT FOR EVERY CHAT
+// ============================================================================
+
+export interface ChatContext {
+  userProfile: {
+    name: string
+    company?: string
+    role?: string
+    journey: ProductType
+    communicationStyle: CommunicationPreference
+  }
+  activeDeals: Array<{
+    id: string
+    title: string
+    value: number
+    stage: string
+    lastActivity: Date
+  }>
+  pendingInsights: Array<{
+    id: string
+    type: string
+    urgency: string
+    title: string
+    potentialValue?: number
+  }>
+  conversationHistory: Array<{
+    topic: string
+    summary: string
+    date: Date
+    followUpNeeded: boolean
+  }>
+  trustLevel: {
+    tier: string
+    score: number
+    autonomyConfig: AutonomyLevel
+  }
+  recentActivity: {
+    lastLogin: Date | null
+    hoursSinceLastInteraction: number
+    isReturningUser: boolean
+  }
+}
+
+/**
+ * Get complete context for injecting into chat
+ * This provides Wells with everything needed to feel like a true companion
+ */
+export async function getContextForChat(userId: string): Promise<ChatContext> {
+  try {
+    const memory = await getEnhancedMemory(userId)
+
+    // Get active deals/negotiations
+    let activeDeals: ChatContext['activeDeals'] = []
+    try {
+      const dealsResult = await query(
+        `SELECT id, title, value, stage, updated_at as last_activity
+         FROM deals
+         WHERE user_id = $1 AND status NOT IN ('closed', 'cancelled')
+         ORDER BY updated_at DESC
+         LIMIT 5`,
+        [userId]
+      )
+      activeDeals = dealsResult.rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        value: parseFloat(row.value || '0'),
+        stage: row.stage,
+        lastActivity: new Date(row.last_activity),
+      }))
+    } catch (e) {
+      // Tables may not exist
+    }
+
+    // Get pending insights
+    let pendingInsights: ChatContext['pendingInsights'] = []
+    try {
+      const insightsResult = await query(
+        `SELECT id, category as type, urgency, title, potential_value
+         FROM proactive_insights
+         WHERE user_id = $1 AND acted_upon = false AND dismissed = false
+         ORDER BY
+           CASE urgency
+             WHEN 'critical' THEN 0
+             WHEN 'high' THEN 1
+             WHEN 'medium' THEN 2
+             ELSE 3
+           END,
+           created_at DESC
+         LIMIT 5`,
+        [userId]
+      )
+      pendingInsights = insightsResult.rows.map((row) => ({
+        id: row.id,
+        type: row.type,
+        urgency: row.urgency,
+        title: row.title,
+        potentialValue: row.potential_value ? parseFloat(row.potential_value) : undefined,
+      }))
+    } catch (e) {
+      // Tables may not exist
+    }
+
+    // Calculate time since last interaction
+    let lastLogin: Date | null = null
+    let hoursSinceLastInteraction = 0
+    try {
+      const loginResult = await query(
+        `SELECT last_login FROM user_sessions WHERE user_id = $1 ORDER BY last_login DESC LIMIT 1`,
+        [userId]
+      )
+      if (loginResult.rows.length > 0 && loginResult.rows[0].last_login) {
+        lastLogin = new Date(loginResult.rows[0].last_login)
+        hoursSinceLastInteraction = (Date.now() - lastLogin.getTime()) / (1000 * 60 * 60)
+      }
+    } catch (e) {
+      // Tables may not exist
+    }
+
+    const isReturningUser = hoursSinceLastInteraction > 4 // More than 4 hours
+
+    return {
+      userProfile: {
+        name: memory?.firstName || memory?.preferredName || 'User',
+        company: memory?.companyName,
+        role: memory?.role,
+        journey: memory?.journey || 'buyer',
+        communicationStyle: memory?.communicationPreference || getDefaultCommunicationPreference(),
+      },
+      activeDeals,
+      pendingInsights,
+      conversationHistory: (memory?.conversationReferences || []).slice(0, 5).map((ref) => ({
+        topic: ref.topic,
+        summary: ref.summary,
+        date: ref.date,
+        followUpNeeded: ref.followUpNeeded,
+      })),
+      trustLevel: {
+        tier: memory?.trustLevel?.tier || 'new',
+        score: memory?.trustLevel?.score || 0,
+        autonomyConfig: memory?.trustLevel?.factors?.autonomyGranted || {
+          autoNegotiate: false,
+          autoApproveThreshold: 0,
+          autoRespondToRfqs: false,
+          autoApplyToJobs: false,
+          proactiveOutreach: false,
+          approvalRequiredFor: ['all'],
+        },
+      },
+      recentActivity: {
+        lastLogin,
+        hoursSinceLastInteraction,
+        isReturningUser,
+      },
+    }
+  } catch (error) {
+    console.error('[MemoryEnhancement] Error getting chat context:', error)
+    // Return minimal context
+    return {
+      userProfile: {
+        name: 'User',
+        journey: 'buyer',
+        communicationStyle: getDefaultCommunicationPreference(),
+      },
+      activeDeals: [],
+      pendingInsights: [],
+      conversationHistory: [],
+      trustLevel: {
+        tier: 'new',
+        score: 0,
+        autonomyConfig: {
+          autoNegotiate: false,
+          autoApproveThreshold: 0,
+          autoRespondToRfqs: false,
+          autoApplyToJobs: false,
+          proactiveOutreach: false,
+          approvalRequiredFor: ['all'],
+        },
+      },
+      recentActivity: {
+        lastLogin: null,
+        hoursSinceLastInteraction: 0,
+        isReturningUser: false,
+      },
+    }
+  }
+}
+
+/**
+ * Generate a contextual greeting based on user state
+ */
+export async function generateContextualGreeting(userId: string): Promise<{
+  greeting: string
+  context: ChatContext
+  proactiveMessages: string[]
+}> {
+  const context = await getContextForChat(userId)
+  const proactiveMessages: string[] = []
+
+  // Build time-based greeting
+  const hour = new Date().getHours()
+  let timeGreeting = 'Hello'
+  if (hour < 12) timeGreeting = 'Good morning'
+  else if (hour < 17) timeGreeting = 'Good afternoon'
+  else timeGreeting = 'Good evening'
+
+  // Personalize with name
+  const name = context.userProfile.name !== 'User' ? `, ${context.userProfile.name}` : ''
+  let greeting = `${timeGreeting}${name}!`
+
+  // If returning user, acknowledge time away
+  if (context.recentActivity.isReturningUser && context.recentActivity.hoursSinceLastInteraction > 24) {
+    greeting += ' Great to see you back.'
+  }
+
+  // Add proactive insights
+  if (context.pendingInsights.length > 0) {
+    proactiveMessages.push('While you were away, I was busy:')
+
+    const criticalInsights = context.pendingInsights.filter((i) => i.urgency === 'critical')
+    const highInsights = context.pendingInsights.filter((i) => i.urgency === 'high')
+
+    for (const insight of criticalInsights.slice(0, 2)) {
+      proactiveMessages.push(`**[Warning] Heads up:** ${insight.title}${insight.potentialValue ? ` ($${insight.potentialValue.toLocaleString()} at stake)` : ''}`)
+    }
+
+    for (const insight of highInsights.slice(0, 2)) {
+      proactiveMessages.push(`**[Search] Found something:** ${insight.title}`)
+    }
+  }
+
+  // Mention active deals if any need attention
+  const urgentDeals = context.activeDeals.filter(
+    (d) => Date.now() - d.lastActivity.getTime() > 24 * 60 * 60 * 1000
+  )
+  if (urgentDeals.length > 0) {
+    proactiveMessages.push(
+      `**[Clock] Deal update:** ${urgentDeals.length} deal${urgentDeals.length > 1 ? 's' : ''} ${urgentDeals.length > 1 ? 'need' : 'needs'} your attention.`
+    )
+  }
+
+  // If no proactive messages, offer help
+  if (proactiveMessages.length === 0) {
+    proactiveMessages.push("I've been monitoring things and all looks good. How can I help you today?")
+  }
+
+  return {
+    greeting,
+    context,
+    proactiveMessages,
+  }
+}
+
+/**
+ * Build system prompt context for AI
+ */
+export async function buildSystemPromptContext(userId: string): Promise<string> {
+  const context = await getContextForChat(userId)
+  const lines: string[] = []
+
+  lines.push('=== USER CONTEXT ===')
+  lines.push(`Name: ${context.userProfile.name}`)
+  if (context.userProfile.company) lines.push(`Company: ${context.userProfile.company}`)
+  if (context.userProfile.role) lines.push(`Role: ${context.userProfile.role}`)
+  lines.push(`Journey Type: ${context.userProfile.journey}`)
+  lines.push(`Trust Level: ${context.userProfile.name} (${context.trustLevel.score}/100)`)
+  lines.push('')
+
+  lines.push('=== COMMUNICATION STYLE ===')
+  lines.push(`Formality: ${context.userProfile.communicationStyle.formality}`)
+  lines.push(`Tone: ${context.userProfile.communicationStyle.tone}`)
+  lines.push(`Verbosity: ${context.userProfile.communicationStyle.verbosity}`)
+  lines.push('')
+
+  if (context.activeDeals.length > 0) {
+    lines.push('=== ACTIVE DEALS ===')
+    context.activeDeals.forEach((deal) => {
+      lines.push(`- ${deal.title}: $${deal.value.toLocaleString()} (${deal.stage})`)
+    })
+    lines.push('')
+  }
+
+  if (context.pendingInsights.length > 0) {
+    lines.push('=== PENDING INSIGHTS ===')
+    context.pendingInsights.forEach((insight) => {
+      lines.push(`- [${insight.urgency.toUpperCase()}] ${insight.title}`)
+    })
+    lines.push('')
+  }
+
+  if (context.conversationHistory.length > 0) {
+    lines.push('=== RECENT CONVERSATION TOPICS ===')
+    context.conversationHistory.slice(0, 3).forEach((conv) => {
+      lines.push(`- ${conv.date.toLocaleDateString()}: ${conv.topic}`)
+    })
+    lines.push('')
+  }
+
+  lines.push('=== AUTONOMY PERMISSIONS ===')
+  const autonomy = context.trustLevel.autonomyConfig
+  if (autonomy.autoNegotiate) lines.push('- Can auto-negotiate deals')
+  if (autonomy.autoApproveThreshold > 0) {
+    lines.push(`- Can auto-approve below $${autonomy.autoApproveThreshold.toLocaleString()}`)
+  }
+  if (autonomy.proactiveOutreach) lines.push('- Can proactively reach out')
+  if (!autonomy.autoNegotiate && !autonomy.proactiveOutreach) {
+    lines.push('- Requires approval for all actions')
+  }
+
+  return lines.join('\n')
+}
+
+/**
+ * Store rich context from a conversation
+ */
+export async function storeRichContext(
+  userId: string,
+  context: {
+    topic: string
+    summary: string
+    entities?: Array<{ type: string; name: string; id?: string }>
+    decisions?: string[]
+    followUpItems?: Array<{ description: string; dueDate?: Date }>
+    sentiment?: 'positive' | 'neutral' | 'negative'
+  }
+): Promise<void> {
+  try {
+    // Store conversation reference
+    await storeConversationReference(userId, {
+      date: new Date(),
+      topic: context.topic,
+      summary: context.summary,
+      outcome: context.decisions?.join('; '),
+      followUpNeeded: (context.followUpItems?.length || 0) > 0,
+      followUpDate: context.followUpItems?.[0]?.dueDate,
+    })
+
+    // Extract and store entities as relationships
+    for (const entity of context.entities || []) {
+      if (entity.type === 'person' || entity.type === 'company') {
+        await upsertRelationship(userId, {
+          name: entity.name,
+          type: entity.type === 'company' ? 'partner' : 'colleague',
+          company: entity.type === 'company' ? entity.name : undefined,
+          notes: `Mentioned in conversation about: ${context.topic}`,
+          lastInteraction: new Date(),
+          interactionCount: 1,
+          sentiment: context.sentiment === 'positive' ? 'positive' : 'neutral',
+        })
+      }
+    }
+  } catch (error) {
+    console.error('[MemoryEnhancement] Error storing rich context:', error)
+  }
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -906,6 +1262,11 @@ export const MemoryEnhancement = {
   getRelationshipsNeedingAttention,
   getEnhancedMemory,
   buildEnhancedContext,
+  // Chat context functions
+  getContextForChat,
+  generateContextualGreeting,
+  buildSystemPromptContext,
+  storeRichContext,
 }
 
 export default MemoryEnhancement

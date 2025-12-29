@@ -415,6 +415,178 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
+-- CHAT QUEUE - ALL NOTIFICATIONS SURFACE THROUGH CHAT
+-- ============================================================================
+
+-- Chat queue for proactive notifications
+CREATE TABLE IF NOT EXISTS chat_queue (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('insight', 'completion', 'reminder', 'celebration', 'alert', 'update')),
+    priority TEXT NOT NULL CHECK (priority IN ('critical', 'high', 'medium', 'low', 'info')),
+    message TEXT NOT NULL,
+    detailed_message TEXT,
+    actions JSONB DEFAULT '[]'::jsonb,
+    related_insight_id TEXT REFERENCES proactive_insights(id) ON DELETE SET NULL,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delivered_at TIMESTAMPTZ,
+    read_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_chat_queue_user ON chat_queue(user_id);
+CREATE INDEX idx_chat_queue_pending ON chat_queue(user_id, read_at) WHERE read_at IS NULL;
+CREATE INDEX idx_chat_queue_priority ON chat_queue(priority, created_at DESC);
+CREATE INDEX idx_chat_queue_type ON chat_queue(type);
+
+-- ============================================================================
+-- ACTION COMPLETIONS - TRACK WHAT WELLS HAS ACCOMPLISHED
+-- ============================================================================
+
+-- Completed actions that Wells has performed
+CREATE TABLE IF NOT EXISTS action_completions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('negotiation', 'order', 'payment', 'contract', 'deal', 'task', 'insight_action')),
+    entity_id TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('completed', 'failed', 'partial')),
+    summary TEXT NOT NULL,
+    details JSONB,
+    value_generated JSONB,
+    completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_action_completions_user ON action_completions(user_id);
+CREATE INDEX idx_action_completions_type ON action_completions(user_id, type);
+CREATE INDEX idx_action_completions_recent ON action_completions(user_id, completed_at DESC);
+
+-- ============================================================================
+-- AUTONOMY OVERRIDES - USER CUSTOM AUTONOMY SETTINGS
+-- ============================================================================
+
+-- User autonomy overrides (custom settings on top of trust-based defaults)
+CREATE TABLE IF NOT EXISTS user_autonomy_overrides (
+    user_id TEXT PRIMARY KEY,
+    overrides JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================================
+-- USER SESSIONS - TRACK ACTIVITY FOR PROACTIVE GREETINGS
+-- ============================================================================
+
+-- Track user sessions for "returning user" detection
+CREATE TABLE IF NOT EXISTS user_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    last_login TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    session_count INTEGER DEFAULT 1,
+    total_duration_minutes INTEGER DEFAULT 0,
+    last_activity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_sessions_user ON user_sessions(user_id);
+CREATE INDEX idx_user_sessions_login ON user_sessions(user_id, last_login DESC);
+
+-- ============================================================================
+-- DEALS TABLE (if not exists) - FOR ACTIVE DEAL TRACKING
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS deals (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    value DECIMAL(15, 2),
+    stage TEXT NOT NULL DEFAULT 'discovery',
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'closed', 'cancelled', 'won', 'lost')),
+    supplier_id TEXT,
+    buyer_id TEXT,
+    notes TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_deals_user ON deals(user_id);
+CREATE INDEX idx_deals_active ON deals(user_id, status) WHERE status = 'active';
+
+-- ============================================================================
+-- CONTRACTS TABLE (if not exists) - FOR CONTRACT TRACKING
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS contracts (
+    id TEXT PRIMARY KEY,
+    buyer_id TEXT NOT NULL,
+    supplier_id TEXT,
+    category TEXT,
+    annual_value DECIMAL(15, 2),
+    start_date TIMESTAMPTZ,
+    end_date TIMESTAMPTZ,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('draft', 'active', 'expired', 'terminated')),
+    terms JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_contracts_buyer ON contracts(buyer_id);
+CREATE INDEX idx_contracts_expiring ON contracts(buyer_id, end_date) WHERE status = 'active';
+
+-- ============================================================================
+-- NEGOTIATIONS TABLE (if not exists) - FOR COMPLETED NEGOTIATIONS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS negotiations (
+    id TEXT PRIMARY KEY,
+    buyer_id TEXT NOT NULL,
+    supplier_id TEXT,
+    category TEXT,
+    initial_ask DECIMAL(15, 2),
+    final_price DECIMAL(15, 2),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled', 'stalled')),
+    po_created BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_negotiations_buyer ON negotiations(buyer_id);
+CREATE INDEX idx_negotiations_recent ON negotiations(buyer_id, completed_at DESC);
+
+-- ============================================================================
+-- ADDITIONAL HELPER VIEWS
+-- ============================================================================
+
+-- View for chat queue with insight details
+CREATE OR REPLACE VIEW chat_queue_enriched_view AS
+SELECT
+    cq.*,
+    pi.title as insight_title,
+    pi.category as insight_category,
+    pi.urgency as insight_urgency,
+    pi.potential_value,
+    pi.potential_value_type
+FROM chat_queue cq
+LEFT JOIN proactive_insights pi ON cq.related_insight_id = pi.id
+WHERE cq.read_at IS NULL
+  AND (cq.expires_at IS NULL OR cq.expires_at > NOW());
+
+-- View for user activity summary
+CREATE OR REPLACE VIEW user_activity_summary_view AS
+SELECT
+    us.user_id,
+    us.last_login,
+    us.session_count,
+    EXTRACT(EPOCH FROM (NOW() - us.last_login)) / 3600 as hours_since_login,
+    uts.score as trust_score,
+    uts.tier as trust_tier,
+    (SELECT COUNT(*) FROM chat_queue cq WHERE cq.user_id = us.user_id AND cq.read_at IS NULL) as pending_notifications,
+    (SELECT COUNT(*) FROM proactive_insights pi WHERE pi.user_id = us.user_id AND pi.acted_upon = false AND pi.dismissed = false) as pending_insights,
+    (SELECT COUNT(*) FROM deals d WHERE d.user_id = us.user_id AND d.status = 'active') as active_deals
+FROM user_sessions us
+LEFT JOIN user_trust_scores uts ON us.user_id = uts.user_id;
+
+-- ============================================================================
 -- SAMPLE DATA (Development only)
 -- ============================================================================
 
@@ -436,4 +608,183 @@ VALUES
     ('sample_insight_2', 'sample_user_1', 'buyer', 'contract_reminder', 'medium', 'Contract expires in 30 days', 'Market rates are 8% lower - good time to renegotiate.', 8000, 'savings'),
     ('sample_insight_3', 'sample_user_1', 'buyer', 'risk_alert', 'critical', 'Unusual invoice detected', '$50K invoice from a new vendor requires verification.', 50000, 'risk_avoided')
 ON CONFLICT (id) DO NOTHING;
+
+-- Sample chat queue items
+INSERT INTO chat_queue (id, user_id, type, priority, message, actions)
+VALUES
+    ('chat_sample_1', 'sample_user_1', 'insight', 'high', 'Your bearing supplier raised prices 8%. I found Precision Bearings can match your specs at 12% less.', '[{"id": "get_quotes", "label": "Get Quotes", "actionType": "ai_task"}]'::jsonb),
+    ('chat_sample_2', 'sample_user_1', 'completion', 'info', 'Negotiation with TechCorp finished - we got $4,800 (4% under budget). PO created and sent.', '[{"id": "view", "label": "View Details", "actionType": "navigation"}]'::jsonb),
+    ('chat_sample_3', 'sample_user_1', 'reminder', 'medium', 'Contract with Acme Corp expires in 30 days. Based on your history, you have 15% leverage.', '[{"id": "negotiate", "label": "Help Me Negotiate", "actionType": "ai_task"}]'::jsonb)
+ON CONFLICT (id) DO NOTHING;
 */
+
+-- ============================================================================
+-- WELLS INSIGHTS TABLE (New structured format)
+-- ============================================================================
+
+-- Main insights table with the new Insight interface structure
+CREATE TABLE IF NOT EXISTS wells_insights (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('savings', 'anomaly', 'vendor', 'market', 'risk', 'opportunity', 'job_match')),
+    priority TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    details TEXT NOT NULL,
+    actionable BOOLEAN NOT NULL DEFAULT TRUE,
+    suggested_action TEXT,
+    potential_value DECIMAL(15, 2),
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    read_at TIMESTAMPTZ,
+    acted_on BOOLEAN NOT NULL DEFAULT FALSE,
+    acted_on_at TIMESTAMPTZ,
+    dismissed BOOLEAN NOT NULL DEFAULT FALSE,
+    dismissed_at TIMESTAMPTZ,
+    metadata JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_wells_insights_user ON wells_insights(user_id);
+CREATE INDEX IF NOT EXISTS idx_wells_insights_pending ON wells_insights(user_id, acted_on, dismissed) WHERE acted_on = false AND dismissed = false;
+CREATE INDEX IF NOT EXISTS idx_wells_insights_type ON wells_insights(type);
+CREATE INDEX IF NOT EXISTS idx_wells_insights_priority ON wells_insights(priority, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wells_insights_created ON wells_insights(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wells_insights_unread ON wells_insights(user_id, read_at) WHERE read_at IS NULL;
+
+-- ============================================================================
+-- WELLS USER PREFERENCES
+-- ============================================================================
+
+-- User preferences for insight generation and delivery
+CREATE TABLE IF NOT EXISTS wells_user_preferences (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL UNIQUE,
+
+    -- Insight frequency preferences
+    insight_frequency TEXT DEFAULT 'realtime' CHECK (insight_frequency IN ('realtime', 'hourly', 'daily', 'weekly')),
+    max_insights_per_day INTEGER DEFAULT 10,
+
+    -- Notification channels
+    notification_channels JSONB DEFAULT '{
+        "in_app": true,
+        "email": false,
+        "sms": false,
+        "slack": false,
+        "teams": false
+    }'::jsonb,
+
+    -- Priority thresholds
+    email_priority_threshold TEXT DEFAULT 'high' CHECK (email_priority_threshold IN ('low', 'medium', 'high', 'urgent')),
+    sms_priority_threshold TEXT DEFAULT 'urgent' CHECK (sms_priority_threshold IN ('low', 'medium', 'high', 'urgent')),
+
+    -- Quiet hours
+    quiet_hours_enabled BOOLEAN DEFAULT FALSE,
+    quiet_hours_start TEXT DEFAULT '22:00',
+    quiet_hours_end TEXT DEFAULT '08:00',
+    timezone TEXT DEFAULT 'America/New_York',
+
+    -- Insight type preferences
+    enabled_insight_types TEXT[] DEFAULT ARRAY['savings', 'anomaly', 'vendor', 'market', 'risk', 'opportunity', 'job_match'],
+
+    -- Learning preferences
+    learn_from_actions BOOLEAN DEFAULT TRUE,
+    personalize_insights BOOLEAN DEFAULT TRUE,
+
+    -- Pause controls
+    paused BOOLEAN DEFAULT FALSE,
+    paused_until TIMESTAMPTZ,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_wells_user_prefs_user ON wells_user_preferences(user_id);
+
+-- ============================================================================
+-- WELLS ACTIVITY LOG
+-- ============================================================================
+
+-- Track what Wells is doing/monitoring for each user
+CREATE TABLE IF NOT EXISTS wells_activity_log (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+
+    -- Activity details
+    action_type TEXT NOT NULL CHECK (action_type IN (
+        'monitoring', 'analyzing', 'tracking', 'searching', 'negotiating', 'matching'
+    )),
+    description TEXT NOT NULL,
+
+    -- Related entities
+    related_entity_type TEXT CHECK (related_entity_type IN (
+        'rfq', 'order', 'invoice', 'contract', 'supplier', 'job', 'application', 'deal'
+    )),
+    related_entity_id TEXT,
+
+    -- Metadata
+    metadata JSONB DEFAULT '{}'::jsonb,
+
+    -- Timing
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+
+    -- Status
+    status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed', 'failed'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_wells_activity_user ON wells_activity_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_wells_activity_status ON wells_activity_log(status, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wells_activity_recent ON wells_activity_log(user_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wells_activity_type ON wells_activity_log(action_type);
+
+-- ============================================================================
+-- VIEWS FOR WELLS ACTIVITY
+-- ============================================================================
+
+-- View for current Wells activity per user
+CREATE OR REPLACE VIEW wells_current_activity_view AS
+SELECT
+    user_id,
+    COUNT(*) FILTER (WHERE status = 'in_progress') as active_tasks,
+    COUNT(*) FILTER (WHERE status = 'completed' AND completed_at > NOW() - INTERVAL '1 hour') as recently_completed,
+    ARRAY_AGG(description) FILTER (WHERE status = 'in_progress') as current_descriptions,
+    MAX(started_at) FILTER (WHERE status = 'in_progress') as latest_activity
+FROM wells_activity_log
+WHERE started_at > NOW() - INTERVAL '24 hours'
+GROUP BY user_id;
+
+-- View for insight effectiveness
+CREATE OR REPLACE VIEW wells_insight_effectiveness_view AS
+SELECT
+    type,
+    priority,
+    COUNT(*) as total_insights,
+    COUNT(*) FILTER (WHERE acted_on = true) as acted_on_count,
+    COUNT(*) FILTER (WHERE dismissed = true) as dismissed_count,
+    ROUND(AVG(potential_value)::numeric, 2) as avg_potential_value,
+    ROUND((COUNT(*) FILTER (WHERE acted_on = true)::decimal / NULLIF(COUNT(*), 0) * 100)::numeric, 2) as action_rate
+FROM wells_insights
+WHERE created_at > NOW() - INTERVAL '30 days'
+GROUP BY type, priority
+ORDER BY action_rate DESC;
+
+-- ============================================================================
+-- TRIGGERS FOR WELLS TABLES
+-- ============================================================================
+
+-- Update timestamp trigger for wells_user_preferences
+CREATE OR REPLACE FUNCTION update_wells_prefs_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_wells_prefs_updated
+    BEFORE UPDATE ON wells_user_preferences
+    FOR EACH ROW EXECUTE FUNCTION update_wells_prefs_timestamp();
+
+-- ============================================================================
+-- END OF SCHEMA ADDITIONS
+-- ============================================================================

@@ -23,7 +23,7 @@ const anthropic = new Anthropic({
 // INTENT TYPES
 // ============================================================================
 
-export type IntentCategory = 'buyer' | 'seller' | 'founder' | 'jobs' | 'universal' | 'treasury' | 'unknown'
+export type IntentCategory = 'buyer' | 'seller' | 'founder' | 'jobs' | 'universal' | 'treasury' | 'negotiation' | 'erp' | 'inbox' | 'unknown'
 
 export type BuyerIntent =
   | 'create_rfq'           // "I need to order ball bearings"
@@ -78,6 +78,42 @@ export type TreasuryIntent =
   | 'credit_status'        // "What's my credit line?"
   | 'earn_grain'           // "How do I earn more GRAIN?"
 
+export type NegotiationIntent =
+  | 'start_negotiation'    // "Help me negotiate with TechCorp"
+  | 'counter_offer'        // "Counter at $50,000"
+  | 'accept_deal'          // "Accept their offer"
+  | 'reject_deal'          // "Walk away from this deal"
+  | 'set_limits'           // "Set my walk-away price at $40K"
+  | 'negotiation_status'   // "How's the negotiation going?"
+  | 'ai_negotiate'         // "Let AI negotiate for me"
+  | 'view_negotiations'    // "Show my active negotiations"
+
+export type ERPIntent =
+  | 'sync_erp'             // "Sync with my QuickBooks"
+  | 'view_invoices'        // "Show my invoices"
+  | 'create_invoice'       // "Create invoice for TechCorp"
+  | 'view_bills'           // "Show pending bills"
+  | 'pay_bills'            // "Pay outstanding bills"
+  | 'reconcile'            // "Reconcile accounts"
+  | 'financial_report'     // "Generate P&L report"
+
+export type InboxIntent =
+  | 'check_urgent'         // "Any urgent messages?"
+  | 'check_unread'         // "Show unread messages"
+  | 'check_all'            // "Show my inbox"
+  | 'filter_channel'       // "Show me my Slack messages"
+  | 'reply'                // "Reply to John's email saying..."
+  | 'forward'              // "Forward that to Sarah"
+  | 'search'               // "Find emails about the Acme deal"
+  | 'set_priority'         // "Mark that as urgent"
+  | 'snooze'               // "Remind me about this tomorrow"
+  | 'archive'              // "Archive this conversation"
+  | 'summarize'            // "Summarize my unread messages"
+  | 'compose'              // "Send a LinkedIn message to..."
+  | 'stats'                // "How many unread messages?"
+  | 'mark_read'            // "Mark as read"
+  | 'star'                 // "Star this message"
+
 export type UniversalIntent =
   | 'help'                 // "Help"
   | 'capabilities'         // "What can you do?"
@@ -95,6 +131,9 @@ export type Intent =
   | FounderIntent
   | JobSeekerIntent
   | TreasuryIntent
+  | NegotiationIntent
+  | ERPIntent
+  | InboxIntent
   | UniversalIntent
 
 export interface IntentClassification {
@@ -299,6 +338,122 @@ const INTENT_PATTERNS: Record<IntentCategory, Record<string, string[]>> = {
     ],
     earn_grain: [
       'earn grain', 'get grain', 'how to earn', 'more grain'
+    ],
+  },
+  negotiation: {
+    start_negotiation: [
+      'negotiate', 'help me negotiate', 'start negotiation', 'negotiate with',
+      'let\'s negotiate', 'negotiation for'
+    ],
+    counter_offer: [
+      'counter at', 'counter offer', 'counteroffer', 'counter with'
+    ],
+    accept_deal: [
+      'accept deal', 'accept the deal', 'take the deal', 'close the deal',
+      'finalize', 'agree to terms'
+    ],
+    reject_deal: [
+      'walk away', 'reject deal', 'no deal', 'pass on deal', 'decline deal'
+    ],
+    set_limits: [
+      'walk-away price', 'minimum acceptable', 'maximum budget', 'set limit',
+      'negotiation limit', 'bottom line'
+    ],
+    negotiation_status: [
+      'negotiation status', 'how is negotiation', 'negotiation progress',
+      'where are we', 'deal status'
+    ],
+    ai_negotiate: [
+      'ai negotiate', 'auto negotiate', 'autonomous negotiation',
+      'let wells negotiate', 'negotiate for me'
+    ],
+    view_negotiations: [
+      'active negotiations', 'my negotiations', 'show negotiations',
+      'pending negotiations'
+    ],
+  },
+  erp: {
+    sync_erp: [
+      'sync erp', 'connect quickbooks', 'connect xero', 'sync accounting',
+      'integrate erp', 'import from'
+    ],
+    view_invoices: [
+      'invoices', 'my invoices', 'invoice list', 'outstanding invoices',
+      'unpaid invoices', 'accounts receivable'
+    ],
+    create_invoice: [
+      'create invoice', 'generate invoice', 'new invoice', 'bill them',
+      'send invoice'
+    ],
+    view_bills: [
+      'bills', 'my bills', 'pending bills', 'what do i owe',
+      'accounts payable'
+    ],
+    pay_bills: [
+      'pay bills', 'pay my bills', 'settle bills', 'clear bills'
+    ],
+    reconcile: [
+      'reconcile', 'reconciliation', 'match transactions', 'bank reconciliation'
+    ],
+    financial_report: [
+      'p&l', 'profit and loss', 'balance sheet', 'financial report',
+      'financial statement', 'cash flow'
+    ],
+  },
+  inbox: {
+    check_urgent: [
+      'urgent messages', 'any urgent', 'emergency messages', 'critical messages',
+      'important messages', 'priority messages'
+    ],
+    check_unread: [
+      'unread messages', 'new messages', 'unread', 'any new messages',
+      'what did i miss', 'missed messages'
+    ],
+    check_all: [
+      'inbox', 'my messages', 'show messages', 'check messages',
+      'communications', 'my inbox'
+    ],
+    filter_channel: [
+      'slack messages', 'email', 'emails', 'sms', 'text messages',
+      'linkedin messages', 'whatsapp', 'teams messages', 'discord messages',
+      'twitter dm', 'instagram dm', 'telegram'
+    ],
+    reply: [
+      'reply to', 'respond to', 'reply saying', 'write back', 'answer'
+    ],
+    forward: [
+      'forward to', 'forward that', 'send to', 'delegate to', 'pass to'
+    ],
+    search: [
+      'find email', 'find messages', 'search for', 'look for messages',
+      'find conversation', 'search messages', 'emails about'
+    ],
+    set_priority: [
+      'mark as urgent', 'mark as important', 'set priority', 'flag as',
+      'mark urgent', 'make urgent'
+    ],
+    snooze: [
+      'remind me', 'snooze', 'later', 'tomorrow', 'remind about this'
+    ],
+    archive: [
+      'archive', 'done with', 'remove from inbox', 'dismiss'
+    ],
+    summarize: [
+      'summarize messages', 'summary of', 'overview of messages',
+      'summarize unread', 'inbox summary', 'what should i focus on'
+    ],
+    compose: [
+      'send a message', 'send slack', 'send email', 'compose',
+      'message to', 'write to', 'send linkedin'
+    ],
+    stats: [
+      'inbox stats', 'how many messages', 'message count', 'unread count'
+    ],
+    mark_read: [
+      'mark as read', 'mark read', 'read it'
+    ],
+    star: [
+      'star this', 'star message', 'save this', 'bookmark'
     ],
   },
   universal: {
@@ -518,6 +673,12 @@ export function routeIntent(classification: IntentClassification): RouteResult {
       return routeJobsIntent(intent as JobSeekerIntent, entities, requiresConfirmation)
     case 'treasury':
       return routeTreasuryIntent(intent as TreasuryIntent, entities, requiresConfirmation)
+    case 'negotiation':
+      return routeNegotiationIntent(intent as NegotiationIntent, entities, requiresConfirmation)
+    case 'erp':
+      return routeERPIntent(intent as ERPIntent, entities, requiresConfirmation)
+    case 'inbox':
+      return routeInboxIntent(intent as InboxIntent, entities, requiresConfirmation)
     case 'universal':
       return routeUniversalIntent(intent as UniversalIntent, entities)
     default:
@@ -1026,6 +1187,222 @@ function routeTreasuryIntent(
   }
 }
 
+function routeInboxIntent(
+  intent: InboxIntent,
+  entities: ExtractedEntities,
+  requiresConfirmation: boolean
+): RouteResult {
+  switch (intent) {
+    case 'check_urgent':
+      return {
+        handler: 'inbox.checkUrgent',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'check_urgent',
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'check_unread':
+      return {
+        handler: 'inbox.checkUnread',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'check_unread',
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'check_all':
+      return {
+        handler: 'inbox.checkAll',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'check_all',
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'filter_channel':
+      return {
+        handler: 'inbox.filterChannel',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'filter_channel',
+          channel: entities.rawValues?.channel,
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'reply':
+      return {
+        handler: 'inbox.reply',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'reply',
+          person: entities.personName,
+          replyContent: entities.rawValues?.replyContent,
+          entities,
+        },
+        confirmationRequired: requiresConfirmation,
+        confirmationMessage: entities.personName
+          ? `Reply to ${entities.personName}?`
+          : 'Which message would you like to reply to?',
+      }
+
+    case 'forward':
+      return {
+        handler: 'inbox.forward',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'forward',
+          forwardTo: entities.personName,
+          entities,
+        },
+        confirmationRequired: requiresConfirmation,
+        confirmationMessage: entities.personName
+          ? `Forward to ${entities.personName}?`
+          : 'Who would you like to forward this to?',
+      }
+
+    case 'search':
+      return {
+        handler: 'inbox.search',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'search',
+          searchQuery: entities.rawValues?.searchQuery || entities.productName,
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'set_priority':
+      return {
+        handler: 'inbox.setPriority',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'set_priority',
+          priority: entities.urgency || 'urgent',
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'snooze':
+      return {
+        handler: 'inbox.snooze',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'snooze',
+          snoozeTime: entities.rawValues?.snoozeTime || entities.timeframe,
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'archive':
+      return {
+        handler: 'inbox.archive',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'archive',
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'summarize':
+      return {
+        handler: 'inbox.summarize',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'summarize',
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'compose':
+      return {
+        handler: 'inbox.compose',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'compose',
+          channel: entities.rawValues?.channel,
+          recipient: entities.personName || entities.email,
+          body: entities.rawValues?.composeBody,
+          entities,
+        },
+        confirmationRequired: requiresConfirmation,
+      }
+
+    case 'stats':
+      return {
+        handler: 'inbox.stats',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'stats',
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'mark_read':
+      return {
+        handler: 'inbox.markRead',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'mark_read',
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'star':
+      return {
+        handler: 'inbox.star',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'star',
+          entities,
+        },
+        confirmationRequired: false,
+      }
+
+    default:
+      return {
+        handler: 'inbox.general',
+        toolGroup: 'inbox',
+        action: 'handleInboxIntent',
+        params: {
+          type: 'unknown',
+          entities,
+        },
+        confirmationRequired: false,
+      }
+  }
+}
+
 function routeUniversalIntent(
   intent: UniversalIntent,
   entities: ExtractedEntities
@@ -1101,11 +1478,278 @@ function routeUniversalIntent(
 }
 
 // ============================================================================
+// MULTI-INTENT CLASSIFICATION
+// ============================================================================
+
+/**
+ * Classify multiple intents in a single message
+ * Handles compound requests like "Find suppliers AND start negotiations"
+ */
+export async function classifyMultipleIntents(
+  message: string,
+  context: {
+    userJourney?: IntentCategory
+    recentMessages?: Array<{ role: string; content: string }>
+    activeDeals?: Array<{ id: string; type: string; status: string }>
+    userPreferences?: Record<string, unknown>
+  } = {}
+): Promise<IntentClassification[]> {
+  const contextString = buildContextString(context)
+
+  const systemPrompt = `You are an intent classification system for Wells AI.
+
+Detect MULTIPLE intents in a single message. Users often have compound requests.
+
+USER CONTEXT:
+${contextString}
+
+CATEGORIES: buyer, seller, founder, jobs, treasury, negotiation, erp, inbox, universal
+
+MULTI-INTENT SIGNALS: "and", "also", "then", "plus", "as well as", multiple verbs
+
+RESPOND WITH JSON ARRAY:
+[{ "category": "...", "intent": "...", "confidence": 0.0-1.0, "entities": {...}, "requiresConfirmation": boolean }]
+
+Return intents in execution order.`
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: `Detect all intents: "${message}"` }],
+    })
+
+    const textBlock = response.content.find(block => block.type === 'text')
+    const text = textBlock?.type === 'text' ? textBlock.text : '[]'
+
+    try {
+      const jsonMatch = text.match(/\[[\s\S]*\]/)
+      const parsed = JSON.parse(jsonMatch?.[0] || '[]')
+
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        return [await classifyIntent(message, context)]
+      }
+
+      return parsed.map((p: Record<string, unknown>) => ({
+        category: (p.category as IntentCategory) || 'unknown',
+        intent: (p.intent as Intent) || 'clarify',
+        confidence: (p.confidence as number) || 0.5,
+        entities: (p.entities as ExtractedEntities) || {},
+        requiresConfirmation: (p.requiresConfirmation as boolean) || false,
+        suggestedAction: p.suggestedAction as string | undefined,
+      }))
+    } catch {
+      return [await classifyIntent(message, context)]
+    }
+  } catch (error) {
+    console.error('[IntentRouter] Error classifying multiple intents:', error)
+    return [await classifyIntent(message, context)]
+  }
+}
+
+// ============================================================================
+// NEGOTIATION INTENT ROUTING
+// ============================================================================
+
+function routeNegotiationIntent(
+  intent: NegotiationIntent,
+  entities: ExtractedEntities,
+  requiresConfirmation: boolean
+): RouteResult {
+  switch (intent) {
+    case 'start_negotiation':
+      return {
+        handler: 'negotiation.start',
+        toolGroup: 'negotiation',
+        action: 'startNegotiation',
+        params: {
+          counterparty: entities.companyName || entities.personName,
+          dealType: entities.productCategory || 'general',
+          initialPosition: entities.amount,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'counter_offer':
+      return {
+        handler: 'negotiation.counter',
+        toolGroup: 'negotiation',
+        action: 'sendCounterOffer',
+        params: { amount: entities.amount, terms: entities.specifications },
+        confirmationRequired: true,
+        confirmationMessage: entities.amount
+          ? `Counter with $${entities.amount.toLocaleString()}?`
+          : 'What amount would you like to counter with?',
+      }
+
+    case 'accept_deal':
+      return {
+        handler: 'negotiation.accept',
+        toolGroup: 'negotiation',
+        action: 'acceptOffer',
+        params: { dealId: entities.rfqId || entities.quoteId },
+        confirmationRequired: true,
+        confirmationMessage: 'Accept the current offer and close the deal?',
+      }
+
+    case 'reject_deal':
+      return {
+        handler: 'negotiation.reject',
+        toolGroup: 'negotiation',
+        action: 'rejectNegotiation',
+        params: { reason: entities.rawValues?.reason },
+        confirmationRequired: true,
+        confirmationMessage: 'Walk away from this negotiation?',
+      }
+
+    case 'set_limits':
+      return {
+        handler: 'negotiation.setLimits',
+        toolGroup: 'negotiation',
+        action: 'setNegotiationLimits',
+        params: {
+          walkAwayPrice: entities.amount,
+          targetPrice: entities.salary?.max,
+          maxConcessions: entities.quantity,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'negotiation_status':
+      return {
+        handler: 'negotiation.status',
+        toolGroup: 'negotiation',
+        action: 'getNegotiationStatus',
+        params: { dealId: entities.rfqId || entities.quoteId },
+        confirmationRequired: false,
+      }
+
+    case 'ai_negotiate':
+      return {
+        handler: 'negotiation.autonomous',
+        toolGroup: 'negotiation',
+        action: 'enableAutonomousNegotiation',
+        params: { dealId: entities.rfqId || entities.quoteId, limits: { walkAway: entities.amount } },
+        confirmationRequired: true,
+        confirmationMessage: 'Let Wells AI negotiate autonomously within your set limits?',
+      }
+
+    case 'view_negotiations':
+      return {
+        handler: 'negotiation.list',
+        toolGroup: 'negotiation',
+        action: 'getActiveNegotiations',
+        params: {},
+        confirmationRequired: false,
+      }
+
+    default:
+      return {
+        handler: 'negotiation.general',
+        toolGroup: 'negotiation',
+        action: 'handleNegotiationRequest',
+        params: { entities },
+        confirmationRequired: true,
+      }
+  }
+}
+
+// ============================================================================
+// ERP INTENT ROUTING
+// ============================================================================
+
+function routeERPIntent(
+  intent: ERPIntent,
+  entities: ExtractedEntities,
+  requiresConfirmation: boolean
+): RouteResult {
+  switch (intent) {
+    case 'sync_erp':
+      return {
+        handler: 'erp.sync',
+        toolGroup: 'erp',
+        action: 'syncERPConnection',
+        params: { provider: entities.companyName },
+        confirmationRequired: false,
+      }
+
+    case 'view_invoices':
+      return {
+        handler: 'erp.invoices',
+        toolGroup: 'erp',
+        action: 'getInvoices',
+        params: { status: entities.rawValues?.status || 'all', customer: entities.companyName },
+        confirmationRequired: false,
+      }
+
+    case 'create_invoice':
+      return {
+        handler: 'erp.createInvoice',
+        toolGroup: 'erp',
+        action: 'createInvoice',
+        params: { customer: entities.companyName, amount: entities.amount, items: entities.specifications },
+        confirmationRequired: true,
+        confirmationMessage: entities.companyName
+          ? `Create invoice for ${entities.companyName}${entities.amount ? ` for $${entities.amount}` : ''}?`
+          : 'Who should I invoice?',
+      }
+
+    case 'view_bills':
+      return {
+        handler: 'erp.bills',
+        toolGroup: 'erp',
+        action: 'getBills',
+        params: { status: entities.rawValues?.status || 'pending', vendor: entities.vendorName },
+        confirmationRequired: false,
+      }
+
+    case 'pay_bills':
+      return {
+        handler: 'erp.payBills',
+        toolGroup: 'erp',
+        action: 'payPendingBills',
+        params: { vendor: entities.vendorName, amount: entities.amount },
+        confirmationRequired: true,
+        confirmationMessage: 'Pay pending bills?',
+      }
+
+    case 'reconcile':
+      return {
+        handler: 'erp.reconcile',
+        toolGroup: 'erp',
+        action: 'reconcileAccounts',
+        params: { account: entities.rawValues?.account },
+        confirmationRequired: false,
+      }
+
+    case 'financial_report':
+      return {
+        handler: 'erp.financialReport',
+        toolGroup: 'erp',
+        action: 'generateFinancialReport',
+        params: { reportType: entities.rawValues?.reportType || 'pnl', timeframe: entities.timeframe || 'this_month' },
+        confirmationRequired: false,
+      }
+
+    default:
+      return {
+        handler: 'erp.general',
+        toolGroup: 'erp',
+        action: 'handleERPRequest',
+        params: { entities },
+        confirmationRequired: true,
+      }
+  }
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
 export const IntentRouter = {
   classifyIntent,
+  classifyMultipleIntents,
   quickClassifyIntent,
   routeIntent,
 }

@@ -16,6 +16,8 @@ import {
   createNegotiationSession,
   runFullNegotiation,
   getSessionsByRFQ,
+  processConversationalNegotiation,
+  NegotiationChatUpdate,
 } from '@/lib/negotiation/ai-router';
 import { NegotiationTerms } from '@/lib/negotiation/protocol';
 import { runNegotiation, quickMatch, type PartyProfile, type NegotiationRequest } from '@/lib/ai-negotiation';
@@ -29,6 +31,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    // STREAMING: Chat-based conversational mode with live updates
+    if (body.chatMode && body.message) {
+      return handleChatNegotiation(body, userId);
+    }
 
     // NEW: Conversational mode for AI-to-AI router
     if (body.conversational && body.message) {
@@ -315,6 +322,212 @@ async function handleLegacyNegotiation(
     { error: 'Must provide either responders (for quick match) or responder (for direct negotiation)' },
     { status: 400 }
   );
+}
+
+/**
+ * Handle chat-based negotiation with streaming updates
+ * This is the primary mode for conversational AI-to-AI negotiation
+ *
+ * Buyer says: "I need 1000 bearings, budget $5000, delivery in 2 weeks"
+ * Wells responds with live negotiation updates and final deal
+ */
+async function handleChatNegotiation(
+  body: {
+    message: string;
+    organizationId?: string;
+    organizationName?: string;
+    stream?: boolean;
+  },
+  userId: string
+) {
+  const {
+    message,
+    organizationId = userId,
+    organizationName = 'Your Organization',
+    stream = false,
+  } = body;
+
+  if (!message) {
+    return NextResponse.json(
+      { error: 'Missing required field: message' },
+      { status: 400 }
+    );
+  }
+
+  // Collect updates during negotiation
+  const updates: NegotiationChatUpdate[] = [];
+
+  try {
+    const result = await processConversationalNegotiation(
+      message,
+      userId,
+      organizationId,
+      organizationName,
+      async (update) => {
+        updates.push(update);
+      }
+    );
+
+    // Format response for chat display
+    let chatResponse = result.chatResponse;
+
+    // Build live negotiation transcript
+    const liveNegotiations: {
+      supplierName: string;
+      rounds: {
+        round: number;
+        myOffer?: string;
+        theirResponse?: string;
+      }[];
+      outcome: string;
+      finalPrice?: number;
+    }[] = [];
+
+    // Group updates by session
+    const sessionUpdates = new Map<string, NegotiationChatUpdate[]>();
+    for (const update of updates) {
+      const sessionId = update.sessionId;
+      if (!sessionUpdates.has(sessionId)) {
+        sessionUpdates.set(sessionId, []);
+      }
+      sessionUpdates.get(sessionId)!.push(update);
+    }
+
+    // Build transcript for each supplier
+    for (const [_sessionId, sessionUpdateList] of sessionUpdates) {
+      if (sessionUpdateList.length === 0) continue;
+
+      const supplierName = sessionUpdateList[0].supplierName;
+      const rounds: { round: number; myOffer?: string; theirResponse?: string }[] = [];
+
+      for (const update of sessionUpdateList) {
+        if (update.type === 'round' || update.type === 'complete') {
+          const round = {
+            round: update.round || 0,
+            myOffer: update.buyerOffer
+              ? `$${update.buyerOffer.price.toFixed(2)}`
+              : undefined,
+            theirResponse: update.sellerResponse
+              ? `$${update.sellerResponse.price.toFixed(2)} (${update.sellerResponse.type})`
+              : undefined,
+          };
+          rounds.push(round);
+        }
+      }
+
+      // Get final update for outcome
+      const finalUpdate = sessionUpdateList[sessionUpdateList.length - 1];
+      const outcome = finalUpdate.agreementReached
+        ? `Agreement at $${finalUpdate.finalPrice?.toFixed(2)}`
+        : finalUpdate.status === 'rejected'
+        ? 'No deal'
+        : finalUpdate.status;
+
+      liveNegotiations.push({
+        supplierName,
+        rounds,
+        outcome,
+        finalPrice: finalUpdate.finalPrice,
+      });
+    }
+
+    // Build the complete chat response with live negotiation details
+    const fullResponse: {
+      success: boolean;
+      mode: 'chat_negotiation';
+      rfqId: string;
+      liveNegotiations: typeof liveNegotiations;
+      bestOffer: typeof result.bestOffer;
+      chatResponse: string;
+      rawUpdates: NegotiationChatUpdate[];
+    } = {
+      success: true,
+      mode: 'chat_negotiation',
+      rfqId: result.rfqId,
+      liveNegotiations,
+      bestOffer: result.bestOffer,
+      chatResponse: formatLiveNegotiationForChat(liveNegotiations, result.bestOffer),
+      rawUpdates: updates,
+    };
+
+    return NextResponse.json(fullResponse);
+  } catch (error) {
+    console.error('[API] Chat negotiation error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Negotiation failed',
+        updates, // Return any updates we collected before the error
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Format live negotiation for chat display
+ * Creates the conversational output users see
+ */
+function formatLiveNegotiationForChat(
+  negotiations: {
+    supplierName: string;
+    rounds: { round: number; myOffer?: string; theirResponse?: string }[];
+    outcome: string;
+    finalPrice?: number;
+  }[],
+  bestOffer: {
+    sessionId: string;
+    supplierName: string;
+    price: number;
+    savings?: { amount: number; percentage: number };
+  } | null
+): string {
+  const lines: string[] = [];
+
+  if (negotiations.length === 0) {
+    return "I couldn't find any suppliers for your request. Would you like me to expand the search?";
+  }
+
+  lines.push(`Got it. I found ${negotiations.length} suppliers who can fulfill this. Let me negotiate on your behalf.`);
+  lines.push('');
+
+  for (const neg of negotiations) {
+    lines.push(`**Live Negotiation with ${neg.supplierName}:**`);
+
+    for (const round of neg.rounds) {
+      if (round.myOffer) {
+        lines.push(`- My offer: ${round.myOffer}`);
+      }
+      if (round.theirResponse) {
+        lines.push(`- Their response: ${round.theirResponse}`);
+      }
+    }
+
+    lines.push(`- **${neg.outcome}**`);
+    lines.push('');
+  }
+
+  if (bestOffer) {
+    lines.push('---');
+    lines.push(`**Best Deal: ${bestOffer.supplierName}**`);
+    lines.push(`- Final Price: $${bestOffer.price.toFixed(2)}`);
+
+    if (bestOffer.savings && bestOffer.savings.amount > 0) {
+      lines.push(`- Savings: $${bestOffer.savings.amount.toFixed(2)} (${bestOffer.savings.percentage.toFixed(1)}% below initial quote)`);
+    }
+
+    lines.push('');
+    lines.push('Want me to proceed with this deal?');
+  } else {
+    lines.push('---');
+    lines.push('Could not reach agreement with any supplier.');
+    lines.push('Would you like me to:');
+    lines.push('- Increase the budget?');
+    lines.push('- Extend the delivery timeline?');
+    lines.push('- Try different suppliers?');
+  }
+
+  return lines.join('\n');
 }
 
 /**

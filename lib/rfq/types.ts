@@ -158,6 +158,58 @@ export type NegotiationMessageRole =
   | 'system';     // System message
 
 // ============================================================================
+// BASE RFQ INTERFACE
+// ============================================================================
+
+/**
+ * Base RFQ (Request for Quote) interface
+ * Represents a buyer's request for quotes from suppliers
+ */
+export interface RFQ {
+  /** Unique RFQ ID (UUID) */
+  id: string;
+
+  /** User ID who created the RFQ */
+  userId: string;
+
+  /** Product/service category */
+  category: string;
+
+  /** Detailed description of requirements */
+  description: string;
+
+  /** Quantity needed */
+  quantity: number;
+
+  /** Target price (buyer's ideal) */
+  targetPrice?: number;
+
+  /** How urgent the request is */
+  urgency: string;
+
+  /** Where goods should be delivered */
+  deliveryLocation?: string;
+
+  /** Specifications/requirements as key-value pairs */
+  specifications?: Record<string, string>;
+
+  /** Required delivery date */
+  requiredDeliveryDate?: Date;
+
+  /** Current RFQ status */
+  status: RFQStatus;
+
+  /** Additional notes */
+  notes?: string;
+
+  /** When RFQ was created */
+  createdAt: Date;
+
+  /** When RFQ was last updated */
+  updatedAt: Date;
+}
+
+// ============================================================================
 // TABLE 1: rfq_constraints (Buyer negotiation limits)
 // ============================================================================
 

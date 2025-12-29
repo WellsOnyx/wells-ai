@@ -12,7 +12,10 @@ import {
   updateWorkerProfile,
   getWorkerStats,
   parseProfileFromText,
+  WorkerService,
+  workerService,
 } from '@/lib/jobs/worker-service';
+import { MergeHRISClient } from '@/lib/hris/merge-hris-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -311,6 +314,156 @@ export async function POST(req: NextRequest) {
           success: result.success,
           message: result.message,
         });
+      }
+
+      // ================================================================
+      // HRIS INTEGRATION ACTIONS
+      // ================================================================
+
+      case 'connect_hris': {
+        // Generate a link token for connecting to an HRIS system
+        if (!existingProfile) {
+          return NextResponse.json({
+            error: 'Create a profile first',
+          }, { status: 400 });
+        }
+
+        const { employerId, employerName, email } = data || body;
+        if (!employerId || !employerName) {
+          return NextResponse.json({
+            error: 'employerId and employerName required',
+          }, { status: 400 });
+        }
+
+        const result = await MergeHRISClient.generateLinkToken(
+          employerId,
+          employerName,
+          email
+        );
+
+        return NextResponse.json({
+          success: result.success,
+          message: result.message,
+          linkToken: result.linkToken,
+          magicLinkUrl: result.magicLinkUrl,
+        });
+      }
+
+      case 'exchange_hris_token': {
+        // Exchange public token for account token after OAuth
+        if (!existingProfile) {
+          return NextResponse.json({
+            error: 'Create a profile first',
+          }, { status: 400 });
+        }
+
+        const { publicToken, employerId, employerName } = data || body;
+        if (!publicToken || !employerId || !employerName) {
+          return NextResponse.json({
+            error: 'publicToken, employerId, and employerName required',
+          }, { status: 400 });
+        }
+
+        const result = await MergeHRISClient.exchangeToken(
+          publicToken,
+          employerId,
+          employerName
+        );
+
+        return NextResponse.json({
+          success: result.success,
+          message: result.message,
+          connection: result.connection,
+        });
+      }
+
+      case 'generate_resume': {
+        // Generate AI-tailored resume for a specific job
+        if (!existingProfile) {
+          return NextResponse.json({
+            error: 'Create a profile first',
+          }, { status: 400 });
+        }
+
+        const { jobId } = data || body;
+        if (!jobId) {
+          return NextResponse.json({
+            error: 'jobId required',
+          }, { status: 400 });
+        }
+
+        try {
+          const resume = await workerService.generateAIResume(existingProfile.id, jobId);
+
+          return NextResponse.json({
+            success: true,
+            message: 'Generated tailored resume for the job',
+            resume,
+          });
+        } catch (error: any) {
+          return NextResponse.json({
+            success: false,
+            message: error.message || 'Failed to generate resume',
+          }, { status: 400 });
+        }
+      }
+
+      case 'interview_prep': {
+        // Get interview preparation for a specific job
+        if (!existingProfile) {
+          return NextResponse.json({
+            error: 'Create a profile first',
+          }, { status: 400 });
+        }
+
+        const { jobId: prepJobId } = data || body;
+        if (!prepJobId) {
+          return NextResponse.json({
+            error: 'jobId required',
+          }, { status: 400 });
+        }
+
+        try {
+          const prep = await workerService.prepareForInterview(existingProfile.id, prepJobId);
+
+          return NextResponse.json({
+            success: true,
+            message: "Here's your interview preparation guide",
+            prep,
+          });
+        } catch (error: any) {
+          return NextResponse.json({
+            success: false,
+            message: error.message || 'Failed to generate interview prep',
+          }, { status: 400 });
+        }
+      }
+
+      case 'find_matches': {
+        // Find matching jobs for the worker
+        if (!existingProfile) {
+          return NextResponse.json({
+            error: 'Create a profile first',
+          }, { status: 400 });
+        }
+
+        try {
+          const matches = await workerService.findMatchingJobs(existingProfile.id);
+
+          return NextResponse.json({
+            success: true,
+            message: matches.length > 0
+              ? `Found ${matches.length} matching jobs for your profile`
+              : 'No matching jobs found. Try updating your skills or preferences.',
+            matches,
+            count: matches.length,
+          });
+        } catch (error: any) {
+          return NextResponse.json({
+            success: false,
+            message: error.message || 'Failed to find matching jobs',
+          }, { status: 400 });
+        }
       }
 
       default:

@@ -327,3 +327,69 @@ function formatLeadForEmail(lead: Lead): string {
     </html>
   `
 }
+
+// ============================================================================
+// GENERIC NOTIFICATION FUNCTION
+// ============================================================================
+
+export interface NotificationParams {
+  type: 'email' | 'slack' | 'push' | 'sms' | 'in_app'
+  recipient: string
+  subject?: string
+  message: string
+  metadata?: Record<string, unknown>
+}
+
+/**
+ * Generic notification function - routes to appropriate channel
+ */
+export async function notify(params: NotificationParams): Promise<void> {
+  const { type, recipient, subject, message, metadata } = params
+
+  console.log(`[Notification] Sending ${type} notification to ${recipient}:`, {
+    subject,
+    message: message.slice(0, 100),
+    metadata,
+  })
+
+  try {
+    switch (type) {
+      case 'slack':
+        const webhookUrl = process.env.SLACK_WEBHOOK_URL
+        if (webhookUrl) {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: subject ? `*${subject}*\n${message}` : message,
+              channel: recipient,
+            }),
+          })
+        }
+        break
+
+      case 'email':
+        // Placeholder for email notifications
+        console.log(`[Email] Would send to ${recipient}: ${subject}`)
+        break
+
+      case 'push':
+        // Placeholder for push notifications
+        console.log(`[Push] Would send to ${recipient}: ${message}`)
+        break
+
+      case 'sms':
+        // Placeholder for SMS notifications
+        console.log(`[SMS] Would send to ${recipient}: ${message}`)
+        break
+
+      case 'in_app':
+        // Placeholder for in-app notifications
+        console.log(`[InApp] Would notify ${recipient}: ${message}`)
+        break
+    }
+  } catch (error) {
+    console.error(`[Notification] Error sending ${type} notification:`, error)
+    // Don't throw - notification failures shouldn't break the flow
+  }
+}

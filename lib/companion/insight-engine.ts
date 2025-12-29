@@ -1039,11 +1039,687 @@ export async function generateWelcomeBackMessage(
 }
 
 // ============================================================================
+// SPEND ANOMALY DETECTION
+// ============================================================================
+
+/**
+ * Detect spend anomalies - price increases, unusual vendors, category spikes
+ */
+export async function detectSpendAnomalies(userId: string): Promise<ProactiveInsight[]> {
+  const insights: ProactiveInsight[] = []
+
+  try {
+    // Check for price increases from regular suppliers
+    const priceIncreases = await query(
+      `WITH recent_orders AS (
+        SELECT supplier_id, category, AVG(unit_price) as avg_price
+        FROM orders
+        WHERE buyer_id = $1 AND created_at > NOW() - INTERVAL '30 days'
+        GROUP BY supplier_id, category
+      ),
+      historical_orders AS (
+        SELECT supplier_id, category, AVG(unit_price) as avg_price
+        FROM orders
+        WHERE buyer_id = $1 AND created_at BETWEEN NOW() - INTERVAL '90 days' AND NOW() - INTERVAL '30 days'
+        GROUP BY supplier_id, category
+      )
+      SELECT
+        r.supplier_id,
+        r.category,
+        r.avg_price as current_price,
+        h.avg_price as historical_price,
+        ROUND(((r.avg_price - h.avg_price) / NULLIF(h.avg_price, 0) * 100)::numeric, 1) as percent_change,
+        s.company_name as supplier_name
+      FROM recent_orders r
+      JOIN historical_orders h ON r.supplier_id = h.supplier_id AND r.category = h.category
+      LEFT JOIN suppliers s ON r.supplier_id = s.id
+      WHERE r.avg_price > h.avg_price * 1.05
+      ORDER BY percent_change DESC
+      LIMIT 5`,
+      [userId]
+    )
+
+    for (const row of priceIncreases.rows) {
+      const percentIncrease = parseFloat(row.percent_change)
+      if (percentIncrease >= 5) {
+        const insightId = `ins_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+        // Find alternative suppliers
+        const alternatives = await query(
+          `SELECT COUNT(*) as count FROM suppliers
+           WHERE categories @> ARRAY[$1]
+           AND id != $2
+           AND verified = true`,
+          [row.category, row.supplier_id]
+        )
+
+        const alternativeCount = parseInt(alternatives.rows[0]?.count || '0', 10)
+        const potentialSavings = Math.floor(row.current_price * 0.12 * 100) // Estimate 12% savings potential
+
+        insights.push({
+          id: insightId,
+          userId,
+          journey: 'buyer',
+          category: 'cost_savings',
+          urgency: percentIncrease >= 15 ? 'high' : 'medium',
+          title: `${row.supplier_name || 'Supplier'} raised prices ${percentIncrease}%`,
+          message: `I noticed ${row.supplier_name || 'your supplier'} increased ${row.category} prices by ${percentIncrease}% last month. I found ${alternativeCount} verified alternatives that could save you up to 12%. Want me to get quotes?`,
+          potentialValue: potentialSavings,
+          potentialValueType: 'savings',
+          actionOptions: [
+            {
+              id: `${insightId}_get_quotes`,
+              label: 'Get Alternative Quotes',
+              actionType: 'ai_task',
+              isPrimary: true,
+              aiTaskDescription: `Find and request quotes from alternative ${row.category} suppliers`,
+            },
+            {
+              id: `${insightId}_negotiate`,
+              label: 'Negotiate with Current Supplier',
+              actionType: 'ai_task',
+              isPrimary: false,
+              aiTaskDescription: `Draft a negotiation email to ${row.supplier_name} about the price increase`,
+            },
+          ],
+          relatedEntities: [{
+            type: 'supplier',
+            id: row.supplier_id,
+            name: row.supplier_name || 'Unknown Supplier',
+          }],
+          dataPoints: {
+            percentIncrease,
+            currentPrice: row.current_price,
+            historicalPrice: row.historical_price,
+            category: row.category,
+            alternativeCount,
+          },
+          createdAt: new Date(),
+          actedUpon: false,
+          dismissed: false,
+        })
+      }
+    }
+
+    // Check for unusual invoice amounts
+    const unusualInvoices = await query(
+      `WITH user_avg AS (
+        SELECT AVG(amount) as avg_amount, STDDEV(amount) as stddev_amount
+        FROM invoices
+        WHERE buyer_id = $1 AND status = 'pending'
+      )
+      SELECT i.*, s.company_name as vendor_name,
+             ua.avg_amount, ua.stddev_amount
+      FROM invoices i
+      CROSS JOIN user_avg ua
+      LEFT JOIN suppliers s ON i.vendor_id = s.id
+      WHERE i.buyer_id = $1
+        AND i.status = 'pending'
+        AND i.amount > ua.avg_amount + (2 * COALESCE(ua.stddev_amount, ua.avg_amount * 0.5))
+      ORDER BY i.amount DESC
+      LIMIT 3`,
+      [userId]
+    )
+
+    for (const row of unusualInvoices.rows) {
+      const insightId = `ins_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      const isNewVendor = !row.vendor_id || row.first_order
+
+      insights.push({
+        id: insightId,
+        userId,
+        journey: 'buyer',
+        category: 'risk_alert',
+        urgency: 'critical',
+        title: `Unusual invoice requires attention`,
+        message: `$${parseFloat(row.amount).toLocaleString()} invoice from ${row.vendor_name || 'unknown vendor'}${isNewVendor ? ' (new vendor)' : ''} is significantly above your average. This is ${Math.round(row.amount / row.avg_amount)}x your typical invoice. Want me to verify this before approval?`,
+        potentialValue: parseFloat(row.amount),
+        potentialValueType: 'risk_avoided',
+        actionOptions: [
+          {
+            id: `${insightId}_investigate`,
+            label: 'Investigate',
+            actionType: 'ai_task',
+            isPrimary: true,
+            aiTaskDescription: 'Analyze this invoice and verify legitimacy',
+          },
+          {
+            id: `${insightId}_approve`,
+            label: 'Approve Anyway',
+            actionType: 'confirm',
+            isPrimary: false,
+            confirmMessage: 'Are you sure you want to approve this unusual invoice?',
+          },
+        ],
+        dataPoints: {
+          invoiceId: row.id,
+          amount: parseFloat(row.amount),
+          avgAmount: parseFloat(row.avg_amount),
+          vendorName: row.vendor_name,
+          isNewVendor,
+        },
+        createdAt: new Date(),
+        actedUpon: false,
+        dismissed: false,
+      })
+    }
+  } catch (error) {
+    console.error('[InsightEngine] Error detecting spend anomalies:', error)
+  }
+
+  return insights
+}
+
+// ============================================================================
+// OPPORTUNITY DETECTION
+// ============================================================================
+
+/**
+ * Detect opportunities - better suppliers, consolidation, contract renewals
+ */
+export async function detectOpportunities(userId: string): Promise<ProactiveInsight[]> {
+  const insights: ProactiveInsight[] = []
+
+  try {
+    // Contract renewal opportunities
+    const expiringContracts = await query(
+      `SELECT c.*, s.company_name as supplier_name,
+              (SELECT AVG(unit_price) FROM orders WHERE supplier_id = c.supplier_id AND created_at > NOW() - INTERVAL '30 days') as current_avg_price,
+              (SELECT AVG(unit_price) FROM orders WHERE category = c.category AND created_at > NOW() - INTERVAL '30 days') as market_avg_price
+       FROM contracts c
+       LEFT JOIN suppliers s ON c.supplier_id = s.id
+       WHERE c.buyer_id = $1
+         AND c.end_date BETWEEN NOW() AND NOW() + INTERVAL '60 days'
+         AND c.status = 'active'
+       ORDER BY c.end_date ASC
+       LIMIT 5`,
+      [userId]
+    )
+
+    for (const row of expiringContracts.rows) {
+      const insightId = `ins_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      const daysRemaining = Math.ceil((new Date(row.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      const marketRateChange = row.market_avg_price && row.current_avg_price
+        ? Math.round(((row.market_avg_price - row.current_avg_price) / row.current_avg_price) * 100)
+        : 0
+      const leveragePercent = Math.abs(marketRateChange) + (daysRemaining < 30 ? 10 : 5)
+
+      insights.push({
+        id: insightId,
+        userId,
+        journey: 'buyer',
+        category: 'contract_reminder',
+        urgency: daysRemaining <= 30 ? 'high' : 'medium',
+        title: `Contract with ${row.supplier_name || 'supplier'} expires in ${daysRemaining} days`,
+        message: `Based on your history and current market rates${marketRateChange !== 0 ? ` (${marketRateChange > 0 ? 'up' : 'down'} ${Math.abs(marketRateChange)}%)` : ''}, you have approximately ${leveragePercent}% leverage to negotiate better terms. ${marketRateChange < 0 ? 'Good time to lock in lower rates.' : 'Consider alternatives or lock in current rates.'}`,
+        potentialValue: Math.floor(parseFloat(row.annual_value || '50000') * 0.15),
+        potentialValueType: 'savings',
+        actionOptions: [
+          {
+            id: `${insightId}_renegotiate`,
+            label: 'Help Me Renegotiate',
+            actionType: 'ai_task',
+            isPrimary: true,
+            aiTaskDescription: `Draft a renegotiation strategy and proposal for ${row.supplier_name} contract`,
+          },
+          {
+            id: `${insightId}_find_alternatives`,
+            label: 'Find Alternatives',
+            actionType: 'ai_task',
+            isPrimary: false,
+            aiTaskDescription: `Find alternative suppliers for ${row.category} category`,
+          },
+          {
+            id: `${insightId}_auto_renew`,
+            label: 'Auto-Renew',
+            actionType: 'confirm',
+            isPrimary: false,
+            confirmMessage: 'Proceed with automatic renewal at current terms?',
+          },
+        ],
+        relatedEntities: [{
+          type: 'contract',
+          id: row.id,
+          name: `${row.supplier_name} Contract`,
+        }],
+        dataPoints: {
+          daysRemaining,
+          marketRateChange,
+          leveragePercent,
+          annualValue: row.annual_value,
+          endDate: row.end_date,
+        },
+        expiresAt: new Date(row.end_date),
+        createdAt: new Date(),
+        actedUpon: false,
+        dismissed: false,
+      })
+    }
+
+    // Supplier consolidation opportunities
+    const consolidationOpps = await query(
+      `SELECT category, COUNT(DISTINCT supplier_id) as supplier_count,
+              SUM(amount) as total_spend,
+              ARRAY_AGG(DISTINCT s.company_name) as supplier_names
+       FROM orders o
+       LEFT JOIN suppliers s ON o.supplier_id = s.id
+       WHERE o.buyer_id = $1 AND o.created_at > NOW() - INTERVAL '90 days'
+       GROUP BY category
+       HAVING COUNT(DISTINCT supplier_id) >= 3
+       ORDER BY total_spend DESC
+       LIMIT 3`,
+      [userId]
+    )
+
+    for (const row of consolidationOpps.rows) {
+      const insightId = `ins_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      const potentialSavings = Math.floor(parseFloat(row.total_spend) * 0.08) // Estimate 8% consolidation savings
+
+      insights.push({
+        id: insightId,
+        userId,
+        journey: 'buyer',
+        category: 'cost_savings',
+        urgency: 'low',
+        title: `Consolidation opportunity in ${row.category}`,
+        message: `You're using ${row.supplier_count} different suppliers for ${row.category}. Consolidating to 1-2 preferred suppliers could save up to 8% ($${potentialSavings.toLocaleString()}/year) through volume discounts.`,
+        potentialValue: potentialSavings,
+        potentialValueType: 'savings',
+        actionOptions: [
+          {
+            id: `${insightId}_analyze`,
+            label: 'Analyze Consolidation',
+            actionType: 'ai_task',
+            isPrimary: true,
+            aiTaskDescription: `Analyze ${row.category} suppliers and recommend consolidation strategy`,
+          },
+          {
+            id: `${insightId}_later`,
+            label: 'Remind Me Later',
+            actionType: 'schedule',
+            isPrimary: false,
+          },
+        ],
+        dataPoints: {
+          category: row.category,
+          supplierCount: row.supplier_count,
+          totalSpend: parseFloat(row.total_spend),
+          supplierNames: row.supplier_names,
+        },
+        createdAt: new Date(),
+        actedUpon: false,
+        dismissed: false,
+      })
+    }
+  } catch (error) {
+    console.error('[InsightEngine] Error detecting opportunities:', error)
+  }
+
+  return insights
+}
+
+// ============================================================================
+// RISK DETECTION
+// ============================================================================
+
+/**
+ * Detect risks - supplier concentration, overdue payments, expiring contracts
+ */
+export async function detectRisks(userId: string): Promise<ProactiveInsight[]> {
+  const insights: ProactiveInsight[] = []
+
+  try {
+    // Supplier concentration risk
+    const concentrationRisk = await query(
+      `WITH supplier_spend AS (
+        SELECT supplier_id, s.company_name, SUM(amount) as total,
+               SUM(amount) / SUM(SUM(amount)) OVER () * 100 as percentage
+        FROM orders o
+        LEFT JOIN suppliers s ON o.supplier_id = s.id
+        WHERE o.buyer_id = $1 AND o.created_at > NOW() - INTERVAL '90 days'
+        GROUP BY supplier_id, s.company_name
+        ORDER BY total DESC
+      )
+      SELECT * FROM supplier_spend WHERE percentage > 40 LIMIT 1`,
+      [userId]
+    )
+
+    if (concentrationRisk.rows.length > 0) {
+      const row = concentrationRisk.rows[0]
+      const insightId = `ins_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      const percentFromTop = Math.round(parseFloat(row.percentage))
+
+      insights.push({
+        id: insightId,
+        userId,
+        journey: 'buyer',
+        category: 'risk_alert',
+        urgency: percentFromTop >= 60 ? 'high' : 'medium',
+        title: `Supplier concentration risk detected`,
+        message: `${percentFromTop}% of your orders are from ${row.company_name || 'one supplier'}. If they have supply issues, it could significantly impact your operations. I recommend diversifying to reduce risk.`,
+        potentialValue: parseFloat(row.total),
+        potentialValueType: 'risk_avoided',
+        actionOptions: [
+          {
+            id: `${insightId}_find_alternatives`,
+            label: 'Find Alternative Suppliers',
+            actionType: 'ai_task',
+            isPrimary: true,
+            aiTaskDescription: 'Find and qualify alternative suppliers to reduce concentration risk',
+          },
+          {
+            id: `${insightId}_risk_plan`,
+            label: 'Create Risk Plan',
+            actionType: 'ai_task',
+            isPrimary: false,
+            aiTaskDescription: 'Create a supplier risk mitigation plan',
+          },
+        ],
+        relatedEntities: [{
+          type: 'supplier',
+          id: row.supplier_id,
+          name: row.company_name || 'Primary Supplier',
+        }],
+        dataPoints: {
+          percentFromTopSupplier: percentFromTop,
+          topSupplierName: row.company_name,
+          atRiskSpend: parseFloat(row.total),
+        },
+        createdAt: new Date(),
+        actedUpon: false,
+        dismissed: false,
+      })
+    }
+
+    // Overdue payment risks
+    const overduePayments = await query(
+      `SELECT COUNT(*) as overdue_count,
+              SUM(amount) as total_overdue,
+              MIN(due_date) as oldest_due
+       FROM invoices
+       WHERE buyer_id = $1
+         AND status = 'pending'
+         AND due_date < NOW()`,
+      [userId]
+    )
+
+    if (overduePayments.rows[0] && parseInt(overduePayments.rows[0].overdue_count, 10) > 0) {
+      const row = overduePayments.rows[0]
+      const insightId = `ins_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      const overdueCount = parseInt(row.overdue_count, 10)
+      const totalOverdue = parseFloat(row.total_overdue || '0')
+      const daysOverdue = Math.ceil((Date.now() - new Date(row.oldest_due).getTime()) / (1000 * 60 * 60 * 24))
+
+      insights.push({
+        id: insightId,
+        userId,
+        journey: 'buyer',
+        category: 'risk_alert',
+        urgency: daysOverdue > 30 ? 'critical' : daysOverdue > 14 ? 'high' : 'medium',
+        title: `${overdueCount} overdue payment${overdueCount > 1 ? 's' : ''} totaling $${totalOverdue.toLocaleString()}`,
+        message: `You have ${overdueCount} overdue invoice${overdueCount > 1 ? 's' : ''} totaling $${totalOverdue.toLocaleString()}. The oldest is ${daysOverdue} days past due. This may affect supplier relationships and credit terms.`,
+        potentialValue: totalOverdue,
+        potentialValueType: 'risk_avoided',
+        actionOptions: [
+          {
+            id: `${insightId}_pay_now`,
+            label: 'Pay Now',
+            actionType: 'navigation',
+            isPrimary: true,
+            navigationUrl: '/payments/overdue',
+          },
+          {
+            id: `${insightId}_request_extension`,
+            label: 'Request Extension',
+            actionType: 'ai_task',
+            isPrimary: false,
+            aiTaskDescription: 'Draft payment extension requests for overdue invoices',
+          },
+        ],
+        dataPoints: {
+          overdueCount,
+          totalOverdue,
+          daysOverdue,
+          oldestDue: row.oldest_due,
+        },
+        createdAt: new Date(),
+        actedUpon: false,
+        dismissed: false,
+      })
+    }
+  } catch (error) {
+    console.error('[InsightEngine] Error detecting risks:', error)
+  }
+
+  return insights
+}
+
+// ============================================================================
+// ACTION COMPLETIONS TRACKING
+// ============================================================================
+
+/**
+ * Track and report completed actions
+ */
+export async function trackCompletions(userId: string): Promise<ProactiveInsight[]> {
+  const insights: ProactiveInsight[] = []
+
+  try {
+    // Check for recently completed negotiations
+    const completedNegotiations = await query(
+      `SELECT n.*,
+              n.final_price - n.initial_ask as savings,
+              s.company_name as supplier_name,
+              ROUND(((n.initial_ask - n.final_price) / NULLIF(n.initial_ask, 0) * 100)::numeric, 1) as savings_percent
+       FROM negotiations n
+       LEFT JOIN suppliers s ON n.supplier_id = s.id
+       WHERE n.buyer_id = $1
+         AND n.status = 'completed'
+         AND n.completed_at > NOW() - INTERVAL '24 hours'
+         AND NOT EXISTS (
+           SELECT 1 FROM proactive_insights pi
+           WHERE pi.user_id = $1
+             AND pi.category = 'celebration'
+             AND pi.data_points->>'negotiationId' = n.id::text
+         )
+       ORDER BY n.completed_at DESC
+       LIMIT 3`,
+      [userId]
+    )
+
+    for (const row of completedNegotiations.rows) {
+      const insightId = `ins_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      const savings = parseFloat(row.savings || '0')
+      const savingsPercent = parseFloat(row.savings_percent || '0')
+
+      insights.push({
+        id: insightId,
+        userId,
+        journey: 'buyer',
+        category: 'celebration',
+        urgency: 'info',
+        title: `Negotiation with ${row.supplier_name || 'supplier'} completed!`,
+        message: `Great news! The negotiation finished - we got $${Math.abs(savings).toLocaleString()} (${Math.abs(savingsPercent)}% ${savings > 0 ? 'under' : 'over'} budget). ${row.po_created ? 'PO created and sent.' : 'Ready to create PO.'}`,
+        potentialValue: Math.abs(savings),
+        potentialValueType: 'savings',
+        actionOptions: [
+          {
+            id: `${insightId}_view_details`,
+            label: 'View Details',
+            actionType: 'navigation',
+            isPrimary: true,
+            navigationUrl: `/negotiations/${row.id}`,
+          },
+          {
+            id: `${insightId}_create_po`,
+            label: 'Create PO',
+            actionType: 'api_call',
+            isPrimary: !row.po_created,
+            endpoint: '/api/orders/create-from-negotiation',
+            payload: { negotiationId: row.id },
+          },
+        ],
+        relatedEntities: [{
+          type: 'deal',
+          id: row.id,
+          name: `${row.supplier_name} Negotiation`,
+        }],
+        dataPoints: {
+          negotiationId: row.id,
+          savings,
+          savingsPercent,
+          finalPrice: row.final_price,
+          initialAsk: row.initial_ask,
+          poCreated: row.po_created,
+        },
+        createdAt: new Date(),
+        actedUpon: false,
+        dismissed: false,
+      })
+    }
+
+    // Check for completed orders/deliveries
+    const completedDeliveries = await query(
+      `SELECT o.*, s.company_name as supplier_name
+       FROM orders o
+       LEFT JOIN suppliers s ON o.supplier_id = s.id
+       WHERE o.buyer_id = $1
+         AND o.status = 'delivered'
+         AND o.delivered_at > NOW() - INTERVAL '24 hours'
+         AND NOT EXISTS (
+           SELECT 1 FROM proactive_insights pi
+           WHERE pi.user_id = $1
+             AND pi.category = 'celebration'
+             AND pi.data_points->>'orderId' = o.id::text
+         )
+       ORDER BY o.delivered_at DESC
+       LIMIT 3`,
+      [userId]
+    )
+
+    for (const row of completedDeliveries.rows) {
+      const insightId = `ins_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+      insights.push({
+        id: insightId,
+        userId,
+        journey: 'buyer',
+        category: 'celebration',
+        urgency: 'info',
+        title: `Order from ${row.supplier_name || 'supplier'} delivered`,
+        message: `Your order #${row.order_number || row.id.slice(-8)} has been delivered. Everything arrived on schedule. Want to rate this supplier?`,
+        actionOptions: [
+          {
+            id: `${insightId}_rate`,
+            label: 'Rate Supplier',
+            actionType: 'navigation',
+            isPrimary: true,
+            navigationUrl: `/suppliers/${row.supplier_id}/rate`,
+          },
+          {
+            id: `${insightId}_reorder`,
+            label: 'Reorder',
+            actionType: 'api_call',
+            isPrimary: false,
+            endpoint: '/api/orders/reorder',
+            payload: { orderId: row.id },
+          },
+        ],
+        relatedEntities: [{
+          type: 'supplier',
+          id: row.supplier_id,
+          name: row.supplier_name || 'Unknown Supplier',
+        }],
+        dataPoints: {
+          orderId: row.id,
+          orderNumber: row.order_number,
+          amount: row.amount,
+          deliveredAt: row.delivered_at,
+        },
+        createdAt: new Date(),
+        actedUpon: false,
+        dismissed: false,
+      })
+    }
+  } catch (error) {
+    console.error('[InsightEngine] Error tracking completions:', error)
+  }
+
+  return insights
+}
+
+// ============================================================================
+// COMPREHENSIVE INSIGHT GENERATION
+// ============================================================================
+
+/**
+ * Generate all insight types for a user
+ */
+export async function generateComprehensiveInsights(
+  context: InsightGenerationContext
+): Promise<ProactiveInsight[]> {
+  const { userId, journey } = context
+  const allInsights: ProactiveInsight[] = []
+
+  try {
+    // Run all detection functions in parallel
+    const [
+      journeyInsights,
+      spendAnomalies,
+      opportunities,
+      risks,
+      completions,
+    ] = await Promise.all([
+      generateInsights(context),
+      journey === 'buyer' ? detectSpendAnomalies(userId) : Promise.resolve([]),
+      journey === 'buyer' ? detectOpportunities(userId) : Promise.resolve([]),
+      journey === 'buyer' || journey === 'founder' ? detectRisks(userId) : Promise.resolve([]),
+      trackCompletions(userId),
+    ])
+
+    allInsights.push(
+      ...journeyInsights,
+      ...spendAnomalies,
+      ...opportunities,
+      ...risks,
+      ...completions
+    )
+
+    // Deduplicate by similar content
+    const seen = new Set<string>()
+    const deduped = allInsights.filter((insight) => {
+      const key = `${insight.category}_${insight.urgency}_${insight.title.slice(0, 30)}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
+    // Sort by urgency and potential value
+    const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
+    deduped.sort((a, b) => {
+      const urgencyDiff = urgencyOrder[a.urgency] - urgencyOrder[b.urgency]
+      if (urgencyDiff !== 0) return urgencyDiff
+      return (b.potentialValue || 0) - (a.potentialValue || 0)
+    })
+
+    return deduped.slice(0, 10) // Return top 10 insights
+  } catch (error) {
+    console.error('[InsightEngine] Error generating comprehensive insights:', error)
+    return []
+  }
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
 export const InsightEngine = {
   generateInsights,
+  generateComprehensiveInsights,
+  detectSpendAnomalies,
+  detectOpportunities,
+  detectRisks,
+  trackCompletions,
   storeInsight,
   getPendingInsights,
   markInsightActedUpon,

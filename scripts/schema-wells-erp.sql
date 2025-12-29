@@ -507,6 +507,136 @@ COMMENT ON COLUMN wells_purchase_orders.created_by_ai IS 'True if PO was created
 -- ORDER BY expected_delivery_date ASC;
 
 -- ============================================================================
+-- CONVERSATION HISTORY TABLE
+-- Stores chat sessions for multi-turn ERP conversations
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS wells_erp_conversations (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+
+  -- Conversation metadata
+  title TEXT, -- Auto-generated from first message
+  summary TEXT, -- AI-generated summary
+  started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  last_message_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  message_count INTEGER DEFAULT 0,
+
+  -- Related entities created during conversation
+  related_invoices TEXT[] DEFAULT '{}',
+  related_pos TEXT[] DEFAULT '{}',
+  related_vendors TEXT[] DEFAULT '{}',
+
+  -- Status
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'archived', 'deleted')),
+
+  -- Timestamps
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_wells_conv_user_id ON wells_erp_conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_wells_conv_last_message ON wells_erp_conversations(user_id, last_message_at DESC);
+
+-- ============================================================================
+-- CONVERSATION MESSAGES TABLE
+-- Individual messages within a conversation
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS wells_erp_messages (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL REFERENCES wells_erp_conversations(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+
+  -- Message content
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+  content TEXT NOT NULL,
+
+  -- Tool usage tracking
+  tools_used TEXT[] DEFAULT '{}',
+  tool_results JSONB DEFAULT '[]',
+
+  -- Entities affected
+  entities_created JSONB DEFAULT '[]', -- [{ type: 'invoice', id: 'xxx' }]
+  entities_modified JSONB DEFAULT '[]',
+
+  -- Timestamps
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_wells_msg_conversation ON wells_erp_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_wells_msg_created_at ON wells_erp_messages(conversation_id, created_at);
+
+-- Trigger to update conversation metadata on new message
+CREATE OR REPLACE FUNCTION update_conversation_on_message()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE wells_erp_conversations
+  SET
+    last_message_at = NEW.created_at,
+    message_count = message_count + 1,
+    updated_at = NOW()
+  WHERE id = NEW.conversation_id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_conversation_on_new_message ON wells_erp_messages;
+CREATE TRIGGER update_conversation_on_new_message
+  AFTER INSERT ON wells_erp_messages
+  FOR EACH ROW EXECUTE FUNCTION update_conversation_on_message();
+
+-- ============================================================================
+-- INVENTORY TABLE
+-- Basic inventory tracking for WellsAI ERP
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS wells_inventory (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+
+  -- Item Details
+  sku TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  category TEXT,
+
+  -- Quantities
+  quantity INTEGER NOT NULL DEFAULT 0,
+  unit_cost DECIMAL(20, 2) NOT NULL DEFAULT 0,
+  total_value DECIMAL(20, 2) NOT NULL DEFAULT 0,
+
+  -- Stock Management
+  reorder_point INTEGER DEFAULT 10,
+  reorder_quantity INTEGER DEFAULT 100,
+  location TEXT,
+
+  -- Tracking
+  last_restock_date TIMESTAMP,
+  last_count_date TIMESTAMP,
+
+  -- AI Tracking
+  created_by_ai BOOLEAN DEFAULT false,
+  ai_conversation_id TEXT,
+
+  -- Timestamps
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+
+  UNIQUE(user_id, sku)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wells_inventory_user_id ON wells_inventory(user_id);
+CREATE INDEX IF NOT EXISTS idx_wells_inventory_sku ON wells_inventory(user_id, sku);
+CREATE INDEX IF NOT EXISTS idx_wells_inventory_category ON wells_inventory(user_id, category);
+CREATE INDEX IF NOT EXISTS idx_wells_inventory_low_stock ON wells_inventory(user_id) WHERE quantity <= reorder_point;
+
+-- Update inventory timestamp trigger
+DROP TRIGGER IF EXISTS update_wells_inventory_timestamp ON wells_inventory;
+CREATE TRIGGER update_wells_inventory_timestamp
+  BEFORE UPDATE ON wells_inventory
+  FOR EACH ROW EXECUTE FUNCTION update_wells_erp_timestamp();
+
+COMMENT ON TABLE wells_inventory IS 'Basic inventory tracking for WellsAI ERP users';
+
+-- ============================================================================
 -- SCHEDULED JOBS (to be run via cron or pg_cron)
 -- ============================================================================
 

@@ -42,6 +42,11 @@
 export {
   InsightEngine,
   generateInsights,
+  generateComprehensiveInsights,
+  detectSpendAnomalies,
+  detectOpportunities,
+  detectRisks,
+  trackCompletions,
   storeInsight,
   getPendingInsights,
   markInsightActedUpon,
@@ -65,11 +70,18 @@ export {
   deliverInsight,
   generateAndSendDigest,
   processPendingDeliveries,
+  // Chat queue functions (primary notification method)
+  addToChatQueue,
+  getChatQueue,
+  markChatQueueRead,
+  buildProactiveChatGreeting,
+  notify,
   type NotificationChannel,
   type NotificationFrequency,
   type NotificationPreferences,
   type NotificationDelivery,
   type DigestContent,
+  type ChatQueueItem,
 } from './notification-hub'
 
 // Trust Builder - Relationship tracking
@@ -85,6 +97,13 @@ export {
   getTierDescription,
   getTierColor,
   formatTrustSummary,
+  // Autonomy functions
+  getAutonomyLevel,
+  canPerformAutonomousAction,
+  getValueDelivered,
+  recordValueDelivered,
+  getTrustProgress,
+  getTrustSummaryForChat,
   type TrustScore,
   type TrustTier,
   type TrustFactors,
@@ -92,6 +111,7 @@ export {
   type TrustEvent,
   type TrustEventType,
   type AutonomySettings,
+  type AutonomyConfig,
 } from './trust-builder'
 
 // Memory Enhancement - Deep user memory
@@ -113,6 +133,11 @@ export {
   getRelationshipsNeedingAttention,
   getEnhancedMemory,
   buildEnhancedContext,
+  // Chat context functions
+  getContextForChat,
+  generateContextualGreeting,
+  buildSystemPromptContext,
+  storeRichContext,
   type CommunicationPreference,
   type UserGoal,
   type GoalMilestone,
@@ -123,6 +148,7 @@ export {
   type PersonalityAdaptation,
   type ImportantDate,
   type UserRelationship,
+  type ChatContext,
 } from './memory-enhancement'
 
 // Insight Generator - Background job
@@ -135,6 +161,49 @@ export {
   type InsightGeneratorConfig,
   type GeneratorStats,
 } from './insight-generator'
+
+// Insight Engine Service - Class-based insight generation
+export {
+  InsightEngineService,
+  type Insight,
+  type SavingsInsight,
+  type AnomalyInsight,
+  type VendorInsight,
+  type MarketInsight,
+  type RiskInsight,
+  type JobMatch,
+  type ApplicationUpdate,
+} from './insight-engine-service'
+
+// Background Worker - Scheduled processing
+export {
+  BackgroundWorker,
+  runBackgroundWorker,
+  runForUser,
+  getWorkerStatus,
+  startWorkerSchedule,
+  stopWorkerSchedule,
+  logActivity,
+  completeActivity,
+  getWellsActivity,
+  getWellsWorkingSummary,
+  type WorkerStatus,
+  type UserProcessingResult,
+  type ActivityLogEntry,
+} from './background-worker'
+
+// Wells Status - "Wells is working" visibility system
+export {
+  WellsStatusService,
+  getWellsStatus,
+  getAnimatedTaskDescriptions,
+  formatTaskForDisplay,
+  getWellsPulse,
+  type WellsStatus,
+  type WellsTask,
+  type WellsCompletion,
+  type WellsStats,
+} from './wells-status'
 
 // ============================================================================
 // COMPANION SYSTEM OVERVIEW
@@ -188,9 +257,12 @@ export const EXAMPLE_MESSAGES = {
 
 export default {
   InsightEngine,
+  InsightEngineService,
   NotificationHub,
   TrustBuilder,
   MemoryEnhancement,
   InsightGenerator,
+  BackgroundWorker,
+  WellsStatusService,
   EXAMPLE_MESSAGES,
 }

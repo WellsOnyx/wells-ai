@@ -1088,16 +1088,359 @@ export async function processPendingDeliveries(): Promise<void> {
 }
 
 // ============================================================================
+// CHAT QUEUE SYSTEM - ALL NOTIFICATIONS SURFACE THROUGH CHAT
+// ============================================================================
+
+export interface ChatQueueItem {
+  id: string
+  userId: string
+  type: 'insight' | 'completion' | 'reminder' | 'celebration' | 'alert' | 'update'
+  priority: 'critical' | 'high' | 'medium' | 'low' | 'info'
+  message: string
+  detailedMessage?: string
+  actions?: Array<{
+    id: string
+    label: string
+    actionType: string
+    data?: Record<string, any>
+  }>
+  relatedInsightId?: string
+  expiresAt?: Date
+  createdAt: Date
+  deliveredAt?: Date
+  readAt?: Date
+}
+
+/**
+ * Add a notification to the chat queue
+ * All notifications appear in Wells chat - this is the primary delivery mechanism
+ */
+export async function addToChatQueue(
+  userId: string,
+  notification: Omit<ChatQueueItem, 'id' | 'userId' | 'createdAt'>
+): Promise<ChatQueueItem> {
+  const id = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const item: ChatQueueItem = {
+    ...notification,
+    id,
+    userId,
+    createdAt: new Date(),
+  }
+
+  try {
+    await query(
+      `INSERT INTO chat_queue (id, user_id, type, priority, message, detailed_message,
+        actions, related_insight_id, expires_at, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        item.id,
+        item.userId,
+        item.type,
+        item.priority,
+        item.message,
+        item.detailedMessage,
+        JSON.stringify(item.actions || []),
+        item.relatedInsightId,
+        item.expiresAt,
+      ]
+    )
+
+    // For critical/high priority, also send push notification
+    if (notification.priority === 'critical' || notification.priority === 'high') {
+      await sendPushNotification(userId, item)
+    }
+
+    return item
+  } catch (error) {
+    console.error('[NotificationHub] Error adding to chat queue:', error)
+    throw error
+  }
+}
+
+/**
+ * Get pending chat queue items for a user
+ */
+export async function getChatQueue(
+  userId: string,
+  options: {
+    limit?: number
+    includeRead?: boolean
+    type?: ChatQueueItem['type']
+    priority?: ChatQueueItem['priority']
+  } = {}
+): Promise<ChatQueueItem[]> {
+  const { limit = 20, includeRead = false, type, priority } = options
+
+  try {
+    let whereConditions = ['user_id = $1']
+    const params: any[] = [userId]
+    let paramIndex = 2
+
+    if (!includeRead) {
+      whereConditions.push('read_at IS NULL')
+    }
+
+    if (type) {
+      whereConditions.push(`type = $${paramIndex++}`)
+      params.push(type)
+    }
+
+    if (priority) {
+      whereConditions.push(`priority = $${paramIndex++}`)
+      params.push(priority)
+    }
+
+    whereConditions.push('(expires_at IS NULL OR expires_at > NOW())')
+
+    const result = await query(
+      `SELECT * FROM chat_queue
+       WHERE ${whereConditions.join(' AND ')}
+       ORDER BY
+         CASE priority
+           WHEN 'critical' THEN 0
+           WHEN 'high' THEN 1
+           WHEN 'medium' THEN 2
+           WHEN 'low' THEN 3
+           ELSE 4
+         END,
+         created_at DESC
+       LIMIT $${paramIndex}`,
+      [...params, limit]
+    )
+
+    return result.rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      type: row.type,
+      priority: row.priority,
+      message: row.message,
+      detailedMessage: row.detailed_message,
+      actions: row.actions || [],
+      relatedInsightId: row.related_insight_id,
+      expiresAt: row.expires_at ? new Date(row.expires_at) : undefined,
+      createdAt: new Date(row.created_at),
+      deliveredAt: row.delivered_at ? new Date(row.delivered_at) : undefined,
+      readAt: row.read_at ? new Date(row.read_at) : undefined,
+    }))
+  } catch (error) {
+    console.error('[NotificationHub] Error getting chat queue:', error)
+    return []
+  }
+}
+
+/**
+ * Mark chat queue items as read
+ */
+export async function markChatQueueRead(
+  userId: string,
+  itemIds: string[]
+): Promise<void> {
+  try {
+    await query(
+      `UPDATE chat_queue
+       SET read_at = NOW()
+       WHERE user_id = $1 AND id = ANY($2) AND read_at IS NULL`,
+      [userId, itemIds]
+    )
+  } catch (error) {
+    console.error('[NotificationHub] Error marking queue read:', error)
+  }
+}
+
+/**
+ * Build proactive chat greeting with pending notifications
+ */
+export async function buildProactiveChatGreeting(userId: string): Promise<{
+  greeting: string
+  pendingItems: ChatQueueItem[]
+  summary: {
+    criticalCount: number
+    highCount: number
+    totalCount: number
+    potentialValue: number
+  }
+}> {
+  const pendingItems = await getChatQueue(userId, { limit: 10 })
+
+  // Get insights for value calculation
+  const insightIds = pendingItems
+    .filter((i) => i.relatedInsightId)
+    .map((i) => i.relatedInsightId)
+
+  let potentialValue = 0
+  if (insightIds.length > 0) {
+    try {
+      const valueResult = await query(
+        `SELECT COALESCE(SUM(potential_value), 0) as total
+         FROM proactive_insights
+         WHERE id = ANY($1)`,
+        [insightIds]
+      )
+      potentialValue = parseFloat(valueResult.rows[0]?.total || '0')
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+
+  const criticalCount = pendingItems.filter((i) => i.priority === 'critical').length
+  const highCount = pendingItems.filter((i) => i.priority === 'high').length
+
+  // Build greeting based on time of day and pending items
+  const hour = new Date().getHours()
+  let timeGreeting = 'Hello!'
+  if (hour < 12) timeGreeting = 'Good morning!'
+  else if (hour < 17) timeGreeting = 'Good afternoon!'
+  else timeGreeting = 'Good evening!'
+
+  let greeting = timeGreeting
+
+  if (pendingItems.length > 0) {
+    greeting += ' While you were away, I was busy:\n\n'
+
+    // Group by type and show most important
+    const criticalItems = pendingItems.filter((i) => i.priority === 'critical')
+    const highItems = pendingItems.filter((i) => i.priority === 'high')
+    const completions = pendingItems.filter((i) => i.type === 'completion')
+    const insights = pendingItems.filter(
+      (i) => i.type === 'insight' && i.priority !== 'critical' && i.priority !== 'high'
+    )
+
+    for (const item of criticalItems.slice(0, 2)) {
+      greeting += `\n**[Warning] Critical:** ${item.message}`
+    }
+
+    for (const item of highItems.slice(0, 2)) {
+      greeting += `\n**[Search] Found something:** ${item.message}`
+    }
+
+    for (const item of completions.slice(0, 2)) {
+      greeting += `\n**[Check] Completed:** ${item.message}`
+    }
+
+    for (const item of insights.slice(0, 2)) {
+      greeting += `\n**[Lightbulb] Insight:** ${item.message}`
+    }
+
+    if (potentialValue > 0) {
+      greeting += `\n\n_Total potential value: $${potentialValue.toLocaleString()}_`
+    }
+  } else {
+    greeting += " I've been monitoring things and all looks good. How can I help you today?"
+  }
+
+  return {
+    greeting,
+    pendingItems,
+    summary: {
+      criticalCount,
+      highCount,
+      totalCount: pendingItems.length,
+      potentialValue,
+    },
+  }
+}
+
+/**
+ * Send push notification for high-priority items
+ */
+async function sendPushNotification(
+  userId: string,
+  item: ChatQueueItem
+): Promise<void> {
+  try {
+    const prefs = await getNotificationPreferences(userId)
+
+    // Check if notifications are paused
+    if (prefs.pauseAll) return
+
+    // Check quiet hours
+    if (prefs.globalQuietHoursStart && prefs.globalQuietHoursEnd) {
+      const now = new Date()
+      const currentTime = now.getHours() * 60 + now.getMinutes()
+      const [startH, startM] = prefs.globalQuietHoursStart.split(':').map(Number)
+      const [endH, endM] = prefs.globalQuietHoursEnd.split(':').map(Number)
+      const start = startH * 60 + startM
+      const end = endH * 60 + endM
+
+      if (start <= end) {
+        if (currentTime >= start && currentTime <= end) return
+      } else {
+        if (currentTime >= start || currentTime <= end) return
+      }
+    }
+
+    // Send via configured push service (e.g., OneSignal, Firebase)
+    console.log(`[NotificationHub] Would send push notification to ${userId}:`, item.message)
+  } catch (error) {
+    console.error('[NotificationHub] Error sending push notification:', error)
+  }
+}
+
+/**
+ * Notify user through chat (primary) and other channels (secondary)
+ */
+export async function notify(
+  userId: string,
+  notification: {
+    type: ChatQueueItem['type']
+    priority: ChatQueueItem['priority']
+    message: string
+    detailedMessage?: string
+    suggestedActions?: Array<{
+      id: string
+      label: string
+      actionType: string
+      data?: Record<string, any>
+    }>
+    relatedInsightId?: string
+    expiresAt?: Date
+  }
+): Promise<void> {
+  // Add to chat queue (primary notification method)
+  await addToChatQueue(userId, {
+    type: notification.type,
+    priority: notification.priority,
+    message: notification.message,
+    detailedMessage: notification.detailedMessage,
+    actions: notification.suggestedActions,
+    relatedInsightId: notification.relatedInsightId,
+    expiresAt: notification.expiresAt,
+  })
+
+  // For high priority, also send push/email based on preferences
+  if (notification.priority === 'critical' || notification.priority === 'high') {
+    const prefs = await getNotificationPreferences(userId)
+
+    if (prefs.channels.email?.enabled) {
+      // Queue email for critical items
+      console.log(`[NotificationHub] Would email ${userId}:`, notification.message)
+    }
+
+    if (prefs.channels.sms?.enabled && notification.priority === 'critical') {
+      // Send SMS for critical only
+      console.log(`[NotificationHub] Would SMS ${userId}:`, notification.message)
+    }
+  }
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
 export const NotificationHub = {
-  getNotificationPreferences,
-  saveNotificationPreferences,
-  updateChannelPreferences,
-  deliverInsight,
-  generateAndSendDigest,
-  processPendingDeliveries,
+  getPreferences: getNotificationPreferences,
+  savePreferences: saveNotificationPreferences,
+  updateChannel: updateChannelPreferences,
+  deliver: deliverInsight,
+  sendDigest: generateAndSendDigest,
+  processQueue: processPendingDeliveries,
+  // Chat queue functions
+  addToChatQueue,
+  getChatQueue,
+  markChatQueueRead,
+  buildProactiveChatGreeting,
+  notify,
 }
 
 export default NotificationHub

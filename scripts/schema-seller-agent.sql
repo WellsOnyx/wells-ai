@@ -523,3 +523,128 @@ COMMENT ON COLUMN seller_quotes.confidence_score IS 'AI confidence in quote accu
 
 COMMENT ON COLUMN seller_negotiations.messages IS 'Full negotiation history with AI reasoning';
 COMMENT ON COLUMN seller_negotiations.seller_floor_price IS 'Minimum acceptable price based on margin rules';
+
+-- ============================================================================
+-- TABLE 9: seller_buyer_preferences
+-- Buyer exclusions, VIP lists, and tier definitions
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS seller_buyer_preferences (
+  seller_id TEXT PRIMARY KEY,
+
+  -- Buyer Lists
+  excluded_buyers JSONB DEFAULT '[]', -- Buyers to not work with
+  priority_buyers JSONB DEFAULT '[]', -- VIP buyers get better terms
+
+  -- Tier Definitions
+  buyer_tiers JSONB DEFAULT '{
+    "gold": {"minOrders": 10, "discountPercent": 10},
+    "silver": {"minOrders": 5, "discountPercent": 5},
+    "bronze": {"minOrders": 1, "discountPercent": 0}
+  }',
+
+  -- Auto-classification Rules
+  auto_classify BOOLEAN DEFAULT true,
+
+  -- Metadata
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================================
+-- TABLE 10: seller_pricing_rules
+-- Custom pricing rules beyond simple volume discounts
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS seller_pricing_rules (
+  id TEXT PRIMARY KEY,
+  seller_id TEXT NOT NULL,
+
+  -- Rule Definition
+  rule_type TEXT NOT NULL CHECK (rule_type IN ('volume_discount', 'buyer_tier', 'seasonal', 'margin_floor', 'time_limited', 'bundle', 'custom')),
+  name TEXT NOT NULL,
+  description TEXT,
+
+  -- Conditions (when to apply the rule)
+  -- Examples:
+  -- {"minQuantity": 100, "maxQuantity": 500}
+  -- {"buyerTier": "gold", "minOrderValue": 1000}
+  -- {"category": "Electronics", "startDate": "2024-01-01", "endDate": "2024-12-31"}
+  conditions JSONB NOT NULL DEFAULT '{}',
+
+  -- Adjustments (what the rule does)
+  -- Examples:
+  -- {"type": "percentage", "amount": -10} -- 10% discount
+  -- {"type": "fixed", "amount": -50} -- $50 off
+  -- {"type": "margin_floor", "minMargin": 15}
+  adjustments JSONB NOT NULL DEFAULT '{}',
+
+  -- Priority (higher = evaluated first)
+  priority INTEGER DEFAULT 0,
+
+  -- Applicability
+  applies_to_products JSONB DEFAULT '[]', -- Empty = all products
+  applies_to_categories JSONB DEFAULT '[]', -- Empty = all categories
+  applies_to_buyers JSONB DEFAULT '[]', -- Empty = all buyers
+
+  -- Status
+  is_active BOOLEAN DEFAULT true,
+
+  -- Validity Period
+  valid_from TIMESTAMPTZ,
+  valid_until TIMESTAMPTZ,
+
+  -- Metadata
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pricing_rules_seller ON seller_pricing_rules(seller_id);
+CREATE INDEX IF NOT EXISTS idx_pricing_rules_type ON seller_pricing_rules(rule_type);
+CREATE INDEX IF NOT EXISTS idx_pricing_rules_active ON seller_pricing_rules(seller_id, is_active) WHERE is_active = true;
+
+-- ============================================================================
+-- TABLE 11: seller_agents
+-- Core seller agent configurations (alternate structure)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS seller_agents (
+  id TEXT PRIMARY KEY,
+  seller_id TEXT NOT NULL UNIQUE,
+
+  -- Business Information
+  company_name TEXT NOT NULL,
+  company_description TEXT,
+  industry TEXT,
+
+  -- Agent Configuration (stored as JSONB for flexibility)
+  config JSONB NOT NULL DEFAULT '{
+    "minMargin": 15,
+    "maxDiscount": 20,
+    "autoApproveBelow": 5000,
+    "responseTimeTarget": "within_hour",
+    "negotiationStyle": "balanced",
+    "preferredPaymentTerms": ["NET30"],
+    "volumeDiscountTiers": [
+      {"minQuantity": 100, "discountPercent": 5},
+      {"minQuantity": 500, "discountPercent": 10},
+      {"minQuantity": 1000, "discountPercent": 15}
+    ],
+    "rushOrderPremium": 20,
+    "standardLeadTimeDays": 7,
+    "rushLeadTimeDays": 3
+  }',
+
+  -- Status
+  is_active BOOLEAN DEFAULT true,
+  onboarding_completed BOOLEAN DEFAULT false,
+  last_activity_at TIMESTAMPTZ,
+
+  -- Metadata
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_seller_agents_seller ON seller_agents(seller_id);
+CREATE INDEX IF NOT EXISTS idx_seller_agents_active ON seller_agents(is_active) WHERE is_active = true;
+
+COMMENT ON TABLE seller_buyer_preferences IS 'Buyer exclusions, VIP lists, and tier definitions for seller agents';
+COMMENT ON TABLE seller_pricing_rules IS 'Custom pricing rules beyond simple volume discounts';
+COMMENT ON TABLE seller_agents IS 'Core seller agent configurations for the Seller AI Agent System';

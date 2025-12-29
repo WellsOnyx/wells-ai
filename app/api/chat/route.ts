@@ -374,6 +374,99 @@ Once you understand their needs, capture their requirements and let them know ou
 
 Be conversational, helpful, and transparent about the Early Access process.`,
 
+  job_seeker: `You are Wells, an AI career agent on the Wells Onyx platform.
+
+You represent job seekers and help them find their next role. You search for opportunities, apply on their behalf, and negotiate offers. Everything happens through conversation.
+
+PROFILE MANAGEMENT:
+- Use jobseeker_save_profile to capture candidate info (title, experience, skills, salary, preferences)
+- Use jobseeker_get_profile to check what you know about them
+- Use jobseeker_update_preferences to update their search criteria
+
+JOB SEARCH:
+- Use jobseeker_search_jobs to find matching opportunities
+- Use jobseeker_view_job to get detailed info about a specific role
+- Always score matches and explain WHY a job is a good fit
+
+APPLICATIONS:
+- Use jobseeker_apply to apply to a single job (auto-generates tailored cover letter)
+- Use jobseeker_bulk_apply to apply to multiple matching jobs
+- Use jobseeker_check_applications to show application status
+- Use jobseeker_withdraw_application if they want to withdraw
+
+OFFER NEGOTIATION (Your specialty!):
+- Use jobseeker_evaluate_offer to analyze offers against market data
+- Use jobseeker_negotiate_offer to submit counter offers
+- Use jobseeker_accept_offer when they're ready to accept
+- Use jobseeker_reject_offer to decline
+
+MARKET DATA:
+- Use jobseeker_get_market_data to research salary ranges
+- Help candidates set realistic expectations
+
+PLACEMENT FEES:
+- Wells charges 1% placement fee on successful hires (0.5% from candidate, 0.5% from employer)
+- Use jobseeker_get_fees to check fee status
+- Fee is due 30 days after start date
+
+CONVERSATIONAL STYLE:
+- Ask questions to understand what they're looking for
+- Be encouraging but realistic about salary expectations
+- Explain match scores and why jobs are good/bad fits
+- Celebrate wins (interviews, offers) and encourage through rejections
+- ALWAYS negotiate - candidates often leave money on the table
+
+EXAMPLE FLOWS:
+
+User: "I'm looking for a VP Engineering role, remote, $200K+"
+You: [Use jobseeker_save_profile] "Got it! I'm now your career agent. Let me understand you better:
+1. What's your current/most recent title?
+2. How many years leading engineering teams?
+3. Any specific industries you prefer?
+4. Are you open to hybrid, or strictly remote?
+I'll search active opportunities and introduce you to matching companies."
+
+User: "CTO at a startup, 8 years leading teams, prefer fintech, strictly remote"
+You: [Use jobseeker_update_preferences + jobseeker_search_jobs] "Perfect profile! I found 7 strong matches:
+
+**Top Match (95%)**: VP Engineering @ TechFin
+- $220K base + 0.5% equity
+- Fully remote, Series B
+- Growing team from 15 to 50 engineers
+- Why match: Fintech, your exact experience level
+
+**Strong Match (88%)**: Head of Engineering @ PayCo
+- $195K base + bonus
+- Remote-first, Series C
+- Need someone to build platform team
+
+Want me to introduce you to TechFin? I can send your profile and negotiate on your behalf."
+
+After interview, company makes offer:
+You: [Use jobseeker_evaluate_offer] "TechFin made you an offer!
+
+**Their Offer**:
+- Base: $200K
+- Equity: 0.3%
+- Bonus: 15% target
+- Start: Feb 1
+
+**My Analysis**:
+- Base is 10% below market for your level ($220K)
+- Equity is light for VP role (typical is 0.4-0.6%)
+- They're eager - you interviewed well
+
+**My Recommendation**: Counter at $215K base + 0.45% equity. High chance they accept.
+
+Should I negotiate this for you?"
+
+KEY PRINCIPLES:
+- YOU are their agent - you work for them
+- Always gather enough info before searching
+- Score and rank every match with explanation
+- ALWAYS recommend negotiating (unless offer is exceptional)
+- Track the 1% placement fee but don't let it deter candidates`,
+
   treasury: `You are Wells, an AI treasury assistant for Grain & Vault - the payment infrastructure powering ALL Wells Onyx transactions.
 
 GRAIN is a 1:1 USD-pegged stablecoin used for all payments on the platform. When users deposit USD, they get GRAIN. When they withdraw, GRAIN converts back to USD.
@@ -479,7 +572,7 @@ interface ChatMessage {
 
 interface ChatRequest {
   messages: ChatMessage[]
-  journey?: 'founder' | 'buyer' | 'seller' | 'jobs' | 'treasury' | 'master'
+  journey?: 'founder' | 'buyer' | 'seller' | 'jobs' | 'job_seeker' | 'treasury' | 'master'
   triggerNegotiation?: boolean // Force AI-to-AI negotiation
   userProfile?: Partial<PartyProfile> // User's preferences for negotiation
   context?: {
@@ -1735,6 +1828,305 @@ const JOBS_TOOLS: Anthropic.Tool[] = [
 ]
 
 // ============================================================================
+// TOOLS FOR JOB SEEKERS (Career Agent - Full-Time Employment)
+// ============================================================================
+
+const JOB_SEEKER_TOOLS: Anthropic.Tool[] = [
+  // ==================== PROFILE MANAGEMENT ====================
+  {
+    name: 'jobseeker_save_profile',
+    description: 'Save or update job seeker profile. Use when candidate shares info about themselves - title, experience, skills, salary expectations.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        firstName: { type: 'string', description: 'First name' },
+        lastName: { type: 'string', description: 'Last name' },
+        email: { type: 'string', description: 'Email address' },
+        phone: { type: 'string', description: 'Phone number' },
+        currentTitle: { type: 'string', description: 'Current or most recent job title' },
+        currentCompany: { type: 'string', description: 'Current or most recent company' },
+        yearsExperience: { type: 'number', description: 'Years of professional experience' },
+        skills: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'List of skills'
+        },
+        desiredTitles: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Target job titles (e.g., ["VP Engineering", "Head of Engineering"])'
+        },
+        minSalary: { type: 'number', description: 'Minimum acceptable salary' },
+        targetSalary: { type: 'number', description: 'Target/preferred salary' },
+        locations: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Preferred locations (e.g., ["Austin, TX", "Remote"])'
+        },
+        remotePreference: {
+          type: 'string',
+          enum: ['remote_only', 'hybrid', 'onsite', 'flexible'],
+          description: 'Work arrangement preference'
+        },
+        industries: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Preferred industries (e.g., ["fintech", "healthtech"])'
+        },
+        excludeCompanies: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Companies to exclude from search'
+        },
+        mustHaveEquity: { type: 'boolean', description: 'Require equity in offers' },
+        resumeUrl: { type: 'string', description: 'URL to resume file' },
+        linkedinUrl: { type: 'string', description: 'LinkedIn profile URL' },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'jobseeker_get_profile',
+    description: 'Get current job seeker profile and preferences. Shows what Wells knows about the candidate.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'jobseeker_update_preferences',
+    description: 'Update job search preferences - salary, location, remote preference, etc.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        minSalary: { type: 'number', description: 'Minimum acceptable salary' },
+        targetSalary: { type: 'number', description: 'Target/preferred salary' },
+        locations: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Preferred locations'
+        },
+        remotePreference: {
+          type: 'string',
+          enum: ['remote_only', 'hybrid', 'onsite', 'flexible'],
+          description: 'Work arrangement preference'
+        },
+        industries: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Preferred industries'
+        },
+        excludeCompanies: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Companies to exclude'
+        },
+        autoApplyEnabled: { type: 'boolean', description: 'Enable auto-apply for strong matches' },
+        autoApplyThreshold: { type: 'number', description: 'Min match score for auto-apply (0-100)' },
+      },
+      required: []
+    }
+  },
+
+  // ==================== JOB SEARCH ====================
+  {
+    name: 'jobseeker_search_jobs',
+    description: 'Search for jobs matching preferences. Returns scored matches with reasons.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string', description: 'Natural language search (e.g., "VP Engineering remote fintech")' },
+        titles: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Specific job titles to search'
+        },
+        skills: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Required skills'
+        },
+        location: { type: 'string', description: 'Location filter' },
+        salaryMin: { type: 'number', description: 'Minimum salary' },
+        remote: { type: 'boolean', description: 'Remote only' },
+        minMatchScore: { type: 'number', description: 'Minimum match score (0-100, default 50)' },
+        limit: { type: 'number', description: 'Max results (default 10)' },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'jobseeker_view_job',
+    description: 'View detailed information about a specific job posting.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        jobId: { type: 'string', description: 'Job posting ID' },
+      },
+      required: ['jobId']
+    }
+  },
+
+  // ==================== APPLICATIONS ====================
+  {
+    name: 'jobseeker_apply',
+    description: 'Apply to a specific job on behalf of the candidate. Generates tailored cover letter.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        jobId: { type: 'string', description: 'Job posting ID to apply to' },
+        coverLetter: { type: 'string', description: 'Custom cover letter (optional - auto-generated if not provided)' },
+        customMessage: { type: 'string', description: 'Additional message to include' },
+      },
+      required: ['jobId']
+    }
+  },
+  {
+    name: 'jobseeker_bulk_apply',
+    description: 'Apply to multiple matching jobs at once. Use when candidate wants to cast a wide net.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        jobIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Specific job IDs to apply to'
+        },
+        autoApplyMatches: { type: 'boolean', description: 'Apply to best matches automatically' },
+        minMatchScore: { type: 'number', description: 'Min match score for auto-apply (default 70)' },
+        maxApplications: { type: 'number', description: 'Max applications to submit (default 10)' },
+        excludeEmployers: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Employers to skip'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'jobseeker_check_applications',
+    description: 'Check status of all applications. Shows where candidate is in each hiring process.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['all', 'active', 'interviewing', 'offers', 'rejected'],
+          description: 'Filter by status (default: all)'
+        },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'jobseeker_withdraw_application',
+    description: 'Withdraw an application from consideration.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        applicationId: { type: 'string', description: 'Application ID to withdraw' },
+        reason: { type: 'string', description: 'Optional reason for withdrawal' },
+      },
+      required: ['applicationId']
+    }
+  },
+
+  // ==================== OFFER NEGOTIATION ====================
+  {
+    name: 'jobseeker_evaluate_offer',
+    description: 'Analyze a job offer against market data and candidate preferences. Returns recommendation.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        offerId: { type: 'string', description: 'Offer ID to evaluate' },
+        // Or provide offer details directly:
+        applicationId: { type: 'string', description: 'Application that received the offer' },
+        baseSalary: { type: 'number', description: 'Base salary offered' },
+        signingBonus: { type: 'number', description: 'Signing bonus' },
+        equity: { type: 'string', description: 'Equity offered (e.g., "0.5%", "10,000 options")' },
+        bonusTarget: { type: 'number', description: 'Annual bonus target percentage' },
+        startDate: { type: 'string', description: 'Proposed start date' },
+        location: { type: 'string', description: 'Job location' },
+      },
+      required: []
+    }
+  },
+  {
+    name: 'jobseeker_negotiate_offer',
+    description: 'Submit a counter offer. Wells negotiates on behalf of the candidate.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        offerId: { type: 'string', description: 'Offer ID to negotiate' },
+        strategy: {
+          type: 'string',
+          enum: ['aggressive', 'moderate', 'conservative'],
+          description: 'Negotiation strategy (default: moderate)'
+        },
+        // Or specify counter terms:
+        counterBaseSalary: { type: 'number', description: 'Counter offer base salary' },
+        counterSigningBonus: { type: 'number', description: 'Counter offer signing bonus' },
+        counterEquity: { type: 'string', description: 'Counter offer equity' },
+        counterStartDate: { type: 'string', description: 'Preferred start date' },
+        rationale: { type: 'string', description: 'Reasoning for counter (auto-generated if not provided)' },
+      },
+      required: ['offerId']
+    }
+  },
+  {
+    name: 'jobseeker_accept_offer',
+    description: 'Accept a job offer. This triggers placement fee calculation.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        offerId: { type: 'string', description: 'Offer ID to accept' },
+      },
+      required: ['offerId']
+    }
+  },
+  {
+    name: 'jobseeker_reject_offer',
+    description: 'Decline a job offer.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        offerId: { type: 'string', description: 'Offer ID to reject' },
+        reason: { type: 'string', description: 'Reason for declining (helps Wells find better matches)' },
+      },
+      required: ['offerId']
+    }
+  },
+
+  // ==================== MARKET DATA ====================
+  {
+    name: 'jobseeker_get_market_data',
+    description: 'Get salary market data for a role/location. Helps set realistic expectations.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        role: { type: 'string', description: 'Job title/role to research' },
+        location: { type: 'string', description: 'Location (city or "remote")' },
+        experienceYears: { type: 'number', description: 'Years of experience' },
+      },
+      required: ['role']
+    }
+  },
+
+  // ==================== PLACEMENT FEES ====================
+  {
+    name: 'jobseeker_get_fees',
+    description: 'Get placement fee status. Shows any pending or paid fees.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {},
+      required: []
+    }
+  },
+]
+
+// ============================================================================
 // TOOLS FOR BUYER ERP SCANNER (Proactive Procurement)
 // ============================================================================
 
@@ -2921,12 +3313,14 @@ NEVER skip the approval step. Real money is involved.`
     const isBuyerMode = journey === 'buyer'
     const isSellerMode = journey === 'seller'
     const isJobsMode = journey === 'jobs'
+    const isJobSeekerMode = journey === 'job_seeker'
     const isFounderMode = journey === 'founder'
 
     // Founder gets founder tools + treasury tools for payments
     // Buyer gets RFQ flow tools + ERP tools + treasury tools for payments
     // Seller gets seller tools + treasury tools for payments
     // Jobs gets worker tools + treasury tools for earnings
+    // Job Seeker gets job seeker tools for career search
     // Treasury mode gets treasury tools
     // Master mode gets master tools
     // Others get negotiation tools
@@ -2956,6 +3350,14 @@ NEVER skip the approval step. Real money is involved.`
       // Seller gets seller tools + payment tools
       tools = [
         ...SELLER_TOOLS,
+        ...TREASURY_TOOLS.filter(t =>
+          ['get_balance', 'get_transactions'].includes(t.name)
+        )
+      ]
+    } else if (isJobSeekerMode) {
+      // Job Seeker gets career agent tools + payment tools for placement fees
+      tools = [
+        ...JOB_SEEKER_TOOLS,
         ...TREASURY_TOOLS.filter(t =>
           ['get_balance', 'get_transactions'].includes(t.name)
         )
@@ -4532,6 +4934,229 @@ Reply "Yes, go ahead" to approve, or let me know what to change.`,
         console.error('ERP tool error:', error)
         return NextResponse.json({
           message: baseMessage || `Error processing ERP action: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: true,
+        })
+      }
+    }
+
+    // ========================================================================
+    // JOB SEEKER TOOLS HANDLERS (Career Agent)
+    // ========================================================================
+
+    // Handle job seeker tools by delegating to HRIS API routes
+    if (toolUse && toolUse.type === 'tool_use' && toolUse.name.startsWith('jobseeker_')) {
+      const toolName = toolUse.name
+      const toolInput = toolUse.input as Record<string, any>
+      const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
+      const textBlock = response.content.find(block => block.type === 'text')
+      const baseMessage = textBlock?.type === 'text' ? textBlock.text : ''
+
+      try {
+        let apiResult: any
+
+        // ==================== PROFILE MANAGEMENT ====================
+        if (toolName === 'jobseeker_save_profile' || toolName === 'jobseeker_update_preferences') {
+          const res = await fetch(`${baseUrl}/api/hris/candidate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              action: 'save_profile',
+              ...toolInput,
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'jobseeker_get_profile') {
+          const res = await fetch(`${baseUrl}/api/hris/candidate?userId=${userId}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        }
+
+        // ==================== JOB SEARCH ====================
+        else if (toolName === 'jobseeker_search_jobs') {
+          const params = new URLSearchParams()
+          if (userId) params.append('userId', userId)
+          params.append('matchForUser', 'true')
+          if (toolInput.query) params.append('search', toolInput.query)
+          if (toolInput.skills) params.append('skills', toolInput.skills.join(','))
+          if (toolInput.location) params.append('location', toolInput.location)
+          if (toolInput.salaryMin) params.append('salaryMin', toolInput.salaryMin.toString())
+          if (toolInput.remote) params.append('locationType', 'remote')
+          if (toolInput.minMatchScore) params.append('minMatchScore', toolInput.minMatchScore.toString())
+          if (toolInput.limit) params.append('limit', toolInput.limit.toString())
+
+          const res = await fetch(`${baseUrl}/api/hris/jobs?${params}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'jobseeker_view_job') {
+          const res = await fetch(`${baseUrl}/api/hris/jobs?jobId=${toolInput.jobId}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        }
+
+        // ==================== APPLICATIONS ====================
+        else if (toolName === 'jobseeker_apply') {
+          const res = await fetch(`${baseUrl}/api/hris/apply`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              userId,
+              jobId: toolInput.jobId,
+              coverLetter: toolInput.coverLetter,
+              customMessage: toolInput.customMessage,
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'jobseeker_bulk_apply') {
+          const res = await fetch(`${baseUrl}/api/hris/apply`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              userId,
+              jobIds: toolInput.jobIds,
+              excludeEmployers: toolInput.excludeEmployers,
+              minMatchScore: toolInput.minMatchScore || 70,
+              maxApplications: toolInput.maxApplications || 10,
+              autoApplyMatches: toolInput.autoApplyMatches,
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'jobseeker_check_applications') {
+          const statusFilter = toolInput.status === 'all' ? '' : toolInput.status
+          const res = await fetch(`${baseUrl}/api/hris/apply?userId=${userId}${statusFilter ? `&status=${statusFilter}` : ''}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'jobseeker_withdraw_application') {
+          const res = await fetch(`${baseUrl}/api/hris/apply?applicationId=${toolInput.applicationId}&userId=${userId}`, {
+            method: 'DELETE',
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        }
+
+        // ==================== OFFER NEGOTIATION ====================
+        else if (toolName === 'jobseeker_evaluate_offer') {
+          // If offer details provided directly, record the offer first
+          if (toolInput.baseSalary && toolInput.applicationId) {
+            const recordRes = await fetch(`${baseUrl}/api/hris/offer`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+              body: JSON.stringify({
+                applicationId: toolInput.applicationId,
+                offer: {
+                  baseSalary: toolInput.baseSalary,
+                  signingBonus: toolInput.signingBonus,
+                  equity: toolInput.equity,
+                  bonusTarget: toolInput.bonusTarget,
+                  startDate: toolInput.startDate,
+                  location: toolInput.location,
+                },
+                userId,
+                autoAnalyze: true,
+              })
+            })
+            apiResult = await recordRes.json()
+          } else if (toolInput.offerId) {
+            const res = await fetch(`${baseUrl}/api/hris/offer?offerId=${toolInput.offerId}&userId=${userId}&includeHistory=true`, {
+              headers: { 'Cookie': request.headers.get('cookie') || '' }
+            })
+            apiResult = await res.json()
+          } else {
+            apiResult = { success: false, message: 'I need either an offer ID or offer details to evaluate.' }
+          }
+        } else if (toolName === 'jobseeker_negotiate_offer') {
+          // Check if counter terms provided or use auto-negotiate
+          if (toolInput.counterBaseSalary || toolInput.counterSigningBonus || toolInput.counterEquity) {
+            const res = await fetch(`${baseUrl}/api/hris/offer`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+              body: JSON.stringify({
+                offerId: toolInput.offerId,
+                userId,
+                action: 'counter',
+                counterOffer: {
+                  baseSalary: toolInput.counterBaseSalary,
+                  signingBonus: toolInput.counterSigningBonus,
+                  equity: toolInput.counterEquity,
+                  startDate: toolInput.counterStartDate,
+                  rationale: toolInput.rationale,
+                },
+              })
+            })
+            apiResult = await res.json()
+          } else {
+            // Auto-negotiate based on strategy
+            const res = await fetch(`${baseUrl}/api/hris/offer`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+              body: JSON.stringify({
+                offerId: toolInput.offerId,
+                userId,
+                action: 'auto_negotiate',
+                strategy: toolInput.strategy || 'moderate',
+              })
+            })
+            apiResult = await res.json()
+          }
+        } else if (toolName === 'jobseeker_accept_offer') {
+          const res = await fetch(`${baseUrl}/api/hris/offer`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              offerId: toolInput.offerId,
+              userId,
+              action: 'accept',
+            })
+          })
+          apiResult = await res.json()
+        } else if (toolName === 'jobseeker_reject_offer') {
+          const res = await fetch(`${baseUrl}/api/hris/offer`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              offerId: toolInput.offerId,
+              userId,
+              action: 'reject',
+              reason: toolInput.reason,
+            })
+          })
+          apiResult = await res.json()
+        }
+
+        // ==================== MARKET DATA ====================
+        else if (toolName === 'jobseeker_get_market_data') {
+          // Call market data API (from offer-negotiation lib)
+          const res = await fetch(`${baseUrl}/api/hris/market-data`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+            body: JSON.stringify({
+              role: toolInput.role,
+              location: toolInput.location,
+              experienceYears: toolInput.experienceYears,
+            })
+          })
+          apiResult = await res.json()
+        }
+
+        // ==================== PLACEMENT FEES ====================
+        else if (toolName === 'jobseeker_get_fees') {
+          const res = await fetch(`${baseUrl}/api/hris/fees?userId=${userId}`, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' }
+          })
+          apiResult = await res.json()
+        }
+
+        return NextResponse.json({
+          message: baseMessage || apiResult.message || 'Done.',
+          data: apiResult,
+        })
+      } catch (error) {
+        console.error('Job seeker tool error:', error)
+        return NextResponse.json({
+          message: baseMessage || `Error processing career action: ${error instanceof Error ? error.message : 'Unknown error'}`,
           error: true,
         })
       }

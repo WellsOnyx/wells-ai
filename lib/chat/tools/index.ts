@@ -11,6 +11,8 @@ export * from './erp-tools'
 export * from './jobs-tools'
 export * from './insights-tools'
 export * from './payment-tools'
+export * from './negotiation-tools'
+export * from './scheduling-tools'
 
 // Import tool registries
 import { rfqTools } from './rfq-tools'
@@ -18,6 +20,12 @@ import { erpTools } from './erp-tools'
 import { jobsTools } from './jobs-tools'
 import { insightsTools } from './insights-tools'
 import { paymentTools } from './payment-tools'
+import { negotiationTools } from './negotiation-tools'
+import { schedulingTools } from './scheduling-tools'
+
+// Import inbox tools
+import { inboxTools } from '../handlers/inbox-handler'
+export { inboxTools } from '../handlers/inbox-handler'
 
 // ============================================================================
 // UNIFIED TOOL REGISTRY
@@ -32,6 +40,9 @@ export const allTools = {
   jobs: jobsTools,
   insights: insightsTools,
   payments: paymentTools,
+  negotiation: negotiationTools,
+  scheduling: schedulingTools,
+  inbox: inboxTools,
 }
 
 /**
@@ -123,6 +134,68 @@ export const toolMetadata = {
       'Show my GRAIN rewards',
     ],
   },
+  negotiation: {
+    name: 'Negotiation Tools',
+    description: 'AI-to-AI negotiation, counter-offers, and deal management',
+    capabilities: [
+      'Start AI-to-AI negotiations',
+      'Send counter-offers',
+      'Set negotiation limits',
+      'Accept or reject offers',
+      'Track negotiation progress',
+    ],
+    examples: [
+      'Help me negotiate with TechCorp',
+      'Counter at $45,000',
+      'Let AI negotiate for me',
+      'Accept their offer',
+      'Set walk-away price at $40K',
+    ],
+  },
+  scheduling: {
+    name: 'Scheduling Tools',
+    description: 'Meeting scheduling, calendar integration, and availability',
+    capabilities: [
+      'Schedule meetings',
+      'Check availability',
+      'Find mutual availability',
+      'Reschedule or cancel meetings',
+      'View upcoming meetings',
+    ],
+    examples: [
+      'Schedule a call with John about the deal',
+      'When am I free tomorrow?',
+      'Find a time that works for everyone',
+      'What meetings do I have today?',
+      'Cancel my 3pm meeting',
+    ],
+  },
+  inbox: {
+    name: 'Unified Inbox Tools',
+    description: 'Manage all communications across Email, Slack, Discord, LinkedIn, SMS, WhatsApp, Teams, and more',
+    capabilities: [
+      'Check messages across all channels',
+      'Filter by channel (Slack, Email, SMS, etc.)',
+      'Reply to messages conversationally',
+      'Forward/delegate messages',
+      'Search messages across all channels',
+      'Set priorities (urgent, important, normal, low)',
+      'Snooze and archive messages',
+      'Summarize unread messages',
+      'Compose new messages to any channel',
+    ],
+    examples: [
+      'Any urgent messages?',
+      'Show me my Slack messages',
+      'Reply to John\'s email saying I\'ll call tomorrow',
+      'Forward that to Sarah',
+      'Find emails about the Acme deal',
+      'Mark that as urgent',
+      'Remind me about this tomorrow',
+      'Summarize my unread messages',
+      'Send a LinkedIn message to Sarah about the partnership',
+    ],
+  },
 }
 
 /**
@@ -207,9 +280,67 @@ export function findToolForIntent(
     treasuryStatus: { toolGroup: 'payments', toolName: 'getTreasuryStatus' },
     grainStatus: { toolGroup: 'payments', toolName: 'getGrainStatus' },
     paymentHistory: { toolGroup: 'payments', toolName: 'getPaymentHistory' },
+
+    // Negotiation intents
+    startNegotiation: { toolGroup: 'negotiation', toolName: 'startNegotiation' },
+    sendCounter: { toolGroup: 'negotiation', toolName: 'sendCounterOffer' },
+    counterOffer: { toolGroup: 'negotiation', toolName: 'sendCounterOffer' },
+    negotiationStatus: { toolGroup: 'negotiation', toolName: 'getNegotiationStatus' },
+    acceptDeal: { toolGroup: 'negotiation', toolName: 'acceptOffer' },
+    rejectDeal: { toolGroup: 'negotiation', toolName: 'rejectNegotiation' },
+    setLimits: { toolGroup: 'negotiation', toolName: 'setNegotiationLimits' },
+
+    // Scheduling intents
+    scheduleMeeting: { toolGroup: 'scheduling', toolName: 'scheduleMeeting' },
+    checkAvailability: { toolGroup: 'scheduling', toolName: 'checkAvailability' },
+    upcomingMeetings: { toolGroup: 'scheduling', toolName: 'getUpcomingMeetings' },
+    rescheduleMeeting: { toolGroup: 'scheduling', toolName: 'rescheduleMeeting' },
+    cancelMeeting: { toolGroup: 'scheduling', toolName: 'cancelMeeting' },
+    findMutualTime: { toolGroup: 'scheduling', toolName: 'findMutualAvailability' },
+
+    // Inbox intents
+    checkMessages: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    checkUrgent: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    checkUnread: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    filterChannel: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    replyMessage: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    forwardMessage: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    searchMessages: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    setPriority: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    snoozeMessage: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    archiveMessage: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    summarizeMessages: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    composeMessage: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
+    inboxStats: { toolGroup: 'inbox', toolName: 'handleInboxIntent' },
   }
 
   return intentToToolMap[intent] || null
+}
+
+/**
+ * Get all tools as a flat list with metadata.
+ */
+export function getAllToolsFlat(): Array<{
+  category: string
+  name: string
+  description: string
+}> {
+  const tools: Array<{ category: string; name: string; description: string }> = []
+
+  for (const [category, toolGroup] of Object.entries(allTools)) {
+    const meta = toolMetadata[category as keyof typeof toolMetadata]
+    for (const toolName of Object.keys(toolGroup)) {
+      tools.push({
+        category,
+        name: toolName,
+        description: meta?.capabilities?.find(c =>
+          c.toLowerCase().includes(toolName.toLowerCase().replace(/([A-Z])/g, ' $1').trim())
+        ) || meta?.description || '',
+      })
+    }
+  }
+
+  return tools
 }
 
 export default allTools

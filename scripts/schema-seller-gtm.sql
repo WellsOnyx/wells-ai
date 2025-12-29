@@ -565,3 +565,156 @@ CREATE INDEX IF NOT EXISTS idx_seller_daily_metrics_seller_date ON seller_daily_
 -- (seller_id, 'Verbal Commit', 5, 80),
 -- (seller_id, 'Won', 6, 100),
 -- (seller_id, 'Lost', 7, 0);
+
+-- =====================================================
+-- CONVERSATIONAL SELLER CHAT SYSTEM
+-- =====================================================
+
+-- Seller conversations (chat sessions)
+CREATE TABLE IF NOT EXISTS seller_conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID REFERENCES seller_profiles(id),
+  clerk_user_id TEXT NOT NULL,
+
+  -- Conversation metadata
+  title TEXT,
+  status TEXT DEFAULT 'active', -- 'active', 'archived', 'deleted'
+
+  -- Context
+  context JSONB DEFAULT '{}', -- Stores lastMentionedLeadId, activeLeadIds, etc.
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Individual messages in seller conversations
+CREATE TABLE IF NOT EXISTS seller_conversation_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES seller_conversations(id) ON DELETE CASCADE,
+
+  -- Message content
+  role TEXT NOT NULL, -- 'user', 'assistant', 'system'
+  content TEXT NOT NULL,
+
+  -- Intent tracking
+  intent TEXT,
+  action TEXT,
+
+  -- Structured data returned
+  data JSONB,
+
+  -- Suggestions offered
+  suggestions JSONB,
+  follow_up_actions JSONB,
+
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Lead activities (for activity logging)
+CREATE TABLE IF NOT EXISTS seller_lead_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  lead_id UUID REFERENCES seller_leads(id) ON DELETE CASCADE,
+  seller_id UUID REFERENCES seller_profiles(id),
+
+  -- Activity details
+  type TEXT NOT NULL, -- 'email_sent', 'call_made', 'meeting', 'note', 'status_change', 'quote_sent'
+  description TEXT NOT NULL,
+  outcome TEXT,
+
+  -- Metadata
+  metadata JSONB DEFAULT '{}',
+
+  -- Who performed the action
+  created_by TEXT,
+
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Lead notes
+CREATE TABLE IF NOT EXISTS seller_lead_notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  lead_id UUID REFERENCES seller_leads(id) ON DELETE CASCADE,
+  seller_id UUID REFERENCES seller_profiles(id),
+
+  content TEXT NOT NULL,
+
+  -- Who created the note
+  created_by TEXT NOT NULL,
+
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seller quotes (for the conversational quote generation)
+CREATE TABLE IF NOT EXISTS seller_quotes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  seller_id UUID REFERENCES seller_profiles(id),
+  lead_id UUID REFERENCES seller_leads(id),
+  opportunity_id UUID REFERENCES seller_opportunities(id),
+  rfq_id UUID,
+
+  -- Quote identification
+  quote_number TEXT NOT NULL,
+
+  -- Quote content
+  items JSONB NOT NULL, -- [{sku, name, description, quantity, unitPrice, discount, total}]
+  subtotal DECIMAL(20,2) NOT NULL,
+  discounts JSONB, -- [{name, type, value, amount}]
+  taxes JSONB, -- [{name, rate, amount}]
+  total DECIMAL(20,2) NOT NULL,
+  currency TEXT DEFAULT 'USD',
+
+  -- Validity
+  valid_until TIMESTAMPTZ NOT NULL,
+
+  -- Status
+  status TEXT DEFAULT 'draft', -- 'draft', 'sent', 'viewed', 'accepted', 'rejected', 'expired', 'superseded'
+
+  -- Terms
+  terms TEXT,
+  notes TEXT,
+  attachments TEXT[],
+
+  -- Tracking
+  created_by TEXT NOT NULL,
+  sent_at TIMESTAMPTZ,
+  viewed_at TIMESTAMPTZ,
+  responded_at TIMESTAMPTZ,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for new tables
+CREATE INDEX IF NOT EXISTS idx_seller_conversations_seller ON seller_conversations(seller_id);
+CREATE INDEX IF NOT EXISTS idx_seller_conversations_user ON seller_conversations(clerk_user_id);
+CREATE INDEX IF NOT EXISTS idx_seller_conversations_status ON seller_conversations(status);
+CREATE INDEX IF NOT EXISTS idx_seller_conversations_updated ON seller_conversations(updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_seller_conversation_messages_conversation ON seller_conversation_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_seller_conversation_messages_created ON seller_conversation_messages(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_seller_lead_activities_lead ON seller_lead_activities(lead_id);
+CREATE INDEX IF NOT EXISTS idx_seller_lead_activities_seller ON seller_lead_activities(seller_id);
+CREATE INDEX IF NOT EXISTS idx_seller_lead_activities_type ON seller_lead_activities(type);
+CREATE INDEX IF NOT EXISTS idx_seller_lead_activities_created ON seller_lead_activities(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_seller_lead_notes_lead ON seller_lead_notes(lead_id);
+
+CREATE INDEX IF NOT EXISTS idx_seller_quotes_seller ON seller_quotes(seller_id);
+CREATE INDEX IF NOT EXISTS idx_seller_quotes_lead ON seller_quotes(lead_id);
+CREATE INDEX IF NOT EXISTS idx_seller_quotes_opportunity ON seller_quotes(opportunity_id);
+CREATE INDEX IF NOT EXISTS idx_seller_quotes_status ON seller_quotes(status);
+CREATE INDEX IF NOT EXISTS idx_seller_quotes_valid_until ON seller_quotes(valid_until);
+
+-- Add additional columns to seller_leads for pipeline management
+ALTER TABLE seller_leads ADD COLUMN IF NOT EXISTS stage TEXT DEFAULT 'discovery';
+ALTER TABLE seller_leads ADD COLUMN IF NOT EXISTS budget DECIMAL(20,2);
+ALTER TABLE seller_leads ADD COLUMN IF NOT EXISTS timeline TEXT;
+ALTER TABLE seller_leads ADD COLUMN IF NOT EXISTS requirements TEXT;
+ALTER TABLE seller_leads ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+ALTER TABLE seller_leads ADD COLUMN IF NOT EXISTS last_contact_at TIMESTAMPTZ;
+ALTER TABLE seller_leads ADD COLUMN IF NOT EXISTS next_follow_up TIMESTAMPTZ;
+ALTER TABLE seller_leads ADD COLUMN IF NOT EXISTS assigned_to TEXT;
+
+-- Index for stage-based queries
+CREATE INDEX IF NOT EXISTS idx_seller_leads_stage ON seller_leads(stage);

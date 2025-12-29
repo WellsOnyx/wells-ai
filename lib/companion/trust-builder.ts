@@ -965,6 +965,306 @@ export function formatTrustSummary(trustScore: TrustScore): string {
 }
 
 // ============================================================================
+// AUTONOMY CONFIGURATION TYPES
+// ============================================================================
+
+export interface AutonomyConfig {
+  autoNegotiate: boolean
+  autoNegotiateMaxValue: number
+  autoApproveBelow: number
+  autoSendQuotes: boolean
+  autoRespondToRfqs: boolean
+  autoApplyToJobs: boolean
+  proactiveOutreach: boolean
+  autoFollowUp: boolean
+  autoScheduleMeetings: boolean
+}
+
+// ============================================================================
+// AUTONOMY LEVEL DETERMINATION
+// ============================================================================
+
+/**
+ * Get autonomy level based on trust score
+ * Higher trust = more autonomous actions Wells can take
+ */
+export async function getAutonomyLevel(userId: string): Promise<AutonomyConfig> {
+  const trust = await getTrustScore(userId)
+
+  // Partner tier (score >= 85) - Full autonomy
+  if (trust.tier === 'partner' && trust.factors.successfulDeals >= 10) {
+    return {
+      autoNegotiate: true,
+      autoNegotiateMaxValue: 100000,
+      autoApproveBelow: 25000,
+      autoSendQuotes: true,
+      autoRespondToRfqs: true,
+      autoApplyToJobs: true,
+      proactiveOutreach: true,
+      autoFollowUp: true,
+      autoScheduleMeetings: true,
+    }
+  }
+
+  // Trusted tier (score >= 60) - High autonomy
+  if (trust.tier === 'trusted' && trust.factors.successfulDeals >= 5) {
+    return {
+      autoNegotiate: true,
+      autoNegotiateMaxValue: 25000,
+      autoApproveBelow: 10000,
+      autoSendQuotes: true,
+      autoRespondToRfqs: true,
+      autoApplyToJobs: false,
+      proactiveOutreach: true,
+      autoFollowUp: true,
+      autoScheduleMeetings: false,
+    }
+  }
+
+  // Developing tier (score >= 25) - Medium autonomy
+  if (trust.tier === 'developing' && trust.factors.insightsActedUpon >= 5) {
+    return {
+      autoNegotiate: false,
+      autoNegotiateMaxValue: 0,
+      autoApproveBelow: 5000,
+      autoSendQuotes: true,
+      autoRespondToRfqs: false,
+      autoApplyToJobs: false,
+      proactiveOutreach: true,
+      autoFollowUp: true,
+      autoScheduleMeetings: false,
+    }
+  }
+
+  // New tier - Minimal autonomy (requires approval for everything)
+  return {
+    autoNegotiate: false,
+    autoNegotiateMaxValue: 0,
+    autoApproveBelow: 0,
+    autoSendQuotes: false,
+    autoRespondToRfqs: false,
+    autoApplyToJobs: false,
+    proactiveOutreach: false,
+    autoFollowUp: false,
+    autoScheduleMeetings: false,
+  }
+}
+
+/**
+ * Check if a specific autonomous action is allowed
+ */
+export async function canPerformAutonomousAction(
+  userId: string,
+  action: keyof AutonomyConfig,
+  value?: number
+): Promise<{ allowed: boolean; reason: string }> {
+  const autonomy = await getAutonomyLevel(userId)
+  const trust = await getTrustScore(userId)
+
+  switch (action) {
+    case 'autoNegotiate':
+      if (!autonomy.autoNegotiate) {
+        return {
+          allowed: false,
+          reason: `Auto-negotiate requires ${trust.tier === 'new' ? 'building more trust' : 'trusted tier or higher'}`,
+        }
+      }
+      if (value && value > autonomy.autoNegotiateMaxValue) {
+        return {
+          allowed: false,
+          reason: `Value $${value.toLocaleString()} exceeds auto-negotiate limit of $${autonomy.autoNegotiateMaxValue.toLocaleString()}`,
+        }
+      }
+      return { allowed: true, reason: 'Autonomous negotiation approved' }
+
+    case 'autoApproveBelow':
+      if (value && value > autonomy.autoApproveBelow) {
+        return {
+          allowed: false,
+          reason: `Amount $${value.toLocaleString()} exceeds auto-approve limit of $${autonomy.autoApproveBelow.toLocaleString()}`,
+        }
+      }
+      return { allowed: true, reason: 'Auto-approval within limits' }
+
+    case 'autoSendQuotes':
+      if (!autonomy.autoSendQuotes) {
+        return { allowed: false, reason: 'Auto-send quotes requires developing tier or higher' }
+      }
+      return { allowed: true, reason: 'Quote sending approved' }
+
+    case 'autoRespondToRfqs':
+      if (!autonomy.autoRespondToRfqs) {
+        return { allowed: false, reason: 'Auto-respond to RFQs requires trusted tier or higher' }
+      }
+      return { allowed: true, reason: 'RFQ response approved' }
+
+    case 'proactiveOutreach':
+      if (!autonomy.proactiveOutreach) {
+        return { allowed: false, reason: 'Proactive outreach requires developing tier or higher' }
+      }
+      return { allowed: true, reason: 'Proactive outreach approved' }
+
+    default:
+      const isAllowed = autonomy[action] === true
+      return {
+        allowed: isAllowed,
+        reason: isAllowed ? 'Action approved' : 'Action requires higher trust level',
+      }
+  }
+}
+
+// ============================================================================
+// VALUE TRACKING
+// ============================================================================
+
+/**
+ * Get total value Wells has delivered to a user
+ */
+export async function getValueDelivered(userId: string): Promise<{
+  moneySaved: number
+  moneyEarned: number
+  risksAvoided: number
+  riskValueAvoided: number
+  timeSavedHours: number
+  totalValue: number
+}> {
+  const trust = await getTrustScore(userId)
+  const factors = trust.factors
+
+  return {
+    moneySaved: factors.moneySaved,
+    moneyEarned: factors.moneyEarned,
+    risksAvoided: factors.risksAvoided,
+    riskValueAvoided: factors.riskValueAvoided,
+    timeSavedHours: factors.timesSaved,
+    totalValue: factors.moneySaved + factors.moneyEarned + factors.riskValueAvoided,
+  }
+}
+
+/**
+ * Record value delivered to user
+ */
+export async function recordValueDelivered(
+  userId: string,
+  valueType: 'saved' | 'earned' | 'risk_avoided' | 'time_saved',
+  amount: number,
+  details?: Record<string, any>
+): Promise<void> {
+  const eventTypeMap: Record<string, TrustEventType> = {
+    saved: 'money_saved',
+    earned: 'money_earned',
+    risk_avoided: 'risk_avoided',
+    time_saved: 'insight_successful',
+  }
+
+  await recordTrustEvent(userId, eventTypeMap[valueType], {
+    value: amount,
+    ...details,
+  })
+}
+
+// ============================================================================
+// TRUST PROGRESSION HELPERS
+// ============================================================================
+
+/**
+ * Get progress toward next trust tier
+ */
+export async function getTrustProgress(userId: string): Promise<{
+  currentTier: TrustTier
+  nextTier: TrustTier | null
+  currentScore: number
+  pointsToNext: number
+  progressPercent: number
+  recommendations: string[]
+}> {
+  const trust = await getTrustScore(userId)
+
+  const tierThresholds: Record<TrustTier, number> = {
+    new: 0,
+    developing: 25,
+    trusted: 60,
+    partner: 85,
+  }
+
+  const tierOrder: TrustTier[] = ['new', 'developing', 'trusted', 'partner']
+  const currentIndex = tierOrder.indexOf(trust.tier)
+  const nextTier = currentIndex < tierOrder.length - 1 ? tierOrder[currentIndex + 1] : null
+
+  const nextThreshold = nextTier ? tierThresholds[nextTier] : 100
+  const currentThreshold = tierThresholds[trust.tier]
+  const pointsToNext = nextThreshold - trust.score
+  const progressPercent = Math.round(
+    ((trust.score - currentThreshold) / (nextThreshold - currentThreshold)) * 100
+  )
+
+  // Generate recommendations based on current state
+  const recommendations: string[] = []
+
+  if (trust.factors.successfulDeals < 5) {
+    recommendations.push('Complete more deals to build trust')
+  }
+  if (trust.factors.insightSuccessRate < 70) {
+    recommendations.push('Act on more insights to improve your success rate')
+  }
+  if (trust.factors.feedbackScore < 80) {
+    recommendations.push('Provide feedback on Wells assistance to help us improve')
+  }
+  if (trust.factors.integrationConnections < 2) {
+    recommendations.push('Connect more integrations for a richer experience')
+  }
+  if (trust.factors.daysActive < 14) {
+    recommendations.push('Use Wells regularly to build a consistent partnership')
+  }
+
+  return {
+    currentTier: trust.tier,
+    nextTier,
+    currentScore: trust.score,
+    pointsToNext: Math.max(0, pointsToNext),
+    progressPercent: Math.min(100, Math.max(0, progressPercent)),
+    recommendations: recommendations.slice(0, 3),
+  }
+}
+
+/**
+ * Get trust summary for display in chat
+ */
+export async function getTrustSummaryForChat(userId: string): Promise<string> {
+  const trust = await getTrustScore(userId)
+  const value = await getValueDelivered(userId)
+  const progress = await getTrustProgress(userId)
+
+  const parts: string[] = []
+
+  // Trust level
+  parts.push(`**Trust Level:** ${trust.tier.charAt(0).toUpperCase() + trust.tier.slice(1)} (${trust.score}/100)`)
+
+  // Value delivered
+  if (value.totalValue > 0) {
+    parts.push(`**Value Delivered:** $${value.totalValue.toLocaleString()}`)
+    if (value.moneySaved > 0) parts.push(`  - Saved: $${value.moneySaved.toLocaleString()}`)
+    if (value.moneyEarned > 0) parts.push(`  - Earned: $${value.moneyEarned.toLocaleString()}`)
+    if (value.risksAvoided > 0) parts.push(`  - Risks Avoided: ${value.risksAvoided}`)
+  }
+
+  // Milestones
+  if (trust.milestones.length > 0) {
+    const recentMilestones = trust.milestones
+      .sort((a, b) => new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime())
+      .slice(0, 3)
+    parts.push(`**Recent Achievements:** ${recentMilestones.map(m => m.name).join(', ')}`)
+  }
+
+  // Progress to next tier
+  if (progress.nextTier) {
+    parts.push(`**Next Tier:** ${progress.nextTier} (${progress.pointsToNext} points away)`)
+  }
+
+  return parts.join('\n')
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -979,6 +1279,12 @@ export const TrustBuilder = {
   getTierDescription,
   getTierColor,
   formatTrustSummary,
+  getAutonomyLevel,
+  canPerformAutonomousAction,
+  getValueDelivered,
+  recordValueDelivered,
+  getTrustProgress,
+  getTrustSummaryForChat,
 }
 
 export default TrustBuilder

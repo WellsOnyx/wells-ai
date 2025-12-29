@@ -630,6 +630,391 @@ export async function getTopSellers(
 }
 
 // ============================================================================
+// ACTIONABLE INSIGHTS
+// ============================================================================
+
+export interface ActionableRecommendation {
+  id: string;
+  priority: 'high' | 'medium' | 'low';
+  category: 'pricing' | 'response_time' | 'negotiation' | 'customer_retention' | 'product_mix';
+  title: string;
+  description: string;
+  expectedImpact: {
+    metric: string;
+    estimatedChange: number;
+    timeframe: string;
+  };
+  action: {
+    type: 'config_change' | 'pricing_adjustment' | 'process_improvement' | 'manual_review';
+    automatable: boolean;
+    parameters?: Record<string, unknown>;
+  };
+}
+
+/**
+ * Generate specific, actionable recommendations based on performance data
+ */
+export async function generateActionableRecommendations(
+  sellerId: string,
+  metrics: SellerMetrics,
+  trends: PerformanceTrend[]
+): Promise<ActionableRecommendation[]> {
+  const config = await getSellerConfig(sellerId);
+  const recommendations: ActionableRecommendation[] = [];
+
+  // Response time recommendations
+  if (metrics.averageResponseTimeHours > 4) {
+    recommendations.push({
+      id: `rec_${Date.now()}_response`,
+      priority: 'high',
+      category: 'response_time',
+      title: 'Enable Auto-Response to Win More Deals',
+      description: `Your average response time is ${metrics.averageResponseTimeHours.toFixed(1)} hours. Top sellers respond in under 2 hours. Enabling auto-response could improve your win rate by 15-20%.`,
+      expectedImpact: {
+        metric: 'win_rate',
+        estimatedChange: 15,
+        timeframe: '30 days',
+      },
+      action: {
+        type: 'config_change',
+        automatable: true,
+        parameters: {
+          setting: 'autoResponse.enabled',
+          value: true,
+          autoApproveUnder: config?.autoResponse?.autoApproveUnder || 5000,
+        },
+      },
+    });
+  } else if (metrics.averageResponseTimeHours < 1 && !config?.autoResponse?.enabled) {
+    recommendations.push({
+      id: `rec_${Date.now()}_fast_response`,
+      priority: 'low',
+      category: 'response_time',
+      title: 'Great Response Time - Consider Raising Auto-Approval Threshold',
+      description: `Your fast response times are working well. Consider raising your auto-approval threshold from $${config?.autoResponse?.autoApproveUnder || 5000} to capture more deals automatically.`,
+      expectedImpact: {
+        metric: 'deals_won',
+        estimatedChange: 10,
+        timeframe: '30 days',
+      },
+      action: {
+        type: 'config_change',
+        automatable: true,
+        parameters: {
+          setting: 'autoResponse.autoApproveUnder',
+          value: (config?.autoResponse?.autoApproveUnder || 5000) * 1.5,
+        },
+      },
+    });
+  }
+
+  // Pricing recommendations based on win rate
+  const winRateTrend = trends.find(t => t.metric === 'Win Rate');
+  if (metrics.winRate < 25 && metrics.averageMarginPercent > (config?.pricingStrategy?.targetMargin || 30)) {
+    recommendations.push({
+      id: `rec_${Date.now()}_pricing_high`,
+      priority: 'high',
+      category: 'pricing',
+      title: 'Lower Prices to Win More Deals',
+      description: `Your win rate is ${metrics.winRate.toFixed(1)}% but your margin is ${metrics.averageMarginPercent.toFixed(1)}%. Consider reducing prices by 5-10% to win more volume.`,
+      expectedImpact: {
+        metric: 'win_rate',
+        estimatedChange: 20,
+        timeframe: '30 days',
+      },
+      action: {
+        type: 'pricing_adjustment',
+        automatable: true,
+        parameters: {
+          adjustmentType: 'percentage',
+          adjustmentValue: -7,
+          applyTo: 'all_products',
+        },
+      },
+    });
+  } else if (metrics.winRate > 60 && metrics.averageMarginPercent < (config?.pricingStrategy?.targetMargin || 30)) {
+    recommendations.push({
+      id: `rec_${Date.now()}_pricing_low`,
+      priority: 'medium',
+      category: 'pricing',
+      title: 'Increase Prices to Improve Margins',
+      description: `Your ${metrics.winRate.toFixed(1)}% win rate suggests you may be underpricing. Your margin is ${metrics.averageMarginPercent.toFixed(1)}% vs target of ${config?.pricingStrategy?.targetMargin || 30}%. Consider a 5% price increase.`,
+      expectedImpact: {
+        metric: 'margin',
+        estimatedChange: 4,
+        timeframe: '30 days',
+      },
+      action: {
+        type: 'pricing_adjustment',
+        automatable: true,
+        parameters: {
+          adjustmentType: 'percentage',
+          adjustmentValue: 5,
+          applyTo: 'all_products',
+        },
+      },
+    });
+  }
+
+  // Negotiation recommendations
+  if (metrics.totalNegotiations > 5 && metrics.negotiationsWon / metrics.totalNegotiations < 0.4) {
+    const negotiationStyle = config?.negotiationStyle?.aggression || 'balanced';
+    const suggestedStyle = negotiationStyle === 'conservative' ? 'balanced' : 'aggressive';
+
+    recommendations.push({
+      id: `rec_${Date.now()}_negotiation`,
+      priority: 'medium',
+      category: 'negotiation',
+      title: 'Adjust Negotiation Strategy',
+      description: `You're winning only ${((metrics.negotiationsWon / metrics.totalNegotiations) * 100).toFixed(0)}% of negotiations. Consider switching from "${negotiationStyle}" to "${suggestedStyle}" negotiation style.`,
+      expectedImpact: {
+        metric: 'negotiation_win_rate',
+        estimatedChange: 15,
+        timeframe: '30 days',
+      },
+      action: {
+        type: 'config_change',
+        automatable: true,
+        parameters: {
+          setting: 'negotiationStyle.aggression',
+          value: suggestedStyle,
+        },
+      },
+    });
+  }
+
+  // Customer retention recommendations
+  if (metrics.repeatCustomerRate < 20 && metrics.totalDealsWon > 10) {
+    recommendations.push({
+      id: `rec_${Date.now()}_retention`,
+      priority: 'medium',
+      category: 'customer_retention',
+      title: 'Improve Customer Retention',
+      description: `Only ${metrics.repeatCustomerRate.toFixed(0)}% of your customers order again. Consider adding a repeat customer discount to encourage loyalty.`,
+      expectedImpact: {
+        metric: 'repeat_customer_rate',
+        estimatedChange: 25,
+        timeframe: '60 days',
+      },
+      action: {
+        type: 'config_change',
+        automatable: true,
+        parameters: {
+          setting: 'pricingStrategy.repeatCustomerDiscount',
+          value: 10,
+        },
+      },
+    });
+  }
+
+  // Volume discount recommendations
+  if (metrics.averageDealSize > 1000 && !config?.pricingStrategy?.volumeDiscountTiers?.length) {
+    recommendations.push({
+      id: `rec_${Date.now()}_volume`,
+      priority: 'medium',
+      category: 'pricing',
+      title: 'Add Volume Discounts',
+      description: 'Your average deal size suggests buyers order in bulk. Adding volume discounts could increase deal sizes and win rate.',
+      expectedImpact: {
+        metric: 'deal_size',
+        estimatedChange: 20,
+        timeframe: '30 days',
+      },
+      action: {
+        type: 'config_change',
+        automatable: true,
+        parameters: {
+          setting: 'pricingStrategy.volumeDiscountTiers',
+          value: [
+            { minQuantity: 100, discountPercent: 5 },
+            { minQuantity: 500, discountPercent: 10 },
+            { minQuantity: 1000, discountPercent: 15 },
+          ],
+        },
+      },
+    });
+  }
+
+  // Sort by priority
+  const priorityOrder = { high: 0, medium: 1, low: 2 };
+  recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+  return recommendations;
+}
+
+/**
+ * Apply an automated recommendation
+ */
+export async function applyRecommendation(
+  sellerId: string,
+  recommendation: ActionableRecommendation
+): Promise<{ success: boolean; message: string }> {
+  if (!recommendation.action.automatable) {
+    return {
+      success: false,
+      message: 'This recommendation requires manual action',
+    };
+  }
+
+  const config = await getSellerConfig(sellerId);
+  if (!config) {
+    return { success: false, message: 'Seller configuration not found' };
+  }
+
+  try {
+    if (recommendation.action.type === 'config_change' && recommendation.action.parameters) {
+      const { setting, value } = recommendation.action.parameters;
+      const settingPath = (setting as string).split('.');
+
+      // Deep update the config
+      let current: Record<string, unknown> = config as unknown as Record<string, unknown>;
+      for (let i = 0; i < settingPath.length - 1; i++) {
+        current = current[settingPath[i]] as Record<string, unknown>;
+      }
+      current[settingPath[settingPath.length - 1]] = value;
+
+      // Save updated config
+      const { saveSellerConfig } = await import('./ai-agent-config');
+      await saveSellerConfig(config);
+
+      return {
+        success: true,
+        message: `Applied recommendation: ${recommendation.title}`,
+      };
+    }
+
+    if (recommendation.action.type === 'pricing_adjustment' && recommendation.action.parameters) {
+      const { adjustmentValue } = recommendation.action.parameters;
+      const { bulkUpdatePrices } = await import('./catalog-service');
+      const count = await bulkUpdatePrices(sellerId, {
+        type: 'percentage',
+        amount: adjustmentValue as number,
+      });
+
+      return {
+        success: true,
+        message: `Updated pricing for ${count} products`,
+      };
+    }
+
+    return { success: false, message: 'Unknown action type' };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to apply recommendation',
+    };
+  }
+}
+
+/**
+ * Get performance comparison with peers/industry
+ */
+export async function getBenchmarkComparison(
+  sellerId: string,
+  period: { start: Date; end: Date }
+): Promise<{
+  seller: SellerMetrics;
+  industry: {
+    avgWinRate: number;
+    avgMargin: number;
+    avgResponseTime: number;
+    avgDealSize: number;
+    avgRating: number;
+  };
+  percentiles: {
+    winRate: number;
+    margin: number;
+    responseTime: number;
+    dealSize: number;
+    rating: number;
+  };
+  ranking: {
+    overall: number;
+    totalSellers: number;
+    tier: 'top10' | 'top25' | 'average' | 'below_average';
+  };
+}> {
+  const sellerMetrics = await getSellerMetrics(sellerId, period);
+
+  // Get industry averages
+  const industryResult = await sql`
+    SELECT
+      AVG(sps.win_rate) as avg_win_rate,
+      AVG(sps.avg_margin) as avg_margin,
+      AVG(sps.avg_response_hours) as avg_response_time,
+      AVG(sps.avg_deal_size) as avg_deal_size,
+      AVG(sps.avg_rating) as avg_rating,
+      COUNT(DISTINCT seller_id) as total_sellers
+    FROM seller_performance_snapshots sps
+    WHERE snapshot_date >= ${period.start.toISOString()}::date
+      AND snapshot_date <= ${period.end.toISOString()}::date
+  `;
+
+  // Get percentile rankings
+  const percentileResult = await sql`
+    WITH seller_ranks AS (
+      SELECT
+        seller_id,
+        PERCENT_RANK() OVER (ORDER BY win_rate DESC) as win_rate_percentile,
+        PERCENT_RANK() OVER (ORDER BY avg_margin DESC) as margin_percentile,
+        PERCENT_RANK() OVER (ORDER BY avg_response_hours ASC) as response_percentile,
+        PERCENT_RANK() OVER (ORDER BY avg_deal_size DESC) as deal_size_percentile,
+        PERCENT_RANK() OVER (ORDER BY avg_rating DESC) as rating_percentile
+      FROM seller_performance_snapshots
+      WHERE snapshot_date = (
+        SELECT MAX(snapshot_date) FROM seller_performance_snapshots
+        WHERE snapshot_date <= ${period.end.toISOString()}::date
+      )
+    )
+    SELECT * FROM seller_ranks
+    WHERE seller_id = ${sellerId}
+  `;
+
+  const industry = industryResult.rows[0];
+  const percentiles = percentileResult.rows[0] || {};
+  const totalSellers = parseInt(industry.total_sellers) || 1;
+
+  // Calculate overall ranking
+  const avgPercentile = (
+    (1 - (parseFloat(percentiles.win_rate_percentile) || 0.5)) +
+    (1 - (parseFloat(percentiles.margin_percentile) || 0.5)) +
+    (1 - (parseFloat(percentiles.response_percentile) || 0.5)) +
+    (1 - (parseFloat(percentiles.deal_size_percentile) || 0.5)) +
+    (1 - (parseFloat(percentiles.rating_percentile) || 0.5))
+  ) / 5;
+
+  const overallRank = Math.round(avgPercentile * totalSellers);
+  let tier: 'top10' | 'top25' | 'average' | 'below_average';
+  if (avgPercentile <= 0.1) tier = 'top10';
+  else if (avgPercentile <= 0.25) tier = 'top25';
+  else if (avgPercentile <= 0.5) tier = 'average';
+  else tier = 'below_average';
+
+  return {
+    seller: sellerMetrics,
+    industry: {
+      avgWinRate: parseFloat(industry.avg_win_rate) || 0,
+      avgMargin: parseFloat(industry.avg_margin) || 0,
+      avgResponseTime: parseFloat(industry.avg_response_time) || 0,
+      avgDealSize: parseFloat(industry.avg_deal_size) || 0,
+      avgRating: parseFloat(industry.avg_rating) || 0,
+    },
+    percentiles: {
+      winRate: Math.round((1 - (parseFloat(percentiles.win_rate_percentile) || 0.5)) * 100),
+      margin: Math.round((1 - (parseFloat(percentiles.margin_percentile) || 0.5)) * 100),
+      responseTime: Math.round((1 - (parseFloat(percentiles.response_percentile) || 0.5)) * 100),
+      dealSize: Math.round((1 - (parseFloat(percentiles.deal_size_percentile) || 0.5)) * 100),
+      rating: Math.round((1 - (parseFloat(percentiles.rating_percentile) || 0.5)) * 100),
+    },
+    ranking: {
+      overall: overallRank,
+      totalSellers,
+      tier,
+    },
+  };
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -641,6 +1026,9 @@ export const PerformanceTracker = {
   getDailySnapshots,
   storePerformanceSnapshot,
   getTopSellers,
+  generateActionableRecommendations,
+  applyRecommendation,
+  getBenchmarkComparison,
 };
 
 export default PerformanceTracker;

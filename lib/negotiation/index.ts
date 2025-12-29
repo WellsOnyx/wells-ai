@@ -60,7 +60,7 @@ export {
   calculateMidpoint,
 } from './protocol';
 
-// AI Router
+// AI Router - Legacy functions and default export
 export {
   // Session management
   createNegotiationSession,
@@ -79,9 +79,61 @@ export {
   // Conversational interface
   processConversationalRequest,
 
+  // Chat streaming interface
+  processConversationalNegotiation,
+  runNegotiationWithStreaming,
+  type NegotiationChatUpdate,
+
+  // Session manager access
+  getSessionManager,
+
   // Default export
   default as AIRouter,
 } from './ai-router';
+
+// AI-to-AI Router (multi-seller) - Class and types
+export {
+  AIToAIRouter,
+  getAIToAIRouter,
+  type NegotiationSessionState,
+  type MultiSellerNegotiationSession,
+  type SellerNegotiationState,
+  type OfferSnapshot,
+  type LineItem,
+  type PaymentTerms,
+  type BuyerNegotiationContext,
+  type NegotiationMessage,
+  type OfferRanking,
+  type NegotiationStrategy,
+} from './ai-router';
+
+// Buyer Agent
+export {
+  BuyerNegotiationAgent,
+  createBuyerAgent,
+  type BuyerConstraints,
+  type BuyerAgentConfig,
+  type OfferEvaluation,
+} from './buyer-agent';
+
+// Seller Agent
+export {
+  SellerNegotiationAgent,
+  createSellerAgent,
+  type SellerConfig,
+  type SellerAgentConfig,
+  type QuoteGeneration,
+  type OfferResponse,
+} from './seller-agent';
+
+// Session Manager
+export {
+  NegotiationSessionManager,
+  type SessionCreateParams,
+  type RoundResult,
+  type NegotiationOutcome,
+  type ChatUpdate,
+} from './session-manager';
 
 // Escalation Service
 export {
@@ -107,6 +159,27 @@ export {
   // Constants
   EscalationService,
 } from './escalation-service';
+
+// ============================================================================
+// CONVERSATIONAL NEGOTIATION ENGINE
+// ============================================================================
+
+// Conversational Negotiation - Chat-based negotiation system
+export {
+  ConversationalNegotiationEngine,
+  getConversationalNegotiationEngine,
+
+  // Types
+  type NegotiationMode,
+  type ConversationalNegotiationSession,
+  type NegotiationConstraints,
+  type NegotiationOffer,
+  type ChatMessage,
+  type NegotiationStrategy as ConversationalNegotiationStrategy,
+  type PendingNegotiationAction,
+  type NegotiationChatResult,
+  type NegotiationIntent,
+} from './conversational-negotiation';
 
 // ============================================================================
 // QUICK START EXAMPLE

@@ -1,8 +1,16 @@
 /**
  * AI-to-AI Negotiation Router
  *
- * Routes buyer Wells agents to seller Wells agents for autonomous negotiation.
- * Handles session management, message routing, and audit logging.
+ * Core system that connects a Buyer's Wells AI agent to a Seller's Wells AI agent
+ * for automated negotiation. Manages session lifecycle, message routing, offer
+ * evaluation, and deal finalization.
+ *
+ * Features:
+ * - Multi-seller negotiation with parallel sessions
+ * - State machine for negotiation lifecycle
+ * - AI-powered negotiation strategy generation
+ * - Full audit trail for fee collection
+ * - ERP write-back on acceptance
  *
  * @module lib/negotiation/ai-router
  */
@@ -29,6 +37,16 @@ import {
 } from './protocol';
 import { checkEscalationTriggers, EscalationResult } from './escalation-service';
 import { matchSuppliersToRequest, getSupplierById } from '../suppliers/db';
+import {
+  NegotiationSessionManager,
+  getSessionManager,
+  SessionCreateParams,
+  RoundResult,
+  NegotiationOutcome,
+  ChatUpdate,
+} from './session-manager';
+import { BuyerConstraints, createBuyerAgent } from './buyer-agent';
+import { SellerConfig, createSellerAgent } from './seller-agent';
 
 // ============================================================================
 // CONFIGURATION
@@ -51,6 +69,197 @@ const STALEMATE_ROUNDS = 3;
 const MIN_PRICE_MOVEMENT_PERCENT = 0.5;
 
 // ============================================================================
+// STATE MACHINE TYPES
+// ============================================================================
+
+/**
+ * NegotiationSessionState - State machine for negotiation lifecycle
+ *
+ * States:
+ * - initiated: Session created but not started
+ * - proposal_sent: Initial proposal sent to seller
+ * - counter_received: Received counter-offer from seller
+ * - counter_sent: Sent counter-offer back to seller
+ * - accepted: Deal accepted by both parties
+ * - rejected: Deal rejected by one party
+ * - expired: Session timed out
+ */
+export type NegotiationSessionState =
+  | 'initiated'
+  | 'proposal_sent'
+  | 'counter_received'
+  | 'counter_sent'
+  | 'accepted'
+  | 'rejected'
+  | 'expired';
+
+/**
+ * Multi-seller negotiation session that tracks parallel negotiations
+ */
+export interface MultiSellerNegotiationSession {
+  id: string;
+  rfqId: string;
+  buyerWellsId: string;
+  buyerOrgId: string;
+  buyerOrgName: string;
+
+  /** All seller sessions in parallel */
+  sellerSessions: Map<string, SellerNegotiationState>;
+
+  /** Current best offer across all sellers */
+  currentBestOffer: OfferSnapshot | null;
+
+  /** History of all offers received */
+  offerHistory: OfferSnapshot[];
+
+  /** Overall session state */
+  state: 'active' | 'decided' | 'expired' | 'cancelled';
+
+  /** Buyer's negotiation preferences */
+  buyerContext: BuyerNegotiationContext;
+
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+  decidedAt?: string;
+  selectedSellerId?: string;
+}
+
+/**
+ * Individual seller's negotiation state
+ */
+export interface SellerNegotiationState {
+  sellerId: string;
+  sellerWellsId: string;
+  sellerOrgName: string;
+
+  /** Current state for this seller */
+  state: NegotiationSessionState;
+
+  /** Current offer from this seller */
+  currentOffer: OfferSnapshot | null;
+
+  /** All counter-offers in history */
+  counterHistory: OfferSnapshot[];
+
+  /** All messages exchanged */
+  messages: NegotiationMessage[];
+
+  /** Round number */
+  round: number;
+
+  /** Last activity timestamp */
+  lastActivityAt: string;
+}
+
+/**
+ * Snapshot of an offer at a point in time
+ */
+export interface OfferSnapshot {
+  sellerId: string;
+  sellerName: string;
+  items: LineItem[];
+  totalAmount: number;
+  terms: PaymentTerms;
+  leadTimeDays: number;
+  validUntil: string;
+  timestamp: string;
+  round: number;
+}
+
+/**
+ * Line item in an offer
+ */
+export interface LineItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  specifications?: Record<string, string>;
+}
+
+/**
+ * Payment terms structure
+ */
+export interface PaymentTerms {
+  paymentTerms: string;
+  currency: string;
+  shippingCost: number;
+  shippingMethod?: string;
+  warrantyMonths?: number;
+  additionalTerms?: Record<string, string | number | boolean>;
+}
+
+/**
+ * Buyer's negotiation context and preferences
+ */
+export interface BuyerNegotiationContext {
+  maxBudget: number;
+  targetPrice: number;
+  maxLeadTime: number;
+  requiredSpecs: string[];
+  preferredPaymentTerms: string[];
+  negotiationStyle: 'aggressive' | 'balanced' | 'conservative';
+  priorityFactors: {
+    price: number;
+    leadTime: number;
+    quality: number;
+    reliability: number;
+  };
+}
+
+/**
+ * Negotiation message protocol
+ */
+export interface NegotiationMessage {
+  type: 'rfq' | 'quote' | 'counter' | 'accept' | 'reject' | 'clarification';
+  fromAgent: 'buyer_wells' | 'seller_wells';
+  payload: {
+    items?: LineItem[];
+    totalAmount?: number;
+    terms?: PaymentTerms;
+    reasoning?: string;
+    counterOffer?: Partial<OfferSnapshot>;
+    clarificationRequest?: string;
+    clarificationResponse?: string;
+  };
+  timestamp: string;
+  sessionId: string;
+  messageId: string;
+}
+
+/**
+ * Offer ranking result
+ */
+export interface OfferRanking {
+  sellerId: string;
+  sellerName: string;
+  offer: OfferSnapshot;
+  score: number;
+  breakdown: {
+    priceScore: number;
+    leadTimeScore: number;
+    termsScore: number;
+    reliabilityScore: number;
+  };
+  recommendation: 'accept' | 'negotiate' | 'reject';
+  reasoning: string;
+}
+
+/**
+ * Negotiation strategy generated by AI
+ */
+export interface NegotiationStrategy {
+  approach: 'aggressive' | 'balanced' | 'conservative';
+  openingDiscount: number;
+  maxConcessions: number;
+  walkAwayThreshold: number;
+  keyLeveragePoints: string[];
+  suggestedTactics: string[];
+  riskAssessment: string;
+}
+
+// ============================================================================
 // LOGGING
 // ============================================================================
 
@@ -65,6 +274,1164 @@ function log(level: 'info' | 'warn' | 'error', message: string, meta?: Record<st
   } else {
     console.log(`${LOG_PREFIX} ${message}`, meta ? JSON.stringify(meta) : '');
   }
+}
+
+// ============================================================================
+// AI-TO-AI ROUTER CLASS
+// ============================================================================
+
+/**
+ * AIToAIRouter - Core class for managing AI-to-AI negotiations
+ *
+ * Connects Buyer Wells AI agents to Seller Wells AI agents for automated
+ * negotiation. Handles multi-seller parallel negotiations, message routing,
+ * offer evaluation, and deal finalization.
+ *
+ * Usage:
+ * ```typescript
+ * const router = new AIToAIRouter();
+ *
+ * // Start negotiation with multiple sellers
+ * const session = await router.initiateNegotiation(rfqId, buyerContext, sellerIds);
+ *
+ * // Route messages between buyer and seller agents
+ * await router.routeBuyerMessage(sessionId, message);
+ * await router.routeSellerResponse(sessionId, sellerId, response);
+ *
+ * // Evaluate and rank offers
+ * const rankings = await router.evaluateOffers(sessionId);
+ *
+ * // Accept the best offer
+ * const award = await router.acceptOffer(sessionId, sellerId);
+ * ```
+ */
+export class AIToAIRouter {
+  private activeSessions: Map<string, MultiSellerNegotiationSession> = new Map();
+  private sessionManager: NegotiationSessionManager;
+
+  constructor() {
+    this.sessionManager = getSessionManager();
+  }
+
+  // ==========================================================================
+  // INITIATE NEGOTIATION
+  // ==========================================================================
+
+  /**
+   * Start multi-seller negotiation
+   *
+   * Creates parallel negotiation sessions with multiple sellers for a single RFQ.
+   * Each seller gets their own negotiation state that runs concurrently.
+   *
+   * @param rfqId - The RFQ being negotiated
+   * @param buyerContext - Buyer's preferences and constraints
+   * @param sellerIds - Array of seller IDs to negotiate with
+   * @returns The multi-seller negotiation session
+   */
+  async initiateNegotiation(
+    rfqId: string,
+    buyerContext: BuyerNegotiationContext,
+    sellerIds: string[]
+  ): Promise<MultiSellerNegotiationSession> {
+    log('info', 'Initiating multi-seller negotiation', {
+      rfqId,
+      sellerCount: sellerIds.length,
+      maxBudget: buyerContext.maxBudget,
+    });
+
+    // Validate inputs
+    if (!sellerIds.length) {
+      throw new Error('At least one seller ID is required');
+    }
+
+    if (buyerContext.maxBudget <= 0) {
+      throw new Error('Max budget must be positive');
+    }
+
+    // Generate session ID
+    const sessionId = `msn_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+
+    // Get RFQ details
+    const rfqResult = await sql`SELECT * FROM rfqs WHERE id = ${rfqId}`;
+    if (rfqResult.rows.length === 0) {
+      throw new Error(`RFQ not found: ${rfqId}`);
+    }
+    const rfq = rfqResult.rows[0];
+
+    // Get buyer organization info
+    const buyerOrgId = rfq.company_id || rfq.requestor_email?.split('@')[1] || 'unknown';
+    const buyerOrgName = rfq.company_name || 'Buyer Organization';
+
+    // Create seller sessions
+    const sellerSessions = new Map<string, SellerNegotiationState>();
+
+    for (const sellerId of sellerIds) {
+      try {
+        const supplier = await getSupplierById(sellerId);
+        if (!supplier) {
+          log('warn', `Supplier not found: ${sellerId}, skipping`);
+          continue;
+        }
+
+        const sellerState: SellerNegotiationState = {
+          sellerId,
+          sellerWellsId: `wells_seller_${sellerId}`,
+          sellerOrgName: supplier.companyName || `Supplier ${sellerId}`,
+          state: 'initiated',
+          currentOffer: null,
+          counterHistory: [],
+          messages: [],
+          round: 0,
+          lastActivityAt: new Date().toISOString(),
+        };
+
+        sellerSessions.set(sellerId, sellerState);
+      } catch (error) {
+        log('error', `Failed to initialize seller session: ${sellerId}`, {
+          error: error instanceof Error ? error.message : 'Unknown',
+        });
+      }
+    }
+
+    if (sellerSessions.size === 0) {
+      throw new Error('No valid sellers found for negotiation');
+    }
+
+    // Create the multi-seller session
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + SESSION_TIMEOUT_MS);
+
+    const session: MultiSellerNegotiationSession = {
+      id: sessionId,
+      rfqId,
+      buyerWellsId: `wells_buyer_${buyerOrgId}`,
+      buyerOrgId,
+      buyerOrgName,
+      sellerSessions,
+      currentBestOffer: null,
+      offerHistory: [],
+      state: 'active',
+      buyerContext,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    };
+
+    // Store in memory and database
+    this.activeSessions.set(sessionId, session);
+    await this.persistMultiSellerSession(session);
+
+    // Record negotiation initiation for fee tracking
+    await this.recordNegotiationEvent(sessionId, 'initiated', {
+      rfqId,
+      sellerCount: sellerSessions.size,
+      buyerContext,
+    });
+
+    log('info', 'Multi-seller negotiation initiated', {
+      sessionId,
+      rfqId,
+      sellerCount: sellerSessions.size,
+    });
+
+    return session;
+  }
+
+  // ==========================================================================
+  // MESSAGE ROUTING
+  // ==========================================================================
+
+  /**
+   * Route buyer Wells message to seller Wells
+   *
+   * Takes a message from the buyer's Wells AI agent and routes it to
+   * the appropriate seller's Wells AI agent.
+   *
+   * @param sessionId - The multi-seller session ID
+   * @param message - The message to route
+   * @returns Updated session state
+   */
+  async routeBuyerMessage(
+    sessionId: string,
+    message: NegotiationMessage
+  ): Promise<{
+    session: MultiSellerNegotiationSession;
+    responses: Map<string, NegotiationMessage>;
+  }> {
+    log('info', 'Routing buyer message', {
+      sessionId,
+      messageType: message.type,
+    });
+
+    const session = await this.getMultiSellerSession(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+
+    if (session.state !== 'active') {
+      throw new Error(`Session is not active: ${session.state}`);
+    }
+
+    // Validate message
+    this.validateMessage(message);
+
+    // Determine which sellers to send to (all active or specific)
+    const targetSellers = Array.from(session.sellerSessions.values())
+      .filter(s => s.state !== 'accepted' && s.state !== 'rejected' && s.state !== 'expired');
+
+    if (targetSellers.length === 0) {
+      throw new Error('No active seller sessions to route message to');
+    }
+
+    const responses = new Map<string, NegotiationMessage>();
+
+    // Route to each seller and collect responses
+    for (const sellerState of targetSellers) {
+      try {
+        // Add message to seller's history
+        sellerState.messages.push({
+          ...message,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Update seller state based on message type
+        if (message.type === 'rfq' || message.type === 'counter') {
+          sellerState.state = message.type === 'rfq' ? 'proposal_sent' : 'counter_sent';
+          sellerState.round++;
+        }
+
+        // Generate seller response using AI
+        const response = await this.generateSellerResponse(session, sellerState, message);
+        responses.set(sellerState.sellerId, response);
+
+        // Process the response
+        await this.processSellerResponse(session, sellerState, response);
+
+        sellerState.lastActivityAt = new Date().toISOString();
+      } catch (error) {
+        log('error', `Failed to route message to seller: ${sellerState.sellerId}`, {
+          error: error instanceof Error ? error.message : 'Unknown',
+        });
+      }
+    }
+
+    // Update session
+    session.updatedAt = new Date().toISOString();
+    this.activeSessions.set(sessionId, session);
+    await this.persistMultiSellerSession(session);
+
+    // Record message routing for audit
+    await this.recordNegotiationEvent(sessionId, 'buyer_message_routed', {
+      messageType: message.type,
+      targetSellerCount: targetSellers.length,
+      responseCount: responses.size,
+    });
+
+    return { session, responses };
+  }
+
+  /**
+   * Route seller Wells response back to buyer Wells
+   *
+   * Processes a response from a seller's Wells AI agent and updates
+   * the negotiation state accordingly.
+   *
+   * @param sessionId - The multi-seller session ID
+   * @param sellerId - The seller's ID
+   * @param response - The seller's response message
+   * @returns Updated session state
+   */
+  async routeSellerResponse(
+    sessionId: string,
+    sellerId: string,
+    response: NegotiationMessage
+  ): Promise<{
+    session: MultiSellerNegotiationSession;
+    buyerAction: 'counter' | 'accept' | 'reject' | 'evaluate' | null;
+    nextMessage?: NegotiationMessage;
+  }> {
+    log('info', 'Routing seller response', {
+      sessionId,
+      sellerId,
+      responseType: response.type,
+    });
+
+    const session = await this.getMultiSellerSession(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+
+    const sellerState = session.sellerSessions.get(sellerId);
+    if (!sellerState) {
+      throw new Error(`Seller not found in session: ${sellerId}`);
+    }
+
+    // Validate response
+    this.validateMessage(response);
+
+    // Process the response
+    await this.processSellerResponse(session, sellerState, response);
+
+    // Determine buyer's next action based on all current offers
+    const { action, nextMessage } = await this.determineBuyerAction(session);
+
+    // Update session
+    session.updatedAt = new Date().toISOString();
+    this.activeSessions.set(sessionId, session);
+    await this.persistMultiSellerSession(session);
+
+    // Record for audit
+    await this.recordNegotiationEvent(sessionId, 'seller_response_routed', {
+      sellerId,
+      responseType: response.type,
+      buyerAction: action,
+    });
+
+    return {
+      session,
+      buyerAction: action,
+      nextMessage,
+    };
+  }
+
+  // ==========================================================================
+  // OFFER EVALUATION
+  // ==========================================================================
+
+  /**
+   * Compare all seller offers and rank them
+   *
+   * Evaluates all current offers from sellers based on the buyer's
+   * preferences and constraints. Returns ranked offers with scores
+   * and recommendations.
+   *
+   * @param sessionId - The multi-seller session ID
+   * @returns Ranked list of offers
+   */
+  async evaluateOffers(sessionId: string): Promise<OfferRanking[]> {
+    log('info', 'Evaluating offers', { sessionId });
+
+    const session = await this.getMultiSellerSession(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+
+    const rankings: OfferRanking[] = [];
+
+    // Collect all current offers
+    const offers: OfferSnapshot[] = [];
+    for (const [sellerId, sellerState] of session.sellerSessions) {
+      if (sellerState.currentOffer) {
+        offers.push(sellerState.currentOffer);
+      }
+    }
+
+    if (offers.length === 0) {
+      log('info', 'No offers to evaluate');
+      return [];
+    }
+
+    // Calculate scores for each offer
+    for (const offer of offers) {
+      const ranking = await this.scoreOffer(offer, session.buyerContext, offers);
+      rankings.push(ranking);
+    }
+
+    // Sort by score descending
+    rankings.sort((a, b) => b.score - a.score);
+
+    // Update session with current best offer
+    if (rankings.length > 0) {
+      session.currentBestOffer = rankings[0].offer;
+      session.updatedAt = new Date().toISOString();
+      this.activeSessions.set(sessionId, session);
+    }
+
+    // Record evaluation for audit
+    await this.recordNegotiationEvent(sessionId, 'offers_evaluated', {
+      offerCount: offers.length,
+      bestSellerId: rankings[0]?.sellerId,
+      bestScore: rankings[0]?.score,
+    });
+
+    log('info', 'Offers evaluated', {
+      sessionId,
+      offerCount: offers.length,
+      bestOffer: rankings[0]?.sellerId,
+    });
+
+    return rankings;
+  }
+
+  /**
+   * Score an individual offer
+   */
+  private async scoreOffer(
+    offer: OfferSnapshot,
+    buyerContext: BuyerNegotiationContext,
+    allOffers: OfferSnapshot[]
+  ): Promise<OfferRanking> {
+    // Calculate price score (0-100, higher is better = lower price)
+    const lowestPrice = Math.min(...allOffers.map(o => o.totalAmount));
+    const highestPrice = Math.max(...allOffers.map(o => o.totalAmount));
+    const priceRange = highestPrice - lowestPrice || 1;
+    const priceScore = offer.totalAmount <= buyerContext.targetPrice
+      ? 100
+      : Math.max(0, 100 - ((offer.totalAmount - lowestPrice) / priceRange) * 50);
+
+    // Calculate lead time score (0-100, higher is better = shorter lead time)
+    const shortestLead = Math.min(...allOffers.map(o => o.leadTimeDays));
+    const longestLead = Math.max(...allOffers.map(o => o.leadTimeDays));
+    const leadRange = longestLead - shortestLead || 1;
+    const leadTimeScore = offer.leadTimeDays <= buyerContext.maxLeadTime
+      ? 100
+      : Math.max(0, 100 - ((offer.leadTimeDays - shortestLead) / leadRange) * 50);
+
+    // Calculate terms score based on payment terms match
+    const termsScore = buyerContext.preferredPaymentTerms.includes(offer.terms.paymentTerms)
+      ? 100
+      : 70;
+
+    // Reliability score (would come from supplier history, defaulting to 80)
+    const reliabilityScore = 80;
+
+    // Calculate weighted total score
+    const weights = buyerContext.priorityFactors;
+    const totalWeight = weights.price + weights.leadTime + weights.quality + weights.reliability;
+    const score = Math.round(
+      (priceScore * weights.price +
+        leadTimeScore * weights.leadTime +
+        termsScore * weights.quality +
+        reliabilityScore * weights.reliability) /
+        totalWeight
+    );
+
+    // Determine recommendation
+    let recommendation: 'accept' | 'negotiate' | 'reject';
+    let reasoning: string;
+
+    if (offer.totalAmount <= buyerContext.targetPrice && offer.leadTimeDays <= buyerContext.maxLeadTime) {
+      recommendation = 'accept';
+      reasoning = 'Offer meets all target criteria.';
+    } else if (offer.totalAmount <= buyerContext.maxBudget) {
+      recommendation = 'negotiate';
+      reasoning = offer.totalAmount > buyerContext.targetPrice
+        ? `Price ${((offer.totalAmount / buyerContext.targetPrice - 1) * 100).toFixed(1)}% above target. Room for negotiation.`
+        : `Lead time ${offer.leadTimeDays - buyerContext.maxLeadTime} days over target. May need to negotiate.`;
+    } else {
+      recommendation = 'reject';
+      reasoning = `Price $${(offer.totalAmount - buyerContext.maxBudget).toFixed(2)} over maximum budget.`;
+    }
+
+    return {
+      sellerId: offer.sellerId,
+      sellerName: offer.sellerName,
+      offer,
+      score,
+      breakdown: {
+        priceScore,
+        leadTimeScore,
+        termsScore,
+        reliabilityScore,
+      },
+      recommendation,
+      reasoning,
+    };
+  }
+
+  // ==========================================================================
+  // ACCEPT OFFER
+  // ==========================================================================
+
+  /**
+   * Finalize winning offer
+   *
+   * Accepts an offer from a specific seller, marks the negotiation as decided,
+   * records the transaction for fee collection, and triggers ERP write-back.
+   *
+   * @param sessionId - The multi-seller session ID
+   * @param sellerId - The winning seller's ID
+   * @returns Award details
+   */
+  async acceptOffer(
+    sessionId: string,
+    sellerId: string
+  ): Promise<{
+    success: boolean;
+    awardId: string;
+    session: MultiSellerNegotiationSession;
+    award: {
+      sellerId: string;
+      sellerName: string;
+      amount: number;
+      terms: PaymentTerms;
+      leadTimeDays: number;
+    };
+    erpSyncTriggered: boolean;
+  }> {
+    log('info', 'Accepting offer', { sessionId, sellerId });
+
+    const session = await this.getMultiSellerSession(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+
+    const sellerState = session.sellerSessions.get(sellerId);
+    if (!sellerState) {
+      throw new Error(`Seller not found in session: ${sellerId}`);
+    }
+
+    if (!sellerState.currentOffer) {
+      throw new Error(`No current offer from seller: ${sellerId}`);
+    }
+
+    const offer = sellerState.currentOffer;
+
+    // Update seller state to accepted
+    sellerState.state = 'accepted';
+    sellerState.messages.push({
+      type: 'accept',
+      fromAgent: 'buyer_wells',
+      payload: {
+        totalAmount: offer.totalAmount,
+        reasoning: 'Offer accepted by buyer.',
+      },
+      timestamp: new Date().toISOString(),
+      sessionId,
+      messageId: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    });
+
+    // Reject all other sellers
+    for (const [otherId, otherState] of session.sellerSessions) {
+      if (otherId !== sellerId && otherState.state !== 'rejected') {
+        otherState.state = 'rejected';
+        otherState.messages.push({
+          type: 'reject',
+          fromAgent: 'buyer_wells',
+          payload: {
+            reasoning: 'Another offer was selected.',
+          },
+          timestamp: new Date().toISOString(),
+          sessionId,
+          messageId: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        });
+      }
+    }
+
+    // Update session state
+    session.state = 'decided';
+    session.decidedAt = new Date().toISOString();
+    session.selectedSellerId = sellerId;
+    session.updatedAt = new Date().toISOString();
+
+    // Create award record
+    const awardId = `award_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    await this.createAwardRecord(session, sellerState, offer, awardId);
+
+    // Persist session
+    this.activeSessions.set(sessionId, session);
+    await this.persistMultiSellerSession(session);
+
+    // Record for fee collection
+    await this.recordNegotiationEvent(sessionId, 'offer_accepted', {
+      sellerId,
+      awardId,
+      amount: offer.totalAmount,
+      feeAmount: offer.totalAmount * 0.02, // 2% fee
+    });
+
+    // Trigger ERP write-back
+    let erpSyncTriggered = false;
+    try {
+      await this.triggerERPWriteback(session.rfqId, awardId);
+      erpSyncTriggered = true;
+    } catch (error) {
+      log('error', 'ERP write-back failed', {
+        error: error instanceof Error ? error.message : 'Unknown',
+      });
+    }
+
+    log('info', 'Offer accepted', {
+      sessionId,
+      sellerId,
+      awardId,
+      amount: offer.totalAmount,
+    });
+
+    return {
+      success: true,
+      awardId,
+      session,
+      award: {
+        sellerId,
+        sellerName: sellerState.sellerOrgName,
+        amount: offer.totalAmount,
+        terms: offer.terms,
+        leadTimeDays: offer.leadTimeDays,
+      },
+      erpSyncTriggered,
+    };
+  }
+
+  // ==========================================================================
+  // NEGOTIATION STRATEGY
+  // ==========================================================================
+
+  /**
+   * Generate AI negotiation strategy
+   *
+   * Uses Claude AI to analyze the buyer's preferences and market conditions
+   * to generate an optimal negotiation strategy.
+   *
+   * @param buyerPreferences - Buyer's preferences and constraints
+   * @returns AI-generated negotiation strategy
+   */
+  async generateNegotiationStrategy(
+    buyerPreferences: BuyerNegotiationContext
+  ): Promise<NegotiationStrategy> {
+    log('info', 'Generating negotiation strategy', {
+      targetPrice: buyerPreferences.targetPrice,
+      maxBudget: buyerPreferences.maxBudget,
+      style: buyerPreferences.negotiationStyle,
+    });
+
+    const systemPrompt = `You are an expert procurement negotiation strategist. Generate a negotiation strategy based on the buyer's preferences and constraints.
+
+Respond in JSON format only:
+{
+  "approach": "aggressive" | "balanced" | "conservative",
+  "openingDiscount": number (0-30, percentage below target),
+  "maxConcessions": number (1-5),
+  "walkAwayThreshold": number (percentage above max budget to walk away),
+  "keyLeveragePoints": string[],
+  "suggestedTactics": string[],
+  "riskAssessment": string
+}`;
+
+    const userPrompt = `Generate a negotiation strategy for these buyer preferences:
+
+- Target Price: $${buyerPreferences.targetPrice.toFixed(2)}
+- Maximum Budget: $${buyerPreferences.maxBudget.toFixed(2)}
+- Maximum Lead Time: ${buyerPreferences.maxLeadTime} days
+- Required Specifications: ${buyerPreferences.requiredSpecs.join(', ') || 'None'}
+- Preferred Payment Terms: ${buyerPreferences.preferredPaymentTerms.join(', ')}
+- Negotiation Style: ${buyerPreferences.negotiationStyle}
+- Priority Factors: Price (${buyerPreferences.priorityFactors.price}), Lead Time (${buyerPreferences.priorityFactors.leadTime}), Quality (${buyerPreferences.priorityFactors.quality}), Reliability (${buyerPreferences.priorityFactors.reliability})
+
+Consider:
+1. The gap between target and max budget
+2. How urgent the purchase is based on lead time requirements
+3. Which factors are most important to the buyer
+4. Appropriate opening position and concession strategy`;
+
+    try {
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+
+      const textBlock = response.content.find(block => block.type === 'text');
+      const text = textBlock?.type === 'text' ? textBlock.text : '{}';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const strategy = JSON.parse(jsonMatch?.[0] || '{}') as NegotiationStrategy;
+
+      // Validate and set defaults
+      return {
+        approach: strategy.approach || buyerPreferences.negotiationStyle,
+        openingDiscount: Math.min(30, Math.max(0, strategy.openingDiscount || 15)),
+        maxConcessions: Math.min(5, Math.max(1, strategy.maxConcessions || 3)),
+        walkAwayThreshold: Math.min(20, Math.max(0, strategy.walkAwayThreshold || 10)),
+        keyLeveragePoints: strategy.keyLeveragePoints || ['Volume commitment', 'Long-term partnership'],
+        suggestedTactics: strategy.suggestedTactics || ['Start below target', 'Make incremental concessions'],
+        riskAssessment: strategy.riskAssessment || 'Standard procurement risk profile.',
+      };
+    } catch (error) {
+      log('error', 'Failed to generate strategy', {
+        error: error instanceof Error ? error.message : 'Unknown',
+      });
+
+      // Return default strategy based on style
+      return this.getDefaultStrategy(buyerPreferences);
+    }
+  }
+
+  private getDefaultStrategy(preferences: BuyerNegotiationContext): NegotiationStrategy {
+    const styleDefaults = {
+      aggressive: { openingDiscount: 25, maxConcessions: 2, walkAwayThreshold: 5 },
+      balanced: { openingDiscount: 15, maxConcessions: 4, walkAwayThreshold: 10 },
+      conservative: { openingDiscount: 10, maxConcessions: 5, walkAwayThreshold: 15 },
+    };
+
+    const defaults = styleDefaults[preferences.negotiationStyle];
+
+    return {
+      approach: preferences.negotiationStyle,
+      openingDiscount: defaults.openingDiscount,
+      maxConcessions: defaults.maxConcessions,
+      walkAwayThreshold: defaults.walkAwayThreshold,
+      keyLeveragePoints: ['Volume commitment', 'Payment terms flexibility'],
+      suggestedTactics: ['Start below target', 'Request value-adds before price concessions'],
+      riskAssessment: 'Standard risk profile. Proceed with caution.',
+    };
+  }
+
+  // ==========================================================================
+  // SESSION MANAGEMENT
+  // ==========================================================================
+
+  /**
+   * Get a multi-seller session by ID
+   */
+  async getMultiSellerSession(sessionId: string): Promise<MultiSellerNegotiationSession | null> {
+    // Check memory cache first
+    let session = this.activeSessions.get(sessionId);
+    if (session) return session;
+
+    // Load from database
+    const result = await sql`
+      SELECT * FROM multi_seller_negotiation_sessions
+      WHERE id = ${sessionId}
+    `;
+
+    if (result.rows.length === 0) return null;
+
+    session = this.mapMultiSellerSessionRow(result.rows[0]);
+    this.activeSessions.set(sessionId, session);
+
+    return session;
+  }
+
+  /**
+   * Get session status summary
+   */
+  async getSessionStatus(sessionId: string): Promise<{
+    sessionId: string;
+    state: string;
+    sellerCount: number;
+    activeSellerCount: number;
+    currentBestOffer: OfferSnapshot | null;
+    roundsCompleted: number;
+    expiresAt: string;
+  } | null> {
+    const session = await this.getMultiSellerSession(sessionId);
+    if (!session) return null;
+
+    const activeSellerCount = Array.from(session.sellerSessions.values())
+      .filter(s => s.state !== 'accepted' && s.state !== 'rejected' && s.state !== 'expired')
+      .length;
+
+    const maxRound = Math.max(...Array.from(session.sellerSessions.values()).map(s => s.round));
+
+    return {
+      sessionId: session.id,
+      state: session.state,
+      sellerCount: session.sellerSessions.size,
+      activeSellerCount,
+      currentBestOffer: session.currentBestOffer,
+      roundsCompleted: maxRound,
+      expiresAt: session.expiresAt,
+    };
+  }
+
+  // ==========================================================================
+  // HELPER METHODS
+  // ==========================================================================
+
+  private validateMessage(message: NegotiationMessage): void {
+    if (!message.type) {
+      throw new Error('Message type is required');
+    }
+    if (!message.fromAgent) {
+      throw new Error('Message sender (fromAgent) is required');
+    }
+    if (!['rfq', 'quote', 'counter', 'accept', 'reject', 'clarification'].includes(message.type)) {
+      throw new Error(`Invalid message type: ${message.type}`);
+    }
+  }
+
+  private async generateSellerResponse(
+    session: MultiSellerNegotiationSession,
+    sellerState: SellerNegotiationState,
+    buyerMessage: NegotiationMessage
+  ): Promise<NegotiationMessage> {
+    // Use AI to generate seller response
+    const systemPrompt = `You are a supplier's AI negotiation agent for ${sellerState.sellerOrgName}.
+You are negotiating with a buyer. Generate an appropriate response.
+
+Respond in JSON:
+{
+  "type": "quote" | "counter" | "accept" | "reject",
+  "totalAmount": number,
+  "leadTimeDays": number,
+  "paymentTerms": string,
+  "reasoning": string
+}`;
+
+    const historyText = sellerState.messages
+      .slice(-5)
+      .map(m => `${m.fromAgent}: ${m.type} - ${m.payload.reasoning || ''}`)
+      .join('\n');
+
+    const userPrompt = `Buyer's message: ${buyerMessage.type}
+Requested amount: $${buyerMessage.payload.totalAmount || 'TBD'}
+History:
+${historyText}
+
+Current round: ${sellerState.round}
+
+Generate your response as the seller. Be professional and aim to close the deal while protecting margins.`;
+
+    try {
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 512,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+
+      const textBlock = response.content.find(block => block.type === 'text');
+      const text = textBlock?.type === 'text' ? textBlock.text : '{}';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const parsed = JSON.parse(jsonMatch?.[0] || '{}');
+
+      return {
+        type: parsed.type || 'counter',
+        fromAgent: 'seller_wells',
+        payload: {
+          totalAmount: parsed.totalAmount,
+          terms: {
+            paymentTerms: parsed.paymentTerms || 'Net 30',
+            currency: 'USD',
+            shippingCost: 0,
+          },
+          reasoning: parsed.reasoning,
+        },
+        timestamp: new Date().toISOString(),
+        sessionId: session.id,
+        messageId: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      };
+    } catch (error) {
+      // Fallback response
+      return {
+        type: 'counter',
+        fromAgent: 'seller_wells',
+        payload: {
+          totalAmount: (buyerMessage.payload.totalAmount || 0) * 1.1,
+          terms: {
+            paymentTerms: 'Net 30',
+            currency: 'USD',
+            shippingCost: 0,
+          },
+          reasoning: 'Counter-offer based on our standard pricing.',
+        },
+        timestamp: new Date().toISOString(),
+        sessionId: session.id,
+        messageId: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      };
+    }
+  }
+
+  private async processSellerResponse(
+    session: MultiSellerNegotiationSession,
+    sellerState: SellerNegotiationState,
+    response: NegotiationMessage
+  ): Promise<void> {
+    // Add to messages
+    sellerState.messages.push(response);
+
+    // Update state based on response type
+    switch (response.type) {
+      case 'quote':
+      case 'counter':
+        sellerState.state = 'counter_received';
+
+        // Create offer snapshot
+        const offer: OfferSnapshot = {
+          sellerId: sellerState.sellerId,
+          sellerName: sellerState.sellerOrgName,
+          items: response.payload.items || [],
+          totalAmount: response.payload.totalAmount || 0,
+          terms: response.payload.terms || {
+            paymentTerms: 'Net 30',
+            currency: 'USD',
+            shippingCost: 0,
+          },
+          leadTimeDays: 14, // Default
+          validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          timestamp: response.timestamp,
+          round: sellerState.round,
+        };
+
+        sellerState.currentOffer = offer;
+        sellerState.counterHistory.push(offer);
+        session.offerHistory.push(offer);
+
+        // Update best offer if this is better
+        if (!session.currentBestOffer || offer.totalAmount < session.currentBestOffer.totalAmount) {
+          session.currentBestOffer = offer;
+        }
+        break;
+
+      case 'accept':
+        sellerState.state = 'accepted';
+        break;
+
+      case 'reject':
+        sellerState.state = 'rejected';
+        break;
+    }
+
+    sellerState.lastActivityAt = new Date().toISOString();
+  }
+
+  private async determineBuyerAction(
+    session: MultiSellerNegotiationSession
+  ): Promise<{
+    action: 'counter' | 'accept' | 'reject' | 'evaluate' | null;
+    nextMessage?: NegotiationMessage;
+  }> {
+    // Collect all current offers
+    const activeOffers = Array.from(session.sellerSessions.values())
+      .filter(s => s.currentOffer && s.state !== 'rejected')
+      .map(s => s.currentOffer!);
+
+    if (activeOffers.length === 0) {
+      return { action: null };
+    }
+
+    // Check if any offer meets our target
+    const acceptableOffers = activeOffers.filter(
+      o => o.totalAmount <= session.buyerContext.targetPrice
+    );
+
+    if (acceptableOffers.length > 0) {
+      // Find best acceptable offer
+      const best = acceptableOffers.reduce((a, b) =>
+        a.totalAmount < b.totalAmount ? a : b
+      );
+
+      return {
+        action: 'accept',
+        nextMessage: {
+          type: 'accept',
+          fromAgent: 'buyer_wells',
+          payload: {
+            totalAmount: best.totalAmount,
+            reasoning: 'Offer meets our requirements.',
+          },
+          timestamp: new Date().toISOString(),
+          sessionId: session.id,
+          messageId: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        },
+      };
+    }
+
+    // Check if best offer is within budget but above target
+    const bestOffer = activeOffers.reduce((a, b) =>
+      a.totalAmount < b.totalAmount ? a : b
+    );
+
+    if (bestOffer.totalAmount <= session.buyerContext.maxBudget) {
+      // Counter-offer
+      const counterAmount = (bestOffer.totalAmount + session.buyerContext.targetPrice) / 2;
+
+      return {
+        action: 'counter',
+        nextMessage: {
+          type: 'counter',
+          fromAgent: 'buyer_wells',
+          payload: {
+            totalAmount: counterAmount,
+            reasoning: `Counter-offer to move toward our target of $${session.buyerContext.targetPrice.toFixed(2)}.`,
+          },
+          timestamp: new Date().toISOString(),
+          sessionId: session.id,
+          messageId: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        },
+      };
+    }
+
+    // All offers above budget - need evaluation
+    return { action: 'evaluate' };
+  }
+
+  // ==========================================================================
+  // DATABASE OPERATIONS
+  // ==========================================================================
+
+  private async persistMultiSellerSession(session: MultiSellerNegotiationSession): Promise<void> {
+    // Convert Map to object for JSON storage
+    const sellerSessionsObj: Record<string, SellerNegotiationState> = {};
+    for (const [key, value] of session.sellerSessions) {
+      sellerSessionsObj[key] = value;
+    }
+
+    await sql`
+      INSERT INTO multi_seller_negotiation_sessions (
+        id,
+        rfq_id,
+        buyer_wells_id,
+        buyer_org_id,
+        buyer_org_name,
+        seller_sessions,
+        current_best_offer,
+        offer_history,
+        state,
+        buyer_context,
+        created_at,
+        updated_at,
+        expires_at,
+        decided_at,
+        selected_seller_id
+      ) VALUES (
+        ${session.id},
+        ${session.rfqId},
+        ${session.buyerWellsId},
+        ${session.buyerOrgId},
+        ${session.buyerOrgName},
+        ${JSON.stringify(sellerSessionsObj)},
+        ${session.currentBestOffer ? JSON.stringify(session.currentBestOffer) : null},
+        ${JSON.stringify(session.offerHistory)},
+        ${session.state},
+        ${JSON.stringify(session.buyerContext)},
+        ${session.createdAt},
+        ${session.updatedAt},
+        ${session.expiresAt},
+        ${session.decidedAt || null},
+        ${session.selectedSellerId || null}
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        seller_sessions = EXCLUDED.seller_sessions,
+        current_best_offer = EXCLUDED.current_best_offer,
+        offer_history = EXCLUDED.offer_history,
+        state = EXCLUDED.state,
+        updated_at = EXCLUDED.updated_at,
+        decided_at = EXCLUDED.decided_at,
+        selected_seller_id = EXCLUDED.selected_seller_id
+    `;
+  }
+
+  private mapMultiSellerSessionRow(row: Record<string, unknown>): MultiSellerNegotiationSession {
+    const sellerSessionsObj = row.seller_sessions as Record<string, SellerNegotiationState>;
+    const sellerSessions = new Map<string, SellerNegotiationState>();
+    for (const [key, value] of Object.entries(sellerSessionsObj)) {
+      sellerSessions.set(key, value);
+    }
+
+    return {
+      id: row.id as string,
+      rfqId: row.rfq_id as string,
+      buyerWellsId: row.buyer_wells_id as string,
+      buyerOrgId: row.buyer_org_id as string,
+      buyerOrgName: row.buyer_org_name as string,
+      sellerSessions,
+      currentBestOffer: row.current_best_offer as OfferSnapshot | null,
+      offerHistory: (row.offer_history as OfferSnapshot[]) || [],
+      state: row.state as 'active' | 'decided' | 'expired' | 'cancelled',
+      buyerContext: row.buyer_context as BuyerNegotiationContext,
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string,
+      expiresAt: row.expires_at as string,
+      decidedAt: row.decided_at as string | undefined,
+      selectedSellerId: row.selected_seller_id as string | undefined,
+    };
+  }
+
+  private async createAwardRecord(
+    session: MultiSellerNegotiationSession,
+    sellerState: SellerNegotiationState,
+    offer: OfferSnapshot,
+    awardId: string
+  ): Promise<void> {
+    await sql`
+      INSERT INTO rfq_awards (
+        id,
+        rfq_id,
+        supplier_id,
+        negotiation_id,
+        award_amount,
+        award_quantity,
+        award_unit_price,
+        award_terms,
+        status,
+        awarded_at
+      ) VALUES (
+        ${awardId},
+        ${session.rfqId},
+        ${sellerState.sellerId},
+        ${session.id},
+        ${offer.totalAmount},
+        ${offer.items.reduce((sum, item) => sum + item.quantity, 0) || 1},
+        ${offer.items[0]?.unitPrice || offer.totalAmount},
+        ${JSON.stringify(offer.terms)},
+        'awarded',
+        NOW()
+      )
+    `;
+  }
+
+  private async recordNegotiationEvent(
+    sessionId: string,
+    eventType: string,
+    details: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      await sql`
+        INSERT INTO negotiation_audit_log (
+          session_id,
+          event_type,
+          details,
+          created_at
+        ) VALUES (
+          ${sessionId},
+          ${eventType},
+          ${JSON.stringify(details)},
+          NOW()
+        )
+      `;
+    } catch (error) {
+      // Don't fail main operation if audit logging fails
+      log('warn', 'Failed to record audit event', {
+        sessionId,
+        eventType,
+        error: error instanceof Error ? error.message : 'Unknown',
+      });
+    }
+  }
+
+  private async triggerERPWriteback(rfqId: string, awardId: string): Promise<void> {
+    // Import and call the ERP sync service
+    try {
+      const { syncAwardToERP } = await import('../rfq/erp-sync');
+      await syncAwardToERP(awardId);
+      log('info', 'ERP write-back triggered', { rfqId, awardId });
+    } catch (error) {
+      log('error', 'ERP write-back failed', {
+        rfqId,
+        awardId,
+        error: error instanceof Error ? error.message : 'Unknown',
+      });
+      throw error;
+    }
+  }
+}
+
+// ============================================================================
+// SINGLETON INSTANCE
+// ============================================================================
+
+let _aiToAiRouter: AIToAIRouter | null = null;
+
+/**
+ * Get the singleton AIToAIRouter instance
+ */
+export function getAIToAIRouter(): AIToAIRouter {
+  if (!_aiToAiRouter) {
+    _aiToAiRouter = new AIToAIRouter();
+  }
+  return _aiToAiRouter;
 }
 
 // ============================================================================
@@ -1095,10 +2462,407 @@ Respond in JSON only. If you can't determine quantity, default to 1.`,
 }
 
 // ============================================================================
+// CHAT STREAMING INTEGRATION
+// ============================================================================
+
+/**
+ * Chat update types for real-time UI updates
+ */
+export interface NegotiationChatUpdate {
+  type: 'start' | 'round' | 'complete' | 'escalation' | 'error';
+  sessionId: string;
+  supplierName: string;
+  round?: number;
+  maxRounds?: number;
+  buyerOffer?: {
+    price: number;
+    message: string;
+  };
+  sellerResponse?: {
+    price: number;
+    message: string;
+    type: 'counter' | 'accept' | 'reject';
+  };
+  status: string;
+  agreementReached?: boolean;
+  finalPrice?: number;
+  savings?: {
+    amount: number;
+    percentage: number;
+  };
+  summary: string;
+}
+
+/**
+ * Run negotiation with streaming updates for chat
+ * This is the main function for conversational AI-to-AI negotiation
+ */
+export async function runNegotiationWithStreaming(
+  sessionId: string,
+  onUpdate: (update: NegotiationChatUpdate) => Promise<void>
+): Promise<NegotiationOutcome> {
+  const manager = getSessionManager();
+  const session = await manager.getSession(sessionId);
+
+  if (!session) {
+    throw new Error(`Session not found: ${sessionId}`);
+  }
+
+  // Send initial update
+  await onUpdate({
+    type: 'start',
+    sessionId,
+    supplierName: session.sellerAgent.organizationName,
+    maxRounds: session.maxRounds,
+    status: 'active',
+    summary: `Starting negotiation with ${session.sellerAgent.organizationName}...`,
+  });
+
+  const rounds: RoundResult[] = [];
+  let lastResult: RoundResult | null = null;
+
+  // Run rounds with streaming
+  for await (const roundResult of manager.runRounds(sessionId)) {
+    rounds.push(roundResult);
+    lastResult = roundResult;
+
+    // Build chat update
+    const update: NegotiationChatUpdate = {
+      type: roundResult.negotiationComplete ? 'complete' : 'round',
+      sessionId,
+      supplierName: roundResult.session.sellerAgent.organizationName,
+      round: roundResult.session.currentRound,
+      maxRounds: roundResult.session.maxRounds,
+      status: roundResult.session.status,
+      agreementReached: roundResult.agreementReached,
+      summary: roundResult.roundSummary,
+    };
+
+    // Add buyer offer if present
+    if (roundResult.buyerMessage?.terms) {
+      update.buyerOffer = {
+        price: roundResult.buyerMessage.terms.totalPrice,
+        message: roundResult.buyerMessage.message,
+      };
+    }
+
+    // Add seller response if present
+    if (roundResult.sellerMessage?.terms) {
+      update.sellerResponse = {
+        price: roundResult.sellerMessage.terms.totalPrice,
+        message: roundResult.sellerMessage.message,
+        type: roundResult.sellerMessage.type as 'counter' | 'accept' | 'reject',
+      };
+    }
+
+    // Add final price and savings if complete
+    if (roundResult.agreementReached && roundResult.session.finalTerms) {
+      update.finalPrice = roundResult.session.finalTerms.totalPrice;
+      const savings = roundResult.session.initialTerms.totalPrice - roundResult.session.finalTerms.totalPrice;
+      if (savings > 0) {
+        update.savings = {
+          amount: savings,
+          percentage: (savings / roundResult.session.initialTerms.totalPrice) * 100,
+        };
+      }
+    }
+
+    // Handle escalation
+    if (roundResult.escalation) {
+      update.type = 'escalation';
+      update.summary = `Escalation needed: ${roundResult.escalation.details}`;
+    }
+
+    await onUpdate(update);
+  }
+
+  // Build final outcome
+  const finalSession = lastResult?.session || session;
+  const durationMs = new Date().getTime() - new Date(finalSession.createdAt).getTime();
+
+  let savings: NegotiationOutcome['savings'];
+  if (lastResult?.agreementReached && finalSession.finalTerms) {
+    const initialPrice = finalSession.initialTerms.totalPrice;
+    const finalPrice = finalSession.finalTerms.totalPrice;
+    savings = {
+      amount: initialPrice - finalPrice,
+      percentage: ((initialPrice - finalPrice) / initialPrice) * 100,
+    };
+  }
+
+  return {
+    session: finalSession,
+    success: lastResult?.agreementReached || false,
+    finalTerms: finalSession.finalTerms,
+    summary: manager.formatForChat({
+      session: finalSession,
+      success: lastResult?.agreementReached || false,
+      finalTerms: finalSession.finalTerms,
+      summary: lastResult?.roundSummary || '',
+      rounds,
+      durationMs,
+      savings,
+    }),
+    rounds,
+    durationMs,
+    savings,
+  };
+}
+
+/**
+ * Process conversational request with streaming updates
+ * Main entry point for chat-based negotiation
+ *
+ * Usage:
+ * ```typescript
+ * const result = await processConversationalNegotiation(
+ *   "I need 1000 bearings, budget $5000, delivery in 2 weeks",
+ *   userId,
+ *   async (update) => {
+ *     // Stream update to user's chat
+ *     await sendChatMessage(userId, update);
+ *   }
+ * );
+ * ```
+ */
+export async function processConversationalNegotiation(
+  userMessage: string,
+  userId: string,
+  organizationId: string,
+  organizationName: string,
+  onUpdate: (update: NegotiationChatUpdate) => Promise<void>
+): Promise<{
+  rfqId: string;
+  negotiations: NegotiationOutcome[];
+  bestOffer: {
+    sessionId: string;
+    supplierName: string;
+    price: number;
+    savings?: { amount: number; percentage: number };
+  } | null;
+  chatResponse: string;
+}> {
+  log('info', 'Processing conversational negotiation', { userId, userMessage });
+
+  // Parse the request
+  const parsedRequest = await parseNaturalLanguageRequest(userMessage);
+  if (!parsedRequest) {
+    throw new Error('I couldn\'t understand your request. Please specify what you need, quantity, and budget.');
+  }
+
+  // Create RFQ
+  const rfqResult = await sql`
+    INSERT INTO rfqs (
+      category,
+      description,
+      quantity,
+      target_price,
+      urgency,
+      delivery_location,
+      required_certifications,
+      requestor_email,
+      status
+    ) VALUES (
+      ${parsedRequest.category},
+      ${parsedRequest.description},
+      ${parsedRequest.quantity},
+      ${parsedRequest.targetPrice || null},
+      ${parsedRequest.urgency || 'standard'},
+      ${parsedRequest.deliveryLocation || 'TBD'},
+      ${parsedRequest.certifications || []},
+      ${userId},
+      'negotiating'
+    )
+    RETURNING id
+  `;
+  const rfqId = rfqResult.rows[0].id;
+
+  // Find matching suppliers
+  const routingResult = await findMatchingSellerAgents({
+    rfqId,
+    category: parsedRequest.category,
+    description: parsedRequest.description,
+    quantity: parsedRequest.quantity,
+    targetPrice: parsedRequest.targetPrice,
+    urgency: parsedRequest.urgency || 'standard',
+    requiredCertifications: parsedRequest.certifications || [],
+    deliveryLocation: parsedRequest.deliveryLocation || 'TBD',
+    buyerAgent: {
+      agentType: 'buyer',
+      agentId: `buyer_${organizationId}`,
+      organizationId,
+      organizationName,
+      autonomous: true,
+      limits: {
+        priceBoundary: parsedRequest.targetPrice || parsedRequest.quantity * 100,
+        acceptablePaymentTerms: ['Net 30', 'Net 45'],
+        certifications: parsedRequest.certifications || [],
+        autoApproveEnabled: true,
+        escalationThreshold: 20,
+      },
+    },
+    preferences: {
+      maxSellers: 5,
+      prioritizePrice: true,
+      prioritizeSpeed: parsedRequest.urgency === 'critical',
+    },
+  });
+
+  if (routingResult.matchedAgents.length === 0) {
+    return {
+      rfqId,
+      negotiations: [],
+      bestOffer: null,
+      chatResponse: `I couldn't find any suppliers for ${parsedRequest.quantity} ${parsedRequest.description}. Would you like me to expand the search criteria?`,
+    };
+  }
+
+  // Create sessions using the session manager
+  const manager = getSessionManager();
+  const negotiations: NegotiationOutcome[] = [];
+  const topMatches = routingResult.matchedAgents.slice(0, 3);
+
+  for (const match of topMatches) {
+    // Build buyer constraints
+    const buyerConstraints: BuyerConstraints = {
+      maxBudget: parsedRequest.targetPrice || parsedRequest.quantity * 100,
+      targetPrice: parsedRequest.targetPrice ? parsedRequest.targetPrice * 0.9 : parsedRequest.quantity * 80,
+      maxLeadTime: parsedRequest.urgency === 'critical' ? 7 : parsedRequest.urgency === 'urgent' ? 14 : 30,
+      requiredSpecs: parsedRequest.certifications || [],
+      acceptablePaymentTerms: ['Net 30', 'Net 45', 'Net 60'],
+      quantity: parsedRequest.quantity,
+      currency: 'USD',
+    };
+
+    // Build seller config from match data
+    const sellerConfig: SellerConfig = {
+      minMargin: match.agent.pricingRules.minMargin,
+      targetMargin: match.agent.pricingRules.baseMargin,
+      volumeDiscounts: match.agent.pricingRules.volumeDiscounts,
+      maxConcessions: 4,
+      costPerUnit: match.estimatedPrice / parsedRequest.quantity * 0.75, // Estimate cost at 75% of price
+      standardLeadTime: match.agent.capacityConstraints.leadTimeDays,
+      rushLeadTime: match.agent.capacityConstraints.rushLeadTimeDays,
+      rushFeePercent: match.agent.pricingRules.rushFeePercentage,
+      monthlyCapacity: match.agent.capacityConstraints.maxMonthlyVolume,
+      currentUtilization: match.agent.capacityConstraints.currentUtilization,
+      currency: 'USD',
+    };
+
+    // Initial terms from seller
+    const initialTerms: NegotiationTerms = {
+      unitPrice: match.estimatedPrice / parsedRequest.quantity,
+      quantity: parsedRequest.quantity,
+      totalPrice: match.estimatedPrice,
+      currency: 'USD',
+      leadTimeDays: match.estimatedLeadTime,
+      paymentTerms: 'Net 30',
+      warrantyMonths: 12,
+      shippingCost: 50,
+      shippingMethod: 'Standard Freight',
+    };
+
+    // Create session
+    const session = await manager.createSession({
+      rfqId,
+      supplierId: match.agent.supplierId,
+      buyer: {
+        organizationId,
+        organizationName,
+        userId,
+      },
+      buyerConstraints,
+      sellerConfig,
+      initialQuote: initialTerms,
+      subject: parsedRequest.description,
+      maxRounds: 5,
+    });
+
+    // Run negotiation with streaming
+    const outcome = await runNegotiationWithStreaming(session.id, onUpdate);
+    negotiations.push(outcome);
+  }
+
+  // Find best offer
+  const successfulNegotiations = negotiations.filter(n => n.success && n.finalTerms);
+  let bestOffer: {
+    sessionId: string;
+    supplierName: string;
+    price: number;
+    savings?: { amount: number; percentage: number };
+  } | null = null;
+
+  if (successfulNegotiations.length > 0) {
+    successfulNegotiations.sort((a, b) => (a.finalTerms?.totalPrice || 0) - (b.finalTerms?.totalPrice || 0));
+    const best = successfulNegotiations[0];
+    bestOffer = {
+      sessionId: best.session.id,
+      supplierName: best.session.sellerAgent.organizationName,
+      price: best.finalTerms!.totalPrice,
+      savings: best.savings,
+    };
+  }
+
+  // Generate chat response
+  const chatResponse = generateChatResponse(parsedRequest, negotiations, bestOffer);
+
+  return {
+    rfqId,
+    negotiations,
+    bestOffer,
+    chatResponse,
+  };
+}
+
+/**
+ * Generate a conversational response for the user
+ */
+function generateChatResponse(
+  request: { description: string; quantity: number },
+  negotiations: NegotiationOutcome[],
+  bestOffer: { sessionId: string; supplierName: string; price: number; savings?: { amount: number; percentage: number } } | null
+): string {
+  const lines: string[] = [];
+
+  if (bestOffer) {
+    lines.push(`Got it. I negotiated with ${negotiations.length} suppliers for ${request.quantity} ${request.description}.`);
+    lines.push('');
+
+    // Show negotiation highlights
+    for (const neg of negotiations) {
+      const emoji = neg.success ? 'check' : 'x';
+      const status = neg.success ? `$${neg.finalTerms?.totalPrice.toFixed(2)}` : 'No deal';
+      lines.push(`- ${neg.session.sellerAgent.organizationName}: ${status}`);
+    }
+
+    lines.push('');
+    lines.push(`**Best Deal: ${bestOffer.supplierName}**`);
+    lines.push(`- Price: $${bestOffer.price.toFixed(2)}`);
+
+    if (bestOffer.savings && bestOffer.savings.amount > 0) {
+      lines.push(`- Savings: $${bestOffer.savings.amount.toFixed(2)} (${bestOffer.savings.percentage.toFixed(1)}% off)`);
+    }
+
+    lines.push('');
+    lines.push('Want me to proceed with this deal?');
+  } else {
+    lines.push(`I negotiated with ${negotiations.length} suppliers for ${request.quantity} ${request.description}, but couldn't reach agreement.`);
+    lines.push('');
+    lines.push('Would you like me to:');
+    lines.push('- Increase the budget?');
+    lines.push('- Extend the delivery timeline?');
+    lines.push('- Try different suppliers?');
+  }
+
+  return lines.join('\n');
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
 const AIRouter = {
+  // Legacy functions (single-seller)
   findMatchingSellerAgents,
   createNegotiationSession,
   getSession,
@@ -1106,6 +2870,14 @@ const AIRouter = {
   routeMessage,
   runFullNegotiation,
   processConversationalRequest,
+  // Streaming functions
+  runNegotiationWithStreaming,
+  processConversationalNegotiation,
+  // Session manager access
+  getSessionManager,
+  // AI-to-AI Router (multi-seller)
+  getAIToAIRouter,
+  AIToAIRouter,
 };
 
 export default AIRouter;
