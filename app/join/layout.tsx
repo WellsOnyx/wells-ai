@@ -1,0 +1,14 @@
+/**
+ * Join Layout
+ * Forces dynamic rendering to prevent static generation issues with Clerk
+ */
+
+export const dynamic = 'force-dynamic'
+
+export default function JoinLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return children
+}

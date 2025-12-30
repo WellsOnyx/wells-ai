@@ -5,6 +5,7 @@
  * - Domain-based routing (wellsonyx.io vs grainandvault.com)
  * - Clerk authentication
  * - Route protection
+ * - User onboarding flow routing
  */
 
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
@@ -37,7 +38,10 @@ const isPublicRoute = createRouteMatcher([
   '/grain-vault',
   '/grain-vault/(.*)',  // All grain-vault routes - auth handled client-side
   '/demo',
+  '/join',              // Unified signup
+  '/join/(.*)',         // Join with invite codes
   '/onboarding',
+  '/onboarding/(.*)',
   '/suppliers/join',
   '/suppliers/onboard',
   '/about',
@@ -46,9 +50,11 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks/(.*)',
   '/api/widget/(.*)',
   '/api/onboarding/(.*)',
+  '/api/join/(.*)',     // Join API routes
   '/api/grain-vault/(.*)',  // Grain vault APIs - auth checked in route handlers
   '/sign-in(.*)',
   '/sign-up(.*)',
+  '/signup(.*)',
 ])
 
 // API routes that should be public (no auth required)

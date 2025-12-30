@@ -6,6 +6,10 @@ import type { ERPBill, ERPIntercept, InterceptOpportunity, InterceptProposal } f
 import { quickbooks } from './quickbooks';
 import { xero } from './xero';
 import { codat } from './codat';
+import { netsuite } from './netsuite';
+import { sap } from './sap';
+import { oracle } from './oracle';
+import { dynamics365 } from './dynamics365';
 
 const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
 
@@ -54,6 +58,54 @@ export class InterceptService {
         for (const bill of bills) {
           await codat.syncBillToDatabase(erpConnectionId, bill);
         }
+      } else if (connection.provider === 'oracle') {
+        const invoices = await oracle.fetchInvoices(erpConnectionId, {
+          status: 'N', // Unpaid
+          limit: 500,
+        });
+        // Sync to database
+        for (const invoice of invoices) {
+          await oracle.syncInvoiceToDatabase(erpConnectionId, invoice);
+        }
+        bills = invoices.map(inv => ({
+          Id: inv.InvoiceId.toString(),
+          TotalAmt: inv.InvoiceAmount,
+          DueDate: inv.PaymentDueDate || inv.InvoiceDate,
+        }));
+      } else if (connection.provider === 'dynamics365') {
+        const invoices = await dynamics365.fetchInvoices(erpConnectionId, {
+          status: 'Open',
+          limit: 500,
+        });
+        // Sync to database
+        for (const invoice of invoices) {
+          await dynamics365.syncInvoiceToDatabase(erpConnectionId, invoice, connection.dynamics_variant);
+        }
+        bills = invoices;
+      } else if (connection.provider === 'netsuite') {
+        // NetSuite vendor bills
+        const nsBills = await netsuite.fetchBills(erpConnectionId);
+        // Sync to database
+        for (const bill of nsBills) {
+          await netsuite.syncBillToDatabase(erpConnectionId, bill);
+        }
+        bills = nsBills.map(b => ({
+          Id: b.id,
+          TotalAmt: b.total,
+          DueDate: b.dueDate,
+        }));
+      } else if (connection.provider === 'sap') {
+        // SAP purchase invoices
+        const sapBills = await sap.fetchBills(erpConnectionId);
+        // Sync to database
+        for (const bill of sapBills) {
+          await sap.syncBillToDatabase(erpConnectionId, bill);
+        }
+        bills = sapBills.map(b => ({
+          Id: String(b.DocEntry),
+          TotalAmt: b.DocTotal,
+          DueDate: b.DocDueDate,
+        }));
       }
 
       billsFound = bills.length;
@@ -278,6 +330,44 @@ export class InterceptService {
           intercept.bill_amount,
           new Date(),
           'WELLS-PAYMENTS',
+          `Paid via Wells AI - Transaction ${wellsPaymentId}`
+        );
+      } else if (intercept.provider === 'oracle') {
+        await oracle.createPayment(
+          intercept.erp_connection_id,
+          intercept.external_bill_id,
+          intercept.bill_amount,
+          new Date(),
+          'Electronic',
+          `WELLS-${wellsPaymentId}`
+        );
+      } else if (intercept.provider === 'dynamics365') {
+        await dynamics365.createPayment(
+          intercept.erp_connection_id,
+          intercept.external_bill_id,
+          intercept.external_vendor_id || '',
+          intercept.bill_amount,
+          new Date(),
+          `WELLS-${wellsPaymentId}`
+        );
+      } else if (intercept.provider === 'netsuite') {
+        await netsuite.createPayment(
+          intercept.erp_connection_id,
+          intercept.external_vendor_id || '',
+          intercept.external_bill_id,
+          intercept.bill_amount,
+          new Date(),
+          '1', // Default bank account
+          `Paid via Wells AI - Transaction ${wellsPaymentId}`
+        );
+      } else if (intercept.provider === 'sap') {
+        await sap.createPayment(
+          intercept.erp_connection_id,
+          intercept.external_vendor_id || '',
+          intercept.external_bill_id,
+          intercept.bill_amount,
+          new Date(),
+          '100000', // Default bank account
           `Paid via Wells AI - Transaction ${wellsPaymentId}`
         );
       }

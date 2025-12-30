@@ -12,6 +12,8 @@
  * - Microsoft Dynamics 365 (Finance & Operations, Business Central)
  * - Workday (Financial Management)
  * - Coupa (Procurement, Treasury)
+ * - Sage Intacct (Web Services API, Multi-Entity)
+ * - Acumatica (REST API, OAuth 2.0)
  */
 
 // Base types and interface
@@ -24,6 +26,8 @@ export { NetSuiteAdapter, createNetSuiteAdapter, type NetSuiteConfig } from './n
 export { Dynamics365Adapter, createDynamics365Adapter, type Dynamics365Config } from './dynamics365'
 export { WorkdayAdapter, createWorkdayAdapter, type WorkdayConfig } from './workday'
 export { CoupaAdapter, createCoupaAdapter, type CoupaConfig } from './coupa'
+export { SageIntacctAdapter, createSageIntacctAdapter, type SageIntacctConfig } from './sage-intacct'
+export { AcumaticaAdapter, createAcumaticaAdapter, type AcumaticaConfig } from './acumatica'
 
 // Re-export base types for convenience
 export type {
@@ -53,8 +57,10 @@ import { createNetSuiteAdapter, NetSuiteConfig } from './netsuite'
 import { createDynamics365Adapter, Dynamics365Config } from './dynamics365'
 import { createWorkdayAdapter, WorkdayConfig } from './workday'
 import { createCoupaAdapter, CoupaConfig } from './coupa'
+import { createSageIntacctAdapter, SageIntacctConfig } from './sage-intacct'
+import { createAcumaticaAdapter, AcumaticaConfig } from './acumatica'
 
-export type ERPType = 'sap' | 'oracle' | 'netsuite' | 'dynamics365' | 'workday' | 'coupa'
+export type ERPType = 'sap' | 'oracle' | 'netsuite' | 'dynamics365' | 'workday' | 'coupa' | 'sage-intacct' | 'acumatica'
 
 export type ERPConfigMap = {
   sap: SAPConfig
@@ -63,6 +69,8 @@ export type ERPConfigMap = {
   dynamics365: Dynamics365Config
   workday: WorkdayConfig
   coupa: CoupaConfig
+  'sage-intacct': SageIntacctConfig
+  acumatica: AcumaticaConfig
 }
 
 /**
@@ -117,6 +125,10 @@ export function createERPAdapter<T extends ERPType>(
       return createWorkdayAdapter(config as WorkdayConfig)
     case 'coupa':
       return createCoupaAdapter(config as CoupaConfig)
+    case 'sage-intacct':
+      return createSageIntacctAdapter(config as SageIntacctConfig)
+    case 'acumatica':
+      return createAcumaticaAdapter(config as AcumaticaConfig)
     default:
       throw new Error(`Unsupported ERP type: ${type}`)
   }
@@ -126,7 +138,7 @@ export function createERPAdapter<T extends ERPType>(
  * Get available ERP types
  */
 export function getSupportedERPs(): ERPType[] {
-  return ['sap', 'oracle', 'netsuite', 'dynamics365', 'workday', 'coupa']
+  return ['sap', 'oracle', 'netsuite', 'dynamics365', 'workday', 'coupa', 'sage-intacct', 'acumatica']
 }
 
 /**
@@ -140,6 +152,8 @@ export function getERPDisplayName(type: ERPType): string {
     dynamics365: 'Dynamics 365',
     workday: 'Workday',
     coupa: 'Coupa',
+    'sage-intacct': 'Sage Intacct',
+    acumatica: 'Acumatica',
   }
   return names[type]
 }
@@ -155,6 +169,8 @@ export function getERPDescription(type: ERPType): string {
     dynamics365: 'Microsoft Dynamics 365 Finance & Operations and Business Central',
     workday: 'Workday Financial Management',
     coupa: 'Coupa Procurement and Treasury',
+    'sage-intacct': 'Sage Intacct with Web Services API and Multi-Entity support',
+    acumatica: 'Acumatica Cloud ERP with REST API and OAuth 2.0',
   }
   return descriptions[type]
 }
