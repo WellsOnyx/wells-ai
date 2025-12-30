@@ -23,7 +23,7 @@ const anthropic = new Anthropic({
 // INTENT TYPES
 // ============================================================================
 
-export type IntentCategory = 'buyer' | 'seller' | 'founder' | 'jobs' | 'universal' | 'treasury' | 'negotiation' | 'erp' | 'inbox' | 'coldstart' | 'unknown'
+export type IntentCategory = 'buyer' | 'seller' | 'founder' | 'jobs' | 'universal' | 'treasury' | 'negotiation' | 'erp' | 'inbox' | 'coldstart' | 'linkedin' | 'unknown'
 
 export type BuyerIntent =
   | 'create_rfq'           // "I need to order ball bearings"
@@ -136,6 +136,18 @@ export type ColdStartIntent =
   | 'review_signals'       // "Show buying signals" / "Any opportunities"
   | 'outreach_help'        // "Help with cold email"
 
+export type LinkedInIntent =
+  | 'linkedin_connect'       // "Connect with Sarah Chen on LinkedIn"
+  | 'linkedin_message'       // "Message the VP of Procurement at Acme"
+  | 'linkedin_draft'         // "Draft a connection request for..."
+  | 'linkedin_analyze'       // "What should I say to this person?" [URL]
+  | 'linkedin_queue'         // "Show me my LinkedIn queue"
+  | 'linkedin_sent'          // "Mark that LinkedIn message as sent"
+  | 'linkedin_post'          // "Draft a LinkedIn post about..."
+  | 'linkedin_comment'       // "What should I comment on this post?"
+  | 'linkedin_stats'         // "How's my LinkedIn outreach?"
+  | 'linkedin_help'          // "Help with LinkedIn"
+
 export type Intent =
   | BuyerIntent
   | SellerIntent
@@ -146,6 +158,7 @@ export type Intent =
   | ERPIntent
   | InboxIntent
   | ColdStartIntent
+  | LinkedInIntent
   | UniversalIntent
 
 export interface IntentClassification {
@@ -529,6 +542,47 @@ const INTENT_PATTERNS: Record<IntentCategory, Record<string, string[]>> = {
     outreach_help: [
       'cold email', 'outreach help', 'how to cold email', 'cold start help',
       'help with outreach', 'email outreach'
+    ],
+  },
+  linkedin: {
+    linkedin_connect: [
+      'connect with', 'connect on linkedin', 'linkedin connect', 'send connection',
+      'add on linkedin', 'connection request'
+    ],
+    linkedin_message: [
+      'linkedin message', 'message on linkedin', 'dm on linkedin', 'inmail',
+      'send linkedin message', 'linkedin dm'
+    ],
+    linkedin_draft: [
+      'draft connection', 'draft linkedin', 'write connection request',
+      'connection note', 'draft inmail'
+    ],
+    linkedin_analyze: [
+      'linkedin.com/in/', 'what should i say to', 'how to approach',
+      'analyze profile', 'linkedin url'
+    ],
+    linkedin_queue: [
+      'linkedin queue', 'pending linkedin', 'my linkedin messages',
+      'show queue', 'what\'s in queue'
+    ],
+    linkedin_sent: [
+      'mark sent', 'i sent it', 'sent the message', 'just sent',
+      'linkedin sent', 'marked sent'
+    ],
+    linkedin_post: [
+      'linkedin post', 'draft post', 'write post', 'post about',
+      'create linkedin post'
+    ],
+    linkedin_comment: [
+      'comment on', 'what should i comment', 'linkedin comment',
+      'reply to post', 'engage with post'
+    ],
+    linkedin_stats: [
+      'linkedin stats', 'linkedin outreach', 'linkedin metrics',
+      'connection rate', 'linkedin response rate'
+    ],
+    linkedin_help: [
+      'linkedin help', 'help with linkedin', 'how to linkedin'
     ],
   },
   unknown: {},

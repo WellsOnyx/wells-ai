@@ -125,6 +125,19 @@ export {
   type SchedulingIntentContext,
 } from './scheduling-handler';
 
+// Email Handler - Conversational email management
+export {
+  EmailHandler,
+  getEmailHandler,
+  handleEmailIntent,
+  classifyEmailIntent,
+  extractEmailEntities,
+  type EmailIntent,
+  type EmailIntentContext,
+  type EmailEntities,
+  type EmailHandlerResult,
+} from './email-handler';
+
 // Re-export all handlers as a single object for convenience
 export const handlers = {
   negotiation: {
@@ -199,6 +212,12 @@ export const handlers = {
     handle: async (context: import('./scheduling-handler').SchedulingIntentContext) => {
       const { getSchedulingHandler } = await import('./scheduling-handler');
       return getSchedulingHandler().handleIntent(context);
+    },
+  },
+  email: {
+    handle: async (context: import('./email-handler').EmailIntentContext) => {
+      const { getEmailHandler } = await import('./email-handler');
+      return getEmailHandler(context.userId).handleIntent(context);
     },
   },
 };
