@@ -165,14 +165,25 @@ export default function WellsAILanding() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-black/5">
         <div className="max-w-[1200px] mx-auto px-6 py-3.5 flex items-center justify-between">
-          <Link href="/wells-ai" className="flex items-center gap-2.5 text-gray-900 font-semibold text-[17px] tracking-tight">
-            <div className="w-7 h-7 bg-gradient-to-br from-gray-800 to-gray-900 rounded-[7px] flex items-center justify-center text-white text-[13px] font-bold">
-              W
-            </div>
-            WellsAI
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/wells-ai" className="flex items-center gap-2.5 text-gray-900 font-semibold text-[17px] tracking-tight">
+              <div className="w-7 h-7 bg-gradient-to-br from-gray-800 to-gray-900 rounded-[7px] flex items-center justify-center text-white text-[13px] font-bold">
+                W
+              </div>
+              WellsAI
+            </Link>
+            <Link href="/grain-vault" className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-medium text-emerald-600 hover:bg-emerald-100 transition-colors">
+              <div className="w-4 h-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded flex items-center justify-center">
+                <div className="w-1.5 h-1.5 bg-white rounded-sm" />
+              </div>
+              Part of Grain & Vault
+            </Link>
+          </div>
 
           <div className="flex items-center gap-2">
+            <Link href="/grain-vault" className="text-emerald-600 text-sm font-medium px-3.5 py-2 rounded-lg hover:text-emerald-700 hover:bg-emerald-50 transition-all">
+              Grain & Vault
+            </Link>
             <Link href="#journeys" className="text-gray-600 text-sm font-medium px-3.5 py-2 rounded-lg hover:text-gray-900 hover:bg-gray-100 transition-all">
               Journeys
             </Link>
@@ -679,12 +690,37 @@ export default function WellsAILanding() {
                 <Link href="/about" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">About</Link>
                 <Link href="/sign-in" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Sign In</Link>
                 <Link href="/grain-vault" className="block text-sm text-emerald-500 hover:text-emerald-600 transition-colors">Grain & Vault</Link>
+                <Link href="https://wellsonyx.io" className="block text-sm text-amber-500 hover:text-amber-600 transition-colors">Wells Onyx</Link>
               </div>
             </div>
           </div>
 
+          {/* Grain & Vault Banner */}
+          <div className="mb-8 p-6 bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200/50 rounded-2xl">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                    <div className="w-4 h-4 bg-white rounded-sm" />
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-sm" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">WellsAI is part of Grain & Vault</div>
+                  <div className="text-xs text-gray-500">Treasury infrastructure for modern finance teams</div>
+                </div>
+              </div>
+              <Link
+                href="/grain-vault"
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-medium rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all"
+              >
+                Explore Grain & Vault
+              </Link>
+            </div>
+          </div>
+
           <div className="flex justify-between items-center pt-8 border-t border-gray-200">
-            <p className="text-[13px] text-gray-400">© 2025 WellsAI. All rights reserved.</p>
+            <p className="text-[13px] text-gray-400">2025 WellsAI. Part of Grain & Vault, a Wells Onyx company.</p>
           </div>
         </div>
       </footer>

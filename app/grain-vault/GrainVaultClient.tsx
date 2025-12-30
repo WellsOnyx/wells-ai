@@ -215,6 +215,9 @@ export default function GrainVaultLanding() {
                   <Link href="#treasury-sdk" className="text-sm text-purple-400 hover:text-purple-300 transition-colors font-medium">
                     Treasury SDK
                   </Link>
+                  <Link href="/wells-ai" className="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium">
+                    WellsAI
+                  </Link>
 
                   <SignedIn>
                     <Link href="/grain-vault/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors">
@@ -822,6 +825,77 @@ export default function GrainVaultLanding() {
           </div>
         </section>
 
+        {/* Powered by WellsAI Section */}
+        <section className="py-24 px-6 lg:px-8 relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-950/10 to-transparent pointer-events-none" />
+
+          <div className="relative max-w-7xl mx-auto">
+            <GlassCard hover glow="blue" padding="lg">
+              <div className="grid md:grid-cols-2 gap-12 items-center">
+                {/* Left - Content */}
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center">
+                      <span className="text-xl font-bold text-white">W</span>
+                    </div>
+                    <div>
+                      <div className="text-xs text-blue-400 uppercase tracking-wider font-semibold">Powered by</div>
+                      <h3 className="text-2xl font-bold text-white">WellsAI</h3>
+                    </div>
+                  </div>
+
+                  <p className="text-lg text-gray-300 mb-6 leading-relaxed">
+                    Grain & Vault is built on WellsAI - enterprise AI that executes. From automated treasury optimization
+                    to intelligent matching and deal execution, WellsAI is the intelligence layer that makes it all work.
+                  </p>
+
+                  <ul className="space-y-3 mb-8">
+                    {[
+                      'Automated vendor sourcing and qualification',
+                      'Intelligent payment routing and optimization',
+                      'Real-time compliance and risk monitoring',
+                      'Enterprise workflow automation'
+                    ].map((item, i) => (
+                      <li key={i} className="flex items-center gap-3 text-gray-300">
+                        <CheckCircle className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    href="/wells-ai"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-violet-500 text-white rounded-xl font-semibold hover:scale-105 transition-all"
+                  >
+                    Explore WellsAI
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                </div>
+
+                {/* Right - Visual */}
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-violet-500/20 rounded-2xl blur-xl" />
+                  <div className="relative bg-black/40 rounded-2xl p-8 border border-white/10">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-3 h-3 rounded-full bg-red-500" />
+                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                      <span className="text-sm text-gray-500 ml-2">WellsAI Terminal</span>
+                    </div>
+                    <div className="space-y-4 font-mono text-sm">
+                      <div className="text-gray-400">&gt; Analyzing treasury positions...</div>
+                      <div className="text-blue-400">&gt; Found 3 optimization opportunities</div>
+                      <div className="text-green-400">&gt; Automated payment routing: $2.3M saved</div>
+                      <div className="text-violet-400">&gt; Vendor qualification: 47 suppliers matched</div>
+                      <div className="text-gray-400 animate-pulse">&gt; _</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+          </div>
+        </section>
+
         {/* Final CTA */}
         <section className="py-24 px-6 lg:px-8">
           <div className="max-w-4xl mx-auto">
@@ -888,11 +962,11 @@ export default function GrainVaultLanding() {
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-4 text-sm">Developers</h4>
+                  <h4 className="font-semibold mb-4 text-sm">Platform</h4>
                   <ul className="space-y-3 text-sm text-gray-400">
+                    <li><Link href="/wells-ai" className="text-blue-400 hover:text-blue-300 transition-colors">WellsAI</Link></li>
                     <li><Link href="/demo" className="hover:text-white transition-colors">Documentation</Link></li>
                     <li><Link href="/demo" className="hover:text-white transition-colors">API Reference</Link></li>
-                    <li><Link href="/demo" className="hover:text-white transition-colors">SDKs</Link></li>
                   </ul>
                 </div>
 

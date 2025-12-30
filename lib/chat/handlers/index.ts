@@ -138,6 +138,14 @@ export {
   type EmailHandlerResult,
 } from './email-handler';
 
+// Twitter Handler - Conversational Twitter/X management
+export {
+  handleTwitterMessage,
+  executeTwitterAction,
+  type TwitterIntent,
+  type TwitterResponse,
+} from '@/lib/twitter/twitter-handler';
+
 // Re-export all handlers as a single object for convenience
 export const handlers = {
   negotiation: {
@@ -218,6 +226,12 @@ export const handlers = {
     handle: async (context: import('./email-handler').EmailIntentContext) => {
       const { getEmailHandler } = await import('./email-handler');
       return getEmailHandler(context.userId).handleIntent(context);
+    },
+  },
+  twitter: {
+    handle: async (userId: string, sessionId: string, message: string, context?: any) => {
+      const { handleTwitterMessage } = await import('@/lib/twitter/twitter-handler');
+      return handleTwitterMessage(userId, sessionId, message, context);
     },
   },
 };
