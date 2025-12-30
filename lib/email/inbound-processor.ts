@@ -106,6 +106,100 @@ const anthropic = new Anthropic({
 })
 
 // ============================================================================
+// RESEND API - FETCH FULL EMAIL CONTENT
+// ============================================================================
+
+const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
+
+/**
+ * Fetch full email content from Resend API
+ * Webhook only contains metadata, need to call API for body/attachments
+ */
+export async function fetchEmailFromResend(emailId: string): Promise<any> {
+  if (!RESEND_API_KEY) {
+    console.error('[Inbound] RESEND_API_KEY not configured')
+    return null
+  }
+
+  try {
+    const response = await fetch(`https://api.resend.com/emails/${emailId}`, {
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      },
+    })
+
+    if (!response.ok) {
+      console.error(`[Inbound] Failed to fetch email ${emailId}: ${response.status}`)
+      return null
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error(`[Inbound] Error fetching email ${emailId}:`, error)
+    return null
+  }
+}
+
+/**
+ * Fetch attachment content from Resend API
+ */
+export async function fetchAttachmentFromResend(attachmentId: string): Promise<Buffer | null> {
+  if (!RESEND_API_KEY) {
+    return null
+  }
+
+  try {
+    const response = await fetch(`https://api.resend.com/attachments/${attachmentId}`, {
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      },
+    })
+
+    if (!response.ok) {
+      console.error(`[Inbound] Failed to fetch attachment ${attachmentId}: ${response.status}`)
+      return null
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    return Buffer.from(arrayBuffer)
+  } catch (error) {
+    console.error(`[Inbound] Error fetching attachment ${attachmentId}:`, error)
+    return null
+  }
+}
+
+/**
+ * Process webhook event - fetch full content if needed
+ */
+export async function processWebhookEvent(webhookPayload: any): Promise<InboundEmail | null> {
+  const eventType = webhookPayload.type || webhookPayload.event
+
+  // email.received webhook - need to fetch full content
+  if (eventType === 'email.received') {
+    const emailId = webhookPayload.data?.email_id || webhookPayload.email_id
+
+    if (!emailId) {
+      console.error('[Inbound] No email_id in webhook payload')
+      // Try to parse whatever we have
+      return parseResendInbound(webhookPayload.data || webhookPayload)
+    }
+
+    // Fetch full email content from API
+    const fullEmail = await fetchEmailFromResend(emailId)
+
+    if (fullEmail) {
+      return parseResendInbound(fullEmail)
+    }
+
+    // Fallback to webhook data
+    return parseResendInbound(webhookPayload.data || webhookPayload)
+  }
+
+  // Other event types (bounces, complaints, etc.) - parse directly
+  return parseResendInbound(webhookPayload.data || webhookPayload)
+}
+
+// ============================================================================
 // EMAIL PARSING
 // ============================================================================
 

@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import crypto from 'crypto'
-import { processInboundEmail } from '@/lib/email/inbound-processor'
+import { processInboundEmail, processWebhookEvent } from '@/lib/email/inbound-processor'
 import { query } from '@/lib/db'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -134,13 +134,20 @@ export async function POST(request: NextRequest) {
 // ============================================================================
 
 async function handleInboundEmail(webhookId: string, payload: any) {
-  // Extract email data - handle different Resend payload formats
-  const emailData = payload.data || payload.email || payload
+  // Fetch full email content from Resend API (webhook only has metadata)
+  const parsedEmail = await processWebhookEvent(payload)
+
+  if (!parsedEmail) {
+    console.error(`[Email Webhook] Failed to parse email from webhook`)
+    return NextResponse.json({
+      received: true,
+      processed: false,
+      reason: 'parse_failed',
+    })
+  }
 
   // Validate recipient
-  const toAddresses = Array.isArray(emailData.to)
-    ? emailData.to.map((t: any) => typeof t === 'string' ? t : t.address || t.email)
-    : [emailData.to]
+  const toAddresses = parsedEmail.to || []
 
   const isForWells = toAddresses.some((addr: string) =>
     ALLOWED_TO_ADDRESSES.some(allowed =>
@@ -157,8 +164,8 @@ async function handleInboundEmail(webhookId: string, payload: any) {
     })
   }
 
-  // Process the inbound email
-  const result = await processInboundEmail(emailData)
+  // Process the inbound email (now with full content)
+  const result = await processInboundEmail(parsedEmail)
 
   console.log(`[Email Webhook] Processed inbound email:`, {
     webhookId,
