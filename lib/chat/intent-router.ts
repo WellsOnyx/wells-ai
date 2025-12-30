@@ -23,7 +23,7 @@ const anthropic = new Anthropic({
 // INTENT TYPES
 // ============================================================================
 
-export type IntentCategory = 'buyer' | 'seller' | 'founder' | 'jobs' | 'universal' | 'treasury' | 'negotiation' | 'erp' | 'inbox' | 'unknown'
+export type IntentCategory = 'buyer' | 'seller' | 'founder' | 'jobs' | 'universal' | 'treasury' | 'negotiation' | 'erp' | 'inbox' | 'coldstart' | 'unknown'
 
 export type BuyerIntent =
   | 'create_rfq'           // "I need to order ball bearings"
@@ -125,6 +125,17 @@ export type UniversalIntent =
   | 'switch_journey'       // "Switch to buyer mode"
   | 'settings'             // "Change my preferences"
 
+export type ColdStartIntent =
+  | 'upload_contacts'      // "Upload my contacts" / "I have a CSV"
+  | 'segment_contacts'     // "Reach out to VPs" / "Who should I target"
+  | 'preview_outreach'     // "Show me a sample" / "What would you send"
+  | 'start_campaign'       // "Cold start my outreach" / "Send it"
+  | 'check_results'        // "How's my campaign" / "Any replies"
+  | 'approve_messages'     // "Review pending messages"
+  | 'find_prospects'       // "Find me customers" / "Get me leads"
+  | 'review_signals'       // "Show buying signals" / "Any opportunities"
+  | 'outreach_help'        // "Help with cold email"
+
 export type Intent =
   | BuyerIntent
   | SellerIntent
@@ -134,6 +145,7 @@ export type Intent =
   | NegotiationIntent
   | ERPIntent
   | InboxIntent
+  | ColdStartIntent
   | UniversalIntent
 
 export interface IntentClassification {
@@ -479,6 +491,46 @@ const INTENT_PATTERNS: Record<IntentCategory, Record<string, string[]>> = {
       'switch to', 'change mode', 'i want to be a', 'as a buyer', 'as a seller'
     ],
   },
+  coldstart: {
+    upload_contacts: [
+      'upload contacts', 'upload my contacts', 'csv', 'import contacts', 'import leads',
+      'have a file', 'spreadsheet', 'excel file', 'bring in contacts', 'list of leads',
+      'upload a list', 'got a csv', 'have some contacts'
+    ],
+    segment_contacts: [
+      'reach out to', 'target', 'segment', 'who should i', 'which contacts',
+      'message the', 'email the', 'contact the', 'narrow down', 'filter contacts'
+    ],
+    preview_outreach: [
+      'preview', 'show me what', 'sample message', 'what would you send',
+      'before sending', 'draft', 'example message'
+    ],
+    start_campaign: [
+      'cold start', 'start outreach', 'launch campaign', 'send outreach',
+      'begin outreach', 'start sending', 'let\'s send', 'go ahead and send',
+      'start my campaign', 'launch outreach'
+    ],
+    check_results: [
+      'campaign doing', 'any replies', 'who replied', 'opens', 'clicks',
+      'response rate', 'outreach results', 'campaign results', 'how\'s my outreach'
+    ],
+    approve_messages: [
+      'approve messages', 'review messages', 'pending messages', 'waiting for approval',
+      'messages to review', 'approve outreach'
+    ],
+    find_prospects: [
+      'find customers', 'find me customers', 'find leads', 'get me leads',
+      'prospect', 'find prospects', 'new leads', 'potential customers'
+    ],
+    review_signals: [
+      'buying signals', 'opportunities', 'who\'s looking', 'signal matches',
+      'prospect matches', 'show signals'
+    ],
+    outreach_help: [
+      'cold email', 'outreach help', 'how to cold email', 'cold start help',
+      'help with outreach', 'email outreach'
+    ],
+  },
   unknown: {},
 }
 
@@ -679,6 +731,8 @@ export function routeIntent(classification: IntentClassification): RouteResult {
       return routeERPIntent(intent as ERPIntent, entities, requiresConfirmation)
     case 'inbox':
       return routeInboxIntent(intent as InboxIntent, entities, requiresConfirmation)
+    case 'coldstart':
+      return routeColdStartIntent(intent as ColdStartIntent, entities, requiresConfirmation)
     case 'universal':
       return routeUniversalIntent(intent as UniversalIntent, entities)
     default:
@@ -1739,6 +1793,118 @@ function routeERPIntent(
         action: 'handleERPRequest',
         params: { entities },
         confirmationRequired: true,
+      }
+  }
+}
+
+// ============================================================================
+// COLD START INTENT ROUTING
+// ============================================================================
+
+function routeColdStartIntent(
+  intent: ColdStartIntent,
+  entities: ExtractedEntities,
+  requiresConfirmation: boolean
+): RouteResult {
+  switch (intent) {
+    case 'upload_contacts':
+      return {
+        handler: 'coldstart.upload',
+        toolGroup: 'coldstart',
+        action: 'uploadContacts',
+        params: {},
+        confirmationRequired: false,
+      }
+
+    case 'segment_contacts':
+      return {
+        handler: 'coldstart.segment',
+        toolGroup: 'coldstart',
+        action: 'segmentContacts',
+        params: {
+          criteria: entities.rawValues?.criteria,
+          segment: entities.rawValues?.segment,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'preview_outreach':
+      return {
+        handler: 'coldstart.preview',
+        toolGroup: 'coldstart',
+        action: 'previewOutreach',
+        params: {},
+        confirmationRequired: false,
+      }
+
+    case 'start_campaign':
+      return {
+        handler: 'coldstart.launch',
+        toolGroup: 'coldstart',
+        action: 'launchCampaign',
+        params: {
+          segment: entities.rawValues?.segment,
+        },
+        confirmationRequired: true,
+        confirmationMessage: 'Ready to start sending. Proceed?',
+      }
+
+    case 'check_results':
+      return {
+        handler: 'coldstart.results',
+        toolGroup: 'coldstart',
+        action: 'checkResults',
+        params: {
+          campaignId: entities.rawValues?.campaignId,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'approve_messages':
+      return {
+        handler: 'coldstart.approve',
+        toolGroup: 'coldstart',
+        action: 'approveMessages',
+        params: {},
+        confirmationRequired: false,
+      }
+
+    case 'find_prospects':
+      return {
+        handler: 'coldstart.prospect',
+        toolGroup: 'coldstart',
+        action: 'findProspects',
+        params: {
+          criteria: entities.rawValues?.criteria,
+        },
+        confirmationRequired: false,
+      }
+
+    case 'review_signals':
+      return {
+        handler: 'coldstart.signals',
+        toolGroup: 'coldstart',
+        action: 'reviewSignals',
+        params: {},
+        confirmationRequired: false,
+      }
+
+    case 'outreach_help':
+      return {
+        handler: 'coldstart.help',
+        toolGroup: 'coldstart',
+        action: 'outreachHelp',
+        params: {},
+        confirmationRequired: false,
+      }
+
+    default:
+      return {
+        handler: 'coldstart.general',
+        toolGroup: 'coldstart',
+        action: 'handleColdStartRequest',
+        params: { entities },
+        confirmationRequired: false,
       }
   }
 }
