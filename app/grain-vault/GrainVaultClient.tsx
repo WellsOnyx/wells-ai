@@ -568,14 +568,14 @@ export default function GrainVaultLanding() {
         <section id="products" className="py-24 px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
-              <FloatingBadge color="blue" pulse={false}>Two Products</FloatingBadge>
-              <h2 className="text-4xl md:text-5xl font-bold mt-6 mb-4">Two products. One platform.</h2>
+              <FloatingBadge color="blue" pulse={false}>Three Products</FloatingBadge>
+              <h2 className="text-4xl md:text-5xl font-bold mt-6 mb-4">Three products. One platform.</h2>
               <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-                GRAIN eliminates payment friction. VAULT protects your reserves.
+                WellsAI powers the intelligence. GRAIN handles payments. VAULT protects value.
               </p>
             </div>
 
-            <BentoGrid cols={2} className="gap-8">
+            <BentoGrid cols={3} className="gap-8">
               {/* GRAIN Card */}
               <BentoItem>
                 <GlassCard hover glow="green" padding="lg" className="h-full">
@@ -658,6 +658,44 @@ export default function GrainVaultLanding() {
                       <div className="text-2xl font-bold text-blue-400">2s</div>
                       <div className="text-xs text-gray-500">Audit Time</div>
                     </div>
+                  </div>
+                </GlassCard>
+              </BentoItem>
+
+              {/* WellsAI Card */}
+              <BentoItem>
+                <GlassCard hover glow="purple" padding="lg" className="h-full">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">WellsAI</h3>
+                      <p className="text-sm text-purple-400">The Intelligence Layer</p>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-400 mb-8 leading-relaxed">
+                    AI backbone that powers everything. Sourcing, matching, workflows, negotiations - all through natural language.
+                  </p>
+
+                  <div className="space-y-4 mb-8">
+                    {['Enterprise Workflows', 'AI-Powered Matching', 'Conversational Interface'].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <CheckCircle className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                        <span className="font-medium">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-6 border-t border-white/10">
+                    <Link
+                      href="/wells-ai"
+                      className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 font-medium transition-colors"
+                    >
+                      Explore WellsAI
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
                   </div>
                 </GlassCard>
               </BentoItem>

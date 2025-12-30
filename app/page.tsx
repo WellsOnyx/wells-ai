@@ -158,6 +158,15 @@ export default function UnifiedLanding() {
               </button>
               {productsOpen && (
                 <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl shadow-xl py-2 z-50">
+                  <Link href="/wells-ai" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                    <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <MessageSquare className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">WellsAI</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Intelligence layer</div>
+                    </div>
+                  </Link>
                   <Link href="/grain-vault" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                     <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
                       <Zap className="w-4 h-4 text-white" />
