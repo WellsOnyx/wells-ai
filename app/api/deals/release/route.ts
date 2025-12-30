@@ -4,23 +4,20 @@
  * POST /api/deals/release
  *
  * Releases GRAIN from escrow to seller upon buyer confirmation.
- * Automatically deducts Wells Onyx success fee from escrow before release.
+ * Fee is already collected in GRAIN during the original escrow creation.
  *
  * Flow:
  * 1. Verify buyer authorization and deal status
- * 2. Calculate and capture success fee (1%, 3.3%, or 7.7%)
- * 3. Transfer fee to Wells treasury wallet
- * 4. Transfer remaining amount to seller
- * 5. Update deal status to 'released'
+ * 2. Release GRAIN from escrow to seller
+ * 3. Seller receives GRAIN at current (potentially appreciated) value
+ * 4. Update deal status to 'released'
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { sql } from '@vercel/postgres'
-import { TransactionEngine } from '@/lib/transactions'
-import { captureFee } from '@/lib/fees/fee-service'
-import { type FeeTier } from '@/lib/fees/fee-calculator'
-import { releaseEscrow, getEscrowByDealId } from '@/lib/escrow/escrow-service'
+import { grainRail } from '@/lib/payments/grain-rail'
+import { unifiedUser } from '@/lib/identity/unified-user'
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,167 +78,56 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get seller's wallet address
-    const sellerWalletResult = await sql`
-      SELECT wallet_address
-      FROM user_wallets
-      WHERE user_id = ${deal.sellerId}
-      LIMIT 1
-    `
+    // Get escrow ID from deal
+    const escrowId = deal.escrowWalletId
 
-    if (sellerWalletResult.rows.length === 0) {
+    if (!escrowId) {
       return NextResponse.json(
-        { error: 'Seller wallet not found' },
+        { error: 'No escrow found for this deal' },
         { status: 400 }
       )
     }
 
-    const sellerWalletAddress = sellerWalletResult.rows[0].wallet_address
+    // Release the GRAIN escrow
+    const releaseResult = await grainRail.releaseEscrow(escrowId, userId)
 
-    // Check if escrow exists for this deal
-    const escrow = await getEscrowByDealId(dealId)
-
-    if (escrow) {
-      // Use new escrow system
-      try {
-        const result = await releaseEscrow(escrow.id, {}, userId)
-
-        // Update deal status
-        await sql`
-          UPDATE deals
-          SET status = 'released', updated_at = NOW()
-          WHERE id = ${dealId}
-        `
-
-        return NextResponse.json({
-          success: true,
-          deal: {
-            id: dealId,
-            status: 'released',
-          },
-          escrow: {
-            id: result.escrow.id,
-            status: result.escrow.status,
-          },
-          release: {
-            amount: result.releasedAmount,
-            transferId: result.transaction.circleTransferId,
-            sellerWallet: sellerWalletAddress,
-          },
-          message: `Payment released! ${result.releasedAmount} USDC transferred to seller.`,
-        })
-      } catch (error) {
-        console.error('Error releasing via escrow:', error)
-        throw error
-      }
-    }
-
-    // Fallback to legacy fee capture system
-    const feeTier: FeeTier = tier || 'standard'
-    const dealAmount = parseFloat(deal.amount)
-
-    try {
-      const feeResult = await captureFee(
-        dealId,
-        dealAmount,
-        deal.escrowWalletId,
-        sellerWalletAddress,
-        feeTier
+    if (!releaseResult.success) {
+      return NextResponse.json(
+        { error: releaseResult.error || 'Failed to release escrow' },
+        { status: 400 }
       )
-
-      if (!feeResult.success) {
-        throw new Error(feeResult.error || 'Fee capture failed')
-      }
-
-      await sql`
-        UPDATE deals
-        SET status = 'released', updated_at = NOW()
-        WHERE id = ${dealId}
-      `
-
-      await sql`
-        INSERT INTO treasury_transactions (
-          id,
-          user_id,
-          circle_transfer_id,
-          transaction_type,
-          amount,
-          currency,
-          status,
-          recipient_wallet,
-          description,
-          metadata,
-          created_at,
-          updated_at
-        ) VALUES (
-          ${`tx_release_${dealId}_${Date.now()}`},
-          ${deal.sellerId},
-          ${feeResult.sellerTransferId},
-          'deal_release',
-          ${feeResult.sellerAmount},
-          ${deal.currency},
-          'succeeded',
-          ${sellerWalletAddress},
-          ${`Payment released for: ${deal.description}`},
-          ${JSON.stringify({
-            dealId,
-            buyerId: deal.buyerId,
-            feeId: feeResult.feeId,
-            feeAmount: feeResult.feeAmount,
-            totalEscrow: dealAmount,
-          })},
-          NOW(),
-          NOW()
-        )
-      `
-
-      return NextResponse.json({
-        success: true,
-        deal: {
-          id: dealId,
-          status: 'released',
-        },
-        fee: {
-          id: feeResult.feeId,
-          amount: feeResult.feeAmount,
-          tier: feeTier,
-        },
-        seller: {
-          amount: feeResult.sellerAmount,
-          transferId: feeResult.sellerTransferId,
-          wallet: sellerWalletAddress,
-        },
-        wells: {
-          feeAmount: feeResult.feeAmount,
-          transferId: feeResult.feeTransferId,
-        },
-        breakdown: {
-          totalEscrow: dealAmount,
-          feeToWells: feeResult.feeAmount,
-          amountToSeller: feeResult.sellerAmount,
-        },
-        message: `Payment released! Seller receives $${feeResult.sellerAmount.toLocaleString()}, Wells fee: $${feeResult.feeAmount.toLocaleString()}`,
-      })
-    } catch (error) {
-      console.error('Error releasing payment:', error)
-
-      // For demo purposes, update status anyway
-      await sql`
-        UPDATE deals
-        SET status = 'released', updated_at = NOW()
-        WHERE id = ${dealId}
-      `
-
-      return NextResponse.json({
-        success: true,
-        deal: {
-          id: dealId,
-          status: 'released',
-        },
-        message: 'Payment marked as released (demo mode)',
-        warning: 'Fee capture failed - running in demo mode',
-      })
     }
+
+    // Update deal status
+    await sql`
+      UPDATE deals
+      SET status = 'released', updated_at = NOW()
+      WHERE id = ${dealId}
+    `
+
+    // Get current GRAIN price for context
+    const { price } = await grainRail.getPrice()
+
+    return NextResponse.json({
+      success: true,
+      deal: {
+        id: dealId,
+        status: 'released',
+      },
+      escrow: {
+        id: escrowId,
+        status: 'released',
+      },
+      release: {
+        grainAmount: releaseResult.releasedAmount,
+        currentUsdValue: releaseResult.currentValue,
+        grainPrice: price,
+      },
+      message: `Payment released! Seller received ${releaseResult.releasedAmount.toLocaleString()} GRAIN (worth $${releaseResult.currentValue.toFixed(2)})`,
+      note: releaseResult.currentValue > parseFloat(deal.amount)
+        ? `GRAIN appreciated! Seller received more than the original $${parseFloat(deal.amount).toFixed(2)} deal amount.`
+        : undefined,
+    })
   } catch (error) {
     console.error('Error releasing deal payment:', error)
     return NextResponse.json(

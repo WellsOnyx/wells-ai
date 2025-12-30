@@ -635,6 +635,89 @@ export async function POST(request: NextRequest) {
           created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )`
       },
+      // Unified Payments Tables (GRAIN-first architecture)
+      {
+        name: 'unified_transactions',
+        sql: `CREATE TABLE IF NOT EXISTS unified_transactions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT NOT NULL,
+          counterparty_id TEXT,
+          counterparty_address TEXT,
+          type VARCHAR(50) NOT NULL,
+          amount DECIMAL(20, 8) NOT NULL,
+          currency VARCHAR(10) NOT NULL,
+          rail VARCHAR(20) NOT NULL,
+          method VARCHAR(30) NOT NULL,
+          fee_amount DECIMAL(20, 8) DEFAULT 0,
+          fee_currency VARCHAR(10) DEFAULT 'GRAIN',
+          reference TEXT,
+          memo TEXT,
+          status VARCHAR(20) DEFAULT 'pending',
+          error_message TEXT,
+          grain_price_at_execution DECIMAL(20, 8),
+          credit_line_draw DECIMAL(20, 8) DEFAULT 0,
+          conversion_rate DECIMAL(20, 8),
+          escrow_id UUID,
+          circle_transfer_id TEXT,
+          stripe_payment_intent_id TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW(),
+          completed_at TIMESTAMPTZ
+        )`
+      },
+      {
+        name: 'grain_escrows',
+        sql: `CREATE TABLE IF NOT EXISTS grain_escrows (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          from_user_id TEXT NOT NULL,
+          to_user_id TEXT NOT NULL,
+          grain_amount DECIMAL(20, 8) NOT NULL,
+          grain_price_at_lock DECIMAL(20, 8) NOT NULL,
+          usd_equivalent_at_lock DECIMAL(20, 2) NOT NULL,
+          released_amount DECIMAL(20, 8) DEFAULT 0,
+          grain_price_at_release DECIMAL(20, 8),
+          release_conditions TEXT NOT NULL,
+          release_date TIMESTAMPTZ,
+          allow_partial_release BOOLEAN DEFAULT false,
+          reference TEXT NOT NULL,
+          status VARCHAR(20) DEFAULT 'locked',
+          released_by TEXT,
+          released_at TIMESTAMPTZ,
+          disputed_at TIMESTAMPTZ,
+          dispute_reason TEXT,
+          dispute_resolved_at TIMESTAMPTZ,
+          dispute_resolution TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'payroll_batches',
+        sql: `CREATE TABLE IF NOT EXISTS payroll_batches (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          company_user_id TEXT NOT NULL,
+          total_grain DECIMAL(20, 8) NOT NULL,
+          total_usd DECIMAL(20, 2) NOT NULL,
+          grain_price DECIMAL(20, 8) NOT NULL,
+          entry_count INTEGER NOT NULL,
+          success_count INTEGER NOT NULL,
+          failed_count INTEGER DEFAULT 0,
+          pay_period_start DATE,
+          pay_period_end DATE,
+          status VARCHAR(20) DEFAULT 'completed',
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      },
+      {
+        name: 'user_balances',
+        sql: `CREATE TABLE IF NOT EXISTS user_balances (
+          user_id TEXT PRIMARY KEY,
+          usdc_balance DECIMAL(20, 8) DEFAULT 0,
+          pending_deposits DECIMAL(20, 8) DEFAULT 0,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )`
+      },
       // Security Infrastructure Tables
       {
         name: 'grain_system_controls',

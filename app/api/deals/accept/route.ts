@@ -3,16 +3,15 @@
  * Accept Deal API
  * POST /api/deals/accept
  *
- * Accepts a deal and creates escrow with USDC payment
- * Uses database transactions for atomic operations
+ * Accepts a deal and creates GRAIN escrow
+ * GRAIN escrows appreciate with price during lock period
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { sql } from '@vercel/postgres'
-import { withTransaction } from '@/lib/db'
-import { TransactionEngine } from '@/lib/transactions'
-import { createEscrow, getEscrowByDealId } from '@/lib/escrow/escrow-service'
+import { grainRail } from '@/lib/payments/grain-rail'
+import { unifiedUser } from '@/lib/identity/unified-user'
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,85 +75,82 @@ export async function POST(request: NextRequest) {
       WHERE id = ${dealId}
     `
 
-    // Check if escrow already exists
-    let escrow = await getEscrowByDealId(dealId)
-
-    // Create escrow if it doesn't exist
-    if (!escrow) {
-      try {
-        // Fetch buyer and seller info
-        const buyerResult = await sql`
-          SELECT email FROM users WHERE id = ${deal.buyerId} LIMIT 1
-        `
-        const sellerResult = await sql`
-          SELECT email FROM users WHERE id = ${deal.sellerId} LIMIT 1
-        `
-
-        const buyerEmail = buyerResult.rows[0]?.email || 'buyer@example.com'
-        const sellerEmail = sellerResult.rows[0]?.email || 'seller@example.com'
-
-        escrow = await createEscrow({
-          dealId,
-          buyerId: deal.buyerId,
-          buyerEmail,
-          sellerId: deal.sellerId,
-          sellerEmail,
-          amount: parseFloat(deal.amount),
-          platformFee: parseFloat(deal.platformFee),
-          description: deal.description,
-          metadata: { originalDealId: dealId },
-        })
-
-        // Update deal with escrow info
-        await sql`
-          UPDATE deals
-          SET
-            escrow_wallet_id = ${escrow.escrowWalletId},
-            escrow_wallet_address = ${escrow.escrowWalletAddress},
-            status = 'escrow_pending'
-          WHERE id = ${dealId}
-        `
-      } catch (error) {
-        console.error('Error creating escrow:', error)
-        // Fallback: Create mock escrow wallet
-        const escrowWalletId = `escrow_${dealId}`
-        const escrowWalletAddress = `0x${Math.random().toString(16).substring(2, 42)}`
-
-        await sql`
-          UPDATE deals
-          SET
-            escrow_wallet_id = ${escrowWalletId},
-            escrow_wallet_address = ${escrowWalletAddress},
-            status = 'escrow_pending'
-          WHERE id = ${dealId}
-        `
-
-        escrow = {
-          escrowWalletId,
-          escrowWalletAddress,
-          totalAmount: parseFloat(deal.amount) + parseFloat(deal.platformFee),
-        }
-      }
+    // Get buyer's unified identity
+    const buyer = await unifiedUser.get(userId)
+    if (!buyer) {
+      return NextResponse.json(
+        { error: 'Buyer account not found. Please complete onboarding.' },
+        { status: 400 }
+      )
     }
+
+    // Get current GRAIN price
+    const { price } = await grainRail.getPrice()
+    const dealAmount = parseFloat(deal.amount)
+    const grainAmount = dealAmount / price
+
+    // Create GRAIN escrow
+    const escrowResult = await grainRail.escrow({
+      fromUserId: buyer.unifiedId,
+      toUserId: deal.sellerId,
+      amount: dealAmount,
+      currency: 'USD',
+      releaseConditions: `Delivery confirmation for deal: ${deal.description}`,
+      reference: dealId,
+      allowPartialRelease: false,
+    })
+
+    if (!escrowResult.success) {
+      // Check if it's a funding issue
+      if (escrowResult.error?.includes('Insufficient')) {
+        return NextResponse.json({
+          success: false,
+          needsFunding: true,
+          required: {
+            grainAmount,
+            usdAmount: dealAmount,
+            grainPrice: price,
+          },
+          available: {
+            grainBalance: buyer.grainBalance,
+            creditAvailable: buyer.creditAvailable,
+          },
+          message: escrowResult.error,
+        }, { status: 402 })
+      }
+      return NextResponse.json({ error: escrowResult.error }, { status: 400 })
+    }
+
+    // Update deal with escrow info
+    await sql`
+      UPDATE deals
+      SET
+        escrow_wallet_id = ${escrowResult.escrowId},
+        status = 'escrowed',
+        updated_at = NOW()
+      WHERE id = ${dealId}
+    `
 
     return NextResponse.json({
       success: true,
       deal: {
         id: dealId,
-        status: 'escrow_pending',
-        escrowWalletAddress: escrow.escrowWalletAddress,
+        status: 'escrowed',
       },
       escrow: {
-        id: escrow.id,
-        walletAddress: escrow.escrowWalletAddress,
-        amount: escrow.totalAmount,
-        currency: 'USDC',
+        id: escrowResult.escrowId,
+        grainAmount: escrowResult.grainAmount,
+        grainPriceAtLock: escrowResult.grainPriceAtLock,
+        usdEquivalent: escrowResult.grainAmount * price,
+        currency: 'GRAIN',
       },
-      message: 'Deal accepted! Please fund escrow with USDC to proceed.',
+      message: `Deal accepted! ${escrowResult.grainAmount.toLocaleString()} GRAIN ($${dealAmount.toFixed(2)}) held in escrow.`,
+      note: 'GRAIN escrow appreciates with price. Value may exceed initial amount when released.',
       nextSteps: [
-        `Send ${escrow.totalAmount} USDC to ${escrow.escrowWalletAddress}`,
-        'Funds will be held in escrow until delivery confirmation',
-        'Seller can begin work once escrow is funded',
+        'GRAIN is now locked in escrow',
+        'Seller can begin work immediately',
+        'Release payment after delivery confirmation',
+        'GRAIN appreciation benefits seller during escrow period',
       ],
     })
   } catch (error) {
