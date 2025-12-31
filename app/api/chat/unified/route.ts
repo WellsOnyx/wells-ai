@@ -546,6 +546,12 @@ async function handleOrchestratedMessage(
     sessionId?: string
     journey?: JourneyType
     previousMessages?: Array<{ role: string; content: string }>
+    attachedFiles?: Array<{
+      id: string
+      filename: string
+      contentType: string
+      extractedText?: string
+    }>
     options?: {
       enableAutonomousActions?: boolean
       maxAutonomousAmount?: number
@@ -564,6 +570,77 @@ async function handleOrchestratedMessage(
 
     // Generate session ID if not provided
     const sessionId = body.sessionId || `session_${userId}_${Date.now()}`
+
+    // Check if there's a CSV file attached - route to coldstart handler
+    const csvFile = body.attachedFiles?.find(
+      f => f.contentType === 'text/csv' || f.filename?.endsWith('.csv')
+    )
+
+    if (csvFile && csvFile.extractedText) {
+      // Import coldstart handler dynamically
+      const { handleColdStartMessage } = await import('@/lib/chat/handlers/coldstart-handler')
+
+      // Route to coldstart handler with the CSV content
+      const coldstartResponse = await handleColdStartMessage(
+        userId,
+        sessionId,
+        body.message,
+        { filename: csvFile.filename, content: csvFile.extractedText }
+      )
+
+      return NextResponse.json({
+        success: true,
+        message: coldstartResponse.message,
+        conversationId: sessionId,
+        suggestions: coldstartResponse.suggestions,
+        quickActions: coldstartResponse.quickActions,
+        displayData: coldstartResponse.displayData,
+        requiresInput: coldstartResponse.requiresInput,
+        metadata: {
+          handler: 'coldstart',
+          fileProcessed: csvFile.filename,
+        },
+      })
+    }
+
+    // Check if user is asking about contacts/outreach without a file
+    const lowerMessage = body.message.toLowerCase()
+    const isColdStartIntent =
+      lowerMessage.includes('upload') ||
+      lowerMessage.includes('contacts') ||
+      lowerMessage.includes('csv') ||
+      lowerMessage.includes('outreach') ||
+      lowerMessage.includes('campaign') ||
+      lowerMessage.includes('cold start') ||
+      lowerMessage.includes('send to') ||
+      lowerMessage.includes('email') && lowerMessage.includes('send') ||
+      lowerMessage.includes('segment') ||
+      lowerMessage.includes('target') ||
+      lowerMessage.includes('prospects')
+
+    if (isColdStartIntent && !body.options?.forceHandler) {
+      // Import coldstart handler dynamically
+      const { handleColdStartMessage } = await import('@/lib/chat/handlers/coldstart-handler')
+
+      const coldstartResponse = await handleColdStartMessage(
+        userId,
+        sessionId,
+        body.message
+      )
+
+      return NextResponse.json({
+        success: true,
+        message: coldstartResponse.message,
+        conversationId: sessionId,
+        suggestions: coldstartResponse.suggestions,
+        quickActions: coldstartResponse.quickActions,
+        displayData: coldstartResponse.displayData,
+        requiresInput: coldstartResponse.requiresInput,
+        metadata: {
+          handler: 'coldstart',
+        },
+      })
+    }
 
     // Get orchestrator instance with optional config
     const orchestrator = getUnifiedOrchestrator({
