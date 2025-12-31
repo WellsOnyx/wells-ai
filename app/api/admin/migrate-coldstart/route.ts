@@ -186,7 +186,11 @@ export async function POST(request: Request) {
   try {
     const { adminKey } = await request.json().catch(() => ({}))
 
-    if (adminKey !== ADMIN_KEY) {
+    // Get env at runtime, not build time
+    const runtimeKey = process.env.COLD_START_MASTER_KEY || 'wells-master-2024-coldstart'
+
+    if (adminKey !== runtimeKey) {
+      console.log('Auth failed - received:', adminKey?.slice(0, 10), 'expected:', runtimeKey?.slice(0, 10))
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
