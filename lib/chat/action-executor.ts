@@ -805,23 +805,19 @@ const actionHandlers: Record<string, Record<string, ActionHandler>> = {
       execute: async (params, context) => {
         const startTime = Date.now()
         try {
-          const { getGrainBalance } = await import('@/lib/grain-vault/balance-service')
-
-          const balance = await getGrainBalance(context.userId)
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('get_balance', context.userId, params)
 
           return {
-            success: true,
-            data: balance,
-            displayMessage: `Your GRAIN balance: ${balance.available?.toLocaleString() || 0} GRAIN${balance.pending ? ` (${balance.pending.toLocaleString()} pending)` : ''}.`,
-            displayData: {
-              available: balance.available,
-              pending: balance.pending,
-              creditLine: balance.creditLine,
-            },
-            suggestedActions: [
-              { label: 'Send GRAIN', action: 'treasury.initiateTransfer' },
-              { label: 'Earn more GRAIN', action: 'treasury.earnGrain' },
-            ],
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
+            suggestedActions: result.suggestedActions?.map(a => ({
+              label: a.label,
+              action: `treasury.${a.action}`,
+              params: a.params,
+            })),
             actionType: 'getBalance',
             executedAt: new Date(),
             durationMs: Date.now() - startTime,
@@ -832,29 +828,55 @@ const actionHandlers: Record<string, Record<string, ActionHandler>> = {
       },
     },
 
+    getPrice: {
+      execute: async (params, context) => {
+        const startTime = Date.now()
+        try {
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('get_price', context.userId, params)
+
+          return {
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
+            suggestedActions: result.suggestedActions?.map(a => ({
+              label: a.label,
+              action: `treasury.${a.action}`,
+              params: a.params,
+            })),
+            actionType: 'getPrice',
+            executedAt: new Date(),
+            durationMs: Date.now() - startTime,
+          }
+        } catch (error) {
+          return createErrorResult('getPrice', error, startTime)
+        }
+      },
+    },
+
     initiateTransfer: {
       execute: async (params, context) => {
         const startTime = Date.now()
         try {
-          const { sendGrain } = await import('@/lib/grain-vault/transfer-service')
-
-          const transfer = await sendGrain({
-            senderId: context.userId,
-            recipient: params.recipient as string,
-            amount: params.amount as number,
-            memo: params.memo as string,
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('send_grain', context.userId, {
+            toEmail: params.recipient,
+            amount: params.amount,
+            memo: params.memo,
           })
 
           return {
-            success: true,
-            data: transfer,
-            displayMessage: `Sent ${params.amount} GRAIN to ${params.recipient}.`,
-            displayData: {
-              transactionId: transfer.id,
-              amount: params.amount,
-              recipient: params.recipient,
-            },
-            createdIds: { transactionId: transfer.id },
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
+            createdIds: result.data?.transactionId ? { transactionId: result.data.transactionId } : undefined,
+            suggestedActions: result.suggestedActions?.map(a => ({
+              label: a.label,
+              action: `treasury.${a.action}`,
+              params: a.params,
+            })),
             actionType: 'initiateTransfer',
             executedAt: new Date(),
             durationMs: Date.now() - startTime,
@@ -871,43 +893,208 @@ const actionHandlers: Record<string, Record<string, ActionHandler>> = {
       execute: async (params, context) => {
         const startTime = Date.now()
         try {
-          const { getTransactions } = await import('@/lib/grain-vault/transfer-service')
-
-          const transactions = await getTransactions({
-            userId: context.userId,
-            limit: 10,
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('get_transactions', context.userId, {
+            limit: params.limit || 10,
           })
 
-          if (transactions.length === 0) {
-            return {
-              success: true,
-              data: [],
-              displayMessage: 'No recent transactions.',
-              actionType: 'getTransactions',
-              executedAt: new Date(),
-              durationMs: Date.now() - startTime,
-            }
-          }
-
           return {
-            success: true,
-            data: transactions,
-            displayMessage: `Here are your last ${transactions.length} transactions.`,
-            displayData: {
-              transactions: transactions.map((t: { id: string; type: string; amount: number; counterparty: string; createdAt: Date }) => ({
-                id: t.id,
-                type: t.type,
-                amount: t.amount,
-                counterparty: t.counterparty,
-                date: t.createdAt,
-              })),
-            },
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
             actionType: 'getTransactions',
             executedAt: new Date(),
             durationMs: Date.now() - startTime,
           }
         } catch (error) {
           return createErrorResult('getTransactions', error, startTime)
+        }
+      },
+    },
+
+    convertToGrain: {
+      execute: async (params, context) => {
+        const startTime = Date.now()
+        try {
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('convert_to_grain', context.userId, {
+            amount: params.amount,
+          })
+
+          return {
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
+            actionType: 'convertToGrain',
+            executedAt: new Date(),
+            durationMs: Date.now() - startTime,
+          }
+        } catch (error) {
+          return createErrorResult('convertToGrain', error, startTime)
+        }
+      },
+      requiresConfirmation: true,
+      confirmationMessage: (params) => `Convert $${params.amount} USDC to GRAIN?`,
+    },
+
+    createEscrow: {
+      execute: async (params, context) => {
+        const startTime = Date.now()
+        try {
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('create_escrow', context.userId, {
+            sellerId: params.sellerId,
+            amount: params.amount,
+            dealId: params.dealId,
+            description: params.description,
+          })
+
+          return {
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
+            actionType: 'createEscrow',
+            executedAt: new Date(),
+            durationMs: Date.now() - startTime,
+          }
+        } catch (error) {
+          return createErrorResult('createEscrow', error, startTime)
+        }
+      },
+      requiresConfirmation: true,
+      confirmationMessage: (params) => `Create escrow of ${params.amount} GRAIN for this deal?`,
+    },
+
+    releaseEscrow: {
+      execute: async (params, context) => {
+        const startTime = Date.now()
+        try {
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('release_escrow', context.userId, {
+            escrowId: params.escrowId,
+          })
+
+          return {
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
+            actionType: 'releaseEscrow',
+            executedAt: new Date(),
+            durationMs: Date.now() - startTime,
+          }
+        } catch (error) {
+          return createErrorResult('releaseEscrow', error, startTime)
+        }
+      },
+      requiresConfirmation: true,
+      confirmationMessage: () => `Release escrow and pay the seller?`,
+    },
+
+    checkCredit: {
+      execute: async (params, context) => {
+        const startTime = Date.now()
+        try {
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('check_credit', context.userId, params)
+
+          return {
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
+            suggestedActions: result.suggestedActions?.map(a => ({
+              label: a.label,
+              action: `treasury.${a.action}`,
+              params: a.params,
+            })),
+            actionType: 'checkCredit',
+            executedAt: new Date(),
+            durationMs: Date.now() - startTime,
+          }
+        } catch (error) {
+          return createErrorResult('checkCredit', error, startTime)
+        }
+      },
+    },
+
+    runPayroll: {
+      execute: async (params, context) => {
+        const startTime = Date.now()
+        try {
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('run_payroll', context.userId, {
+            recipients: params.recipients,
+          })
+
+          return {
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
+            actionType: 'runPayroll',
+            executedAt: new Date(),
+            durationMs: Date.now() - startTime,
+          }
+        } catch (error) {
+          return createErrorResult('runPayroll', error, startTime)
+        }
+      },
+      requiresConfirmation: true,
+      confirmationMessage: (params) => {
+        const total = params.recipients?.reduce((sum: number, r: any) => sum + (r.amount || 0), 0) || 0
+        return `Run payroll for ${params.recipients?.length || 0} recipients totaling ${total} GRAIN?`
+      },
+    },
+
+    getTreasuryStats: {
+      execute: async (params, context) => {
+        const startTime = Date.now()
+        try {
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('get_treasury_stats', context.userId, params)
+
+          return {
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
+            actionType: 'getTreasuryStats',
+            executedAt: new Date(),
+            durationMs: Date.now() - startTime,
+          }
+        } catch (error) {
+          return createErrorResult('getTreasuryStats', error, startTime)
+        }
+      },
+    },
+
+    explainGrain: {
+      execute: async (params, context) => {
+        const startTime = Date.now()
+        try {
+          const { treasuryHandler } = await import('./handlers/treasury-handler')
+          const result = await treasuryHandler.handleAction('explain_grain', context.userId, params)
+
+          return {
+            success: result.success,
+            data: result.data,
+            displayMessage: result.displayMessage,
+            displayData: result.displayData,
+            suggestedActions: result.suggestedActions?.map(a => ({
+              label: a.label,
+              action: `treasury.${a.action}`,
+              params: a.params,
+            })),
+            actionType: 'explainGrain',
+            executedAt: new Date(),
+            durationMs: Date.now() - startTime,
+          }
+        } catch (error) {
+          return createErrorResult('explainGrain', error, startTime)
         }
       },
     },

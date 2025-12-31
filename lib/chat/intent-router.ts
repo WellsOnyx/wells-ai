@@ -77,6 +77,20 @@ export type TreasuryIntent =
   | 'view_transactions'    // "Show my recent transactions"
   | 'credit_status'        // "What's my credit line?"
   | 'earn_grain'           // "How do I earn more GRAIN?"
+  | 'grain_price'          // "What's GRAIN worth?"
+  | 'convert_to_grain'     // "Convert $1000 to GRAIN"
+  | 'convert_from_grain'   // "Convert 500 GRAIN to USDC"
+  | 'create_escrow'        // "Hold funds for this deal"
+  | 'release_escrow'       // "Release the escrow"
+  | 'check_escrow'         // "How's my escrow?"
+  | 'draw_credit'          // "Draw $5000 from credit"
+  | 'repay_credit'         // "Repay my credit line"
+  | 'run_payroll'          // "Pay my team"
+  | 'deposit_usdc'         // "Add funds to my account"
+  | 'withdraw_usdc'        // "Withdraw to bank"
+  | 'treasury_stats'       // "Treasury health"
+  | 'explain_grain'        // "What is GRAIN?"
+  | 'invite_to_grain'      // "Invite someone to GRAIN"
 
 export type NegotiationIntent =
   | 'start_negotiation'    // "Help me negotiate with TechCorp"
@@ -350,19 +364,81 @@ const INTENT_PATTERNS: Record<IntentCategory, Record<string, string[]>> = {
   },
   treasury: {
     check_balance: [
-      'grain balance', 'my balance', 'how much grain', 'wallet balance'
+      'grain balance', 'my balance', 'how much grain', 'wallet balance',
+      'check balance', 'show balance', 'what\'s in my account', 'available funds'
     ],
     send_payment: [
-      'send', 'transfer', 'pay @', 'send grain', 'pay user'
+      'send', 'transfer', 'pay @', 'send grain', 'pay user', 'send to',
+      'transfer to', 'pay them', 'wire', 'send money', 'payment to'
     ],
     view_transactions: [
-      'transactions', 'history', 'recent payments', 'what did i send'
+      'transactions', 'history', 'recent payments', 'what did i send',
+      'payment history', 'show transactions', 'tx history', 'ledger'
     ],
     credit_status: [
-      'credit line', 'credit limit', 'available credit', 'borrowing'
+      'credit line', 'credit limit', 'available credit', 'borrowing',
+      'my credit', 'credit available', 'credit tier', 'apr'
     ],
     earn_grain: [
-      'earn grain', 'get grain', 'how to earn', 'more grain'
+      'earn grain', 'get grain', 'how to earn', 'more grain',
+      'accumulate grain', 'grow my grain'
+    ],
+    grain_price: [
+      'grain price', 'grain worth', 'current price', 'price of grain',
+      'what\'s grain at', 'grain value', 'exchange rate', 'grain rate',
+      'treasury backing', 'backing ratio'
+    ],
+    convert_to_grain: [
+      'buy grain', 'convert to grain', 'get grain', 'swap to grain',
+      'usdc to grain', 'dollars to grain', 'purchase grain'
+    ],
+    convert_from_grain: [
+      'sell grain', 'convert grain', 'grain to usdc', 'grain to dollars',
+      'liquidate grain', 'cash out', 'redeem grain'
+    ],
+    create_escrow: [
+      'create escrow', 'hold funds', 'escrow for deal', 'lock funds',
+      'secure payment', 'escrow this', 'hold payment'
+    ],
+    release_escrow: [
+      'release escrow', 'release funds', 'unlock escrow', 'complete escrow',
+      'pay out escrow', 'finalize escrow'
+    ],
+    check_escrow: [
+      'escrow status', 'my escrow', 'check escrow', 'escrow balance',
+      'escrow appreciation', 'locked funds'
+    ],
+    draw_credit: [
+      'draw credit', 'use credit', 'borrow', 'draw from credit',
+      'credit draw', 'take credit', 'use my credit line'
+    ],
+    repay_credit: [
+      'repay credit', 'pay back', 'pay credit', 'repay loan',
+      'clear credit', 'pay off credit'
+    ],
+    run_payroll: [
+      'run payroll', 'pay team', 'payroll', 'pay employees',
+      'salary payment', 'batch payment', 'pay everyone', 'pay contractors'
+    ],
+    deposit_usdc: [
+      'deposit', 'add funds', 'fund account', 'top up', 'add money',
+      'deposit usdc', 'load balance'
+    ],
+    withdraw_usdc: [
+      'withdraw', 'cash out', 'withdraw to bank', 'offramp',
+      'withdraw usdc', 'bank transfer', 'withdraw funds'
+    ],
+    treasury_stats: [
+      'treasury stats', 'treasury health', 'grain stats', 'total backing',
+      'treasury dashboard', 'grain metrics', 'system health'
+    ],
+    explain_grain: [
+      'what is grain', 'explain grain', 'how does grain work',
+      'grain explained', 'about grain', 'grain help', 'grain faq'
+    ],
+    invite_to_grain: [
+      'invite to grain', 'invite user', 'add user', 'invite to platform',
+      'onboard someone', 'get them on grain'
     ],
   },
   negotiation: {

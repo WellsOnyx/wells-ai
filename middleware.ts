@@ -114,6 +114,14 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   // ========================================
 
   if (isGrainVaultDomain(host)) {
+    // Redirect /dashboard to unified dashboard with treasury journey
+    if (pathname === '/dashboard' || pathname === '/grain-vault/dashboard') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.searchParams.set('journey', 'treasury')
+      return NextResponse.redirect(url)
+    }
+
     // Routes that should be rewritten to /grain-vault/* on grainandvault.com
     const grainVaultRoutes = ['/', '/demo', '/signup', '/signin', '/onboarding']
 
@@ -129,6 +137,14 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
       // Health endpoint works fine, just allow it
       return NextResponse.next()
     }
+  }
+
+  // Redirect old grain-vault/dashboard to unified dashboard (for any domain)
+  if (pathname === '/grain-vault/dashboard') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    url.searchParams.set('journey', 'treasury')
+    return NextResponse.redirect(url)
   }
 
   // ========================================

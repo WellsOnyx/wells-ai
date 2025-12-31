@@ -18,6 +18,7 @@ import { UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useState, useRef, useEffect, useCallback } from 'react'
+import TreasuryPanel from '@/components/dashboard/TreasuryPanel'
 import {
   Send,
   Loader2,
@@ -814,15 +815,25 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* Recent Activity Placeholder */}
-                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-                  <div className="text-center py-8 text-gray-400">
-                    <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No recent activity</p>
-                    <p className="text-sm mt-1">Start a conversation with Wells to get things done</p>
+                {/* Treasury Panel - shown when treasury journey is active */}
+                {activeJourney === 'treasury' && user?.id && (
+                  <TreasuryPanel
+                    userId={user.id}
+                    onAction={(prompt) => sendMessage(prompt)}
+                  />
+                )}
+
+                {/* Recent Activity - shown for non-treasury journeys */}
+                {activeJourney !== 'treasury' && (
+                  <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+                    <div className="text-center py-8 text-gray-400">
+                      <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>No recent activity</p>
+                      <p className="text-sm mt-1">Start a conversation with Wells to get things done</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           ) : (
