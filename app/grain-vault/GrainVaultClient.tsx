@@ -209,6 +209,9 @@ export default function GrainVaultLanding() {
                 </div>
 
                 <nav className="hidden md:flex items-center gap-8">
+                  <Link href="/grain-vault/how-it-works" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">
+                    How It Works
+                  </Link>
                   <Link href="#products" className="text-sm text-gray-400 hover:text-white transition-colors">
                     Products
                   </Link>
@@ -292,8 +295,8 @@ export default function GrainVaultLanding() {
                 Get Started Free
                 <ArrowRight className="w-5 h-5" />
               </ShimmerButton>
-              <ShimmerButton variant="secondary" size="lg" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
-                <Sparkles className="w-5 h-5" />
+              <ShimmerButton variant="secondary" size="lg" onClick={() => window.location.href = '/grain-vault/how-it-works'}>
+                <Play className="w-5 h-5" />
                 How It Works
               </ShimmerButton>
               <ShimmerButton variant="ghost" size="lg" onClick={() => document.getElementById('treasury-sdk')?.scrollIntoView({ behavior: 'smooth' })}>
