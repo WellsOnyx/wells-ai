@@ -29,6 +29,46 @@ const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Wells AI <hello@wellsonyx.c
 const TEAM_EMAIL = process.env.WELLS_TEAM_EMAIL || 'team@wellsonyx.com'
 
 // ============================================================================
+// GENERIC EMAIL SEND
+// ============================================================================
+
+export interface EmailOptions {
+  to: string | string[]
+  subject: string
+  html: string
+  replyTo?: string
+}
+
+/**
+ * Generic email send function for custom emails
+ */
+export async function sendEmail(options: EmailOptions): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) {
+    console.log('RESEND_API_KEY not configured, skipping email')
+    return false
+  }
+
+  try {
+    const resend = getResendClient()
+    if (!resend) return false
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+      ...(options.replyTo && { replyTo: options.replyTo }),
+    })
+
+    console.log(`Email sent: ${options.subject} to ${options.to}`)
+    return true
+  } catch (error) {
+    console.error('Error sending email:', error)
+    return false
+  }
+}
+
+// ============================================================================
 // LEAD CONFIRMATION EMAIL (to user)
 // ============================================================================
 
