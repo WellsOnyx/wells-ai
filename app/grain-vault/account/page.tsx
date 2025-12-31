@@ -46,11 +46,22 @@ interface AccountData {
   createdAt: string
 }
 
+interface CreditLinePosition {
+  protectedDeposit: number
+  creditLineLimit: number
+  creditLineUsed: number
+  creditLineAvailable: number
+  appreciationGrain: number
+  grainPrice: number
+  currentValue: number
+}
+
 export default function GrainVaultAccountPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
 
   const [account, setAccount] = useState<AccountData | null>(null)
+  const [creditPosition, setCreditPosition] = useState<CreditLinePosition | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showApiKey, setShowApiKey] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
@@ -79,6 +90,8 @@ export default function GrainVaultAccountPage() {
 
       if (data.account) {
         setAccount(data.account)
+        // Fetch credit line position
+        fetchCreditPosition(data.account.id)
       }
     } catch (error) {
       console.error('Error fetching account:', error)
@@ -86,6 +99,18 @@ export default function GrainVaultAccountPage() {
       router.push('/grain-vault/onboard')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchCreditPosition = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/grain/credit-line?userId=${userId}`)
+      const data = await response.json()
+      if (data.success && data.position) {
+        setCreditPosition(data.position)
+      }
+    } catch (error) {
+      console.error('Error fetching credit position:', error)
     }
   }
 
@@ -179,6 +204,91 @@ export default function GrainVaultAccountPage() {
           </div>
         </div>
 
+        {/* Three Layer Model - Protected Deposit, Credit Line, Appreciation */}
+        <div className="mb-8 p-6 rounded-2xl bg-white/5 border border-white/10">
+          <div className="flex items-center gap-2 mb-6">
+            <Shield className="w-5 h-5 text-green-400" />
+            <h2 className="text-lg font-bold text-white">Your Three-Layer Position</h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Layer 1: Protected Deposit */}
+            <div className="p-5 rounded-xl bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/30">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-green-400 font-medium">LAYER 1</p>
+                  <p className="text-sm text-white font-semibold">Protected Deposit</p>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-white mb-1">
+                ${creditPosition?.protectedDeposit?.toLocaleString() || '0'}
+              </p>
+              <p className="text-xs text-gray-400">100% protected. Cash available anytime.</p>
+            </div>
+
+            {/* Layer 2: Credit Line */}
+            <div className="p-5 rounded-xl bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/30">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-blue-400 font-medium">LAYER 2</p>
+                  <p className="text-sm text-white font-semibold">Credit Line</p>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-white mb-1">
+                {creditPosition?.creditLineAvailable?.toLocaleString() || account.creditLine.toLocaleString()} <span className="text-lg text-gray-400">GRAIN</span>
+              </p>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400">0% interest</span>
+                <span className="text-blue-400">0% fees</span>
+              </div>
+              {creditPosition?.creditLineUsed && creditPosition.creditLineUsed > 0 && (
+                <p className="text-xs text-amber-400 mt-2">
+                  Used: {creditPosition.creditLineUsed.toLocaleString()} GRAIN
+                </p>
+              )}
+            </div>
+
+            {/* Layer 3: Appreciation */}
+            <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/30">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-purple-400 font-medium">LAYER 3</p>
+                  <p className="text-sm text-white font-semibold">Appreciation</p>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-white mb-1">
+                {creditPosition?.appreciationGrain?.toLocaleString() || '0'} <span className="text-lg text-gray-400">GRAIN</span>
+              </p>
+              <p className="text-xs text-gray-400">Bonus GRAIN from ecosystem growth</p>
+            </div>
+          </div>
+
+          {/* GRAIN Price */}
+          <div className="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">Current GRAIN Price</p>
+              <p className="text-xl font-bold text-white">
+                ${creditPosition?.grainPrice?.toFixed(4) || '1.0000'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-400">Your Current Value</p>
+              <p className="text-xl font-bold text-green-400">
+                ${creditPosition?.currentValue?.toLocaleString() || '0'}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           {/* GRAIN Balance */}
@@ -189,9 +299,11 @@ export default function GrainVaultAccountPage() {
               </div>
               <TrendingUp className="w-4 h-4 text-green-400" />
             </div>
-            <p className="text-sm text-gray-400 mb-1">GRAIN Balance</p>
-            <p className="text-3xl font-bold text-white">{account.grainBalance.toLocaleString()}</p>
-            <p className="text-xs text-green-400 mt-1">+0% appreciation</p>
+            <p className="text-sm text-gray-400 mb-1">Total GRAIN</p>
+            <p className="text-3xl font-bold text-white">
+              {((creditPosition?.creditLineAvailable || 0) + (creditPosition?.appreciationGrain || 0)).toLocaleString() || account.grainBalance.toLocaleString()}
+            </p>
+            <p className="text-xs text-green-400 mt-1">Backed by real liquidity</p>
           </div>
 
           {/* Credit Line */}
@@ -202,12 +314,12 @@ export default function GrainVaultAccountPage() {
               </div>
               <span className="text-xs text-blue-400">1:1 ratio</span>
             </div>
-            <p className="text-sm text-gray-400 mb-1">Credit Line</p>
-            <p className="text-3xl font-bold text-white">{account.creditLine.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 mt-1">Available: {availableCredit.toLocaleString()}</p>
+            <p className="text-sm text-gray-400 mb-1">Credit Line Limit</p>
+            <p className="text-3xl font-bold text-white">{creditPosition?.creditLineLimit?.toLocaleString() || account.creditLine.toLocaleString()}</p>
+            <p className="text-xs text-gray-500 mt-1">Available: {creditPosition?.creditLineAvailable?.toLocaleString() || availableCredit.toLocaleString()}</p>
           </div>
 
-          {/* Collateral Health */}
+          {/* Protected Deposit */}
           <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/20">
             <div className="flex items-center justify-between mb-4">
               <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
@@ -215,7 +327,7 @@ export default function GrainVaultAccountPage() {
               </div>
               <Activity className="w-4 h-4 text-purple-400" />
             </div>
-            <p className="text-sm text-gray-400 mb-1">Collateral</p>
+            <p className="text-sm text-gray-400 mb-1">Protected</p>
             <p className="text-3xl font-bold text-white">100%</p>
             <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div className="h-full w-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />

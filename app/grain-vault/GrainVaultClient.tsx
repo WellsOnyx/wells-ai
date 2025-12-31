@@ -285,8 +285,8 @@ export default function GrainVaultLanding() {
 
             {/* Subheadline */}
             <p className="text-xl md:text-2xl text-gray-400 mb-12 max-w-3xl mx-auto">
-              Zero-friction payments with GRAIN. Protected reserves with VAULT.
-              Native ERP integration for CFOs and treasury teams.
+              Your deposit is protected. Your value grows with the ecosystem.
+              Zero fees inside the network. Cash available anytime.
             </p>
 
             {/* CTA Buttons */}
@@ -308,20 +308,20 @@ export default function GrainVaultLanding() {
             {/* Trust Bar */}
             <div className="flex flex-wrap items-center justify-center gap-6 md:gap-8 text-sm text-gray-500 mb-12">
               <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-green-500" />
-                <span className="font-medium text-white">180+ Countries</span>
+                <Shield className="w-4 h-4 text-green-500" />
+                <span className="font-medium text-white">Deposit Protected</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>100% Collateralized</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>Real-time Audits</span>
+                <TrendingUp className="w-4 h-4 text-green-500" />
+                <span>Value Grows</span>
               </div>
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-yellow-500" />
-                <span>Instant Settlement</span>
+                <span>Zero Fees Inside</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-blue-500" />
+                <span>Cash Available</span>
               </div>
             </div>
 
@@ -348,52 +348,52 @@ export default function GrainVaultLanding() {
             <BentoGrid cols={4} className="max-w-4xl mx-auto">
               <BentoItem>
                 <MetricCard
-                  value="<1s"
-                  label="Settlement Time"
-                  icon={<Zap className="w-7 h-7 text-green-400" />}
+                  value="100%"
+                  label="Protected Deposit"
+                  icon={<Shield className="w-7 h-7 text-green-400" />}
                 />
               </BentoItem>
               <BentoItem>
                 <MetricCard
-                  value="0%"
-                  label="Payment Friction"
+                  value="Real"
+                  label="Asset Backing"
                   icon={<TrendingUp className="w-7 h-7 text-green-400" />}
                 />
               </BentoItem>
               <BentoItem>
                 <MetricCard
-                  value="100%"
-                  label="Collateral Ratio"
-                  icon={<Shield className="w-7 h-7 text-blue-400" />}
+                  value="0%"
+                  label="Fees Inside Network"
+                  icon={<Zap className="w-7 h-7 text-blue-400" />}
                 />
               </BentoItem>
               <BentoItem>
                 <MetricCard
                   value="24/7"
-                  label="Blockchain Audits"
-                  icon={<Activity className="w-7 h-7 text-purple-400" />}
+                  label="Cash Available"
+                  icon={<Wallet className="w-7 h-7 text-purple-400" />}
                 />
               </BentoItem>
             </BentoGrid>
           </div>
         </section>
 
-        {/* How GRAIN Works - Consumer Focus */}
+        {/* How GRAIN Works - Value-Focused Consumer Messaging */}
         <section id="how-it-works" className="py-24 px-6 lg:px-8 relative">
           <div className="absolute inset-0 bg-gradient-to-b from-green-950/20 via-transparent to-transparent pointer-events-none" />
 
           <div className="relative max-w-7xl mx-auto">
             <div className="text-center mb-16">
               <FloatingBadge color="green">
-                <TrendingUp className="w-4 h-4" />
-                Anti-Inflationary
+                <Shield className="w-4 h-4" />
+                Protected & Growing
               </FloatingBadge>
               <h2 className="text-4xl md:text-5xl font-bold mt-6 mb-4">
-                Money that works <span className="text-green-400">for you</span>
+                Your money is <span className="text-green-400">protected</span>
               </h2>
               <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-                Unlike traditional currencies that lose value over time, GRAIN is designed to appreciate.
-                Your purchasing power grows while you hold.
+                Every dollar you deposit is 100% backed by real assets. Your deposit is always protected,
+                and your value grows with the ecosystem over time.
               </p>
             </div>
 
@@ -445,11 +445,11 @@ export default function GrainVaultLanding() {
               <GlassCard hover glow="green" padding="lg">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-black" />
+                    <Shield className="w-6 h-6 text-black" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-green-400">GRAIN</h3>
-                    <p className="text-sm text-gray-400">Designed to appreciate</p>
+                    <h3 className="text-xl font-bold text-green-400">GRAIN & VAULT</h3>
+                    <p className="text-sm text-gray-400">Protected and growing</p>
                   </div>
                 </div>
                 <ul className="space-y-4">
@@ -458,8 +458,8 @@ export default function GrainVaultLanding() {
                       <CheckCircle className="w-4 h-4 text-green-400" />
                     </div>
                     <div>
-                      <p className="font-medium text-white">Your purchasing power grows</p>
-                      <p className="text-sm text-gray-400">GRAIN only goes up in value</p>
+                      <p className="font-medium text-white">Your money is protected</p>
+                      <p className="text-sm text-gray-400">Principal is always safe and accessible</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
@@ -467,8 +467,8 @@ export default function GrainVaultLanding() {
                       <CheckCircle className="w-4 h-4 text-green-400" />
                     </div>
                     <div>
-                      <p className="font-medium text-white">You benefit from treasury growth</p>
-                      <p className="text-sm text-gray-400">As our reserves grow, so does your GRAIN value</p>
+                      <p className="font-medium text-white">Value grows with the ecosystem</p>
+                      <p className="text-sm text-gray-400">GRAIN appreciates over time as we grow</p>
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
@@ -476,8 +476,17 @@ export default function GrainVaultLanding() {
                       <CheckCircle className="w-4 h-4 text-green-400" />
                     </div>
                     <div>
-                      <p className="font-medium text-white">100% backed, always</p>
-                      <p className="text-sm text-gray-400">Every GRAIN is fully backed by real assets</p>
+                      <p className="font-medium text-white">Cash available anytime</p>
+                      <p className="text-sm text-gray-400">No lock-ups, no restrictions on your funds</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">Backed by real assets</p>
+                      <p className="text-sm text-gray-400">Not speculative - real, tangible backing</p>
                     </div>
                   </li>
                 </ul>
@@ -492,29 +501,29 @@ export default function GrainVaultLanding() {
                   {
                     step: '1',
                     icon: Wallet,
-                    title: 'Deposit',
-                    desc: 'Add funds instantly with card or bank transfer. Available in 180+ countries.',
+                    title: 'Make a Deposit',
+                    desc: 'Add funds instantly with card or bank transfer. Your deposit is protected immediately.',
                     color: 'blue'
                   },
                   {
                     step: '2',
-                    icon: Sparkles,
-                    title: 'Convert to GRAIN',
-                    desc: 'Your deposit converts to GRAIN at the current market price.',
+                    icon: Shield,
+                    title: 'Protected Value',
+                    desc: 'Your full deposit is backed by real assets and accessible anytime.',
                     color: 'green'
                   },
                   {
                     step: '3',
                     icon: TrendingUp,
                     title: 'Watch it Grow',
-                    desc: 'As our treasury grows, GRAIN appreciates. Your balance gains value.',
+                    desc: 'As the ecosystem grows, your value grows with it. Simple as that.',
                     color: 'purple'
                   },
                   {
                     step: '4',
                     icon: Globe,
-                    title: 'Use Anywhere',
-                    desc: 'Spend, send, or withdraw anytime. Your money, your control.',
+                    title: 'Access Anytime',
+                    desc: 'Spend, send, or withdraw whenever you need. Your money, your control.',
                     color: 'amber'
                   }
                 ].map((item, i) => (
@@ -540,18 +549,35 @@ export default function GrainVaultLanding() {
             {/* Value Proposition Banner */}
             <GlassCard hover={false} glow="green" padding="lg" className="text-center">
               <div className="max-w-3xl mx-auto">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/20 text-green-400 text-sm font-medium mb-6">
-                  <TrendingUp className="w-4 h-4" />
-                  Anti-Inflationary by Design
+                {/* Four Key Messages */}
+                <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/20 text-green-400 text-sm font-medium">
+                    <Shield className="w-4 h-4" />
+                    Principal Protected
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-400 text-sm font-medium">
+                    <TrendingUp className="w-4 h-4" />
+                    Value Grows
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium">
+                    <Zap className="w-4 h-4" />
+                    Cash Anytime
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 text-amber-400 text-sm font-medium">
+                    <Building2 className="w-4 h-4" />
+                    Real Assets
+                  </div>
                 </div>
+
                 <h3 className="text-3xl md:text-4xl font-bold mb-4">
-                  Stop losing money to inflation.
+                  Your money, protected and growing.
                   <br />
-                  <span className="text-green-400">Start growing with GRAIN.</span>
+                  <span className="text-green-400">Available when you need it.</span>
                 </h3>
                 <p className="text-lg text-gray-400 mb-8">
-                  While traditional money loses purchasing power year after year,
-                  GRAIN is engineered to appreciate. Every holder benefits equally as our treasury grows.
+                  Every dollar is 100% backed by real assets - not speculation.
+                  Your deposit is always protected, your value grows with the ecosystem,
+                  and your cash is available anytime you need it.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <ShimmerButton size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => window.location.href = '/join?journey=treasury'}>
@@ -955,9 +981,10 @@ export default function GrainVaultLanding() {
                 </div>
 
                 <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                  Ready to modernize your treasury?
+                  Ready to grow your value?
                 </h2>
                 <p className="text-xl text-white/80 mb-10">
+                  Your deposit is protected. Your value grows with the ecosystem.
                   Get started in minutes.
                 </p>
 

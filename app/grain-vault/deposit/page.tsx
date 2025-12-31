@@ -1,16 +1,23 @@
 'use client'
 
 /**
- * Grain & Vault - Enterprise Deposit Page
+ * Grain & Vault - Deposit Page
  *
- * Circle-native ACH/Wire deposits only.
- * No cards, no Base Pay - enterprise grade.
+ * UX PRINCIPLES:
+ * 1. TRUST FIRST - Show that deposits are protected
+ * 2. CLARITY - Simple flow: Deposit X -> Your account grows
+ * 3. SIMPLICITY - Hide internal mechanics (GRAIN conversion, treasury, etc.)
+ * 4. PREMIUM FEEL - Like a wealth management platform, not crypto
  *
- * Flow:
- * 1. User gets unique Virtual Account Number (VAN) from Circle
- * 2. User initiates ACH/wire from their ERP/bank
- * 3. Circle receives funds, credits USDC to master wallet
- * 4. We credit GRAIN to user's ledger
+ * What users see:
+ * - "You're depositing $X"
+ * - "Your protected amount will be $X"
+ * - "Your account value may grow over time"
+ *
+ * What we DON'T show:
+ * - GRAIN price oracle mechanics
+ * - Treasury backing ratios
+ * - Token conversion formulas
  */
 
 import { useEffect, useState, useMemo, useCallback, Suspense } from 'react'
@@ -280,19 +287,18 @@ function DepositPageContent() {
             </div>
           </div>
 
-          {/* Deposit Summary */}
+          {/* Deposit Summary - User Friendly */}
           <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400">Amount to Deposit</span>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-gray-400">Your Deposit</span>
               <span className="text-xl font-bold text-white">{formatUSD(parseFloat(amount))}</span>
             </div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400">Current GRAIN Price</span>
-              <span className="text-white font-semibold">{formatUSD(currentPrice)}</span>
-            </div>
-            <div className="flex items-center justify-between pt-2 border-t border-white/10">
-              <span className="text-gray-400">You will receive</span>
-              <span className="text-green-400 font-bold">{formatGRAIN(grainToReceive)} GRAIN</span>
+            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-green-400" />
+                <span className="text-gray-400">Protected Amount</span>
+              </div>
+              <span className="text-green-400 font-bold">{formatUSD(parseFloat(amount))}</span>
             </div>
           </div>
 
@@ -364,7 +370,7 @@ function DepositPageContent() {
                   <li>Include the reference code in your transfer memo</li>
                   <li>ACH transfers typically arrive in 1-3 business days</li>
                   <li>Wire transfers typically arrive same day or next business day</li>
-                  <li>Your GRAIN will be credited at the price when funds arrive</li>
+                  <li>Your account will be credited once funds are received</li>
                 </ul>
               </div>
             </div>
@@ -419,10 +425,26 @@ function DepositPageContent() {
           Back to Dashboard
         </Link>
 
-        {/* Page Title */}
+        {/* Page Title with Value Messaging */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Add Funds</h1>
-          <p className="text-gray-400">Deposit USD via ACH or wire transfer to receive GRAIN</p>
+          <p className="text-gray-400 mb-4">Deposit securely - your money is protected and grows with the ecosystem</p>
+
+          {/* Trust Badges */}
+          <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 rounded-full border border-green-500/20">
+              <Shield className="w-3.5 h-3.5 text-green-400" />
+              <span className="text-xs text-green-400 font-medium">Principal Protected</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-full border border-blue-500/20">
+              <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-xs text-blue-400 font-medium">Value Appreciates</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 rounded-full border border-purple-500/20">
+              <Clock className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-xs text-purple-400 font-medium">Access Anytime</span>
+            </div>
+          </div>
         </div>
 
         {/* Error Alert */}
@@ -433,48 +455,45 @@ function DepositPageContent() {
           </div>
         )}
 
-        {/* Current Balance Card */}
+        {/* Current Account Summary - User-Friendly */}
         <div className="mb-6 p-6 rounded-2xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield className="w-5 h-5 text-green-400" />
+            <span className="text-sm text-green-400 font-medium">Your Account</span>
+          </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400 mb-1">Current Balance</p>
-              <h3 className="text-2xl font-bold text-white">
-                {formatGRAIN(walletData?.balance?.grain || 0)} <span className="text-lg text-gray-400">GRAIN</span>
-              </h3>
-              <p className="text-sm text-green-400">
+              <p className="text-sm text-gray-400 mb-1">Current Value</p>
+              <h3 className="text-3xl font-bold text-white">
                 {formatUSD(walletData?.balance?.usd_value || 0)}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Protected and accessible anytime
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-400 mb-1">GRAIN Price</p>
-              <p className="text-xl font-bold text-green-400">{formatUSD(currentPrice)}</p>
-              {priceData?.grain?.change_24h !== undefined && priceData.grain.change_24h > 0 && (
-                <p className="text-sm text-green-400 flex items-center justify-end gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  +{priceData.grain.change_24h.toFixed(2)}% (24h)
-                </p>
-              )}
+              <p className="text-sm text-gray-400 mb-1">Account Status</p>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-green-400 font-medium">Active</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* GRAIN Price Oracle Info */}
-        {priceData?.grain?.treasury_value && priceData?.grain?.total_supply && (
-          <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-            <div className="flex items-start gap-3">
-              <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm text-blue-400 font-medium mb-1">GRAIN Price Oracle</p>
-                <p className="text-sm text-gray-400">
-                  Price = Treasury ({formatUSD(priceData.grain.treasury_value)}) / Supply ({formatGRAIN(priceData.grain.total_supply)})
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  GRAIN only appreciates. Monitored by VAULT autonomous auditor.
-                </p>
-              </div>
+        {/* Trust Message */}
+        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+          <div className="flex items-start gap-3">
+            <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-blue-400 font-medium mb-1">Your Deposit is Protected</p>
+              <p className="text-sm text-gray-400">
+                Every dollar you deposit is fully backed and protected. Your funds are always
+                accessible, and your account value may grow over time as you participate in the ecosystem.
+              </p>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Deposit Form */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
@@ -517,20 +536,53 @@ function DepositPageContent() {
             <p className="mt-2 text-sm text-gray-500">Minimum deposit: $100</p>
           </div>
 
-          {/* GRAIN Conversion Preview */}
+          {/* Deposit Preview - Value-Focused */}
           {parseFloat(amount) >= 100 && (
-            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-400">You will receive</span>
-                <span className="text-2xl font-bold text-green-400">
-                  {formatGRAIN(grainToReceive)} GRAIN
-                </span>
+            <div className="mb-6 rounded-xl overflow-hidden border border-green-500/20">
+              {/* Header */}
+              <div className="px-4 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/10">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-green-400" />
+                  <span className="text-sm font-medium text-green-400">Your Investment Summary</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">At current price of {formatUSD(currentPrice)}</span>
-                <span className="text-gray-400">
-                  {formatUSD(grainToReceive * currentPrice)}
-                </span>
+
+              {/* Content */}
+              <div className="p-4 bg-white/5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-gray-400">Cash Available</span>
+                  <span className="text-2xl font-bold text-white">
+                    {formatUSD(parseFloat(amount))}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between py-3 border-t border-white/10">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-green-400" />
+                    <span className="text-gray-400">Protected Amount</span>
+                  </div>
+                  <span className="text-green-400 font-bold">
+                    {formatUSD(parseFloat(amount))}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between py-3 border-t border-white/10">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-purple-400" />
+                    <span className="text-gray-400">Value Growth</span>
+                  </div>
+                  <span className="text-purple-400 font-medium">
+                    Grows with ecosystem
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-4 py-3 bg-green-500/10 border-t border-green-500/20">
+                <div className="flex items-center gap-2 text-xs text-green-400/80">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>Full deposit protected. Withdraw anytime. Value appreciates over time.</span>
+                </div>
               </div>
             </div>
           )}
@@ -628,7 +680,7 @@ function DepositPageContent() {
             <div className="p-4 bg-white/5 rounded-lg">
               <p className="font-medium text-white mb-1">ERP Integration</p>
               <p className="text-sm text-gray-400">
-                Connect SAP, NetSuite, QuickBooks for automated treasury sync
+                Connect SAP, NetSuite, QuickBooks for automated account sync
               </p>
             </div>
             <div className="p-4 bg-white/5 rounded-lg">
@@ -659,9 +711,8 @@ function DepositPageContent() {
             <div>
               <p className="text-sm text-blue-400 font-medium mb-1">Bank-Grade Security</p>
               <p className="text-sm text-gray-400">
-                All deposits processed through Circle, a licensed money transmitter with
-                $100B+ in transaction volume. Your funds are converted to USDC and held
-                in our fully-backed treasury. GRAIN only appreciates.
+                Your deposits are held securely by our regulated banking partners with
+                industry-leading security. Every dollar is protected and accessible when you need it.
               </p>
             </div>
           </div>

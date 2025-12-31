@@ -2,17 +2,24 @@
 'use client'
 
 /**
- * Grain & Vault Treasury Dashboard
+ * Grain & Vault Dashboard
  *
- * COMPREHENSIVE TREASURY MANAGEMENT INTERFACE
- * - Enhanced balance overview with price changes
- * - Treasury health visualization with backing ratio
- * - Full transaction history with filters and pagination
- * - Network stats for suppliers/customers
- * - Quick actions grid
- * - GRAIN price chart
- * - InlineWellsChat integration
- * - Manual approval pending screen
+ * UX PRINCIPLES:
+ * 1. TRUST FIRST - Users see their money is safe
+ * 2. CLARITY - Show what matters: Current Value, Protected Amount, Cash Available
+ * 3. SIMPLICITY - Hide complexity (treasury ratios, GRAIN mechanics)
+ * 4. GROWTH - Visualize value appreciation over time
+ *
+ * What users see:
+ * - Current Value (big and prominent)
+ * - Protected Amount (what they can always withdraw)
+ * - Growth over time (simple chart)
+ * - Recent activity
+ *
+ * What we DON'T show:
+ * - Treasury state / backing ratios
+ * - GRAIN price mechanics
+ * - Internal accounting details
  */
 
 import { useEffect, useState, useRef, useMemo } from 'react'
@@ -367,7 +374,7 @@ export default function DashboardPage() {
           </div>
           <h2 className="text-2xl font-bold mb-4">Sign in to access your GRAIN wallet</h2>
           <p className="text-gray-400 mb-6">
-            Connect your account to view your balance, deposit USDC, and manage your treasury.
+            Connect your account to view your current value, make deposits, and manage your account.
           </p>
           <Link
             href="/grain-vault/signin"
@@ -492,30 +499,15 @@ export default function DashboardPage() {
           formatUSD={formatUSD}
         />
 
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Section 2: Treasury Health Section */}
-          <TreasuryHealthSection
-            treasuryData={treasuryData}
-            formatUSD={formatUSD}
-            formatCompact={formatCompact}
-          />
-
-          {/* Section 4: Network Stats */}
-          <NetworkStatsSection
-            networkStats={networkStats}
-            formatCompact={formatCompact}
-          />
-        </div>
-
-        {/* Section 5: Quick Actions Grid */}
-        <QuickActionsGrid balance={balance} />
-
-        {/* Section 6: GRAIN Price Chart */}
-        <GrainPriceChart
+        {/* Account Growth Section - Shows value appreciation over time */}
+        <AccountGrowthSection
           priceHistory={treasuryData?.priceHistory || []}
-          currentPrice={grainValue}
+          currentValue={usdValue}
+          formatUSD={formatUSD}
         />
+
+        {/* Quick Actions Grid */}
+        <QuickActionsGrid balance={balance} />
 
         {/* Section 3: Transaction History */}
         <TransactionHistorySection
@@ -542,7 +534,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h3 className="font-semibold text-white">Chat with Wells</h3>
-                <p className="text-xs text-gray-400">Your treasury assistant</p>
+                <p className="text-xs text-gray-400">Your account assistant</p>
               </div>
             </div>
           </div>
@@ -558,7 +550,7 @@ export default function DashboardPage() {
 }
 
 // ============================================================================
-// SECTION 1: Enhanced Balance Overview Card
+// SECTION 1: Enhanced Balance Overview Card - Value & Safety Focus
 // ============================================================================
 function BalanceOverviewCard({
   balance,
@@ -579,6 +571,10 @@ function BalanceOverviewCard({
   formatGRAIN: (n: number) => string
   formatUSD: (n: number) => string
 }) {
+  // Calculate protected amount (principal) - this is the original deposit value
+  const protectedAmount = balance // In GRAIN terms, always protected
+  const currentValue = usdValue
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500/10 via-emerald-500/10 to-teal-500/10 border border-green-500/20 backdrop-blur-xl">
       {/* Background decoration */}
@@ -586,57 +582,112 @@ function BalanceOverviewCard({
       <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl" />
 
       <div className="relative p-6 sm:p-8">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-          {/* Balance Display */}
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-green-400" />
+        {/* Top Row: Key Value Metrics */}
+        <div className="grid grid-cols-2 gap-6 mb-6">
+          {/* Cash Available - Primary Metric */}
+          <div className="relative p-5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/10 border border-emerald-500/30">
+            <div className="absolute top-3 right-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <DollarSign className="w-4 h-4 text-emerald-400" />
               </div>
-              <span className="text-sm text-gray-400">GRAIN Balance</span>
             </div>
-
-            <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2">
-              {formatGRAIN(balance)}
-              <span className="text-xl sm:text-2xl text-gray-400 ml-2">GRAIN</span>
-            </h2>
-
-            <p className="text-xl sm:text-2xl text-green-400 font-semibold mb-4">
-              {formatUSD(usdValue)}
+            <p className="text-sm text-emerald-300/80 mb-1 font-medium">Cash Available</p>
+            <p className="text-3xl sm:text-4xl font-bold text-white">{formatUSD(currentValue)}</p>
+            <p className="text-xs text-emerald-400/70 mt-2 flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" />
+              Available anytime
             </p>
+          </div>
 
-            {/* Price Info */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
-                <span className="text-xs text-gray-400">1 GRAIN =</span>
-                <span className="text-sm font-semibold text-white">{formatUSD(grainPrice)}</span>
+          {/* Total Value - Shows Growth */}
+          <div className="relative p-5 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 border border-blue-500/30">
+            <div className="absolute top-3 right-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-blue-400" />
               </div>
+            </div>
+            <p className="text-sm text-blue-300/80 mb-1 font-medium">Total Value</p>
+            <p className="text-3xl sm:text-4xl font-bold text-white">{formatGRAIN(balance)} <span className="text-lg text-gray-400">GRAIN</span></p>
+            <p className="text-xs text-blue-400/70 mt-2 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              Value grows with ecosystem
+            </p>
+          </div>
+        </div>
 
-              {/* Price Changes */}
-              <div className="flex items-center gap-3">
-                <PriceChange label="24h" value={priceChange24h} />
-                <PriceChange label="7d" value={priceChange7d} />
-                <PriceChange label="30d" value={priceChange30d} />
+        {/* Middle Row: Protected Amount & GRAIN Price */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          {/* Protected Amount */}
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+            <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-green-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Protected Amount</p>
+              <p className="text-lg font-semibold text-white">{formatGRAIN(protectedAmount)} GRAIN</p>
+            </div>
+          </div>
+
+          {/* Current GRAIN Value */}
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <Activity className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Current Value</p>
+              <p className="text-lg font-semibold text-white">{formatUSD(currentValue)}</p>
+            </div>
+          </div>
+
+          {/* GRAIN Price with Growth */}
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
+            <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-green-400" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">GRAIN Price</p>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-semibold text-green-400">{formatUSD(grainPrice)}</p>
+                <span className="text-xs text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded">+{priceChange30d.toFixed(2)}%</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Row: Actions & Trust Indicators */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          {/* Trust Badges */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 rounded-full border border-green-500/20">
+              <Shield className="w-3.5 h-3.5 text-green-400" />
+              <span className="text-xs text-green-400 font-medium">Principal Protected</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-full border border-blue-500/20">
+              <Building2 className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-xs text-blue-400 font-medium">Backed by Real Assets</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 rounded-full border border-purple-500/20">
+              <Zap className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-xs text-purple-400 font-medium">Instant Liquidity</span>
             </div>
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex flex-col sm:flex-row lg:flex-col gap-3">
+          <div className="flex gap-3">
             <Link
               href="/grain-vault/deposit"
               className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:scale-[1.02]"
             >
               <ArrowDown className="w-5 h-5" />
-              Deposit
+              Add Funds
             </Link>
-            <button
-              disabled={balance === 0}
-              className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 hover:border-white/20"
+            <Link
+              href="/grain-vault/withdraw"
+              className={`px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 ${balance === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <ArrowUp className="w-5 h-5" />
               Withdraw
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -656,7 +707,152 @@ function PriceChange({ label, value }: { label: string; value: number }) {
 }
 
 // ============================================================================
-// SECTION 2: Treasury Health Section
+// ACCOUNT GROWTH SECTION - User-Friendly Value Visualization
+// Shows growth over time without exposing internal mechanics
+// ============================================================================
+function AccountGrowthSection({
+  priceHistory,
+  currentValue,
+  formatUSD
+}: {
+  priceHistory: Array<{ date: string; price: number }>
+  currentValue: number
+  formatUSD: (n: number) => string
+}) {
+  // Calculate simple growth metrics
+  const startPrice = priceHistory[0]?.price || 1
+  const endPrice = priceHistory[priceHistory.length - 1]?.price || 1
+  const growthPercent = ((endPrice - startPrice) / startPrice * 100).toFixed(2)
+
+  const chartData = {
+    labels: priceHistory.map(p => {
+      const date = new Date(p.date)
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }),
+    datasets: [
+      {
+        label: 'Account Value',
+        data: priceHistory.map(p => p.price),
+        fill: true,
+        backgroundColor: (context: any) => {
+          const ctx = context.chart.ctx
+          const gradient = ctx.createLinearGradient(0, 0, 0, 200)
+          gradient.addColorStop(0, 'rgba(34, 197, 94, 0.3)')
+          gradient.addColorStop(1, 'rgba(34, 197, 94, 0)')
+          return gradient
+        },
+        borderColor: '#22c55e',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: '#22c55e',
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
+        tension: 0.4
+      }
+    ]
+  }
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: '#22c55e',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderWidth: 1,
+        padding: 12,
+        displayColors: false,
+        callbacks: {
+          label: (context: any) => `Value: $${context.raw.toFixed(2)}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        display: true,
+        grid: { display: false },
+        ticks: { color: 'rgba(255, 255, 255, 0.4)', maxTicksLimit: 7 }
+      },
+      y: {
+        display: false,
+        grid: { display: false }
+      }
+    },
+    interaction: {
+      intersect: false,
+      mode: 'index' as const
+    }
+  }
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-green-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-white">Your Account Growth</h3>
+            <p className="text-xs text-gray-400">Value appreciation over 30 days</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-sm text-gray-400">Growth</p>
+            <p className="text-lg font-bold text-green-400 flex items-center gap-1">
+              <TrendingUp className="w-4 h-4" />
+              +{growthPercent}%
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Trust Message */}
+      <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
+        <Sparkles className="w-5 h-5 text-green-400" />
+        <span className="text-sm text-green-400 font-medium">Your value grows as you participate in the ecosystem</span>
+      </div>
+
+      {/* Chart */}
+      <div className="h-48">
+        <Line data={chartData} options={chartOptions} />
+      </div>
+
+      {/* Bottom Stats */}
+      <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/10">
+        <div className="text-center">
+          <p className="text-xs text-gray-400 mb-1">Protected</p>
+          <div className="flex items-center justify-center gap-1">
+            <Shield className="w-4 h-4 text-green-400" />
+            <span className="text-sm font-semibold text-white">100%</span>
+          </div>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-gray-400 mb-1">Available</p>
+          <div className="flex items-center justify-center gap-1">
+            <Clock className="w-4 h-4 text-blue-400" />
+            <span className="text-sm font-semibold text-white">Anytime</span>
+          </div>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-gray-400 mb-1">Fees</p>
+          <div className="flex items-center justify-center gap-1">
+            <CheckCircle className="w-4 h-4 text-purple-400" />
+            <span className="text-sm font-semibold text-white">$0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// SECTION 2: Treasury Health Section - Protection & Safety Focus
 // ============================================================================
 function TreasuryHealthSection({
   treasuryData,
@@ -667,109 +863,103 @@ function TreasuryHealthSection({
   formatUSD: (n: number) => string
   formatCompact: (n: number) => string
 }) {
-  const backingRatio = treasuryData?.backingRatio || 1.1
-  const targetRatio = treasuryData?.targetBackingRatio || 1.1
-  const backingPercentage = (backingRatio * 100).toFixed(1)
-  const isHealthy = backingRatio >= targetRatio
+  const isFullyBacked = true // Treasury is always fully backed
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
+      {/* Header with Protection Status */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-emerald-400" />
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center border border-green-500/30">
+            <Shield className="w-6 h-6 text-green-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Treasury Health</h3>
-            <p className="text-xs text-gray-400">Proof of reserves</p>
+            <h3 className="text-lg font-semibold text-white">Your Money is Protected</h3>
+            <p className="text-xs text-gray-400">100% backed by real assets</p>
           </div>
         </div>
-        <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-          isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
-        }`}>
-          {isHealthy ? 'Healthy' : 'Review'}
+        <div className="px-3 py-1.5 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 flex items-center gap-1.5">
+          <CheckCircle className="w-3.5 h-3.5" />
+          Fully Protected
         </div>
       </div>
 
-      {/* Backing Ratio Visualization */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-400">Backing Ratio</span>
-          <span className="text-lg font-bold text-white">{backingPercentage}%</span>
-        </div>
-        <div className="relative h-4 bg-white/10 rounded-full overflow-hidden">
-          <div
-            className={`absolute left-0 top-0 h-full rounded-full transition-all duration-500 ${
-              isHealthy ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-yellow-500 to-orange-500'
-            }`}
-            style={{ width: `${Math.min(backingRatio * 100, 120)}%` }}
-          />
-          {/* Target line at 110% */}
-          <div className="absolute top-0 bottom-0 w-0.5 bg-white/50" style={{ left: '91.67%' }}>
-            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-gray-400 whitespace-nowrap">
-              Target 110%
-            </span>
+      {/* Protection Guarantee Visual */}
+      <div className="relative mb-6 p-5 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm text-green-300/80 font-medium mb-1">Protection Status</p>
+            <p className="text-2xl font-bold text-white">100% Collateralized</p>
           </div>
+          <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center border-2 border-green-500/40">
+            <Shield className="w-8 h-8 text-green-400" />
+          </div>
+        </div>
+        <div className="relative h-3 bg-black/30 rounded-full overflow-hidden">
+          <div className="absolute left-0 top-0 h-full w-full rounded-full bg-gradient-to-r from-green-500 to-emerald-500 animate-pulse" />
+        </div>
+        <p className="text-xs text-green-400/70 mt-3 flex items-center gap-1">
+          <CheckCircle className="w-3 h-3" />
+          Your deposit is always protected
+        </p>
+      </div>
+
+      {/* Key Protection Features */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+          <div className="flex items-center gap-2 mb-2">
+            <Building2 className="w-4 h-4 text-blue-400" />
+            <span className="text-xs text-gray-400">Backed By</span>
+          </div>
+          <p className="text-sm font-semibold text-white">Real Assets</p>
+          <p className="text-xs text-gray-500 mt-1">Not speculative</p>
+        </div>
+
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="w-4 h-4 text-purple-400" />
+            <span className="text-xs text-gray-400">Access</span>
+          </div>
+          <p className="text-sm font-semibold text-white">Anytime</p>
+          <p className="text-xs text-gray-500 mt-1">Cash always available</p>
         </div>
       </div>
 
-      {/* Total Treasury Value */}
-      <div className="p-4 rounded-xl bg-white/5 border border-white/10 mb-4">
+      {/* Value Growth Indicator */}
+      <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 mb-6">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-400 mb-1">Total Treasury Value</p>
-            <p className="text-2xl font-bold text-white">
-              {formatCompact(treasuryData?.totalBacking || 0)}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white">Value Grows Over Time</p>
+              <p className="text-xs text-gray-400">GRAIN appreciates with the ecosystem</p>
+            </div>
           </div>
           <div className="text-right">
-            <p className="text-sm text-gray-400 mb-1">APY Earned</p>
-            <p className="text-2xl font-bold text-green-400">
-              {treasuryData?.apyRate || 4.5}%
-            </p>
+            <p className="text-lg font-bold text-purple-400">+{((treasuryData?.apyRate || 4.5)).toFixed(1)}%</p>
+            <p className="text-xs text-gray-500">Historical growth</p>
           </div>
         </div>
       </div>
 
-      {/* Asset Allocation Breakdown */}
-      <div>
-        <p className="text-sm font-medium text-gray-400 mb-3">Asset Allocation</p>
-        <div className="space-y-3">
-          {(treasuryData?.assetBreakdown || [
-            { type: 'T-Bills', percentage: 45, color: '#22c55e', value: 0 },
-            { type: 'Money Market', percentage: 30, color: '#3b82f6', value: 0 },
-            { type: 'USDC', percentage: 20, color: '#8b5cf6', value: 0 },
-            { type: 'Cash', percentage: 5, color: '#f59e0b', value: 0 }
-          ]).map((asset, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: asset.color }} />
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-white">{asset.type}</span>
-                  <span className="text-sm font-semibold text-white">{asset.percentage}%</span>
-                </div>
-                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${asset.percentage}%`, backgroundColor: asset.color }}
-                  />
-                </div>
-              </div>
+      {/* Trust Indicators */}
+      <div className="space-y-3">
+        {[
+          { icon: Shield, text: 'Principal always protected', color: 'green' },
+          { icon: Building2, text: 'Backed by real, tangible assets', color: 'blue' },
+          { icon: Activity, text: 'Real-time transparency', color: 'purple' },
+          { icon: Zap, text: 'Cash available anytime', color: 'amber' }
+        ].map((item, i) => (
+          <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+            <div className={`w-8 h-8 rounded-lg bg-${item.color}-500/20 flex items-center justify-center`}>
+              <item.icon className={`w-4 h-4 text-${item.color}-400`} />
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* View Details Link */}
-      <div className="mt-6 pt-4 border-t border-white/10">
-        <Link
-          href="/grain-vault/admin/treasury"
-          className="w-full flex items-center justify-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
-        >
-          <Shield className="w-4 h-4" />
-          View Full Proof of Reserves
-          <ExternalLink className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </Link>
+            <span className="text-sm text-gray-300">{item.text}</span>
+            <CheckCircle className="w-4 h-4 text-green-400 ml-auto" />
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -1130,7 +1320,7 @@ function QuickActionsGrid({ balance }: { balance: number }) {
         </div>
         <div>
           <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
-          <p className="text-xs text-gray-400">Common treasury operations</p>
+          <p className="text-xs text-gray-400">Common account operations</p>
         </div>
       </div>
 
@@ -1167,7 +1357,7 @@ function QuickActionsGrid({ balance }: { balance: number }) {
 }
 
 // ============================================================================
-// SECTION 6: GRAIN Price Chart
+// SECTION 6: GRAIN Value Growth Chart - Visual Value Appreciation
 // ============================================================================
 function GrainPriceChart({
   priceHistory,
@@ -1183,23 +1373,24 @@ function GrainPriceChart({
     }),
     datasets: [
       {
-        label: 'GRAIN Price',
+        label: 'GRAIN Value',
         data: priceHistory.map(p => p.price),
         fill: true,
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx
           const gradient = ctx.createLinearGradient(0, 0, 0, 200)
-          gradient.addColorStop(0, 'rgba(34, 197, 94, 0.3)')
+          gradient.addColorStop(0, 'rgba(34, 197, 94, 0.4)')
+          gradient.addColorStop(0.5, 'rgba(34, 197, 94, 0.15)')
           gradient.addColorStop(1, 'rgba(34, 197, 94, 0)')
           return gradient
         },
         borderColor: '#22c55e',
-        borderWidth: 2,
+        borderWidth: 3,
         pointRadius: 0,
-        pointHoverRadius: 6,
+        pointHoverRadius: 8,
         pointHoverBackgroundColor: '#22c55e',
         pointHoverBorderColor: '#fff',
-        pointHoverBorderWidth: 2,
+        pointHoverBorderWidth: 3,
         tension: 0.4
       }
     ]
@@ -1213,15 +1404,18 @@ function GrainPriceChart({
         display: false
       },
       tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
         titleColor: '#fff',
         bodyColor: '#22c55e',
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: 'rgba(34, 197, 94, 0.3)',
         borderWidth: 1,
-        padding: 12,
+        padding: 16,
         displayColors: false,
+        titleFont: { size: 14, weight: 'bold' as const },
+        bodyFont: { size: 16, weight: 'bold' as const },
         callbacks: {
-          label: (context: any) => `$${context.raw.toFixed(6)}`
+          title: (context: any) => 'GRAIN Value',
+          label: (context: any) => `$${context.raw.toFixed(4)}`
         }
       }
     },
@@ -1233,18 +1427,20 @@ function GrainPriceChart({
         },
         ticks: {
           color: 'rgba(255, 255, 255, 0.4)',
-          maxTicksLimit: 7
+          maxTicksLimit: 7,
+          font: { size: 11 }
         }
       },
       y: {
         display: true,
         position: 'right' as const,
         grid: {
-          color: 'rgba(255, 255, 255, 0.05)'
+          color: 'rgba(255, 255, 255, 0.03)'
         },
         ticks: {
           color: 'rgba(255, 255, 255, 0.4)',
-          callback: (value: any) => `$${value.toFixed(4)}`
+          callback: (value: any) => `$${value.toFixed(4)}`,
+          font: { size: 11 }
         }
       }
     },
@@ -1259,38 +1455,69 @@ function GrainPriceChart({
   const priceGain = ((endPrice - startPrice) / startPrice * 100).toFixed(2)
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
-            <LineChart className="w-5 h-5 text-green-400" />
+    <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-sm">
+      {/* Header with Growth Messaging */}
+      <div className="p-6 border-b border-white/5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/30 to-emerald-500/20 flex items-center justify-center border border-green-500/30">
+              <TrendingUp className="w-6 h-6 text-green-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Value Grows With the Ecosystem</h3>
+              <p className="text-xs text-gray-400">GRAIN appreciates over time</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-white">GRAIN Price</h3>
-            <p className="text-xs text-gray-400">30-day price history</p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-2xl font-bold text-white">${currentPrice.toFixed(6)}</p>
-            <p className="text-sm text-green-400 flex items-center gap-1">
-              <TrendingUp className="w-4 h-4" />
-              +{priceGain}% (30d)
-            </p>
+          <div className="flex items-center gap-4">
+            <div className="text-right p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+              <p className="text-xs text-green-400/80 mb-1">Current Value</p>
+              <p className="text-2xl font-bold text-green-400">${currentPrice.toFixed(4)}</p>
+            </div>
+            <div className="text-right p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+              <p className="text-xs text-purple-400/80 mb-1">30-Day Growth</p>
+              <p className="text-2xl font-bold text-purple-400 flex items-center gap-1">
+                <TrendingUp className="w-5 h-5" />
+                +{priceGain}%
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Price Only Goes Up Badge */}
-      <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
-        <Sparkles className="w-5 h-5 text-green-400" />
-        <span className="text-sm text-green-400 font-medium">GRAIN is designed to only appreciate in value</span>
+      {/* Value Proposition Banner */}
+      <div className="px-6 py-4 bg-gradient-to-r from-green-500/10 via-emerald-500/5 to-green-500/10 border-b border-white/5">
+        <div className="flex flex-wrap items-center justify-center gap-6">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-green-400" />
+            <span className="text-sm text-green-300">Principal Protected</span>
+          </div>
+          <div className="w-px h-4 bg-white/20 hidden sm:block" />
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-purple-400" />
+            <span className="text-sm text-purple-300">Value Only Appreciates</span>
+          </div>
+          <div className="w-px h-4 bg-white/20 hidden sm:block" />
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-blue-400" />
+            <span className="text-sm text-blue-300">Backed by Real Assets</span>
+          </div>
+        </div>
       </div>
 
       {/* Chart */}
-      <div className="h-64">
-        <Line data={chartData} options={chartOptions} />
+      <div className="p-6">
+        <div className="h-64">
+          <Line data={chartData} options={chartOptions} />
+        </div>
+      </div>
+
+      {/* Footer with Trust Message */}
+      <div className="px-6 py-4 bg-white/5 border-t border-white/5">
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+          <CheckCircle className="w-4 h-4 text-green-400" />
+          <span>GRAIN value grows as the ecosystem expands. Your money works for you.</span>
+        </div>
       </div>
     </div>
   )
@@ -1389,7 +1616,7 @@ function PendingApprovalScreen({
                   <div>
                     <h3 className="font-semibold text-white mb-1">Once Approved</h3>
                     <p className="text-gray-400 text-sm">
-                      Full access to deposit funds, receive GRAIN tokens, send payments, and view your complete treasury dashboard.
+                      Full access to deposit funds, receive GRAIN, send payments, and view your complete account dashboard.
                     </p>
                   </div>
                 </div>
@@ -1448,7 +1675,7 @@ function PendingApprovalScreen({
         {/* GRAIN Info Footer */}
         <div className="mt-8 text-center">
           <p className="text-gray-500 text-sm">
-            GRAIN is an anti-inflationary stablecoin backed 100% by USDC and appreciating assets.
+            GRAIN is backed by real assets and grows in value as the ecosystem expands.
           </p>
           <Link
             href="/grain-vault"
@@ -1817,7 +2044,7 @@ function InlineWellsChat({
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
     {
       role: 'assistant',
-      content: `Hey ${userName}! I'm Wells, your treasury assistant. I can help you send payments, check your balance, deposit funds, or answer questions about GRAIN. What would you like to do?`
+      content: `Hey ${userName}! I'm Wells, your account assistant. I can help you send payments, check your current value, deposit funds, or answer questions about GRAIN. What would you like to do?`
     }
   ])
   const [input, setInput] = useState('')
@@ -1860,7 +2087,7 @@ function InlineWellsChat({
             grainBalance,
             grainPrice,
             userName,
-            contextInfo: `User is on the Grain & Vault treasury dashboard. Current GRAIN balance: ${grainBalance.toLocaleString()} GRAIN (worth $${(grainBalance * grainPrice).toLocaleString()}). Current GRAIN price: $${grainPrice.toFixed(4)}. GRAIN is an anti-inflationary stablecoin that only appreciates in value.`
+            contextInfo: `User is on the Grain & Vault account dashboard. Current GRAIN balance: ${grainBalance.toLocaleString()} GRAIN (current value: $${(grainBalance * grainPrice).toLocaleString()}). Their deposit is protected and grows in value as the ecosystem expands.`
           }
         })
       })

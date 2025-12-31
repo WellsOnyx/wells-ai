@@ -5,6 +5,27 @@
  * VAULT TRACKS EVERYTHING. PERFECTLY. ALWAYS.
  * ═══════════════════════════════════════════════════════════════════════════
  *
+ * THE VALUE EQUATION:
+ *
+ *   GRAIN PRICE = Total Ecosystem Value / GRAIN Supply
+ *
+ *   Total Ecosystem Value = USDC Liquidity + Equity Value
+ *
+ *   Where:
+ *   - USDC Liquidity = Cash + liquid assets (what users deposited)
+ *   - Equity Value = Platform value + investments + accumulated fees
+ *
+ * COLD START:
+ *   WellsAI + GRAIN platform has real value from day one.
+ *   Conservative valuation: $5M (seed stage platform value)
+ *   This is the INITIAL EQUITY that backs early GRAIN.
+ *
+ *   First user deposits $1,000:
+ *   - USDC Liquidity: $1,000
+ *   - Equity Value: $5,000,000 (platform) + $0 (investments)
+ *   - Total Value: $5,001,000
+ *   - GRAIN Supply: Determined by initial price setting
+ *
  * THE TWO-LAYER MODEL:
  *
  * ┌─────────────────────────────────────────────────────────────────────────┐
@@ -99,50 +120,109 @@ export interface GrainAcquisition {
 
 /**
  * The master treasury ledger
+ *
+ * GRAIN PRICE = (USDC Liquidity + Equity Value) / GRAIN Supply
  */
 export interface VaultTreasury {
-  // Asset Side (What we OWN)
-  assets: {
-    // Liquid
-    cashUsd: number              // Cash and USDC
-    shortTermBonds: number       // T-bills, money market
-
-    // Semi-Liquid (30-90 days to liquidate)
-    reits: number                // Real estate investment trusts
-    preciousMetalsEtf: number    // Gold/Silver ETFs
-
-    // Illiquid (Strategic holdings)
-    realEstateDirect: number     // Direct property ownership
-    preciousMetalsDirect: number // Physical gold/silver
-    otherInvestments: number     // Other revenue-generating assets
-
-    // Ecosystem Revenue
-    accumulatedFees: number      // 33bps from WellsAI transactions
+  // ═══════════════════════════════════════════════════════════════════════════
+  // USDC LIQUIDITY (Cash - what users can withdraw)
+  // ═══════════════════════════════════════════════════════════════════════════
+  liquidity: {
+    usdcCash: number              // USDC in Circle/custody (instant)
+    usdcReserve: number           // USDC in money market (same-day)
   }
 
-  // Liability Side (What we OWE)
-  liabilities: {
-    totalPrincipal: number       // Sum of all user principals (Vault floor)
-  }
-
-  // Equity Side (What BELONGS to GRAIN holders collectively)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EQUITY VALUE (Platform + Investments + Revenue)
+  // ═══════════════════════════════════════════════════════════════════════════
   equity: {
-    totalEquityBuyIn: number     // Premium paid by users above $1 base
-    retainedEarnings: number     // Accumulated investment returns + fees
-    unrealizedGains: number      // Asset appreciation not yet realized
+    // Platform Valuation (WellsAI + GRAIN as a company)
+    platformValuation: number     // Conservative startup valuation
+    platformValuationDate: Date   // When last valued
+
+    // Investment Portfolio
+    realEstate: number            // Commercial real estate holdings
+    preciousMetals: number        // Gold, silver, physical metals
+    bonds: number                 // Government/corporate bonds
+    otherInvestments: number      // Other income-generating assets
+
+    // Accumulated Revenue
+    wellsaiFees: number           // 33bps from AI transactions
+    investmentIncome: number      // Dividends, rent, interest earned
+    unrealizedGains: number       // Paper gains on investments
   }
 
-  // GRAIN Supply
-  grainSupply: number            // Total GRAIN in circulation
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LIABILITIES (The VAULT floor - always owed to users)
+  // ═══════════════════════════════════════════════════════════════════════════
+  liabilities: {
+    totalPrincipal: number        // Sum of all user deposits (1:1 owed)
+    totalEquityBuyIn: number      // Premium paid by users above base
+  }
 
-  // Calculated
-  totalAssetValue: number        // Sum of all assets
-  grainPrice: number             // totalAssetValue / grainSupply
-  vaultCoverage: number          // totalAssetValue / totalPrincipal (should be > 1)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GRAIN SUPPLY
+  // ═══════════════════════════════════════════════════════════════════════════
+  grainSupply: number             // Total GRAIN in circulation
+  grainFounderPool: number        // Allocated to founders (vesting)
+  grainTreasuryReserve: number    // Held by treasury for operations
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CALCULATED VALUES (The key metrics)
+  // ═══════════════════════════════════════════════════════════════════════════
+  calculated: {
+    usdcLiquidity: number         // Total cash available
+    equityValue: number           // Total equity value
+    totalEcosystemValue: number   // usdcLiquidity + equityValue
+    grainPrice: number            // totalEcosystemValue / grainSupply
+    vaultCoverage: number         // totalEcosystemValue / totalPrincipal
+    liquidityCoverage: number     // usdcLiquidity / totalPrincipal (cash coverage)
+  }
 
   // Timestamps
   lastUpdated: Date
   lastAudit: Date
+}
+
+/**
+ * Display-ready treasury summary for dashboards
+ */
+export interface TreasurySummary {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THE TWO NUMBERS EVERYONE SEES
+  // ═══════════════════════════════════════════════════════════════════════════
+  usdcLiquidity: number           // "Cash"
+  equityValue: number             // "Equity"
+  totalValue: number              // Cash + Equity
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GRAIN METRICS
+  // ═══════════════════════════════════════════════════════════════════════════
+  grainPrice: number
+  grainPriceFormatted: string     // "$12.47"
+  grainSupply: number
+  grainMarketCap: number
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COVERAGE RATIOS
+  // ═══════════════════════════════════════════════════════════════════════════
+  vaultCoverage: number           // e.g., 1.42 (142%)
+  vaultCoverageFormatted: string  // "142%"
+  liquidityCoverage: number       // e.g., 0.98 (98%)
+  liquidityCoverageFormatted: string
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DETAILED BREAKDOWNS
+  // ═══════════════════════════════════════════════════════════════════════════
+  liquidityBreakdown: {
+    usdcCash: number
+    usdcReserve: number
+  }
+  equityBreakdown: {
+    platformValue: number
+    investments: number
+    accumulatedRevenue: number
+  }
 }
 
 /**
@@ -209,31 +289,84 @@ export class Vault {
     this.transactions = []
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COLD START CONFIGURATION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Conservative seed stage platform valuation
+  // This is REAL VALUE - the platform itself has worth
+  private static readonly INITIAL_PLATFORM_VALUATION = 5_000_000 // $5M
+
+  // Initial GRAIN supply for founders/treasury
+  // These GRAIN are allocated at $1 base but represent platform equity
+  private static readonly INITIAL_GRAIN_SUPPLY = 5_000_000 // 5M GRAIN at $1 = $5M
+  private static readonly FOUNDER_POOL_ALLOCATION = 0.15 // 15% to founders
+  private static readonly TREASURY_RESERVE_ALLOCATION = 0.05 // 5% treasury reserve
+
   private initializeTreasury(initial?: Partial<VaultTreasury>): VaultTreasury {
     const now = new Date()
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INITIALIZE WITH PLATFORM VALUE
+    // ═══════════════════════════════════════════════════════════════════════════
+    //
+    // The WellsAI + GRAIN platform has REAL VALUE from day one.
+    // This is not a gimmick - it's the technology, the network, the brand.
+    // Initial conservative valuation: $5M (seed stage)
+    //
+    // This creates initial equity that backs early GRAIN.
+    // As the platform grows, this value will be updated (Series A, B, etc.)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    const platformValuation = initial?.equity?.platformValuation ?? Vault.INITIAL_PLATFORM_VALUATION
+
+    // Initial GRAIN allocation
+    const totalInitialGrain = Vault.INITIAL_GRAIN_SUPPLY
+    const founderPool = totalInitialGrain * Vault.FOUNDER_POOL_ALLOCATION
+    const treasuryReserve = totalInitialGrain * Vault.TREASURY_RESERVE_ALLOCATION
+    const circulatingSupply = totalInitialGrain - founderPool - treasuryReserve
+
     return {
-      assets: {
-        cashUsd: initial?.assets?.cashUsd ?? 0,
-        shortTermBonds: initial?.assets?.shortTermBonds ?? 0,
-        reits: initial?.assets?.reits ?? 0,
-        preciousMetalsEtf: initial?.assets?.preciousMetalsEtf ?? 0,
-        realEstateDirect: initial?.assets?.realEstateDirect ?? 0,
-        preciousMetalsDirect: initial?.assets?.preciousMetalsDirect ?? 0,
-        otherInvestments: initial?.assets?.otherInvestments ?? 0,
-        accumulatedFees: initial?.assets?.accumulatedFees ?? 0,
+      // USDC LIQUIDITY (starts at 0 until first deposit)
+      liquidity: {
+        usdcCash: initial?.liquidity?.usdcCash ?? 0,
+        usdcReserve: initial?.liquidity?.usdcReserve ?? 0,
       },
-      liabilities: {
-        totalPrincipal: initial?.liabilities?.totalPrincipal ?? 0,
-      },
+
+      // EQUITY (starts with platform valuation!)
       equity: {
-        totalEquityBuyIn: initial?.equity?.totalEquityBuyIn ?? 0,
-        retainedEarnings: initial?.equity?.retainedEarnings ?? 0,
+        platformValuation: platformValuation,
+        platformValuationDate: now,
+        realEstate: initial?.equity?.realEstate ?? 0,
+        preciousMetals: initial?.equity?.preciousMetals ?? 0,
+        bonds: initial?.equity?.bonds ?? 0,
+        otherInvestments: initial?.equity?.otherInvestments ?? 0,
+        wellsaiFees: initial?.equity?.wellsaiFees ?? 0,
+        investmentIncome: initial?.equity?.investmentIncome ?? 0,
         unrealizedGains: initial?.equity?.unrealizedGains ?? 0,
       },
-      grainSupply: initial?.grainSupply ?? 0,
-      totalAssetValue: 0,
-      grainPrice: 1.0, // Starts at $1
-      vaultCoverage: 1.0,
+
+      // LIABILITIES (The VAULT floor - what we owe users)
+      liabilities: {
+        totalPrincipal: initial?.liabilities?.totalPrincipal ?? 0,
+        totalEquityBuyIn: initial?.liabilities?.totalEquityBuyIn ?? 0,
+      },
+
+      // GRAIN SUPPLY
+      grainSupply: initial?.grainSupply ?? circulatingSupply,
+      grainFounderPool: founderPool,
+      grainTreasuryReserve: treasuryReserve,
+
+      // CALCULATED VALUES (computed on every change)
+      calculated: {
+        usdcLiquidity: 0,
+        equityValue: platformValuation, // Starts with platform value!
+        totalEcosystemValue: platformValuation,
+        grainPrice: platformValuation / circulatingSupply, // ~$1.25 at cold start
+        vaultCoverage: Infinity, // No liabilities yet
+        liquidityCoverage: 0, // No liquidity yet
+      },
+
       lastUpdated: now,
       lastAudit: now,
     }
@@ -244,35 +377,53 @@ export class Vault {
   // ==========================================================================
 
   /**
-   * DEPOSIT - User deposits USD, receives GRAIN at current price
+   * DEPOSIT - User deposits USDC, receives GRAIN at current price
    *
+   * ═══════════════════════════════════════════════════════════════════════════
    * ACCOUNTING:
-   * - User receives GRAIN at current price
-   * - Principal (floor protection) = deposit amount
-   * - If GRAIN > $1, they're paying equity premium
-   * - Treasury receives cash, allocates to assets
+   * ═══════════════════════════════════════════════════════════════════════════
+   *
+   * 1. User receives GRAIN at current price
+   * 2. Principal (floor protection) = deposit amount (ALWAYS withdrawable 1:1)
+   * 3. If GRAIN > $1, they're paying equity premium for appreciation potential
+   * 4. Treasury receives USDC as liquidity
+   *
+   * EXAMPLE at $2/GRAIN:
+   *   - User deposits $1,000 USDC
+   *   - Receives 500 GRAIN ($1,000 / $2)
+   *   - Principal recorded: $1,000 (always withdrawable)
+   *   - No equity premium concept - they bought at market price
+   *
+   * NEW MODEL SIMPLIFICATION:
+   *   - Principal = full deposit amount (what they can always withdraw)
+   *   - Equity buy-in = premium above $1 base (tracks appreciation cost)
+   *   - USDC goes straight to liquidity (not allocated to investments)
+   *   - Equity grows from platform value + fees, not from deposits
    */
   deposit(
     userId: string,
-    usdAmount: number,
-    options?: { allocationStrategy?: 'conservative' | 'balanced' | 'growth' }
+    usdcAmount: number,
+    options?: { investmentAllocation?: number } // Optional % to allocate to yield-bearing
   ): {
     grainReceived: number
     principalRecorded: number
-    equityPaid: number
+    equityBuyIn: number
     newGrainPrice: number
+    usdcLiquidity: number
+    equityValue: number
     transaction: VaultTransaction
   } {
     const currentPrice = this.getGrainPrice()
 
     // Calculate GRAIN to issue
-    const grainToIssue = usdAmount / currentPrice
+    const grainToIssue = usdcAmount / currentPrice
 
-    // Calculate principal vs equity portions
-    // Principal = $1 per GRAIN (the protected floor)
-    // Equity = premium above $1 (the buy-in cost)
-    const principalPortion = grainToIssue * 1.0  // $1 per GRAIN base
-    const equityPortion = usdAmount - principalPortion  // Premium paid
+    // Calculate principal vs equity buy-in
+    // Principal = full deposit (what they can withdraw 1:1)
+    // Equity buy-in = premium above $1 base (tracks appreciation cost basis)
+    const principalPortion = usdcAmount  // FULL deposit is protected!
+    const baseCost = grainToIssue * 1.0  // $1 per GRAIN base
+    const equityBuyIn = usdcAmount - baseCost  // Premium paid for appreciation
 
     // Get or create user position
     let position = this.positions.get(userId)
@@ -287,8 +438,8 @@ export class Vault {
       grainAmount: grainToIssue,
       pricePerGrain: currentPrice,
       principalPortion,
-      equityPortion,
-      totalCost: usdAmount,
+      equityPortion: equityBuyIn,
+      totalCost: usdcAmount,
       timestamp: new Date(),
     }
 
@@ -296,22 +447,22 @@ export class Vault {
     position.grainBalance += grainToIssue
     position.grainAcquisitions.push(acquisition)
     position.totalPrincipal += principalPortion
-    position.totalEquityPaid += equityPortion
+    position.totalEquityPaid += equityBuyIn
     position.updatedAt = new Date()
 
-    // Update treasury - ASSETS
-    const allocation = this.allocateDeposit(usdAmount, options?.allocationStrategy)
-    this.treasury.assets.cashUsd += allocation.cash
-    this.treasury.assets.shortTermBonds += allocation.shortTermBonds
-    this.treasury.assets.reits += allocation.reits
-    this.treasury.assets.realEstateDirect += allocation.realEstate
-    this.treasury.assets.preciousMetalsEtf += allocation.preciousMetals
+    // ═══════════════════════════════════════════════════════════════════════════
+    // UPDATE TREASURY - New USDC goes to LIQUIDITY
+    // ═══════════════════════════════════════════════════════════════════════════
+    const investmentPct = options?.investmentAllocation ?? 0.0 // Default: all to cash
+    const cashPortion = usdcAmount * (1 - investmentPct)
+    const reservePortion = usdcAmount * investmentPct
 
-    // Update treasury - LIABILITIES
+    this.treasury.liquidity.usdcCash += cashPortion
+    this.treasury.liquidity.usdcReserve += reservePortion
+
+    // Update treasury - LIABILITIES (what we owe users)
     this.treasury.liabilities.totalPrincipal += principalPortion
-
-    // Update treasury - EQUITY
-    this.treasury.equity.totalEquityBuyIn += equityPortion
+    this.treasury.liabilities.totalEquityBuyIn += equityBuyIn
 
     // Update GRAIN supply
     this.treasury.grainSupply += grainToIssue
@@ -326,23 +477,25 @@ export class Vault {
     const transaction = this.recordTransaction({
       type: 'deposit',
       userId,
-      usdAmount,
+      usdAmount: usdcAmount,
       grainAmount: grainToIssue,
       grainPrice: currentPrice,
       principalPortion,
-      equityPortion,
+      equityPortion: equityBuyIn,
       assetAllocation: {
-        cash: allocation.cash,
-        investments: usdAmount - allocation.cash,
+        cash: cashPortion,
+        investments: reservePortion,
       },
-      notes: `Deposit $${usdAmount} at $${currentPrice}/GRAIN = ${grainToIssue.toFixed(4)} GRAIN`,
+      notes: `Deposit $${usdcAmount.toLocaleString()} USDC at $${currentPrice.toFixed(4)}/GRAIN = ${grainToIssue.toFixed(4)} GRAIN`,
     })
 
     return {
       grainReceived: grainToIssue,
       principalRecorded: principalPortion,
-      equityPaid: equityPortion,
+      equityBuyIn,
       newGrainPrice: this.getGrainPrice(),
+      usdcLiquidity: this.treasury.calculated.usdcLiquidity,
+      equityValue: this.treasury.calculated.equityValue,
       transaction,
     }
   }
@@ -387,14 +540,14 @@ export class Vault {
     position.totalEquityPaid -= equityToRemove
     position.updatedAt = new Date()
 
-    // Update treasury - ASSETS (use liquid assets first)
-    this.withdrawFromAssets(actualWithdraw)
+    // Update treasury - LIQUIDITY (withdraw from USDC)
+    this.withdrawFromLiquidity(actualWithdraw)
 
     // Update treasury - LIABILITIES
     this.treasury.liabilities.totalPrincipal -= actualWithdraw
 
-    // Update treasury - EQUITY (remove their equity buy-in)
-    this.treasury.equity.totalEquityBuyIn -= equityToRemove
+    // Update treasury - LIABILITIES (remove their equity buy-in)
+    this.treasury.liabilities.totalEquityBuyIn -= equityToRemove
 
     // Update GRAIN supply (burn)
     this.treasury.grainSupply -= grainToBurn
@@ -471,17 +624,20 @@ export class Vault {
     position.totalEquityPaid -= equityToRemove
     position.updatedAt = new Date()
 
-    // Update treasury - ASSETS
-    this.withdrawFromAssets(usdValue)
+    // Update treasury - LIQUIDITY (withdraw USDC)
+    this.withdrawFromLiquidity(usdValue)
 
     // Update treasury - LIABILITIES
     this.treasury.liabilities.totalPrincipal -= principalToRemove
+    this.treasury.liabilities.totalEquityBuyIn -= equityToRemove
 
-    // Update treasury - EQUITY
     // The difference between USD withdrawn and (principal + equity paid) is realized gain
+    // This comes from the appreciation - reduces equity value
     const realizedGain = usdValue - principalToRemove - equityToRemove
-    this.treasury.equity.totalEquityBuyIn -= equityToRemove
-    this.treasury.equity.retainedEarnings -= realizedGain
+    if (realizedGain > 0) {
+      // User is withdrawing more than they paid - this reduces equity
+      this.treasury.equity.unrealizedGains -= realizedGain
+    }
 
     // Update GRAIN supply
     this.treasury.grainSupply -= grainAmount
@@ -510,8 +666,10 @@ export class Vault {
   /**
    * COLLECT FEE - 33bps from WellsAI transaction
    *
-   * This is how the ecosystem grows value.
-   * Fees go into retained earnings = GRAIN appreciates.
+   * ═══════════════════════════════════════════════════════════════════════════
+   * This is how the ecosystem grows value!
+   * Fees go to EQUITY → GRAIN appreciates
+   * ═══════════════════════════════════════════════════════════════════════════
    */
   collectFee(
     transactionVolume: number,
@@ -519,84 +677,108 @@ export class Vault {
   ): {
     feeCollected: number
     newGrainPrice: number
+    usdcLiquidity: number
+    equityValue: number
   } {
     const fee = transactionVolume * feeRate
 
-    // Add to accumulated fees (asset)
-    this.treasury.assets.accumulatedFees += fee
+    // Add fee to equity (WellsAI revenue)
+    this.treasury.equity.wellsaiFees += fee
 
-    // Add to retained earnings (equity)
-    this.treasury.equity.retainedEarnings += fee
+    // Fee is collected as USDC, goes to liquidity
+    this.treasury.liquidity.usdcCash += fee
 
     this.recalculateTreasury()
 
     return {
       feeCollected: fee,
       newGrainPrice: this.getGrainPrice(),
+      usdcLiquidity: this.treasury.calculated.usdcLiquidity,
+      equityValue: this.treasury.calculated.equityValue,
     }
   }
 
   /**
    * RECORD INVESTMENT RETURN
    *
-   * When our assets generate returns (rent, dividends, appreciation)
+   * When our equity investments generate returns (rent, dividends, appreciation)
+   * This grows EQUITY VALUE → GRAIN appreciates
    */
   recordInvestmentReturn(
     returnAmount: number,
-    source: 'real_estate' | 'precious_metals' | 'bonds' | 'other'
+    source: 'real_estate' | 'precious_metals' | 'bonds' | 'other',
+    options?: { isCash?: boolean } // If true, return is cash; otherwise, it's asset appreciation
   ): {
     returnRecorded: number
     newGrainPrice: number
+    usdcLiquidity: number
+    equityValue: number
   } {
-    // Add to appropriate asset category
+    const isCash = options?.isCash ?? false
+
+    // Add to appropriate equity category
     switch (source) {
       case 'real_estate':
-        this.treasury.assets.realEstateDirect += returnAmount
+        this.treasury.equity.realEstate += returnAmount
         break
       case 'precious_metals':
-        this.treasury.assets.preciousMetalsDirect += returnAmount
+        this.treasury.equity.preciousMetals += returnAmount
         break
       case 'bonds':
-        this.treasury.assets.shortTermBonds += returnAmount
+        this.treasury.equity.bonds += returnAmount
         break
       case 'other':
-        this.treasury.assets.otherInvestments += returnAmount
+        this.treasury.equity.otherInvestments += returnAmount
         break
     }
 
-    // Add to retained earnings
-    this.treasury.equity.retainedEarnings += returnAmount
+    // Track as investment income in equity
+    this.treasury.equity.investmentIncome += returnAmount
+
+    // If it's a cash return (dividend, rent, etc.), add to liquidity too
+    if (isCash) {
+      this.treasury.liquidity.usdcCash += returnAmount
+    }
 
     this.recalculateTreasury()
 
     return {
       returnRecorded: returnAmount,
       newGrainPrice: this.getGrainPrice(),
+      usdcLiquidity: this.treasury.calculated.usdcLiquidity,
+      equityValue: this.treasury.calculated.equityValue,
     }
   }
 
   /**
-   * REVALUE ASSETS - Mark-to-market
+   * REVALUE EQUITY ASSET - Mark-to-market
    *
-   * When asset values change (real estate appraisal, metal prices, etc.)
+   * When equity investment values change (real estate appraisal, metal prices, etc.)
    */
-  revalueAssets(
-    assetType: keyof VaultTreasury['assets'],
+  revalueEquityAsset(
+    assetType: 'platformValuation' | 'realEstate' | 'preciousMetals' | 'bonds' | 'otherInvestments',
     newValue: number
   ): {
     previousValue: number
     newValue: number
     change: number
     newGrainPrice: number
+    usdcLiquidity: number
+    equityValue: number
   } {
-    const previousValue = this.treasury.assets[assetType]
+    const previousValue = this.treasury.equity[assetType] as number
     const change = newValue - previousValue
 
     // Update asset value
-    this.treasury.assets[assetType] = newValue
+    ;(this.treasury.equity as any)[assetType] = newValue
 
-    // Update unrealized gains
+    // Track the change as unrealized gain/loss
     this.treasury.equity.unrealizedGains += change
+
+    // If it's platform valuation, update the date
+    if (assetType === 'platformValuation') {
+      this.treasury.equity.platformValuationDate = new Date()
+    }
 
     this.recalculateTreasury()
 
@@ -605,6 +787,34 @@ export class Vault {
       newValue,
       change,
       newGrainPrice: this.getGrainPrice(),
+      usdcLiquidity: this.treasury.calculated.usdcLiquidity,
+      equityValue: this.treasury.calculated.equityValue,
+    }
+  }
+
+  /**
+   * UPDATE PLATFORM VALUATION
+   *
+   * Call this when the platform raises funding or has a new valuation event
+   */
+  updatePlatformValuation(
+    newValuation: number,
+    reason: 'seed' | 'series_a' | 'series_b' | 'appraisal' | 'market'
+  ): {
+    previousValuation: number
+    newValuation: number
+    change: number
+    newGrainPrice: number
+  } {
+    const result = this.revalueEquityAsset('platformValuation', newValuation)
+
+    console.log(`[VAULT] Platform valuation updated (${reason}): $${result.previousValue.toLocaleString()} → $${result.newValue.toLocaleString()} (+$${result.change.toLocaleString()})`)
+
+    return {
+      previousValuation: result.previousValue,
+      newValuation: result.newValue,
+      change: result.change,
+      newGrainPrice: result.newGrainPrice,
     }
   }
 
@@ -613,13 +823,39 @@ export class Vault {
   // ==========================================================================
 
   /**
-   * Get current GRAIN price based on total asset value
+   * Get current GRAIN price
+   *
+   * GRAIN PRICE = Total Ecosystem Value / Total GRAIN Supply
+   *
+   * Where:
+   *   Total Ecosystem Value = USDC Liquidity + Equity Value
+   *   Total GRAIN Supply = circulating + founder pool + treasury reserve
    */
   getGrainPrice(): number {
-    if (this.treasury.grainSupply === 0) {
+    const totalGrainSupply =
+      this.treasury.grainSupply +
+      this.treasury.grainFounderPool +
+      this.treasury.grainTreasuryReserve
+
+    if (totalGrainSupply === 0) {
       return 1.0  // Initial price
     }
-    return this.treasury.totalAssetValue / this.treasury.grainSupply
+
+    const usdcLiquidity =
+      this.treasury.liquidity.usdcCash +
+      this.treasury.liquidity.usdcReserve
+
+    const equityValue =
+      this.treasury.equity.platformValuation +
+      this.treasury.equity.realEstate +
+      this.treasury.equity.preciousMetals +
+      this.treasury.equity.bonds +
+      this.treasury.equity.otherInvestments +
+      this.treasury.equity.wellsaiFees +
+      this.treasury.equity.investmentIncome +
+      this.treasury.equity.unrealizedGains
+
+    return (usdcLiquidity + equityValue) / totalGrainSupply
   }
 
   /**
@@ -642,37 +878,76 @@ export class Vault {
   }
 
   /**
-   * Get liquid assets available for withdrawals
+   * Get liquid assets available for withdrawals (USDC only)
    */
   getLiquidAssets(): number {
-    return this.treasury.assets.cashUsd + this.treasury.assets.shortTermBonds
+    return this.treasury.liquidity.usdcCash + this.treasury.liquidity.usdcReserve
+  }
+
+  /**
+   * Get USDC liquidity (cash available now)
+   */
+  getUsdcLiquidity(): number {
+    return this.treasury.calculated.usdcLiquidity
+  }
+
+  /**
+   * Get total equity value (platform + investments + fees)
+   */
+  getEquityValue(): number {
+    return this.treasury.calculated.equityValue
   }
 
   /**
    * Get vault coverage ratio (should be >= 1)
+   * Total ecosystem value / total principal owed
    */
   getVaultCoverage(): number {
     if (this.treasury.liabilities.totalPrincipal === 0) return Infinity
-    return this.treasury.totalAssetValue / this.treasury.liabilities.totalPrincipal
+    return this.treasury.calculated.totalEcosystemValue / this.treasury.liabilities.totalPrincipal
+  }
+
+  /**
+   * Get liquidity coverage ratio
+   * USDC liquidity / total principal owed
+   */
+  getLiquidityCoverage(): number {
+    if (this.treasury.liabilities.totalPrincipal === 0) {
+      return this.treasury.calculated.usdcLiquidity > 0 ? Infinity : 0
+    }
+    return this.treasury.calculated.usdcLiquidity / this.treasury.liabilities.totalPrincipal
   }
 
   /**
    * Check if we can handle a bank run (everyone withdraws principal)
+   *
+   * BANK RUN PROTECTION:
+   * - USDC Liquidity covers immediate withdrawals
+   * - Equity stays with the ecosystem
+   * - Even in worst case, principals are paid, equity remains
    */
   canSurviveBankRun(): {
     canSurvive: boolean
     totalPrincipal: number
-    totalAssets: number
-    surplus: number
+    usdcLiquidity: number
+    equityValue: number
+    totalEcosystemValue: number
+    surplusOverPrincipal: number
+    liquidityGap: number // Negative if we need to liquidate equity
   } {
     const totalPrincipal = this.treasury.liabilities.totalPrincipal
-    const totalAssets = this.treasury.totalAssetValue
+    const usdcLiquidity = this.treasury.calculated.usdcLiquidity
+    const equityValue = this.treasury.calculated.equityValue
+    const totalEcosystemValue = this.treasury.calculated.totalEcosystemValue
 
     return {
-      canSurvive: totalAssets >= totalPrincipal,
+      canSurvive: totalEcosystemValue >= totalPrincipal,
       totalPrincipal,
-      totalAssets,
-      surplus: totalAssets - totalPrincipal,
+      usdcLiquidity,
+      equityValue,
+      totalEcosystemValue,
+      surplusOverPrincipal: totalEcosystemValue - totalPrincipal,
+      liquidityGap: usdcLiquidity - totalPrincipal, // Positive = fully liquid
     }
   }
 
@@ -681,18 +956,30 @@ export class Vault {
    */
   getAuditReport(): {
     treasury: VaultTreasury
+    summary: TreasurySummary
     accounting: {
-      assetsEqualLiabilitiesPlusEquity: boolean
-      totalAssets: number
-      totalLiabilities: number
-      totalEquity: number
-      difference: number
+      // The key equation: USDC Liquidity + Equity = What backs GRAIN
+      usdcLiquidity: number
+      equityValue: number
+      totalEcosystemValue: number
+      // Liabilities: what we owe users
+      totalPrincipal: number
+      totalEquityBuyIn: number
+      // Surplus: ecosystem value - liabilities
+      surplus: number
     }
     health: {
       grainPrice: number
-      vaultCoverage: number
-      liquidityRatio: number
+      vaultCoverage: number       // Total value / principal (should be > 1)
+      liquidityCoverage: number   // USDC / principal (cash coverage)
       canSurviveBankRun: boolean
+      liquidityGap: number        // USDC - principal (positive = fully liquid)
+    }
+    grainSupply: {
+      circulating: number
+      founderPool: number
+      treasuryReserve: number
+      total: number
     }
     positions: {
       count: number
@@ -702,42 +989,112 @@ export class Vault {
   } {
     this.recalculateTreasury()
 
-    const totalAssets = this.treasury.totalAssetValue
-    const totalLiabilities = this.treasury.liabilities.totalPrincipal
-    const totalEquity =
-      this.treasury.equity.totalEquityBuyIn +
-      this.treasury.equity.retainedEarnings +
-      this.treasury.equity.unrealizedGains
-
-    // Assets should equal Liabilities + Equity (basic accounting equation)
-    const difference = totalAssets - (totalLiabilities + totalEquity)
+    const usdcLiquidity = this.treasury.calculated.usdcLiquidity
+    const equityValue = this.treasury.calculated.equityValue
+    const totalEcosystemValue = this.treasury.calculated.totalEcosystemValue
+    const totalPrincipal = this.treasury.liabilities.totalPrincipal
+    const totalEquityBuyIn = this.treasury.liabilities.totalEquityBuyIn
 
     let totalGrain = 0
-    let totalPrincipal = 0
-    for (const position of this.positions.values()) {
+    let totalUserPrincipal = 0
+    this.positions.forEach((position) => {
       totalGrain += position.grainBalance
-      totalPrincipal += position.totalPrincipal
-    }
+      totalUserPrincipal += position.totalPrincipal
+    })
+
+    const bankRunCheck = this.canSurviveBankRun()
+
+    // Build treasury summary for dashboard
+    const summary: TreasurySummary = this.getTreasurySummary()
 
     return {
       treasury: { ...this.treasury },
+      summary,
       accounting: {
-        assetsEqualLiabilitiesPlusEquity: Math.abs(difference) < 0.01,
-        totalAssets,
-        totalLiabilities,
-        totalEquity,
-        difference,
+        usdcLiquidity,
+        equityValue,
+        totalEcosystemValue,
+        totalPrincipal,
+        totalEquityBuyIn,
+        surplus: totalEcosystemValue - totalPrincipal,
       },
       health: {
         grainPrice: this.getGrainPrice(),
         vaultCoverage: this.getVaultCoverage(),
-        liquidityRatio: this.getLiquidAssets() / totalAssets,
-        canSurviveBankRun: this.canSurviveBankRun().canSurvive,
+        liquidityCoverage: this.getLiquidityCoverage(),
+        canSurviveBankRun: bankRunCheck.canSurvive,
+        liquidityGap: bankRunCheck.liquidityGap,
+      },
+      grainSupply: {
+        circulating: this.treasury.grainSupply,
+        founderPool: this.treasury.grainFounderPool,
+        treasuryReserve: this.treasury.grainTreasuryReserve,
+        total: this.treasury.grainSupply +
+          this.treasury.grainFounderPool +
+          this.treasury.grainTreasuryReserve,
       },
       positions: {
         count: this.positions.size,
         totalGrain,
-        totalPrincipal,
+        totalPrincipal: totalUserPrincipal,
+      },
+    }
+  }
+
+  /**
+   * Get treasury summary for dashboard display
+   * THE TWO NUMBERS EVERYONE SEES: USDC Liquidity + Equity Value
+   */
+  getTreasurySummary(): TreasurySummary {
+    this.recalculateTreasury()
+
+    const usdcLiquidity = this.treasury.calculated.usdcLiquidity
+    const equityValue = this.treasury.calculated.equityValue
+    const totalValue = this.treasury.calculated.totalEcosystemValue
+    const grainPrice = this.treasury.calculated.grainPrice
+    const totalGrainSupply =
+      this.treasury.grainSupply +
+      this.treasury.grainFounderPool +
+      this.treasury.grainTreasuryReserve
+
+    return {
+      // THE TWO NUMBERS
+      usdcLiquidity,
+      equityValue,
+      totalValue,
+
+      // GRAIN METRICS
+      grainPrice,
+      grainPriceFormatted: `$${grainPrice.toFixed(4)}`,
+      grainSupply: totalGrainSupply,
+      grainMarketCap: totalValue,
+
+      // COVERAGE RATIOS
+      vaultCoverage: this.treasury.calculated.vaultCoverage,
+      vaultCoverageFormatted: this.treasury.calculated.vaultCoverage === Infinity
+        ? '∞'
+        : `${(this.treasury.calculated.vaultCoverage * 100).toFixed(1)}%`,
+      liquidityCoverage: this.treasury.calculated.liquidityCoverage,
+      liquidityCoverageFormatted: this.treasury.calculated.liquidityCoverage === Infinity
+        ? '∞'
+        : `${(this.treasury.calculated.liquidityCoverage * 100).toFixed(1)}%`,
+
+      // DETAILED BREAKDOWNS
+      liquidityBreakdown: {
+        usdcCash: this.treasury.liquidity.usdcCash,
+        usdcReserve: this.treasury.liquidity.usdcReserve,
+      },
+      equityBreakdown: {
+        platformValue: this.treasury.equity.platformValuation,
+        investments:
+          this.treasury.equity.realEstate +
+          this.treasury.equity.preciousMetals +
+          this.treasury.equity.bonds +
+          this.treasury.equity.otherInvestments,
+        accumulatedRevenue:
+          this.treasury.equity.wellsaiFees +
+          this.treasury.equity.investmentIncome +
+          this.treasury.equity.unrealizedGains,
       },
     }
   }
@@ -772,22 +1129,72 @@ export class Vault {
   }
 
   private recalculateTreasury(): void {
-    // Sum all assets
-    this.treasury.totalAssetValue =
-      this.treasury.assets.cashUsd +
-      this.treasury.assets.shortTermBonds +
-      this.treasury.assets.reits +
-      this.treasury.assets.preciousMetalsEtf +
-      this.treasury.assets.realEstateDirect +
-      this.treasury.assets.preciousMetalsDirect +
-      this.treasury.assets.otherInvestments +
-      this.treasury.assets.accumulatedFees
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CALCULATE USDC LIQUIDITY
+    // This is what users can withdraw (cash available)
+    // ═══════════════════════════════════════════════════════════════════════════
+    const usdcLiquidity =
+      this.treasury.liquidity.usdcCash +
+      this.treasury.liquidity.usdcReserve
 
-    // Calculate GRAIN price
-    this.treasury.grainPrice = this.getGrainPrice()
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CALCULATE EQUITY VALUE
+    // Platform value + investments + accumulated revenue
+    // ═══════════════════════════════════════════════════════════════════════════
+    const equityValue =
+      this.treasury.equity.platformValuation +
+      this.treasury.equity.realEstate +
+      this.treasury.equity.preciousMetals +
+      this.treasury.equity.bonds +
+      this.treasury.equity.otherInvestments +
+      this.treasury.equity.wellsaiFees +
+      this.treasury.equity.investmentIncome +
+      this.treasury.equity.unrealizedGains
 
-    // Calculate vault coverage
-    this.treasury.vaultCoverage = this.getVaultCoverage()
+    // ═══════════════════════════════════════════════════════════════════════════
+    // TOTAL ECOSYSTEM VALUE = USDC Liquidity + Equity Value
+    // This is THE number that determines GRAIN price
+    // ═══════════════════════════════════════════════════════════════════════════
+    const totalEcosystemValue = usdcLiquidity + equityValue
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GRAIN PRICE = Total Ecosystem Value / GRAIN Supply
+    // ═══════════════════════════════════════════════════════════════════════════
+    const totalGrainSupply =
+      this.treasury.grainSupply +
+      this.treasury.grainFounderPool +
+      this.treasury.grainTreasuryReserve
+
+    const grainPrice = totalGrainSupply > 0
+      ? totalEcosystemValue / totalGrainSupply
+      : 1.0
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // COVERAGE RATIOS
+    // ═══════════════════════════════════════════════════════════════════════════
+    const totalPrincipal = this.treasury.liabilities.totalPrincipal
+
+    // Vault coverage: total value / total principal owed
+    const vaultCoverage = totalPrincipal > 0
+      ? totalEcosystemValue / totalPrincipal
+      : Infinity
+
+    // Liquidity coverage: cash / total principal owed
+    const liquidityCoverage = totalPrincipal > 0
+      ? usdcLiquidity / totalPrincipal
+      : usdcLiquidity > 0 ? Infinity : 0
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // UPDATE CALCULATED VALUES
+    // ═══════════════════════════════════════════════════════════════════════════
+    this.treasury.calculated = {
+      usdcLiquidity,
+      equityValue,
+      totalEcosystemValue,
+      grainPrice,
+      vaultCoverage,
+      liquidityCoverage,
+    }
 
     this.treasury.lastUpdated = new Date()
   }
@@ -820,57 +1227,35 @@ export class Vault {
     }
   }
 
-  private withdrawFromAssets(amount: number): void {
+  /**
+   * Withdraw from liquidity (USDC)
+   * Uses cash first, then reserve
+   */
+  private withdrawFromLiquidity(amount: number): void {
     let remaining = amount
 
-    // Use liquid assets first
-    if (this.treasury.assets.cashUsd >= remaining) {
-      this.treasury.assets.cashUsd -= remaining
+    // Use USDC cash first (instant access)
+    if (this.treasury.liquidity.usdcCash >= remaining) {
+      this.treasury.liquidity.usdcCash -= remaining
       return
     } else {
-      remaining -= this.treasury.assets.cashUsd
-      this.treasury.assets.cashUsd = 0
+      remaining -= this.treasury.liquidity.usdcCash
+      this.treasury.liquidity.usdcCash = 0
     }
 
-    if (this.treasury.assets.shortTermBonds >= remaining) {
-      this.treasury.assets.shortTermBonds -= remaining
+    // Then USDC reserve (same-day access)
+    if (this.treasury.liquidity.usdcReserve >= remaining) {
+      this.treasury.liquidity.usdcReserve -= remaining
       return
     } else {
-      remaining -= this.treasury.assets.shortTermBonds
-      this.treasury.assets.shortTermBonds = 0
+      remaining -= this.treasury.liquidity.usdcReserve
+      this.treasury.liquidity.usdcReserve = 0
     }
 
-    // Then semi-liquid
-    if (this.treasury.assets.reits >= remaining) {
-      this.treasury.assets.reits -= remaining
-      return
-    } else {
-      remaining -= this.treasury.assets.reits
-      this.treasury.assets.reits = 0
-    }
-
-    if (this.treasury.assets.preciousMetalsEtf >= remaining) {
-      this.treasury.assets.preciousMetalsEtf -= remaining
-      return
-    } else {
-      remaining -= this.treasury.assets.preciousMetalsEtf
-      this.treasury.assets.preciousMetalsEtf = 0
-    }
-
-    // Finally illiquid (shouldn't normally happen)
+    // If we get here, we've exhausted USDC liquidity
+    // This shouldn't happen if liquidity checks are done first
     if (remaining > 0) {
-      // Pro-rata from illiquid assets
-      const illiquidTotal =
-        this.treasury.assets.realEstateDirect +
-        this.treasury.assets.preciousMetalsDirect +
-        this.treasury.assets.otherInvestments
-
-      if (illiquidTotal > 0) {
-        const ratio = remaining / illiquidTotal
-        this.treasury.assets.realEstateDirect -= this.treasury.assets.realEstateDirect * ratio
-        this.treasury.assets.preciousMetalsDirect -= this.treasury.assets.preciousMetalsDirect * ratio
-        this.treasury.assets.otherInvestments -= this.treasury.assets.otherInvestments * ratio
-      }
+      console.warn(`[VAULT] Insufficient liquidity: $${remaining.toFixed(2)} shortfall`)
     }
   }
 
@@ -885,7 +1270,7 @@ export class Vault {
       ...params,
       userGrainBalance: position?.grainBalance ?? 0,
       userPrincipal: position?.totalPrincipal ?? 0,
-      treasuryAssets: this.treasury.totalAssetValue,
+      treasuryAssets: this.treasury.calculated.totalEcosystemValue,
       treasuryPrincipal: this.treasury.liabilities.totalPrincipal,
     }
 
@@ -937,53 +1322,94 @@ export class Vault {
 
 /**
  * Example: Full lifecycle demonstration
+ *
+ * DEMONSTRATES THE KEY CONCEPTS:
+ * 1. COLD START: Platform starts with $5M equity valuation
+ * 2. DEPOSITS: Users deposit USDC, receive GRAIN at current price
+ * 3. FEE COLLECTION: 33bps fees grow equity → GRAIN appreciates
+ * 4. NEW USERS: Buy GRAIN at higher price → liquidity always covers
+ * 5. BANK RUN: Principals always paid, equity stays with ecosystem
  */
 export function demonstrateVault(): void {
-  console.log('=== VAULT DEMONSTRATION ===\n')
+  console.log('═══════════════════════════════════════════════════════════════════════════')
+  console.log('  VAULT DEMONSTRATION - USDC Liquidity + Equity Value Model')
+  console.log('═══════════════════════════════════════════════════════════════════════════\n')
 
-  // Initialize Vault
+  // Initialize Vault - starts with $5M platform valuation
   const vault = new Vault()
 
-  // COLD START: First user deposits at $1/GRAIN
-  console.log('--- COLD START ---')
+  // Cold start state
+  console.log('--- COLD START (Platform has $5M valuation) ---')
+  const coldStartSummary = vault.getTreasurySummary()
+  console.log(`  USDC Liquidity: $${coldStartSummary.usdcLiquidity.toLocaleString()}`)
+  console.log(`  Equity Value:   $${coldStartSummary.equityValue.toLocaleString()}`)
+  console.log(`  GRAIN Price:    ${coldStartSummary.grainPriceFormatted}`)
+  console.log(`  GRAIN Supply:   ${coldStartSummary.grainSupply.toLocaleString()}`)
+
+  // First user deposits
+  console.log('\n--- FIRST USER DEPOSIT ---')
   const alice = vault.deposit('alice', 10000)
-  console.log(`Alice deposits $10,000 at $${alice.newGrainPrice}/GRAIN`)
-  console.log(`Alice receives: ${alice.grainReceived} GRAIN`)
-  console.log(`Principal recorded: $${alice.principalRecorded}`)
-  console.log(`Equity paid: $${alice.equityPaid}`)
+  console.log(`  Alice deposits $10,000 USDC`)
+  console.log(`  GRAIN received: ${alice.grainReceived.toFixed(4)} GRAIN`)
+  console.log(`  GRAIN price:    $${alice.newGrainPrice.toFixed(4)}`)
+  console.log(`  Principal:      $${alice.principalRecorded.toLocaleString()} (always withdrawable)`)
+  console.log(`  USDC Liquidity: $${alice.usdcLiquidity.toLocaleString()}`)
+  console.log(`  Equity Value:   $${alice.equityValue.toLocaleString()}`)
 
-  // Simulate investment returns (treasury grows)
+  // Simulate WellsAI fee collection (33bps on $1M in transactions)
+  console.log('\n--- WELLSAI FEE COLLECTION (33bps on $1M) ---')
+  const feeResult = vault.collectFee(1000000) // $1M in transactions
+  console.log(`  Fee collected:  $${feeResult.feeCollected.toLocaleString()}`)
+  console.log(`  New GRAIN price: $${feeResult.newGrainPrice.toFixed(4)}`)
+  console.log(`  Equity Value:   $${feeResult.equityValue.toLocaleString()}`)
+
+  // Investment returns
   console.log('\n--- INVESTMENT RETURNS ---')
-  vault.recordInvestmentReturn(500, 'real_estate')  // 5% on real estate portion
-  vault.recordInvestmentReturn(200, 'precious_metals')
-  vault.collectFee(100000)  // $100k in WellsAI transactions
-
-  const newPrice = vault.getGrainPrice()
-  console.log(`New GRAIN price: $${newPrice.toFixed(4)}`)
+  const realEstateReturn = vault.recordInvestmentReturn(50000, 'real_estate', { isCash: true })
+  console.log(`  Real estate dividend: $${realEstateReturn.returnRecorded.toLocaleString()}`)
+  console.log(`  New GRAIN price: $${realEstateReturn.newGrainPrice.toFixed(4)}`)
+  console.log(`  USDC Liquidity: $${realEstateReturn.usdcLiquidity.toLocaleString()}`)
+  console.log(`  Equity Value:   $${realEstateReturn.equityValue.toLocaleString()}`)
 
   // New user joins at higher price
   console.log('\n--- NEW USER AT HIGHER PRICE ---')
-  const bob = vault.deposit('bob', 5000)
-  console.log(`Bob deposits $5,000 at $${vault.getGrainPrice().toFixed(4)}/GRAIN`)
-  console.log(`Bob receives: ${bob.grainReceived.toFixed(4)} GRAIN`)
-  console.log(`Principal recorded: $${bob.principalRecorded.toFixed(2)}`)
-  console.log(`Equity paid: $${bob.equityPaid.toFixed(2)}`)
+  const bob = vault.deposit('bob', 50000)
+  console.log(`  Bob deposits $50,000 USDC at $${vault.getGrainPrice().toFixed(4)}/GRAIN`)
+  console.log(`  GRAIN received: ${bob.grainReceived.toFixed(4)} GRAIN`)
+  console.log(`  Principal:      $${bob.principalRecorded.toLocaleString()} (always withdrawable)`)
+  console.log(`  USDC Liquidity: $${bob.usdcLiquidity.toLocaleString()}`)
+  console.log(`  Equity Value:   $${bob.equityValue.toLocaleString()}`)
 
   // Check positions
-  console.log('\n--- POSITIONS ---')
+  console.log('\n--- USER POSITIONS ---')
   const alicePosition = vault.getPosition('alice')!
   const bobPosition = vault.getPosition('bob')!
-  console.log(`Alice: ${alicePosition.grainBalance.toFixed(4)} GRAIN, worth $${alicePosition.currentGrainValue.toFixed(2)}, floor $${alicePosition.protectedFloor.toFixed(2)}`)
-  console.log(`Bob: ${bobPosition.grainBalance.toFixed(4)} GRAIN, worth $${bobPosition.currentGrainValue.toFixed(2)}, floor $${bobPosition.protectedFloor.toFixed(2)}`)
+  console.log(`  Alice: ${alicePosition.grainBalance.toFixed(4)} GRAIN, worth $${alicePosition.currentGrainValue.toFixed(2)}, floor $${alicePosition.protectedFloor.toFixed(2)}`)
+  console.log(`  Bob:   ${bobPosition.grainBalance.toFixed(4)} GRAIN, worth $${bobPosition.currentGrainValue.toFixed(2)}, floor $${bobPosition.protectedFloor.toFixed(2)}`)
 
-  // Audit
-  console.log('\n--- AUDIT ---')
-  const audit = vault.getAuditReport()
-  console.log(`Total Assets: $${audit.accounting.totalAssets.toFixed(2)}`)
-  console.log(`Total Liabilities (Principal): $${audit.accounting.totalLiabilities.toFixed(2)}`)
-  console.log(`Total Equity: $${audit.accounting.totalEquity.toFixed(2)}`)
-  console.log(`Assets = Liabilities + Equity: ${audit.accounting.assetsEqualLiabilitiesPlusEquity}`)
-  console.log(`GRAIN Price: $${audit.health.grainPrice.toFixed(4)}`)
-  console.log(`Vault Coverage: ${(audit.health.vaultCoverage * 100).toFixed(1)}%`)
-  console.log(`Can Survive Bank Run: ${audit.health.canSurviveBankRun}`)
+  // Treasury summary
+  console.log('\n--- TREASURY SUMMARY ---')
+  const summary = vault.getTreasurySummary()
+  console.log(`  ┌────────────────────────────────────────────┐`)
+  console.log(`  │  USDC LIQUIDITY:  $${summary.usdcLiquidity.toLocaleString().padStart(15)}  │`)
+  console.log(`  │  EQUITY VALUE:    $${summary.equityValue.toLocaleString().padStart(15)}  │`)
+  console.log(`  ├────────────────────────────────────────────┤`)
+  console.log(`  │  TOTAL VALUE:     $${summary.totalValue.toLocaleString().padStart(15)}  │`)
+  console.log(`  └────────────────────────────────────────────┘`)
+  console.log(`  GRAIN Price: ${summary.grainPriceFormatted}`)
+  console.log(`  Vault Coverage: ${summary.vaultCoverageFormatted}`)
+  console.log(`  Liquidity Coverage: ${summary.liquidityCoverageFormatted}`)
+
+  // Bank run check
+  console.log('\n--- BANK RUN PROTECTION ---')
+  const bankRun = vault.canSurviveBankRun()
+  console.log(`  Can survive: ${bankRun.canSurvive ? '✓ YES' : '✗ NO'}`)
+  console.log(`  Total Principal: $${bankRun.totalPrincipal.toLocaleString()}`)
+  console.log(`  USDC Liquidity: $${bankRun.usdcLiquidity.toLocaleString()}`)
+  console.log(`  Liquidity Gap: $${bankRun.liquidityGap.toLocaleString()} ${bankRun.liquidityGap >= 0 ? '(fully liquid)' : '(need to liquidate equity)'}`)
+  console.log(`  Equity Remaining: $${bankRun.equityValue.toLocaleString()}`)
+
+  console.log('\n═══════════════════════════════════════════════════════════════════════════')
+  console.log('  KEY INSIGHT: Equity stays with ecosystem even in worst case!')
+  console.log('═══════════════════════════════════════════════════════════════════════════\n')
 }

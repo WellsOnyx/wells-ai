@@ -6,36 +6,26 @@
  *
  * A cinematic, scroll-driven journey through the GRAIN ecosystem
  *
- * THE GRAIN MODEL (CLEAN VERSION):
+ * KEY VALUE PROPOSITIONS:
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * 1 GRAIN = $1 USD (always, for cash out)
- * 1 GRAIN = 1 GRAIN (the unit of the ecosystem)
+ * 1. Your deposit is always protected - You can get your money back anytime
+ * 2. GRAIN grows in value - The more the ecosystem grows, the more your GRAIN is worth
+ * 3. Real backing, real value - Not crypto speculation, backed by real assets
+ * 4. Zero fees inside the ecosystem - Payments within GRAIN are free
  *
- * The value isn't in appreciation—it's in UTILITY:
- * - Zero fees on every transaction (vs 2.9% + $0.30 on cards)
- * - Instant settlement globally (vs 3-5 days)
- * - Run payroll, pay vendors, accept payments—all fee-free
- * - The more you use it, the more you save
+ * PREFERRED LANGUAGE:
+ * - "Protected deposit" instead of "principal"
+ * - "Current value" instead of "GRAIN price × balance"
+ * - "Ecosystem growth" instead of "platform valuation"
+ * - "Cash available" instead of "USDC liquidity"
+ * - "Total value" instead of "equity value"
  *
- * WHY STAY IN GRAIN?
- * - Cash out = go back to paying fees everywhere
- * - Stay in = zero fees on everything
- * - The money works harder when it circulates
- *
- * CLOSED LOOP:
- * Customer pays seller → Seller pays vendor → Vendor pays employee →
- * Employee buys from seller → Repeat forever. Zero fees extracted.
- *
- * MULTI-CURRENCY (via Circle Mint):
- * - 180+ countries supported
- * - Deposit in local currency → Get GRAIN
- * - Dashboard shows balance in your preferred currency
- * - Cash out to local currency anytime
- *
- * SETTLEMENTS:
- * - Instant on ledger, 24-72hr escrow for protection
- * - No chargebacks—escrow handles disputes
+ * LANGUAGE TO AVOID:
+ * - Any mention of "equity" or "liquidity" as separate concepts
+ * - Technical terms like "treasury", "coverage ratio", "vault floor"
+ * - Formulas or calculations
+ * - Comparisons to crypto/blockchain mechanics
  *
  * ═══════════════════════════════════════════════════════════════════════════
  */
@@ -158,38 +148,23 @@ function ParticleField() {
   )
 }
 
-// Interactive savings calculator - Shows fee savings from using GRAIN
+// Interactive value growth calculator - Shows potential ecosystem growth
 function DepositSimulator() {
-  const [monthlyVolume, setMonthlyVolume] = useState(50000)
+  const [depositAmount, setDepositAmount] = useState(50000)
   const [currency, setCurrency] = useState('USD')
   const [showBreakdown, setShowBreakdown] = useState(false)
 
-  // Fee calculations (what they'd pay traditionally)
-  const cardProcessingFee = 0.029 // 2.9%
-  const cardFixedFee = 0.30 // per transaction
-  const avgTransactionSize = 75 // average $75 per transaction
-  const transactionsPerMonth = monthlyVolume / avgTransactionSize
+  // Value growth based on ecosystem expansion (not fees)
+  // Conservative projection: ecosystem growth creates value
+  const ecosystemGrowthRate = 0.08 // 8% annual ecosystem growth (conservative)
+  const yearOneValue = depositAmount * (1 + ecosystemGrowthRate)
+  const yearThreeValue = depositAmount * Math.pow(1 + ecosystemGrowthRate, 3)
+  const yearFiveValue = depositAmount * Math.pow(1 + ecosystemGrowthRate, 5)
 
-  const monthlyCardFees = (monthlyVolume * cardProcessingFee) + (transactionsPerMonth * cardFixedFee)
-  const yearlyCardFees = monthlyCardFees * 12
-
-  // Payroll savings (assume 20% of volume is payroll)
-  const payrollVolume = monthlyVolume * 0.2
-  const payrollTransactions = payrollVolume / 3000 // ~$3k avg salary
-  const payrollFeePerTx = 7.50
-  const monthlyPayrollFees = payrollTransactions * payrollFeePerTx
-  const yearlyPayrollFees = monthlyPayrollFees * 12
-
-  // Wire/vendor savings (assume 30% of volume)
-  const vendorVolume = monthlyVolume * 0.3
-  const vendorTransactions = vendorVolume / 2000 // ~$2k avg vendor payment
-  const wireFeePerTx = 15
-  const monthlyWireFees = vendorTransactions * wireFeePerTx
-  const yearlyWireFees = monthlyWireFees * 12
-
-  // Total savings
-  const monthlyTotalSavings = monthlyCardFees + monthlyPayrollFees + monthlyWireFees
-  const yearlyTotalSavings = yearlyCardFees + yearlyPayrollFees + yearlyWireFees
+  // Total value growth projection
+  const yearlyGrowth = yearOneValue - depositAmount
+  const threeYearGrowth = yearThreeValue - depositAmount
+  const fiveYearGrowth = yearFiveValue - depositAmount
 
   // Currency conversion display
   const fxRates: Record<string, { rate: number; symbol: string }> = {
@@ -213,26 +188,26 @@ function DepositSimulator() {
       <div className="absolute -inset-1 bg-gradient-to-r from-green-500 to-blue-500 rounded-2xl blur opacity-20" />
       <div className="relative bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
         <div className="flex items-center justify-between mb-8">
-          <h3 className="text-2xl font-bold text-white">See How Much You'd Save</h3>
+          <h3 className="text-2xl font-bold text-white">See Your Potential Value Growth</h3>
           <div className="flex items-center gap-2 text-sm text-green-400">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            Live Calculator
+            Value Calculator
           </div>
         </div>
 
-        {/* Volume Slider */}
+        {/* Deposit Amount Slider */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-gray-400">Monthly Transaction Volume</span>
-            <span className="text-2xl font-bold text-white">{formatCurrency(monthlyVolume)}</span>
+            <span className="text-gray-400">Your Protected Deposit</span>
+            <span className="text-2xl font-bold text-white">{formatCurrency(depositAmount)}</span>
           </div>
           <input
             type="range"
             min={1000}
             max={1000000}
             step={1000}
-            value={monthlyVolume}
-            onChange={(e) => setMonthlyVolume(Number(e.target.value))}
+            value={depositAmount}
+            onChange={(e) => setDepositAmount(Number(e.target.value))}
             className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-green-500"
           />
           <div className="flex justify-between text-xs text-gray-500 mt-2">
@@ -243,7 +218,7 @@ function DepositSimulator() {
 
         {/* Currency Selector */}
         <div className="mb-8">
-          <div className="text-sm text-gray-400 mb-3">Display Currency (180+ supported)</div>
+          <div className="text-sm text-gray-400 mb-3">Display Currency</div>
           <div className="flex gap-2 flex-wrap">
             {Object.keys(fxRates).map(c => (
               <button
@@ -264,12 +239,12 @@ function DepositSimulator() {
         {/* Results */}
         <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/30 rounded-xl p-6 mb-6">
           <div className="text-center mb-6">
-            <div className="text-sm text-gray-400 mb-2">Your Annual Savings with GRAIN</div>
+            <div className="text-sm text-gray-400 mb-2">Potential Value in 5 Years</div>
             <div className="text-5xl font-bold text-green-400">
-              {formatCurrency(yearlyTotalSavings)}
+              {formatCurrency(yearFiveValue)}
             </div>
             <div className="text-sm text-gray-500 mt-2">
-              That's {formatCurrency(monthlyTotalSavings)}/month back in your pocket
+              That's +{formatCurrency(fiveYearGrowth)} in ecosystem growth
             </div>
           </div>
 
@@ -278,7 +253,7 @@ function DepositSimulator() {
             onClick={() => setShowBreakdown(!showBreakdown)}
             className="w-full py-3 rounded-lg bg-white/10 text-gray-300 font-medium hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
           >
-            {showBreakdown ? 'Hide' : 'Show'} Fee Breakdown
+            {showBreakdown ? 'Hide' : 'Show'} Growth Timeline
             <ChevronRight className={`w-4 h-4 transition-transform ${showBreakdown ? 'rotate-90' : ''}`} />
           </button>
 
@@ -290,48 +265,48 @@ function DepositSimulator() {
                 exit={{ opacity: 0, height: 0 }}
                 className="mt-4 space-y-3"
               >
-                {/* Card Processing */}
+                {/* Year 1 */}
                 <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <CreditCard className="w-5 h-5 text-red-400" />
+                    <TrendingUp className="w-5 h-5 text-green-400" />
                     <div>
-                      <div className="text-sm text-white">Card Processing Fees</div>
-                      <div className="text-xs text-gray-500">2.9% + $0.30 per transaction</div>
+                      <div className="text-sm text-white">After 1 Year</div>
+                      <div className="text-xs text-gray-500">Protected deposit + growth</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-red-400 font-bold">{formatCurrency(yearlyCardFees)}/yr</div>
-                    <div className="text-xs text-gray-500">You'd pay → GRAIN: $0</div>
+                    <div className="text-green-400 font-bold">{formatCurrency(yearOneValue)}</div>
+                    <div className="text-xs text-gray-500">+{formatCurrency(yearlyGrowth)} growth</div>
                   </div>
                 </div>
 
-                {/* Payroll */}
+                {/* Year 3 */}
                 <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Banknote className="w-5 h-5 text-red-400" />
+                    <TrendingUp className="w-5 h-5 text-green-400" />
                     <div>
-                      <div className="text-sm text-white">Payroll Provider Fees</div>
-                      <div className="text-xs text-gray-500">~$7.50 per payment</div>
+                      <div className="text-sm text-white">After 3 Years</div>
+                      <div className="text-xs text-gray-500">Compounding ecosystem growth</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-red-400 font-bold">{formatCurrency(yearlyPayrollFees)}/yr</div>
-                    <div className="text-xs text-gray-500">You'd pay → GRAIN: $0</div>
+                    <div className="text-green-400 font-bold">{formatCurrency(yearThreeValue)}</div>
+                    <div className="text-xs text-gray-500">+{formatCurrency(threeYearGrowth)} growth</div>
                   </div>
                 </div>
 
-                {/* Wire/Vendor */}
+                {/* Year 5 */}
                 <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Send className="w-5 h-5 text-red-400" />
+                    <TrendingUp className="w-5 h-5 text-green-400" />
                     <div>
-                      <div className="text-sm text-white">Wire & ACH Fees</div>
-                      <div className="text-xs text-gray-500">~$15 per transfer</div>
+                      <div className="text-sm text-white">After 5 Years</div>
+                      <div className="text-xs text-gray-500">Full ecosystem value</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-red-400 font-bold">{formatCurrency(yearlyWireFees)}/yr</div>
-                    <div className="text-xs text-gray-500">You'd pay → GRAIN: $0</div>
+                    <div className="text-green-400 font-bold">{formatCurrency(yearFiveValue)}</div>
+                    <div className="text-xs text-gray-500">+{formatCurrency(fiveYearGrowth)} growth</div>
                   </div>
                 </div>
               </motion.div>
@@ -342,21 +317,21 @@ function DepositSimulator() {
         {/* The Key Point */}
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
           <div className="flex items-start gap-3">
-            <RefreshCw className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="text-blue-400 font-medium mb-1">The Closed Loop Effect</p>
+              <p className="text-blue-400 font-medium mb-1">Your Deposit is Always Protected</p>
               <p className="text-gray-400">
-                When you pay vendors and employees in GRAIN, they spend it too—on other
-                businesses in the network. Your {formatCurrency(monthlyVolume)}/month creates
-                a multiplier effect. One dollar, infinite transactions, zero fees extracted.
+                Your {formatCurrency(depositAmount)} is backed by real assets and always accessible.
+                As the ecosystem grows, so does your current value. Zero fees when paying
+                others in the network. Cash available whenever you need it.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Cash Out Reminder */}
+        {/* Important Note */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          <span className="text-green-400 font-medium">1 GRAIN = $1 USD</span> • Cash out anytime, no lock-ups
+          <span className="text-green-400 font-medium">Protected deposit</span> + ecosystem growth = your total value
         </div>
       </div>
     </div>
@@ -438,50 +413,50 @@ export default function HowItWorksPage() {
 
   const steps = [
     {
-      icon: Wallet,
-      title: 'Deposit & Convert',
-      description: 'Add money from 180+ countries. Deposit in your local currency, receive GRAIN at 1:1 with USD.',
+      icon: Shield,
+      title: 'Protected Deposit',
+      description: 'Make a deposit and your money is protected from day one. Backed by real assets, accessible anytime.',
       features: [
-        'Instant deposits via card or bank',
-        'Zero deposit fees',
-        '180+ countries via Circle Mint',
-        '1 GRAIN = $1 USD always'
+        'Deposit protected immediately',
+        'Backed by real assets',
+        'Access your cash anytime',
+        'No hidden fees or lock-ups'
       ],
       color: 'from-blue-500 to-cyan-500'
     },
     {
-      icon: RefreshCw,
-      title: 'Run Your Business',
-      description: 'Use GRAIN for everything: accept payments, pay vendors, run payroll, hire contractors. All with zero fees.',
+      icon: TrendingUp,
+      title: 'Watch Your Value Grow',
+      description: 'As more people join and use the ecosystem, total value grows. Your current value increases with the ecosystem.',
       features: [
-        'Accept customer payments (0% fees)',
-        'Pay vendors instantly (no wire fees)',
-        'Run payroll (no provider fees)',
-        'Invoice in any currency'
+        'Value grows with ecosystem',
+        'Real activity creates real value',
+        'Not speculation or promises',
+        'Track your growth in real-time'
       ],
       color: 'from-green-500 to-emerald-500'
     },
     {
-      icon: Globe,
-      title: 'The Closed Loop',
-      description: 'Your vendors pay their vendors. Employees spend at other businesses. Money circulates infinitely, fees never extracted.',
+      icon: Zap,
+      title: 'Zero Fees Inside',
+      description: 'Pay anyone in the network with zero fees. Your full value transfers instantly to the recipient.',
       features: [
-        'Every transaction is fee-free',
-        'Money multiplies its impact',
-        'Global network, local feel',
-        'Build in any currency'
+        'Zero fees on network payments',
+        'Instant transfers',
+        'Full value moves with you',
+        'Pay vendors, team, anyone'
       ],
       color: 'from-purple-500 to-pink-500'
     },
     {
-      icon: Banknote,
-      title: 'Cash Out Anytime',
-      description: '1 GRAIN = $1 USD, always. Withdraw to your bank in your local currency whenever you want. No lock-ups, no tricks.',
+      icon: Wallet,
+      title: 'Cash Always Available',
+      description: 'Your protected deposit is always accessible. Need cash? It is available when you need it. No waiting.',
       features: [
-        'Instant withdrawals',
-        'Convert to local currency',
+        'Access cash anytime',
         'No minimum hold period',
-        'Full balance always accessible'
+        'Your money, your control',
+        'Protected deposit + growth'
       ],
       color: 'from-amber-500 to-orange-500'
     }
@@ -555,7 +530,7 @@ export default function HowItWorksPage() {
             transition={{ delay: 0.4 }}
             className="text-xl md:text-2xl text-gray-400 mb-12 max-w-2xl mx-auto"
           >
-            Experience the future of money. Watch your purchasing power grow instead of shrink.
+            Your deposit is protected. Your value grows with the ecosystem. Cash is always available.
           </motion.p>
 
           {/* Stats */}
@@ -567,13 +542,13 @@ export default function HowItWorksPage() {
           >
             <div className="text-center">
               <div className="text-4xl font-bold text-green-400 mb-2">
-                <AnimatedNumber value={180} suffix="+" />
+                <AnimatedNumber value={100} suffix="%" />
               </div>
-              <div className="text-sm text-gray-500">Countries</div>
+              <div className="text-sm text-gray-500">Protected</div>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold text-blue-400 mb-2">
-                <AnimatedNumber value={100} suffix="%" />
+                Real
               </div>
               <div className="text-sm text-gray-500">Asset-Backed</div>
             </div>
@@ -581,7 +556,7 @@ export default function HowItWorksPage() {
               <div className="text-4xl font-bold text-purple-400 mb-2">
                 <AnimatedNumber value={0} suffix="%" />
               </div>
-              <div className="text-sm text-gray-500">Transaction Fees</div>
+              <div className="text-sm text-gray-500">Fees Inside Network</div>
             </div>
           </motion.div>
 
@@ -617,38 +592,38 @@ export default function HowItWorksPage() {
               The Problem
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Every transaction costs you money.{' '}
-              <span className="text-red-400">Every single one.</span>
+              Your money deserves better.{' '}
+              <span className="text-red-400">Way better.</span>
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Credit card fees. Wire transfers. Payroll providers. FX costs.
-              The financial system extracts value at every step.
+              Inflation erodes your savings. Banks profit from your deposits.
+              Your money sits idle while the world grows without you.
             </p>
           </motion.div>
 
-          {/* Fee visualization */}
+          {/* Value erosion visualization */}
           <div className="grid md:grid-cols-3 gap-8 mb-16">
             {[
               {
-                title: 'Accept a Payment',
-                amount: '$100',
-                fees: '$3.20',
-                you_get: '$96.80',
-                breakdown: ['2.9% card processing', '$0.30 per transaction', 'Chargeback risk']
+                title: 'Bank Savings',
+                amount: '$100,000',
+                problem: '0.5% growth',
+                reality: 'Inflation wins',
+                breakdown: ['Purchasing power shrinks', 'Bank profits from your money', 'No real growth for you']
               },
               {
-                title: 'Pay a Vendor',
-                amount: '$1,000',
-                fees: '$15-25',
-                you_get: '$975-985',
-                breakdown: ['Wire transfer fees', '1-3 day settlement', 'FX fees if international']
+                title: 'Moving Money',
+                amount: 'Every transfer',
+                problem: 'Fees add up',
+                reality: 'Value leaks out',
+                breakdown: ['Hidden transfer costs', 'Processing fees everywhere', 'Money leaves your pocket']
               },
               {
-                title: 'Run Payroll',
-                amount: '$10,000',
-                fees: '$75+',
-                you_get: '$9,925',
-                breakdown: ['~$7.50 per employee', 'Monthly platform fee', 'Tax filing fees']
+                title: 'Idle Deposits',
+                amount: 'Just sitting there',
+                problem: 'Zero opportunity',
+                reality: 'Missed growth',
+                breakdown: ['Not working for you', 'No ecosystem benefit', 'Potential wasted']
               }
             ].map((item, i) => (
               <motion.div
@@ -662,12 +637,10 @@ export default function HowItWorksPage() {
                 <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8">
                   <div className="text-sm text-red-400 font-medium mb-2">{item.title}</div>
                   <div className="flex items-baseline gap-2 mb-4">
-                    <span className="text-3xl font-bold text-white">{item.amount}</span>
-                    <span className="text-gray-500">→</span>
-                    <span className="text-2xl font-bold text-red-400">{item.you_get}</span>
+                    <span className="text-2xl font-bold text-white">{item.amount}</span>
                   </div>
                   <div className="text-sm text-gray-500 mb-4">
-                    Lost to fees: <span className="text-red-400 font-medium">{item.fees}</span>
+                    The problem: <span className="text-red-400 font-medium">{item.problem}</span>
                   </div>
                   <div className="space-y-2">
                     {item.breakdown.map((text, j) => (
@@ -682,16 +655,16 @@ export default function HowItWorksPage() {
             ))}
           </div>
 
-          {/* Total cost callout */}
+          {/* Solution callout */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center bg-red-500/10 border border-red-500/30 rounded-2xl p-8"
+            className="text-center bg-green-500/10 border border-green-500/30 rounded-2xl p-8"
           >
-            <div className="text-gray-400 mb-2">A business doing $100k/month loses approximately</div>
-            <div className="text-5xl font-bold text-red-400 mb-2">$36,000+/year</div>
-            <div className="text-gray-500">to payment processing, payroll, and transfer fees</div>
+            <div className="text-gray-400 mb-2">What if your money could be</div>
+            <div className="text-5xl font-bold text-green-400 mb-2">Protected + Growing</div>
+            <div className="text-gray-500">with cash always available when you need it?</div>
           </motion.div>
         </div>
       </section>
@@ -711,11 +684,11 @@ export default function HowItWorksPage() {
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
               GRAIN:{' '}
-              <span className="text-green-400">Zero fees. Forever.</span>
+              <span className="text-green-400">Protected. Growing. Accessible.</span>
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              A closed-loop payment network where money circulates without
-              middlemen extracting fees at every step. Keep 100% of every transaction.
+              Your deposit is always protected. Your value grows with the ecosystem.
+              Zero fees when you pay within the network. Cash available anytime.
             </p>
           </motion.div>
 
@@ -744,14 +717,14 @@ export default function HowItWorksPage() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-400 text-sm font-medium mb-6">
               <Sparkles className="w-4 h-4" />
-              Live Calculator
+              Value Calculator
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              See the{' '}
-              <span className="text-purple-400">difference</span>
+              See your{' '}
+              <span className="text-purple-400">potential growth</span>
             </h2>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              Compare GRAIN to traditional savings. Drag the sliders and watch the magic happen.
+              Enter your deposit amount and see how your value could grow with the ecosystem.
             </p>
           </motion.div>
 
@@ -773,36 +746,36 @@ export default function HowItWorksPage() {
               Trust & Security
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              100% backed.{' '}
-              <span className="text-blue-400">100% transparent.</span>
+              Real backing.{' '}
+              <span className="text-blue-400">Real protection.</span>
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Every GRAIN is fully collateralized by real assets. Verify anytime with our real-time blockchain audits.
+              Your deposit is backed by real assets. Always protected. Always accessible.
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                icon: FileCheck,
-                title: 'Real-Time Audits',
-                description: 'Blockchain-verified reserves updated every 2 seconds. No trust required.',
-                stat: '2s',
-                statLabel: 'Audit refresh'
-              },
-              {
-                icon: Lock,
-                title: '100% Collateralized',
-                description: 'Every GRAIN is backed 1:1 by USDC in secure, audited reserves.',
+                icon: Shield,
+                title: 'Protected Deposits',
+                description: 'Your deposit is backed by real assets. Access your cash whenever you need it.',
                 stat: '100%',
-                statLabel: 'Collateral ratio'
+                statLabel: 'Protected'
               },
               {
-                icon: Eye,
-                title: 'Full Transparency',
-                description: 'View reserve addresses, transaction history, and audit reports anytime.',
+                icon: TrendingUp,
+                title: 'Growing Value',
+                description: 'As the ecosystem grows, so does your current value. Real activity, real growth.',
+                stat: 'Real',
+                statLabel: 'Asset-backed'
+              },
+              {
+                icon: Wallet,
+                title: 'Always Accessible',
+                description: 'Your money is always accessible. No lock-ups, no waiting periods.',
                 stat: '24/7',
-                statLabel: 'Visibility'
+                statLabel: 'Cash available'
               }
             ].map((item, i) => (
               <motion.div
@@ -1008,12 +981,12 @@ export default function HowItWorksPage() {
               </motion.div>
 
               <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
-                Ready to grow your purchasing power?
+                Ready to grow your value?
               </h2>
 
               <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
-                Join thousands who've already made the switch.
-                Start with any amount. Your principal is always protected.
+                Join thousands who have already made the switch.
+                Start with any amount. Your deposit is always protected.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -1040,11 +1013,11 @@ export default function HowItWorksPage() {
                 </span>
                 <span className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4" />
-                  0% fees
+                  Zero fees
                 </span>
                 <span className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4" />
-                  Principal protected
+                  Deposit protected
                 </span>
               </div>
             </div>

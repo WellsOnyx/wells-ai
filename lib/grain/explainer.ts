@@ -1,21 +1,27 @@
 /**
- * GRAIN Explainer Content
+ * GRAIN & Vault Explainer Content
  * Deep explanation for video, homepage, and all marketing collateral
  *
- * This file contains the canonical messaging for GRAIN.
+ * This file contains the canonical messaging for GRAIN & Vault.
  * Use this as the source of truth for all communications.
+ *
+ * KEY VALUE PROPOSITIONS:
+ * 1. "Your deposit is always protected" - You can get your money back anytime
+ * 2. "GRAIN grows in value" - The more the ecosystem grows, the more your GRAIN is worth
+ * 3. "Real backing, real value" - Not crypto speculation, backed by real assets
+ * 4. "Zero fees inside the ecosystem" - Payments within GRAIN are free
  */
 
 // ============================================================================
 // THE ONE-LINER
 // ============================================================================
 
-export const GRAIN_TAGLINE = "Money that works harder when it stays."
+export const GRAIN_TAGLINE = "Your money, protected and growing."
 
 export const GRAIN_ELEVATOR_PITCH = `
-GRAIN is a closed-loop payment network where every dollar deposited circulates
-infinitely with zero fees. Sellers keep more, employees get paid instantly,
-and the money never leaves the ecosystem.
+GRAIN is a smarter way to hold and use your money. Your deposit is always protected,
+your value grows as the ecosystem expands, and you pay zero fees when transacting
+with others in the network. It's your money, working harder for you.
 `
 
 // ============================================================================
@@ -24,46 +30,46 @@ and the money never leaves the ecosystem.
 
 export const VALUE_PROPS = {
   forConsumers: {
-    headline: "Pay with zero fees. Everywhere.",
-    subhead: "Your money goes further in GRAIN.",
+    headline: "Your deposit grows. Your money stays protected.",
+    subhead: "Watch your value increase while keeping full access to your funds.",
     points: [
-      "No transaction fees ever",
-      "Instant payments globally",
-      "Your balance, your control",
-      "Cash out 1:1 anytime"
+      "Protected deposit you can access anytime",
+      "Your value grows as the ecosystem expands",
+      "Zero fees when paying others in GRAIN",
+      "Cash available whenever you need it"
     ]
   },
 
   forSellers: {
-    headline: "Keep 100% of every sale.",
-    subhead: "No payment processing fees. No waiting. No middlemen.",
+    headline: "Accept payments. Keep everything.",
+    subhead: "No processing fees eating into your margins. Your money works for you.",
     points: [
-      "Zero fees on incoming payments (vs 2.9% + $0.30)",
-      "Pay vendors without wire fees",
-      "Run payroll instantly",
-      "One balance for everything"
+      "Zero fees on payments within the ecosystem",
+      "Your protected deposit is always accessible",
+      "Watch your total value grow over time",
+      "One account for all your business needs"
     ]
   },
 
   forFounders: {
-    headline: "Run your entire company in GRAIN.",
-    subhead: "Treasury, payroll, vendors, customers—all in one ecosystem.",
+    headline: "Treasury that grows while you build.",
+    subhead: "Your company's reserves stay protected while gaining value.",
     points: [
-      "Pay employees without payroll fees",
-      "Pay contractors globally, instantly",
-      "Accept customer payments fee-free",
-      "Manage treasury with full visibility"
+      "Protected deposits your board can trust",
+      "Value grows with ecosystem success",
+      "Pay your team with zero fees",
+      "Full visibility into your total value"
     ]
   },
 
   forEmployees: {
-    headline: "Get paid instantly. Spend anywhere.",
-    subhead: "No waiting for payday. No fees to access your money.",
+    headline: "Get paid. Watch it grow.",
+    subhead: "Your salary is protected and gains value just by holding it.",
     points: [
-      "Instant salary deposits",
-      "Zero fees on spending",
-      "Cash out 1:1 anytime",
-      "Works globally"
+      "Protected balance from day one",
+      "Your value increases over time",
+      "Zero fees when spending in the network",
+      "Cash available when you need it"
     ]
   }
 }
@@ -75,94 +81,91 @@ export const VALUE_PROPS = {
 export const EXPLAINER_VIDEO_SCRIPT = {
   hook: {
     duration: "0:00 - 0:10",
-    visual: "Split screen: money leaving a business vs money circulating",
+    visual: "Split screen: money sitting idle vs money growing",
     narration: `
-      Every time you make a sale, you lose money.
-      Credit card fees. Payroll costs. Wire transfers.
-      What if that money never left?
+      What if your money could grow, just by holding it?
+      Protected. Accessible. Always yours.
+      Welcome to GRAIN.
     `
   },
 
   problem: {
     duration: "0:10 - 0:30",
-    visual: "Animated flow showing fees at every transaction",
+    visual: "Animated flow showing value erosion over time",
     narration: `
-      Here's how money moves today:
+      Here's what happens to your money today:
 
-      A customer pays you $100. Stripe takes $3.20. You get $96.80.
-      You pay a vendor $50. Another $1.75 gone to fees.
-      You pay an employee $30. Payroll provider takes their cut.
+      You deposit $100 in a bank. It sits there.
+      Inflation chips away at its purchasing power.
+      Fees eat into it every time you move it.
 
-      By the time you're done, you've lost 5-10% to middlemen.
-      And that happens on EVERY transaction.
+      Your money works for the bank, not for you.
+      And that's been the only option. Until now.
     `
   },
 
   solution: {
     duration: "0:30 - 1:00",
-    visual: "GRAIN logo reveal, then circular flow animation",
+    visual: "GRAIN logo reveal, value growth animation",
     narration: `
       GRAIN is different.
 
-      When a customer pays you 100 GRAIN, you get 100 GRAIN. Zero fees.
-      When you pay a vendor 50 GRAIN, they get 50 GRAIN. Zero fees.
-      When you pay an employee 30 GRAIN, they get 30 GRAIN. Instantly.
+      Your deposit is always protected. Every dollar you put in
+      can be taken out whenever you want.
 
-      The money never leaves the ecosystem. It just keeps working.
+      But here's the magic: as more people join and the ecosystem grows,
+      your GRAIN grows in value too. Not speculation. Real backing.
+
+      And when you pay others in GRAIN? Zero fees. Your full value moves.
     `
   },
 
   howItWorks: {
     duration: "1:00 - 1:45",
-    visual: "Step-by-step animation of the closed loop",
+    visual: "Step-by-step animation of the value journey",
     narration: `
       Here's how it works:
 
-      Step 1: Deposit dollars, get GRAIN. Always 1-to-1.
+      Step 1: Make a deposit. Your money is protected from day one.
 
-      Step 2: Use GRAIN for everything—sales, payroll, vendors, rent.
-      Every transaction is instant and fee-free.
+      Step 2: Watch your value grow. As the ecosystem expands,
+      so does your current value. Real growth, real backing.
 
-      Step 3: Your suppliers use GRAIN to pay THEIR vendors.
-      Your employees use GRAIN to buy goods and services.
+      Step 3: Use GRAIN for payments, payroll, vendors—all fee-free
+      within the network. Your full value transfers instantly.
 
-      That single dollar you deposited? It creates transaction after
-      transaction of economic activity—without losing a penny to fees.
-
-      Step 4: Need cash? Withdraw anytime. 1 GRAIN always equals $1.
-      No tricks. No lock-ups. Your money, your choice.
+      Step 4: Need cash? It's always available. Your protected deposit
+      plus any growth is yours to access anytime.
     `
   },
 
   whyItWorks: {
     duration: "1:45 - 2:15",
-    visual: "Comparison charts and growing network visualization",
+    visual: "Value growth visualization and success stories",
     narration: `
-      Why would anyone stay in GRAIN?
+      Why do people choose GRAIN?
 
-      Simple: the more you use it, the more you save.
+      Because their money finally works for them.
 
-      A business doing $100,000/month in transactions saves over
-      $3,000 in fees. Every single month.
+      Your protected deposit gives you peace of mind.
+      The ecosystem growth gives you upside.
+      Zero fees inside the network keeps more in your pocket.
 
-      That's money that stays in YOUR pocket, not going to
-      payment processors, banks, and payroll companies.
-
-      And as more businesses join, more places accept GRAIN,
-      making it even more valuable to stay in the ecosystem.
+      It's not about locking up your money. It's about
+      giving it a better place to live—while you have full access.
     `
   },
 
   callToAction: {
     duration: "2:15 - 2:30",
-    visual: "Sign up flow, dashboard preview",
+    visual: "Sign up flow, dashboard showing value growth",
     narration: `
-      Ready to keep more of what you earn?
+      Ready to let your money grow?
 
-      Join GRAIN today. Deposit any amount.
-      Start accepting payments in minutes.
+      Join GRAIN today. Your deposit is protected.
+      Your value grows with the ecosystem.
 
-      GRAIN. Money that works harder when it stays.
+      GRAIN. Your money, protected and growing.
     `
   }
 }
@@ -173,93 +176,93 @@ export const EXPLAINER_VIDEO_SCRIPT = {
 
 export const HOMEPAGE_CONTENT = {
   hero: {
-    headline: "Stop losing money on every transaction.",
-    subhead: "GRAIN is the zero-fee payment network where your money works harder—because it never leaves.",
-    cta: "Start Accepting GRAIN",
+    headline: "Your money, protected and growing.",
+    subhead: "GRAIN keeps your deposit safe while your value grows with the ecosystem. Zero fees when you pay within the network.",
+    cta: "Start Growing",
     ctaSecondary: "See How It Works"
   },
 
   problemSection: {
-    headline: "The hidden cost of doing business",
+    headline: "Your money deserves better",
     stats: [
-      { value: "2.9%", label: "Lost on every card payment" },
-      { value: "$5-25", label: "Per wire transfer" },
-      { value: "$7.50", label: "Per payroll transaction" },
-      { value: "15-30 days", label: "To get paid by customers" }
+      { value: "0%", label: "Growth in most accounts" },
+      { value: "2-3%", label: "Lost to inflation yearly" },
+      { value: "Hidden", label: "Fees on every transfer" },
+      { value: "Days", label: "To access your own money" }
     ],
     body: `
-      Every time money moves, someone takes a cut.
-      Credit card processors. Banks. Payroll companies.
-      It adds up to thousands of dollars every month—money
-      that should be yours.
+      Traditional accounts let your money sit idle.
+      Inflation erodes your purchasing power.
+      Fees chip away every time you move it.
+      Your money should work for you, not against you.
     `
   },
 
   solutionSection: {
-    headline: "What if the money just... stayed?",
-    subhead: "GRAIN is a closed-loop economy. Deposit once, transact forever—with zero fees.",
+    headline: "A smarter place for your money",
+    subhead: "Your deposit is protected. Your value grows. Payments within the network are free.",
     features: [
       {
+        icon: "Shield",
+        title: "Protected Deposit",
+        description: "Your money is backed by real assets. Access it anytime."
+      },
+      {
+        icon: "TrendingUp",
+        title: "Growing Value",
+        description: "As the ecosystem expands, so does your current value."
+      },
+      {
         icon: "Zap",
-        title: "Instant Payments",
-        description: "Send and receive GRAIN in seconds, not days."
-      },
-      {
-        icon: "DollarSign",
-        title: "Zero Fees",
-        description: "No transaction fees. Ever. Keep 100% of every payment."
-      },
-      {
-        icon: "RefreshCw",
-        title: "Closed Loop",
-        description: "Pay vendors, run payroll, accept payments—all in GRAIN."
+        title: "Zero Fees Inside",
+        description: "Pay anyone in the network instantly with no fees."
       },
       {
         icon: "Wallet",
-        title: "Cash Out Anytime",
-        description: "1 GRAIN = $1. Withdraw whenever you want."
+        title: "Cash Available",
+        description: "Your money is always accessible when you need it."
       }
     ]
   },
 
   howItWorksSection: {
-    headline: "How the closed loop works",
+    headline: "How your money grows",
     steps: [
       {
         number: 1,
         title: "Deposit",
-        description: "Add dollars, get GRAIN at 1:1. Your money backs your balance.",
-        detail: "Bank transfer, card, or wire. Takes seconds."
+        description: "Add funds to your account. Your deposit is protected from day one.",
+        detail: "Bank transfer, card, or wire. Simple and secure."
       },
       {
         number: 2,
-        title: "Transact",
-        description: "Use GRAIN for everything. Payments, payroll, vendors, rent.",
-        detail: "Zero fees on every transaction within the network."
+        title: "Watch It Grow",
+        description: "As more people join, the ecosystem grows—and so does your value.",
+        detail: "Real backing, real growth. Not speculation."
       },
       {
         number: 3,
-        title: "Circulate",
-        description: "Your GRAIN moves to vendors, who pay employees, who buy from sellers...",
-        detail: "One dollar creates endless economic activity."
+        title: "Use It Freely",
+        description: "Pay others in the network with zero fees. Instant transfers.",
+        detail: "Your full value moves with you."
       },
       {
         number: 4,
-        title: "Withdraw",
-        description: "Need cash? Take it out. 1 GRAIN = $1, always.",
-        detail: "No lock-ups, no penalties, no tricks."
+        title: "Access Anytime",
+        description: "Need cash? Your protected deposit is always available.",
+        detail: "No lock-ups, no penalties, no waiting."
       }
     ]
   },
 
   savingsCalculator: {
-    headline: "See how much you'd save",
-    description: "Enter your monthly transaction volume to see your potential savings with GRAIN.",
+    headline: "See your potential value",
+    description: "Enter your deposit amount to see how your value could grow.",
     // Interactive calculator component
   },
 
   testimonialSection: {
-    headline: "Businesses that keep more",
+    headline: "People who let their money grow",
     // Testimonials go here
   },
 
@@ -267,37 +270,37 @@ export const HOMEPAGE_CONTENT = {
     headline: "Common questions",
     faqs: [
       {
-        question: "Is GRAIN a cryptocurrency?",
-        answer: "No. GRAIN is a digital dollar held in your account. 1 GRAIN always equals $1 USD. There's no volatility, no speculation—just a better way to move money."
+        question: "Is my deposit safe?",
+        answer: "Absolutely. Your deposit is backed by real assets and protected at all times. You can access your cash whenever you need it—no lock-ups, no restrictions."
       },
       {
-        question: "Why would I stay in GRAIN instead of cashing out?",
-        answer: "Every time you cash out and use traditional payments, you pay fees. Credit cards take 2.9%. Wire transfers cost $15-25. Payroll services charge per transaction. In GRAIN, all of that is free. The more you use it, the more you save."
+        question: "How does my value grow?",
+        answer: "As more people join and use the ecosystem, the total value grows. This growth is shared among all participants. It's real value from real activity—not speculation."
       },
       {
-        question: "What if my vendors don't accept GRAIN?",
-        answer: "You can always cash out to pay vendors who aren't in the network yet. But here's the thing: when you tell them they could receive payments with zero fees, most want to join. That's how the network grows."
+        question: "Why are payments free inside the network?",
+        answer: "When you pay someone else in GRAIN, the money stays in the ecosystem. There's no payment processor taking a cut, no bank charging transfer fees. Your full value moves to the recipient."
       },
       {
-        question: "Is my money safe?",
-        answer: "Every GRAIN is backed 1:1 by USD in our treasury. You can withdraw your full balance at any time. We maintain full reserves—no fractional banking."
+        question: "Can I get my money out anytime?",
+        answer: "Yes. Your protected deposit is always accessible. When you need cash, it's available. We believe your money should be accessible when you need it."
       },
       {
-        question: "How do you make money if there are no fees?",
-        answer: "Our treasury earns yield on the reserves backing GRAIN. We don't need to charge you fees because the float generates enough to operate. Your money working for us means zero fees for you."
+        question: "Is this like cryptocurrency?",
+        answer: "No. GRAIN is backed by real assets, not speculation. There's no wild volatility or complicated technology to understand. Your deposit is protected, and your value grows with real ecosystem activity."
       },
       {
-        question: "Can I pay employees in GRAIN?",
-        answer: "Yes. Run payroll directly in GRAIN—instant payments, zero fees, works globally. Employees can cash out to their bank anytime, or spend directly in the GRAIN network."
+        question: "What makes GRAIN different from a savings account?",
+        answer: "Traditional savings accounts offer minimal growth while banks profit from your deposits. GRAIN shares the benefits of ecosystem growth directly with you, while keeping your deposit protected and accessible."
       }
     ]
   },
 
   finalCta: {
-    headline: "Ready to keep more of what you earn?",
-    subhead: "Join thousands of businesses saving money on every transaction.",
+    headline: "Ready to let your money grow?",
+    subhead: "Join thousands of people whose deposits are protected and growing.",
     cta: "Get Started Free",
-    ctaNote: "No minimums. No monthly fees. Cash out anytime."
+    ctaNote: "Your deposit is protected. Cash available anytime."
   }
 }
 
@@ -308,70 +311,70 @@ export const HOMEPAGE_CONTENT = {
 export const SELLER_ONBOARDING = {
   welcome: {
     headline: "Welcome to GRAIN",
-    subhead: "You're about to keep 100% of every payment.",
+    subhead: "Your deposit is protected. Your value grows with the ecosystem.",
     steps: [
       "Set up your account",
-      "Connect your bank",
-      "Start accepting GRAIN"
+      "Make your first deposit",
+      "Watch your value grow"
     ]
   },
 
   dashboardTour: {
     balanceCard: {
-      title: "Your GRAIN Balance",
+      title: "Your Current Value",
       explanation: `
-        This is your total GRAIN balance. It's what you can spend in the network
-        or cash out at any time. 1 GRAIN = $1, always.
+        This shows your total value in GRAIN. Your protected deposit forms the foundation,
+        and your value grows as the ecosystem expands. Cash is always available when you need it.
       `
     },
     transactionsCard: {
       title: "Recent Activity",
       explanation: `
-        See every payment, payout, and transfer. All transactions settle
-        instantly on your ledger, with escrow protection for both parties.
+        See all your deposits, payments, and value changes in one place.
+        Every transaction is instant with secure protection for all parties.
       `
     },
     payrollCard: {
       title: "Payroll",
       explanation: `
-        Pay your team directly in GRAIN. No payroll provider fees.
-        Employees receive funds instantly and can cash out or spend in the network.
+        Pay your team in GRAIN—zero fees within the network.
+        Their deposits are protected too, and they can access cash anytime.
       `
     },
     vendorsCard: {
-      title: "Vendor Payments",
+      title: "Payments",
       explanation: `
-        Pay suppliers, contractors, and service providers. Zero wire fees.
-        If they're not in GRAIN yet, invite them—or cash out to pay traditionally.
+        Pay anyone in the network with zero fees. Full value transfers instantly.
+        For those outside the network, cash is always available.
       `
     },
     savingsCard: {
-      title: "Fees Saved",
+      title: "Value Growth",
       explanation: `
-        This shows how much you've saved by using GRAIN instead of traditional
-        payment methods. Most businesses save 2-5% of their transaction volume.
+        Track how your value has grown since your first deposit.
+        Real ecosystem growth, real value—not speculation.
       `
     }
   },
 
   firstPaymentGuide: {
-    headline: "Accepting your first payment",
+    headline: "Getting started",
     steps: [
       {
+        title: "Make your first deposit",
+        description: "Add funds to get started. Your deposit is protected from day one."
+      },
+      {
         title: "Share your GRAIN ID",
-        description: "Every account has a unique GRAIN ID. Share it with customers to receive payments."
+        description: "Every account has a unique ID. Share it to receive payments fee-free."
       },
       {
-        title: "Generate a payment link",
-        description: "Create a link for a specific amount. Customer clicks, pays, done."
+        title: "Watch your value",
+        description: "As the ecosystem grows, so does your current value."
       },
       {
-        title: "Invoice in GRAIN",
-        description: "Send professional invoices that customers can pay with one click."
-      },
-      {
-        title: "Integrate with your site",
-        description: "Add GRAIN checkout to your website with our simple embed code."
+        title: "Access cash anytime",
+        description: "Your protected deposit is always available when you need it."
       }
     ]
   }
@@ -383,69 +386,69 @@ export const SELLER_ONBOARDING = {
 
 export const FOUNDER_CONTENT = {
   pitch: {
-    headline: "Run your startup on GRAIN",
-    subhead: "Treasury, payroll, vendor payments, customer revenue—one ecosystem, zero fees.",
+    headline: "Company reserves that grow",
+    subhead: "Your protected deposits work harder while you build. Zero fees within the ecosystem.",
     painPoints: [
-      "Tired of $25 wire fees to pay contractors?",
-      "Losing 3% on every customer payment?",
-      "Paying $500/month for payroll software?",
-      "Managing 5 different financial tools?"
+      "Watching reserves sit idle in a bank?",
+      "Paying fees every time money moves?",
+      "No visibility into where your value sits?",
+      "Struggling to show financial health to investors?"
     ],
-    solution: "GRAIN consolidates everything. One balance. Zero fees. Full control."
+    solution: "GRAIN protects your deposits while they grow with the ecosystem. Full transparency. Full access."
   },
 
   treasuryBenefits: {
-    headline: "Your treasury, working harder",
+    headline: "Your reserves, protected and growing",
     points: [
       {
-        title: "Hold operating reserves",
-        description: "Keep 3-6 months of runway in GRAIN. Instant access when you need it."
+        title: "Protected deposits",
+        description: "Your company's reserves are backed by real assets. Access cash when you need it."
       },
       {
-        title: "Pay without friction",
-        description: "Contractors, vendors, employees—pay anyone in the network instantly."
+        title: "Growing value",
+        description: "As the ecosystem expands, your current value grows. Real backing, not speculation."
       },
       {
-        title: "Track everything",
-        description: "Real-time visibility into cash flow, burn rate, and runway."
+        title: "Full visibility",
+        description: "See your total value, protected deposit, and growth in one dashboard."
       },
       {
-        title: "Skip the bank fees",
-        description: "No wire fees, no ACH fees, no international transfer costs."
+        title: "Zero fees inside",
+        description: "Pay anyone in the network without fees eating into your runway."
       }
     ]
   },
 
   payrollBenefits: {
-    headline: "Payroll without the overhead",
+    headline: "Pay your team, keep more",
     comparison: {
       traditional: {
         title: "Traditional Payroll",
         items: [
-          "Pay $200-500/month for Gusto/Rippling",
-          "Wait 2-3 days for payments to process",
-          "Extra fees for contractors",
-          "Complex international payments"
+          "Fees on every payment",
+          "Days for payments to process",
+          "No value growth while funds sit",
+          "Complexity and overhead"
         ]
       },
       grain: {
         title: "GRAIN Payroll",
         items: [
-          "Zero platform fees",
+          "Zero fees within the network",
           "Instant payment delivery",
-          "Same process for employees and contractors",
-          "Global payments, same as local"
+          "Your deposits grow while held",
+          "Simple, transparent, accessible"
         ]
       }
     }
   },
 
   investorIntegration: {
-    headline: "Investor-friendly transparency",
+    headline: "Investor-ready transparency",
     points: [
-      "Real-time treasury visibility for board members",
-      "Automatic burn rate calculations",
-      "Clear runway projections",
+      "Real-time total value visibility",
+      "Clear protected deposit tracking",
+      "Ecosystem growth reporting",
       "Full transaction history"
     ]
   }
@@ -457,30 +460,38 @@ export const FOUNDER_CONTENT = {
 
 export const MESSAGING_GUIDELINES = {
   always: [
-    "1 GRAIN = $1 (cash out value is always clear)",
-    "Zero fees (be specific: no transaction fees, no payroll fees, etc.)",
-    "Closed loop (money circulates, doesn't leave)",
-    "Cash out anytime (no lock-ups, no tricks)",
-    "The value is in utility, not appreciation"
+    "Your deposit is always protected",
+    "Your value grows with the ecosystem",
+    "Zero fees inside the network",
+    "Cash available whenever you need it",
+    "Real backing, real value—not speculation"
   ],
 
   never: [
-    "Don't call it cryptocurrency or blockchain",
-    "Don't promise investment returns or appreciation",
-    "Don't suggest people can't access their money",
-    "Don't compare to speculative assets",
-    "Don't make it sound complicated"
+    "Don't mention equity, liquidity, or treasury mechanics",
+    "Don't use terms like coverage ratio or vault floor",
+    "Don't show formulas or calculations",
+    "Don't compare to crypto or blockchain",
+    "Don't discuss technical backing ratios"
   ],
 
-  tone: {
-    voice: "Confident, clear, practical",
-    avoid: "Hype, jargon, complexity",
-    goal: "Make the value proposition immediately obvious"
+  preferredLanguage: {
+    "principal": "protected deposit",
+    "GRAIN price × balance": "current value",
+    "platform valuation": "ecosystem growth",
+    "USDC liquidity": "cash available",
+    "equity value": "total value"
   },
 
-  keyMetric: "Fees saved",
-  keyEmotion: "Keeping more of what you earn",
-  keyAction: "Start accepting GRAIN"
+  tone: {
+    voice: "Premium financial product, trustworthy and confident",
+    avoid: "Technical jargon, crypto language, complex mechanics",
+    goal: "Communicate VALUE without revealing HOW"
+  },
+
+  keyMetric: "Value growth",
+  keyEmotion: "Money working for you, protected and growing",
+  keyAction: "Start growing your value"
 }
 
 // ============================================================================
@@ -488,37 +499,40 @@ export const MESSAGING_GUIDELINES = {
 // ============================================================================
 
 export const OBJECTION_RESPONSES = {
-  "Why would customers pay in GRAIN?": `
-    Customers save too. No card fees means sellers can offer better prices.
-    Plus, payments are instant—no waiting for holds or processing.
-    As more businesses join, GRAIN becomes the obvious choice.
+  "Is my money safe?": `
+    Absolutely. Your deposit is protected by real assets at all times.
+    You can access your cash whenever you need it—no waiting,
+    no approval process. Your money is always there for you.
   `,
 
-  "What if I need to pay someone outside the network?": `
-    Cash out instantly. 1 GRAIN = $1, always available.
-    Most businesses keep some in GRAIN for network transactions
-    and some in cash for outside payments. Over time, as more
-    join the network, you'll find you need less cash.
+  "How does my value actually grow?": `
+    As more people join and use the ecosystem, total value grows.
+    That growth is shared among all participants. It's real activity
+    creating real value—not speculation or promises.
   `,
 
-  "How is this different from PayPal/Venmo?": `
-    PayPal charges 2.9% + $0.30 per transaction. Venmo charges for business.
-    GRAIN charges nothing. Zero.
-
-    Plus, PayPal is a payment method. GRAIN is an ecosystem.
-    You can run your entire business—payroll, vendors, everything—
-    inside GRAIN without paying fees to anyone.
+  "Can I get my money out anytime?": `
+    Yes. Your protected deposit is always accessible. When you need
+    cash, it's available. We believe your money should work for you
+    AND be accessible when you need it.
   `,
 
-  "Is this legal?": `
-    Yes. GRAIN is not a bank or a cryptocurrency. It's a closed-loop
-    payment network, similar to gift card ecosystems but for business.
-    Your funds are held in regulated accounts and always available.
+  "Is this like crypto or Bitcoin?": `
+    No. GRAIN is backed by real assets, not speculation. There's no
+    wild volatility or complicated technology. Your deposit is protected,
+    and value growth comes from real ecosystem activity.
   `,
 
-  "What happens if GRAIN shuts down?": `
-    All funds are backed 1:1 by USD in our treasury. If we ever
-    shut down, every user would receive their full balance.
-    There's no fractional reserve—your money is always there.
+  "Why would I use this instead of a bank?": `
+    Banks offer minimal growth while profiting from your deposits.
+    GRAIN shares the benefits of ecosystem growth directly with you,
+    keeps your deposit protected, and charges zero fees for payments
+    within the network.
+  `,
+
+  "What happens to my money if something goes wrong?": `
+    Your deposit is backed by real assets at all times. Your protected
+    deposit is always accessible. We maintain full backing to ensure
+    you can always access your value.
   `
 }
