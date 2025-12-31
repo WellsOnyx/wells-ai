@@ -204,86 +204,149 @@ export default function GrainVaultAccountPage() {
           </div>
         </div>
 
-        {/* Three Layer Model - Protected Deposit, Credit Line, Appreciation */}
+        {/* Three Layer Model - Visual Stack */}
         <div className="mb-8 p-6 rounded-2xl bg-white/5 border border-white/10">
-          <div className="flex items-center gap-2 mb-6">
-            <Shield className="w-5 h-5 text-green-400" />
-            <h2 className="text-lg font-bold text-white">Your Three-Layer Position</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-green-400" />
+              <h2 className="text-lg font-bold text-white">Your Three-Layer Position</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/grain-vault/deposit"
+                className="px-4 py-2 rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 text-sm font-medium hover:bg-green-500/30 transition-colors"
+              >
+                + Deposit
+              </Link>
+              <Link
+                href="/grain-vault/pay"
+                className="px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 text-sm font-medium hover:bg-blue-500/30 transition-colors"
+              >
+                Send Payment
+              </Link>
+              <Link
+                href="/grain-vault/withdraw"
+                className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm font-medium hover:bg-white/20 transition-colors"
+              >
+                Withdraw
+              </Link>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Layer 1: Protected Deposit */}
-            <div className="p-5 rounded-xl bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/30">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-green-400" />
+          {/* Visual Three-Layer Stack */}
+          <div className="relative mb-6">
+            {/* Layer 3: Appreciation (Top) */}
+            <div className="relative z-30 p-5 rounded-t-xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 border border-purple-500/30 border-b-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-500/30 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-purple-400 font-medium">LAYER 3 • APPRECIATION</p>
+                    <p className="text-sm text-white">Bonus GRAIN from ecosystem growth</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-green-400 font-medium">LAYER 1</p>
-                  <p className="text-sm text-white font-semibold">Protected Deposit</p>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-white">
+                    {creditPosition?.appreciationGrain?.toLocaleString() || '0'}
+                  </p>
+                  <p className="text-xs text-purple-400">GRAIN (free to spend)</p>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">
-                ${creditPosition?.protectedDeposit?.toLocaleString() || '0'}
-              </p>
-              <p className="text-xs text-gray-400">100% protected. Cash available anytime.</p>
             </div>
 
-            {/* Layer 2: Credit Line */}
-            <div className="p-5 rounded-xl bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/30">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                  <CreditCard className="w-4 h-4 text-blue-400" />
+            {/* Layer 2: Credit Line (Middle) */}
+            <div className="relative z-20 p-5 bg-gradient-to-br from-blue-500/20 to-blue-500/5 border-x border-blue-500/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/30 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-400 font-medium">LAYER 2 • CREDIT LINE</p>
+                    <p className="text-sm text-white">0% interest • 0% fees • 1:1 GRAIN</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-blue-400 font-medium">LAYER 2</p>
-                  <p className="text-sm text-white font-semibold">Credit Line</p>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-white">
+                    {creditPosition?.creditLineAvailable?.toLocaleString() || account.creditLine.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-blue-400">
+                    GRAIN available
+                    {creditPosition?.creditLineUsed && creditPosition.creditLineUsed > 0 && (
+                      <span className="text-amber-400 ml-2">
+                        ({creditPosition.creditLineUsed.toLocaleString()} used)
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">
-                {creditPosition?.creditLineAvailable?.toLocaleString() || account.creditLine.toLocaleString()} <span className="text-lg text-gray-400">GRAIN</span>
-              </p>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-400">0% interest</span>
-                <span className="text-blue-400">0% fees</span>
-              </div>
-              {creditPosition?.creditLineUsed && creditPosition.creditLineUsed > 0 && (
-                <p className="text-xs text-amber-400 mt-2">
-                  Used: {creditPosition.creditLineUsed.toLocaleString()} GRAIN
-                </p>
+              {/* Credit usage bar */}
+              {creditPosition?.creditLineLimit && creditPosition.creditLineLimit > 0 && (
+                <div className="mt-3 h-2 bg-black/30 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all"
+                    style={{
+                      width: `${((creditPosition.creditLineAvailable || 0) / creditPosition.creditLineLimit) * 100}%`
+                    }}
+                  />
+                </div>
               )}
             </div>
 
-            {/* Layer 3: Appreciation */}
-            <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/30">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-purple-400" />
+            {/* Layer 1: Protected Deposit (Bottom/Foundation) */}
+            <div className="relative z-10 p-5 rounded-b-xl bg-gradient-to-br from-green-500/20 to-green-500/5 border border-green-500/30 border-t-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-500/30 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-green-400 font-medium">LAYER 1 • PROTECTED DEPOSIT</p>
+                    <p className="text-sm text-white">100% protected • Your cash • Always available</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-purple-400 font-medium">LAYER 3</p>
-                  <p className="text-sm text-white font-semibold">Appreciation</p>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-white">
+                    ${creditPosition?.protectedDeposit?.toLocaleString() || '0'}
+                  </p>
+                  <p className="text-xs text-green-400">USD (withdraw anytime)</p>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">
-                {creditPosition?.appreciationGrain?.toLocaleString() || '0'} <span className="text-lg text-gray-400">GRAIN</span>
-              </p>
-              <p className="text-xs text-gray-400">Bonus GRAIN from ecosystem growth</p>
             </div>
+
+            {/* Connection Lines */}
+            <div className="absolute left-8 top-[60px] bottom-[60px] w-0.5 bg-gradient-to-b from-purple-500 via-blue-500 to-green-500 opacity-30" />
           </div>
 
-          {/* GRAIN Price */}
-          <div className="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-400">Current GRAIN Price</p>
-              <p className="text-xl font-bold text-white">
+          {/* Summary Bar */}
+          <div className="grid grid-cols-4 gap-4 p-4 rounded-xl bg-black/30 border border-white/10">
+            <div className="text-center">
+              <p className="text-xs text-gray-500 mb-1">GRAIN Price</p>
+              <p className="text-lg font-bold text-white">
                 ${creditPosition?.grainPrice?.toFixed(4) || '1.0000'}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-400">Your Current Value</p>
-              <p className="text-xl font-bold text-green-400">
+            <div className="text-center border-l border-white/10">
+              <p className="text-xs text-gray-500 mb-1">Total Value</p>
+              <p className="text-lg font-bold text-green-400">
                 ${creditPosition?.currentValue?.toLocaleString() || '0'}
+              </p>
+            </div>
+            <div className="text-center border-l border-white/10">
+              <p className="text-xs text-gray-500 mb-1">Credit Utilization</p>
+              <p className="text-lg font-bold text-blue-400">
+                {creditPosition?.creditLineLimit && creditPosition.creditLineLimit > 0
+                  ? `${(((creditPosition.creditLineUsed || 0) / creditPosition.creditLineLimit) * 100).toFixed(1)}%`
+                  : '0%'
+                }
+              </p>
+            </div>
+            <div className="text-center border-l border-white/10">
+              <p className="text-xs text-gray-500 mb-1">Spending Power</p>
+              <p className="text-lg font-bold text-purple-400">
+                {((creditPosition?.creditLineAvailable || 0) + (creditPosition?.appreciationGrain || 0)).toLocaleString()} GRAIN
               </p>
             </div>
           </div>

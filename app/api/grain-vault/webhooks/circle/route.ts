@@ -278,7 +278,12 @@ async function addToTreasury(
 }
 
 /**
- * Credit GRAIN to user's ledger
+ * Credit GRAIN to user's ledger using Credit Line Engine
+ *
+ * NEW CREDIT LINE MODEL:
+ * - Deposit goes to protected deposit (100% protected)
+ * - Credit line created 1:1 at current GRAIN price
+ * - 0% interest, 0% fees
  */
 async function creditGrainToUser(
   userId: string,
@@ -288,16 +293,41 @@ async function creditGrainToUser(
   circleTransferId: string,
   source: string
 ): Promise<void> {
-  // Update user's GRAIN balance
+  // Import Credit Line Engine dynamically to avoid circular deps
+  const { CreditLineEngine } = await import('@/lib/grain/credit-line-engine')
+
+  // Use Credit Line Engine for deposit
+  // This creates: protected deposit + credit line at current price
+  const depositResult = await CreditLineEngine.deposit(userId, usdAmount)
+
+  console.log(`[Circle Webhook] Credit Line Model deposit:`)
+  console.log(`  User: ${userId}`)
+  console.log(`  Protected Deposit: $${depositResult.position.protectedDeposit.toLocaleString()}`)
+  console.log(`  Credit Line: ${depositResult.position.creditLineAvailable.toLocaleString()} GRAIN`)
+
+  // Also maintain legacy user_wallets for backward compatibility
+  await sql`
+    INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, created_at, updated_at)
+    VALUES (
+      ${userId},
+      ${'grain-' + userId.substring(0, 8) + '-' + Date.now().toString(36)},
+      'custodial',
+      0,
+      NOW(),
+      NOW()
+    )
+    ON CONFLICT (user_id) DO NOTHING
+  `
+
   await sql`
     UPDATE user_wallets
     SET
-      balance = balance + ${grainAmount},
+      balance = ${depositResult.position.creditLineAvailable + depositResult.position.appreciationGrain},
       updated_at = NOW()
     WHERE user_id = ${userId}
   `
 
-  // Record transaction
+  // Record in legacy grain_transactions table for backward compatibility
   const transactionId = `gv_${Date.now()}_${Math.random().toString(36).substring(7)}`
 
   await sql`
@@ -326,7 +356,7 @@ async function creditGrainToUser(
       ${source.includes('wire') ? 'wire' : 'ach'},
       ${circleTransferId},
       'completed',
-      ${`${source.includes('wire') ? 'Wire' : 'ACH'} deposit via Circle`},
+      ${`${source.includes('wire') ? 'Wire' : 'ACH'} deposit via Circle - Credit Line Model`},
       NOW(),
       NOW()
     )

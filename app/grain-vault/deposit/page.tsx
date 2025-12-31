@@ -1,23 +1,18 @@
 'use client'
 
 /**
- * Grain & Vault - Deposit Page
+ * Grain & Vault - Deposit Page (Credit Line Model)
  *
- * UX PRINCIPLES:
- * 1. TRUST FIRST - Show that deposits are protected
- * 2. CLARITY - Simple flow: Deposit X -> Your account grows
- * 3. SIMPLICITY - Hide internal mechanics (GRAIN conversion, treasury, etc.)
- * 4. PREMIUM FEEL - Like a wealth management platform, not crypto
+ * THE CREDIT LINE MODEL:
+ * 1. Protected Deposit - 100% of USD deposit is always withdrawable
+ * 2. Credit Line - 1:1 credit line in GRAIN at current GRAIN price
+ * 3. 0% Interest - No interest on the credit line
+ * 4. 0% Transaction Fees - Free transactions inside the network
  *
- * What users see:
- * - "You're depositing $X"
- * - "Your protected amount will be $X"
- * - "Your account value may grow over time"
- *
- * What we DON'T show:
- * - GRAIN price oracle mechanics
- * - Treasury backing ratios
- * - Token conversion formulas
+ * THREE LAYERS:
+ * Layer 1: Protected Deposit (your USD, always safe)
+ * Layer 2: Credit Line (GRAIN to spend, 0% interest)
+ * Layer 3: Appreciation (bonus GRAIN from ecosystem growth)
  */
 
 import { useEffect, useState, useMemo, useCallback, Suspense } from 'react'
@@ -35,10 +30,12 @@ import {
   Info,
   TrendingUp,
   Clock,
-  Copy,
-  Building2,
-  RefreshCw,
-  ExternalLink
+  Sparkles,
+  Percent,
+  CreditCard,
+  Wallet,
+  Lock,
+  Zap
 } from 'lucide-react'
 
 // Types
@@ -62,23 +59,21 @@ interface PriceData {
   }
 }
 
-interface BankInstructions {
-  method: 'wire' | 'ach'
-  bankName: string
-  routingNumber: string
-  accountNumber: string  // Virtual Account Number - unique per customer
-  accountName: string
-  reference: string
-  swiftCode?: string     // For international wire
+interface DepositResult {
+  success: boolean
+  position: {
+    protectedDeposit: number
+    creditLineAvailable: number
+    creditLineUsed: number
+    appreciationGrain: number
+  }
+  transaction: {
+    id: string
+    amount: number
+    grainCredited: number
+    grainPrice: number
+  }
 }
-
-interface DepositSession {
-  sessionId: string
-  bankInstructions: BankInstructions
-  estimatedCrediting: string
-}
-
-type DepositMethod = 'ach' | 'wire'
 
 // Loading fallback
 function DepositPageLoading() {
@@ -109,26 +104,22 @@ function DepositPageContent() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<DepositResult | null>(null)
 
   // Data
   const [walletData, setWalletData] = useState<WalletData | null>(null)
   const [priceData, setPriceData] = useState<PriceData | null>(null)
-  const [depositSession, setDepositSession] = useState<DepositSession | null>(null)
-  const [copied, setCopied] = useState<string | null>(null)
 
   // Form
   const initialAmount = searchParams.get('amount') || ''
   const [amount, setAmount] = useState<string>(initialAmount)
-  const [depositMethod, setDepositMethod] = useState<DepositMethod>('ach')
 
-  // Calculate GRAIN to receive based on oracle price
-  const grainToReceive = useMemo(() => {
-    const numAmount = parseFloat(amount) || 0
-    const price = priceData?.grain?.price_usd || walletData?.grain_price || 1
-    return numAmount / price
-  }, [amount, priceData, walletData])
-
+  // Calculate GRAIN credit line based on oracle price
   const currentPrice = priceData?.grain?.price_usd || walletData?.grain_price || 1
+  const grainCreditLine = useMemo(() => {
+    const numAmount = parseFloat(amount) || 0
+    return numAmount / currentPrice
+  }, [amount, currentPrice])
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -186,12 +177,12 @@ function DepositPageContent() {
     }
   }, [isLoaded, isSignedIn, fetchData, router])
 
-  // Get bank instructions for deposit
-  const getDepositInstructions = async () => {
+  // Submit deposit to credit-line API
+  const handleDeposit = async () => {
     const numAmount = parseFloat(amount)
 
     if (!numAmount || numAmount < 100) {
-      setError('Minimum deposit is $100 for ACH/wire transfers')
+      setError('Minimum deposit is $100')
       return
     }
 
@@ -199,22 +190,23 @@ function DepositPageContent() {
     setError(null)
 
     try {
-      const res = await fetch('/api/grain-vault/deposit/bank-instructions', {
+      const res = await fetch('/api/grain/credit-line', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: numAmount,
-          method: depositMethod
+          action: 'deposit',
+          userId: user?.id,
+          amount: numAmount
         })
       })
 
       const result = await res.json()
 
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to get deposit instructions')
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || 'Failed to process deposit')
       }
 
-      setDepositSession(result)
+      setSuccess(result)
 
     } catch (err: any) {
       console.error('Deposit error:', err)
@@ -222,13 +214,6 @@ function DepositPageContent() {
     } finally {
       setSubmitting(false)
     }
-  }
-
-  // Copy to clipboard
-  const copyToClipboard = (text: string, field: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(field)
-    setTimeout(() => setCopied(null), 2000)
   }
 
   // Format helpers
@@ -253,9 +238,8 @@ function DepositPageContent() {
     return <DepositPageLoading />
   }
 
-  // Show bank instructions
-  if (depositSession) {
-    const { bankInstructions } = depositSession
+  // Success state
+  if (success) {
     return (
       <div className="min-h-screen bg-black text-white">
         <Header user={user} />
@@ -270,119 +254,75 @@ function DepositPageContent() {
           </Link>
 
           {/* Success Banner */}
-          <div className="mb-8 p-6 bg-green-500/10 border border-green-500/20 rounded-2xl">
+          <div className="mb-8 p-8 bg-gradient-to-br from-green-500/20 to-emerald-500/10 border border-green-500/30 rounded-3xl backdrop-blur-xl">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                <CheckCircle className="w-6 h-6 text-green-400" />
+              <div className="w-16 h-16 rounded-2xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-8 h-8 text-green-400" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white mb-2">
-                  Deposit Instructions Ready
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Deposit Successful!
                 </h2>
                 <p className="text-gray-400">
-                  Use the bank details below to initiate your {depositMethod.toUpperCase()} transfer.
-                  Your GRAIN will be credited upon receipt.
+                  Your funds are protected and your credit line is ready to use.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Deposit Summary - User Friendly */}
-          <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-xl">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-gray-400">Your Deposit</span>
-              <span className="text-xl font-bold text-white">{formatUSD(parseFloat(amount))}</span>
-            </div>
-            <div className="flex items-center justify-between pt-3 border-t border-white/10">
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-green-400" />
-                <span className="text-gray-400">Protected Amount</span>
-              </div>
-              <span className="text-green-400 font-bold">{formatUSD(parseFloat(amount))}</span>
-            </div>
-          </div>
-
-          {/* Bank Instructions Card */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">
-                  {bankInstructions.method === 'wire' ? 'Wire Transfer' : 'ACH Transfer'} Details
-                </h3>
-                <p className="text-sm text-gray-400">Send funds to this account</p>
+          {/* What You Got */}
+          <div className="space-y-4 mb-8">
+            {/* Protected Deposit */}
+            <div className="p-5 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Protected Deposit</p>
+                    <p className="text-xs text-green-400">100% Withdrawable</p>
+                  </div>
+                </div>
+                <p className="text-2xl font-bold text-white">
+                  {formatUSD(success.position.protectedDeposit)}
+                </p>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <InstructionRow
-                label="Bank Name"
-                value={bankInstructions.bankName}
-                onCopy={() => copyToClipboard(bankInstructions.bankName, 'bank')}
-                copied={copied === 'bank'}
-              />
-              <InstructionRow
-                label="Routing Number"
-                value={bankInstructions.routingNumber}
-                onCopy={() => copyToClipboard(bankInstructions.routingNumber, 'routing')}
-                copied={copied === 'routing'}
-              />
-              <InstructionRow
-                label="Account Number"
-                value={bankInstructions.accountNumber}
-                onCopy={() => copyToClipboard(bankInstructions.accountNumber, 'account')}
-                copied={copied === 'account'}
-                highlight
-              />
-              <InstructionRow
-                label="Account Name"
-                value={bankInstructions.accountName}
-                onCopy={() => copyToClipboard(bankInstructions.accountName, 'name')}
-                copied={copied === 'name'}
-              />
-              {bankInstructions.swiftCode && (
-                <InstructionRow
-                  label="SWIFT Code"
-                  value={bankInstructions.swiftCode}
-                  onCopy={() => copyToClipboard(bankInstructions.swiftCode!, 'swift')}
-                  copied={copied === 'swift'}
-                />
-              )}
-              <InstructionRow
-                label="Reference/Memo"
-                value={bankInstructions.reference}
-                onCopy={() => copyToClipboard(bankInstructions.reference, 'reference')}
-                copied={copied === 'reference'}
-                highlight
-              />
-            </div>
-          </div>
-
-          {/* Important Notes */}
-          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm text-yellow-400 font-medium mb-2">Important</p>
-                <ul className="text-sm text-gray-400 space-y-1">
-                  <li>Include the reference code in your transfer memo</li>
-                  <li>ACH transfers typically arrive in 1-3 business days</li>
-                  <li>Wire transfers typically arrive same day or next business day</li>
-                  <li>Your account will be credited once funds are received</li>
-                </ul>
+            {/* Credit Line */}
+            <div className="p-5 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Credit Line</p>
+                    <p className="text-xs text-purple-400">@ {formatUSD(success.transaction.grainPrice)}/GRAIN</p>
+                  </div>
+                </div>
+                <p className="text-2xl font-bold text-white">
+                  {formatGRAIN(success.position.creditLineAvailable)} <span className="text-lg text-gray-400">GRAIN</span>
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Timing Info */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-400">Estimated Credit Time</p>
-                <p className="text-white font-medium">{depositSession.estimatedCrediting}</p>
+            {/* Zero Fees Card */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-white/5 border border-white/10 rounded-xl backdrop-blur-xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <Percent className="w-4 h-4 text-blue-400" />
+                  <p className="text-sm text-gray-400">Interest Rate</p>
+                </div>
+                <p className="text-xl font-bold text-green-400">0%</p>
+              </div>
+              <div className="p-4 bg-white/5 border border-white/10 rounded-xl backdrop-blur-xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="w-4 h-4 text-yellow-400" />
+                  <p className="text-sm text-gray-400">Network Fees</p>
+                </div>
+                <p className="text-xl font-bold text-green-400">0%</p>
               </div>
             </div>
           </div>
@@ -391,19 +331,18 @@ function DepositPageContent() {
           <div className="flex gap-3">
             <Link
               href="/grain-vault/dashboard"
-              className="flex-1 px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all text-center"
+              className="flex-1 px-6 py-4 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all text-center backdrop-blur-xl"
             >
-              Back to Dashboard
+              View Dashboard
             </Link>
             <button
               onClick={() => {
-                setDepositSession(null)
+                setSuccess(null)
                 setAmount('')
               }}
-              className="flex-1 px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all"
             >
-              <RefreshCw className="w-4 h-4" />
-              New Deposit
+              Make Another Deposit
             </button>
           </div>
         </main>
@@ -425,91 +364,86 @@ function DepositPageContent() {
           Back to Dashboard
         </Link>
 
-        {/* Page Title with Value Messaging */}
+        {/* Page Title */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Add Funds</h1>
-          <p className="text-gray-400 mb-4">Deposit securely - your money is protected and grows with the ecosystem</p>
-
-          {/* Trust Badges */}
-          <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 rounded-full border border-green-500/20">
-              <Shield className="w-3.5 h-3.5 text-green-400" />
-              <span className="text-xs text-green-400 font-medium">Principal Protected</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-full border border-blue-500/20">
-              <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-xs text-blue-400 font-medium">Value Appreciates</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 rounded-full border border-purple-500/20">
-              <Clock className="w-3.5 h-3.5 text-purple-400" />
-              <span className="text-xs text-purple-400 font-medium">Access Anytime</span>
-            </div>
-          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">Deposit Funds</h1>
+          <p className="text-gray-400">
+            Get instant credit in GRAIN with zero interest and zero fees
+          </p>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 backdrop-blur-xl">
             <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
             <p className="text-red-400 font-medium">{error}</p>
           </div>
         )}
 
-        {/* Current Account Summary - User-Friendly */}
-        <div className="mb-6 p-6 rounded-2xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20">
-          <div className="flex items-center gap-2 mb-4">
-            <Shield className="w-5 h-5 text-green-400" />
-            <span className="text-sm text-green-400 font-medium">Your Account</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-400 mb-1">Current Value</p>
-              <h3 className="text-3xl font-bold text-white">
-                {formatUSD(walletData?.balance?.usd_value || 0)}
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Protected and accessible anytime
-              </p>
+        {/* The Three Layers Explanation */}
+        <div className="mb-8 p-6 bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl backdrop-blur-xl">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-yellow-400" />
+            How It Works
+          </h3>
+
+          <div className="space-y-4">
+            {/* Layer 1 */}
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <Shield className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">Layer 1: Protected Deposit</p>
+                <p className="text-sm text-gray-400">
+                  Your USD is 100% protected and always withdrawable. No lockups.
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-400 mb-1">Account Status</p>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-green-400 font-medium">Active</span>
+
+            {/* Layer 2 */}
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                <CreditCard className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">Layer 2: Credit Line</p>
+                <p className="text-sm text-gray-400">
+                  Get a 1:1 credit line in GRAIN at current price. 0% interest forever.
+                </p>
+              </div>
+            </div>
+
+            {/* Layer 3 */}
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-5 h-5 text-yellow-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">Layer 3: Appreciation</p>
+                <p className="text-sm text-gray-400">
+                  Earn bonus GRAIN as the ecosystem grows. Your value increases over time.
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Trust Message */}
-        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-          <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-blue-400 font-medium mb-1">Your Deposit is Protected</p>
-              <p className="text-sm text-gray-400">
-                Every dollar you deposit is fully backed and protected. Your funds are always
-                accessible, and your account value may grow over time as you participate in the ecosystem.
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Deposit Form */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+        <div className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-6 mb-6 backdrop-blur-xl">
           {/* Amount Input */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-3">
-              Amount to Deposit (USD)
+              Deposit Amount (USD)
             </label>
 
-            {/* Preset Amounts - Enterprise focused */}
+            {/* Preset Amounts */}
             <div className="grid grid-cols-4 gap-2 mb-4">
               {[1000, 5000, 10000, 25000].map((preset) => (
                 <button
                   key={preset}
                   onClick={() => setAmount(preset.toString())}
-                  className={`p-3 rounded-lg border text-center transition-all ${
+                  className={`p-3 rounded-xl border text-center transition-all ${
                     amount === preset.toString()
                       ? 'bg-green-500/20 border-green-500/50 text-green-400'
                       : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
@@ -530,189 +464,135 @@ function DepositPageContent() {
                 placeholder="Enter amount"
                 min="100"
                 step="1"
-                className="w-full pl-10 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-2xl font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all"
+                className="w-full pl-10 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-2xl font-semibold text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all backdrop-blur-xl"
               />
             </div>
             <p className="mt-2 text-sm text-gray-500">Minimum deposit: $100</p>
           </div>
 
-          {/* Deposit Preview - Value-Focused */}
+          {/* What You'll Get Preview */}
           {parseFloat(amount) >= 100 && (
-            <div className="mb-6 rounded-xl overflow-hidden border border-green-500/20">
+            <div className="mb-6 rounded-2xl overflow-hidden border border-green-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/5 backdrop-blur-xl">
               {/* Header */}
-              <div className="px-4 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/10">
+              <div className="px-5 py-4 bg-gradient-to-r from-green-500/20 to-emerald-500/10 border-b border-green-500/20">
                 <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-green-400" />
-                  <span className="text-sm font-medium text-green-400">Your Investment Summary</span>
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <span className="font-semibold text-white">What You'll Get</span>
                 </div>
               </div>
 
               {/* Content */}
-              <div className="p-4 bg-white/5">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-gray-400">Cash Available</span>
-                  <span className="text-2xl font-bold text-white">
-                    {formatUSD(parseFloat(amount))}
-                  </span>
+              <div className="p-5 space-y-4">
+                {/* Protected Deposit */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-5 h-5 text-green-400" />
+                    <div>
+                      <p className="text-white font-medium">Protected Deposit</p>
+                      <p className="text-xs text-green-400">100% withdrawable anytime</p>
+                    </div>
+                  </div>
+                  <p className="text-xl font-bold text-white">{formatUSD(parseFloat(amount))}</p>
                 </div>
 
-                <div className="flex items-center justify-between py-3 border-t border-white/10">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-green-400" />
-                    <span className="text-gray-400">Protected Amount</span>
+                <div className="h-px bg-white/10" />
+
+                {/* Credit Line */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="w-5 h-5 text-purple-400" />
+                    <div>
+                      <p className="text-white font-medium">Credit Line</p>
+                      <p className="text-xs text-purple-400">at {formatUSD(currentPrice)}/GRAIN</p>
+                    </div>
                   </div>
-                  <span className="text-green-400 font-bold">
-                    {formatUSD(parseFloat(amount))}
-                  </span>
+                  <p className="text-xl font-bold text-white">
+                    {formatGRAIN(grainCreditLine)} <span className="text-sm text-gray-400">GRAIN</span>
+                  </p>
                 </div>
 
-                <div className="flex items-center justify-between py-3 border-t border-white/10">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-purple-400" />
-                    <span className="text-gray-400">Value Growth</span>
+                <div className="h-px bg-white/10" />
+
+                {/* Zero Interest */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Percent className="w-5 h-5 text-blue-400" />
+                    <p className="text-white font-medium">Interest Rate</p>
                   </div>
-                  <span className="text-purple-400 font-medium">
-                    Grows with ecosystem
-                  </span>
+                  <p className="text-xl font-bold text-green-400">0%</p>
+                </div>
+
+                <div className="h-px bg-white/10" />
+
+                {/* Zero Fees */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Zap className="w-5 h-5 text-yellow-400" />
+                    <p className="text-white font-medium">Transaction Fees</p>
+                  </div>
+                  <p className="text-xl font-bold text-green-400">0%</p>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="px-4 py-3 bg-green-500/10 border-t border-green-500/20">
-                <div className="flex items-center gap-2 text-xs text-green-400/80">
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  <span>Full deposit protected. Withdraw anytime. Value appreciates over time.</span>
+              <div className="px-5 py-3 bg-green-500/10 border-t border-green-500/20">
+                <div className="flex items-center gap-2 text-sm text-green-400/90">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Plus appreciation rewards as the ecosystem grows</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Transfer Method Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              Transfer Method
-            </label>
-
-            <div className="grid grid-cols-2 gap-3">
-              {/* ACH */}
-              <button
-                onClick={() => setDepositMethod('ach')}
-                className={`p-4 rounded-xl border transition-all text-left ${
-                  depositMethod === 'ach'
-                    ? 'bg-green-500/10 border-green-500/50'
-                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    depositMethod === 'ach' ? 'bg-green-500/20' : 'bg-purple-500/20'
-                  }`}>
-                    <Landmark className={`w-5 h-5 ${depositMethod === 'ach' ? 'text-green-400' : 'text-purple-400'}`} />
-                  </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    depositMethod === 'ach' ? 'border-green-500 bg-green-500' : 'border-gray-500'
-                  }`}>
-                    {depositMethod === 'ach' && <CheckCircle className="w-3 h-3 text-white" />}
-                  </div>
-                </div>
-                <p className="font-semibold text-white">ACH Transfer</p>
-                <p className="text-sm text-gray-400">1-3 business days</p>
-                <p className="text-xs text-gray-500 mt-1">No fees</p>
-              </button>
-
-              {/* Wire */}
-              <button
-                onClick={() => setDepositMethod('wire')}
-                className={`p-4 rounded-xl border transition-all text-left ${
-                  depositMethod === 'wire'
-                    ? 'bg-green-500/10 border-green-500/50'
-                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    depositMethod === 'wire' ? 'bg-green-500/20' : 'bg-blue-500/20'
-                  }`}>
-                    <Building2 className={`w-5 h-5 ${depositMethod === 'wire' ? 'text-green-400' : 'text-blue-400'}`} />
-                  </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    depositMethod === 'wire' ? 'border-green-500 bg-green-500' : 'border-gray-500'
-                  }`}>
-                    {depositMethod === 'wire' && <CheckCircle className="w-3 h-3 text-white" />}
-                  </div>
-                </div>
-                <p className="font-semibold text-white">Wire Transfer</p>
-                <p className="text-sm text-gray-400">Same/next business day</p>
-                <p className="text-xs text-gray-500 mt-1">Bank fees may apply</p>
-              </button>
-            </div>
-          </div>
-
-          {/* Submit Button */}
+          {/* Deposit Button */}
           <button
-            onClick={getDepositInstructions}
+            onClick={handleDeposit}
             disabled={submitting || !amount || parseFloat(amount) < 100}
-            className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg shadow-green-500/25"
           >
             {submitting ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Getting Instructions...
+                Processing Deposit...
               </>
             ) : (
               <>
-                <Landmark className="w-5 h-5" />
-                Get Deposit Instructions
+                <Wallet className="w-5 h-5" />
+                Deposit {amount ? formatUSD(parseFloat(amount) || 0) : 'Now'}
                 <ArrowRight className="w-5 h-5" />
               </>
             )}
           </button>
         </div>
 
-        {/* Enterprise Features */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-green-400" />
-            Enterprise Features
-          </h3>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="p-4 bg-white/5 rounded-lg">
-              <p className="font-medium text-white mb-1">ERP Integration</p>
-              <p className="text-sm text-gray-400">
-                Connect SAP, NetSuite, QuickBooks for automated account sync
-              </p>
-            </div>
-            <div className="p-4 bg-white/5 rounded-lg">
-              <p className="font-medium text-white mb-1">Virtual Account Numbers</p>
-              <p className="text-sm text-gray-400">
-                Unique account number for auto-attribution of deposits
-              </p>
-            </div>
-            <div className="p-4 bg-white/5 rounded-lg">
-              <p className="font-medium text-white mb-1">No Limits</p>
-              <p className="text-sm text-gray-400">
-                Deposit any amount. Wire unlimited. ACH up to $1M/day.
-              </p>
-            </div>
-            <div className="p-4 bg-white/5 rounded-lg">
-              <p className="font-medium text-white mb-1">Treasury Reporting</p>
-              <p className="text-sm text-gray-400">
-                Real-time balance tracking and audit-ready reports
-              </p>
-            </div>
+        {/* Key Benefits */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="p-4 bg-white/5 border border-white/10 rounded-xl backdrop-blur-xl text-center">
+            <Lock className="w-6 h-6 text-green-400 mx-auto mb-2" />
+            <p className="text-sm font-medium text-white">100% Safe</p>
+            <p className="text-xs text-gray-400">Always protected</p>
+          </div>
+          <div className="p-4 bg-white/5 border border-white/10 rounded-xl backdrop-blur-xl text-center">
+            <Percent className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+            <p className="text-sm font-medium text-white">0% Interest</p>
+            <p className="text-xs text-gray-400">Forever</p>
+          </div>
+          <div className="p-4 bg-white/5 border border-white/10 rounded-xl backdrop-blur-xl text-center">
+            <Zap className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+            <p className="text-sm font-medium text-white">0% Fees</p>
+            <p className="text-xs text-gray-400">In-network</p>
           </div>
         </div>
 
-        {/* Security Info */}
-        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+        {/* Trust & Security */}
+        <div className="p-5 bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-xl backdrop-blur-xl">
           <div className="flex items-start gap-3">
             <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm text-blue-400 font-medium mb-1">Bank-Grade Security</p>
               <p className="text-sm text-gray-400">
-                Your deposits are held securely by our regulated banking partners with
-                industry-leading security. Every dollar is protected and accessible when you need it.
+                Your deposits are held securely by regulated banking partners. Every dollar
+                is protected, and you can withdraw your full deposit at any time with no penalties.
               </p>
             </div>
           </div>
@@ -722,50 +602,14 @@ function DepositPageContent() {
   )
 }
 
-// Instruction Row Component
-function InstructionRow({
-  label,
-  value,
-  onCopy,
-  copied,
-  highlight = false
-}: {
-  label: string
-  value: string
-  onCopy: () => void
-  copied: boolean
-  highlight?: boolean
-}) {
-  return (
-    <div className={`p-3 rounded-lg ${highlight ? 'bg-green-500/10 border border-green-500/20' : 'bg-white/5'}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs text-gray-500 mb-1">{label}</p>
-          <p className={`font-mono ${highlight ? 'text-green-400 font-bold' : 'text-white'}`}>
-            {value}
-          </p>
-        </div>
-        <button
-          onClick={onCopy}
-          className={`p-2 rounded-lg transition-colors ${
-            copied ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400 hover:text-white'
-          }`}
-        >
-          {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // Header Component
 function Header({ user }: { user: any }) {
   return (
-    <header className="border-b border-white/10 bg-black/50 backdrop-blur-lg sticky top-0 z-50">
+    <header className="border-b border-white/10 bg-black/50 backdrop-blur-xl sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/grain-vault" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
               <div className="w-3 h-3 bg-black rounded-sm" />
             </div>
             <div>

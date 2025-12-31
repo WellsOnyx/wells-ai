@@ -1,11 +1,17 @@
 /**
  * Complete Deposit API
  * POST: Complete deposit after Circle on-ramp success (or demo checkout)
+ *
+ * NEW CREDIT LINE MODEL:
+ * - Deposit goes to protected deposit (100% protected)
+ * - Credit line created 1:1 at current GRAIN price
+ * - 0% interest, 0% fees
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { sql } from '@vercel/postgres'
+import { CreditLineEngine } from '@/lib/grain/credit-line-engine'
 
 export async function POST(req: NextRequest) {
   try {
@@ -63,10 +69,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // GRAIN price is 1:1 with USD
-    const grainPrice = 1.0
-    const grainAmount = depositAmount / grainPrice
-
     // Check if already completed
     const existingResult = await sql`
       SELECT id FROM grain_transactions
@@ -76,15 +78,21 @@ export async function POST(req: NextRequest) {
     `
 
     if (existingResult.rows.length > 0) {
+      // Return existing position
+      const position = await CreditLineEngine.getPosition(userId)
       return NextResponse.json({
         success: true,
         message: 'Deposit already completed',
-        grainAmount,
-        alreadyProcessed: true
+        alreadyProcessed: true,
+        position,
       })
     }
 
-    // Update existing pending transaction or create new one
+    // Use Credit Line Engine for deposit
+    // This creates: protected deposit + credit line at current price
+    const depositResult = await CreditLineEngine.deposit(userId, depositAmount)
+
+    // Also update legacy grain_transactions table for backward compatibility
     const txResult = await sql`
       UPDATE grain_transactions
       SET
@@ -111,8 +119,8 @@ export async function POST(req: NextRequest) {
         ) VALUES (
           ${userId},
           'deposit',
-          ${grainAmount},
-          ${demo ? 'Demo deposit (sandbox)' : 'Card deposit via Circle'},
+          ${depositAmount},
+          ${demo ? 'Demo deposit (sandbox) - Credit Line Model' : 'Card deposit via Circle - Credit Line Model'},
           ${reference},
           'completed',
           NOW(),
@@ -121,7 +129,7 @@ export async function POST(req: NextRequest) {
       `
     }
 
-    // Ensure user has wallet entry
+    // Also maintain user_wallets for backward compatibility
     await sql`
       INSERT INTO user_wallets (user_id, wallet_id, wallet_address, balance, created_at, updated_at)
       VALUES (
@@ -135,31 +143,38 @@ export async function POST(req: NextRequest) {
       ON CONFLICT (user_id) DO NOTHING
     `
 
-    // Credit user's GRAIN balance
     await sql`
       UPDATE user_wallets
       SET
-        balance = balance + ${grainAmount},
+        balance = ${depositResult.position.creditLineAvailable + depositResult.position.appreciationGrain},
         updated_at = NOW()
       WHERE user_id = ${userId}
     `
 
-    // Get new balance
-    const balanceResult = await sql`
-      SELECT balance FROM user_wallets WHERE user_id = ${userId}
-    `
-    const newBalance = parseFloat(balanceResult.rows[0]?.balance || '0')
-
-    console.log(`[Deposit Complete] User ${userId}: +${grainAmount} GRAIN, new balance: ${newBalance}`)
+    console.log(`[Deposit Complete] User ${userId}: Credit Line Model activated`)
+    console.log(`  Protected Deposit: $${depositResult.position.protectedDeposit.toLocaleString()}`)
+    console.log(`  Credit Line: ${depositResult.position.creditLineAvailable.toLocaleString()} GRAIN`)
 
     return NextResponse.json({
       success: true,
       status: 'completed',
-      grainAmount,
-      grainPrice,
       depositAmount,
-      newBalance,
-      transactionId: reference
+      transactionId: reference,
+
+      // Credit Line Model response
+      position: depositResult.position,
+      transaction: depositResult.transaction,
+      message: depositResult.message,
+
+      // Summary for UI
+      summary: {
+        protectedDeposit: depositResult.position.protectedDeposit,
+        protectedDepositFormatted: `$${depositResult.position.protectedDeposit.toLocaleString()}`,
+        creditLineAvailable: depositResult.position.creditLineAvailable,
+        creditLineAvailableFormatted: `${depositResult.position.creditLineAvailable.toLocaleString()} GRAIN`,
+        grainPrice: depositResult.position.depositGrainPrice,
+        grainPriceFormatted: `$${depositResult.position.depositGrainPrice.toFixed(4)}`,
+      },
     })
   } catch (error: any) {
     console.error('Complete deposit error:', error)

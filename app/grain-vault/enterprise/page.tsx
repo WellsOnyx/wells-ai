@@ -29,7 +29,8 @@ import {
   Wallet,
   ChevronRight,
   ExternalLink,
-  MessageSquare
+  MessageSquare,
+  CreditCard
 } from 'lucide-react'
 
 export default function EnterprisePage() {
@@ -98,17 +99,37 @@ export default function EnterprisePage() {
 
             {/* Main Headline */}
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-              <span className="text-white">Treasury infrastructure</span>
+              <span className="text-white">Deposit your predictable spend.</span>
               <br />
-              <span className="bg-gradient-to-r from-purple-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                at enterprise scale
+              <span className="bg-gradient-to-r from-green-400 via-emerald-500 to-cyan-500 bg-clip-text text-transparent">
+                100% protected. 0% interest.
               </span>
             </h1>
 
+            {/* The Killer Value Prop */}
+            <div className="grid md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-8">
+              <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30">
+                <div className="text-2xl font-bold text-white">100%</div>
+                <div className="text-sm text-green-400">Protected Deposit</div>
+              </div>
+              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+                <div className="text-2xl font-bold text-white">0%</div>
+                <div className="text-sm text-blue-400">Interest Rate</div>
+              </div>
+              <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30">
+                <div className="text-2xl font-bold text-white">0%</div>
+                <div className="text-sm text-purple-400">Transaction Fees</div>
+              </div>
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                <div className="text-2xl font-bold text-white">4.5%</div>
+                <div className="text-sm text-amber-400">Annual Appreciation</div>
+              </div>
+            </div>
+
             {/* Subheadline */}
             <p className="text-xl md:text-2xl text-gray-400 mb-12 leading-relaxed max-w-3xl mx-auto">
-              Custom integrations. Volume pricing. Dedicated support.
-              Treasury operations designed for Fortune 500 companies.
+              The Credit Line Model: Your deposit stays protected. Get a 1:1 GRAIN credit line.
+              Pay suppliers with GRAIN. Your purchasing power appreciates over time.
             </p>
 
             {/* CTA Buttons */}
@@ -143,6 +164,104 @@ export default function EnterprisePage() {
                 <CheckCircle className="w-4 h-4 text-purple-500" />
                 <span>99.99% Uptime SLA</span>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Credit Line Model Explainer */}
+      <section className="py-24 px-6 lg:px-8 bg-gradient-to-b from-black to-black/95">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">The Credit Line Model</h2>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              Unlike banks, we don't lend out your money. Your deposit stays protected
+              while you get a 0% interest credit line to pay suppliers.
+            </p>
+          </div>
+
+          {/* Three Layer Visual */}
+          <div className="max-w-4xl mx-auto mb-16">
+            {/* Layer 3: Appreciation (Top) */}
+            <div className="p-6 rounded-t-2xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 border border-purple-500/30 border-b-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-purple-500/30 flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-purple-400 font-medium">LAYER 3: APPRECIATION</p>
+                    <p className="text-lg text-white font-semibold">Bonus GRAIN from ecosystem growth</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-purple-400">+4.5%</p>
+                  <p className="text-sm text-gray-400">annual appreciation</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Layer 2: Credit Line (Middle) */}
+            <div className="p-6 bg-gradient-to-br from-blue-500/20 to-blue-500/5 border-x border-blue-500/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/30 flex items-center justify-center">
+                    <CreditCard className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-blue-400 font-medium">LAYER 2: CREDIT LINE</p>
+                    <p className="text-lg text-white font-semibold">1:1 GRAIN credit at deposit price</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-blue-400">0%</p>
+                  <p className="text-sm text-gray-400">interest forever</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Layer 1: Protected Deposit (Bottom) */}
+            <div className="p-6 rounded-b-2xl bg-gradient-to-br from-green-500/20 to-green-500/5 border border-green-500/30 border-t-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-green-500/30 flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-green-400 font-medium">LAYER 1: PROTECTED DEPOSIT</p>
+                    <p className="text-lg text-white font-semibold">Your cash, always available</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-green-400">100%</p>
+                  <p className="text-sm text-gray-400">protected</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Example Flow */}
+          <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-6">
+            <div className="p-6 rounded-xl bg-white/5 border border-white/10">
+              <div className="text-4xl font-bold text-green-400 mb-2">1</div>
+              <h3 className="text-lg font-semibold mb-2">Deposit $1M</h3>
+              <p className="text-sm text-gray-400">
+                Your $1M is 100% protected in the vault. Get 100,000 GRAIN credit line at $10/GRAIN.
+              </p>
+            </div>
+            <div className="p-6 rounded-xl bg-white/5 border border-white/10">
+              <div className="text-4xl font-bold text-blue-400 mb-2">2</div>
+              <h3 className="text-lg font-semibold mb-2">Pay Suppliers</h3>
+              <p className="text-sm text-gray-400">
+                Spend your GRAIN credit line to pay suppliers. 0% interest. 0% transaction fees.
+              </p>
+            </div>
+            <div className="p-6 rounded-xl bg-white/5 border border-white/10">
+              <div className="text-4xl font-bold text-purple-400 mb-2">3</div>
+              <h3 className="text-lg font-semibold mb-2">Earn Appreciation</h3>
+              <p className="text-sm text-gray-400">
+                GRAIN appreciates 4.5%+ annually. Your purchasing power grows while your deposit stays protected.
+              </p>
             </div>
           </div>
         </div>
