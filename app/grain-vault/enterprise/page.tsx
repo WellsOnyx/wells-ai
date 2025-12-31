@@ -118,7 +118,7 @@ export default function EnterprisePage() {
               </div>
               <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30">
                 <div className="text-2xl font-bold text-white">1%</div>
-                <div className="text-sm text-purple-400">Flat Transaction Fee</div>
+                <div className="text-sm text-purple-400">Sourcing Fee (COGS)</div>
               </div>
               <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
                 <div className="text-2xl font-bold text-white">4.5%+</div>
