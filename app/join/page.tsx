@@ -146,8 +146,19 @@ export default function JoinPage() {
     connectErp: false,
   })
 
-  // Check for referral code
+  // Check for referral code and journey context
   const referralCode = searchParams.get('ref') || searchParams.get('invite')
+  const journeyFromUrl = searchParams.get('journey') as 'treasury' | 'sourcing' | 'sales' | 'hiring' | null
+
+  // Pre-select treasury need if coming from Grain & Vault
+  useEffect(() => {
+    if (journeyFromUrl === 'treasury' && !formData.needs.includes('treasury')) {
+      setFormData(prev => ({
+        ...prev,
+        needs: [...prev.needs, 'treasury']
+      }))
+    }
+  }, [journeyFromUrl])
 
   // If already signed in, redirect to dashboard
   useEffect(() => {

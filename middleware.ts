@@ -148,6 +148,26 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   }
 
   // ========================================
+  // UNIFIED AUTH FLOW - Redirect separate auth pages to /join
+  // ========================================
+
+  // Redirect grain-vault auth to unified flow
+  if (pathname === '/grain-vault/signin' || pathname === '/grain-vault/signup') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/join'
+    // Preserve that they came from treasury flow
+    url.searchParams.set('journey', 'treasury')
+    return NextResponse.redirect(url)
+  }
+
+  // Redirect legacy signup paths to unified /join
+  if (pathname === '/signup' || pathname === '/sign-up') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/join'
+    return NextResponse.redirect(url)
+  }
+
+  // ========================================
   // AUTHENTICATED USER REDIRECT
   // ========================================
 
@@ -177,22 +197,23 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   const host = req.headers.get('host') || ''
   const isGrainVault = GRAIN_VAULT_DOMAINS.some(domain => host.includes(domain))
 
-  // Domain-specific paths - Clerk works directly on both domains
+  // Unified auth flow - all domains use /join for signup, /sign-in for signin
+  // After auth, route based on domain
   if (isGrainVault) {
     return {
-      signInUrl: '/grain-vault/signin',
-      signUpUrl: '/grain-vault/signup',
-      afterSignInUrl: '/grain-vault/dashboard',
-      afterSignUpUrl: '/grain-vault/onboard',
+      signInUrl: '/sign-in',
+      signUpUrl: '/join?journey=treasury',
+      afterSignInUrl: '/dashboard?journey=treasury',
+      afterSignUpUrl: '/dashboard?journey=treasury',
     }
   }
 
-  // Default Wells Onyx paths
+  // Default Wells Onyx paths - unified flow
   return {
     signInUrl: '/sign-in',
-    signUpUrl: '/sign-up',
+    signUpUrl: '/join',
     afterSignInUrl: '/dashboard',
-    afterSignUpUrl: '/onboarding',
+    afterSignUpUrl: '/dashboard',
   }
 })
 

@@ -220,20 +220,20 @@ export default function GrainVaultLanding() {
                   </Link>
 
                   <SignedIn>
-                    <Link href="/grain-vault/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors">
+                    <Link href="/dashboard?journey=treasury" className="text-sm text-gray-400 hover:text-white transition-colors">
                       Dashboard
                     </Link>
-                    <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/grain-vault/dashboard'}>
+                    <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-green-500 to-green-600" onClick={() => window.location.href = '/dashboard?journey=treasury'}>
                       Dashboard
                     </ShimmerButton>
                   </SignedIn>
 
                   <SignedOut>
-                    <Link href="/grain-vault/waitlist" className="text-sm text-amber-400 hover:text-amber-300 transition-colors font-medium">
-                      Join Waitlist
+                    <Link href="/join?journey=treasury" className="text-sm text-amber-400 hover:text-amber-300 transition-colors font-medium">
+                      Sign Up
                     </Link>
-                    <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => window.location.href = '/grain-vault/waitlist'}>
-                      Get Early Access
+                    <ShimmerButton variant="primary" size="sm" className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => window.location.href = '/join?journey=treasury'}>
+                      Get Started
                     </ShimmerButton>
                   </SignedOut>
                 </nav>
@@ -241,13 +241,13 @@ export default function GrainVaultLanding() {
                 {/* Mobile */}
                 <div className="md:hidden">
                   <SignedIn>
-                    <ShimmerButton size="sm" className="bg-green-500" onClick={() => window.location.href = '/grain-vault/dashboard'}>
+                    <ShimmerButton size="sm" className="bg-green-500" onClick={() => window.location.href = '/dashboard?journey=treasury'}>
                       Dashboard
                     </ShimmerButton>
                   </SignedIn>
                   <SignedOut>
-                    <ShimmerButton size="sm" className="bg-amber-500" onClick={() => window.location.href = '/grain-vault/waitlist'}>
-                      Waitlist
+                    <ShimmerButton size="sm" className="bg-amber-500" onClick={() => window.location.href = '/join?journey=treasury'}>
+                      Sign Up
                     </ShimmerButton>
                   </SignedOut>
                 </div>
@@ -288,8 +288,8 @@ export default function GrainVaultLanding() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-              <ShimmerButton size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => window.location.href = '/grain-vault/waitlist'}>
-                Join the Waitlist
+              <ShimmerButton size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => window.location.href = '/join?journey=treasury'}>
+                Get Started Free
                 <ArrowRight className="w-5 h-5" />
               </ShimmerButton>
               <ShimmerButton variant="secondary" size="lg" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
@@ -551,12 +551,12 @@ export default function GrainVaultLanding() {
                   GRAIN is engineered to appreciate. Every holder benefits equally as our treasury grows.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <ShimmerButton size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => window.location.href = '/grain-vault/waitlist'}>
-                    Join the Waitlist
+                  <ShimmerButton size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600" onClick={() => window.location.href = '/join?journey=treasury'}>
+                    Get Started Free
                     <ArrowRight className="w-5 h-5" />
                   </ShimmerButton>
                   <div className="text-sm text-gray-500">
-                    Limited early access · Enterprise priority
+                    No credit card required
                   </div>
                 </div>
               </div>
@@ -823,11 +823,11 @@ export default function GrainVaultLanding() {
             {/* CTA */}
             <div className="text-center">
               <Link
-                href="/grain-vault/sdk-waitlist"
+                href="/join?journey=treasury"
                 className="group inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50"
               >
                 <Code className="w-5 h-5" />
-                Join SDK Waitlist
+                Get SDK Access
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
@@ -959,10 +959,10 @@ export default function GrainVaultLanding() {
                 </p>
 
                 <button
-                  onClick={() => window.location.href = '/grain-vault/waitlist'}
+                  onClick={() => window.location.href = '/join?journey=treasury'}
                   className="inline-flex items-center gap-3 px-8 py-4 bg-black text-white rounded-xl font-bold text-lg hover:bg-gray-900 transition-all hover:scale-105"
                 >
-                  Join the Waitlist
+                  Get Started Free
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
