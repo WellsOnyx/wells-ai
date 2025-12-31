@@ -579,8 +579,8 @@ function DepositPageContent() {
           </div>
           <div className="p-4 bg-white/5 border border-white/10 rounded-xl backdrop-blur-xl text-center">
             <Zap className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-            <p className="text-sm font-medium text-white">0% Fees</p>
-            <p className="text-xs text-gray-400">In-network</p>
+            <p className="text-sm font-medium text-white">1% Flat Fee</p>
+            <p className="text-xs text-gray-400">vs 2.9% cards</p>
           </div>
         </div>
 

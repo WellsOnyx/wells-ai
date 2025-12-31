@@ -265,7 +265,7 @@ export default function GrainVaultAccountPage() {
                   </div>
                   <div>
                     <p className="text-xs text-blue-400 font-medium">LAYER 2 • CREDIT LINE</p>
-                    <p className="text-sm text-white">0% interest • 0% fees • 1:1 GRAIN</p>
+                    <p className="text-sm text-white">0% interest • 1% flat fee • 1:1 GRAIN</p>
                   </div>
                 </div>
                 <div className="text-right">

@@ -281,7 +281,7 @@ export default function GrainVaultLanding() {
                   className="text-4xl md:text-6xl font-bold"
                 />
               </span>
-              <span className="block text-white mt-2">0% fees. Appreciates over time.</span>
+              <span className="block text-white mt-2">1% flat fee. Appreciates over time.</span>
             </h1>
 
             {/* Subheadline */}
@@ -567,7 +567,7 @@ export default function GrainVaultLanding() {
                     step: '4',
                     icon: Globe,
                     title: 'Spend or Withdraw',
-                    desc: 'Use GRAIN in the ecosystem at 0% fees, or withdraw your deposit anytime.',
+                    desc: 'Use GRAIN in the ecosystem at 1% flat fee, or withdraw your deposit anytime.',
                     color: 'amber'
                   }
                 ].map((item, i) => (
@@ -605,7 +605,7 @@ export default function GrainVaultLanding() {
                   </div>
                   <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-400 text-sm font-medium">
                     <Zap className="w-4 h-4" />
-                    0% Fees
+                    1% Flat Fee
                   </div>
                   <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 text-amber-400 text-sm font-medium">
                     <TrendingUp className="w-4 h-4" />
@@ -1033,7 +1033,7 @@ export default function GrainVaultLanding() {
                   Stop losing purchasing power.
                 </h2>
                 <p className="text-xl text-white/80 mb-4">
-                  100% protected. 0% interest credit line. 0% fees.
+                  100% protected. 0% interest credit line. 1% flat fee.
                 </p>
                 <p className="text-lg text-white/60 mb-10">
                   Withdraw anytime. Your money appreciates instead of shrinks.

@@ -117,11 +117,11 @@ export default function EnterprisePage() {
                 <div className="text-sm text-blue-400">Interest Rate</div>
               </div>
               <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30">
-                <div className="text-2xl font-bold text-white">0%</div>
-                <div className="text-sm text-purple-400">Transaction Fees</div>
+                <div className="text-2xl font-bold text-white">1%</div>
+                <div className="text-sm text-purple-400">Flat Transaction Fee</div>
               </div>
               <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-                <div className="text-2xl font-bold text-white">4.5%</div>
+                <div className="text-2xl font-bold text-white">4.5%+</div>
                 <div className="text-sm text-amber-400">Annual Appreciation</div>
               </div>
             </div>

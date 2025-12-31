@@ -10,7 +10,7 @@
  * 2. Then spends from Credit Line
  * 3. Protected deposit stays unchanged
  *
- * 0% fees for payments inside the network
+ * 1% flat fee for payments (vs 2.9% for cards)
  */
 
 import { useEffect, useState, useMemo, useCallback, Suspense } from 'react'
@@ -351,7 +351,7 @@ function PayPageContent() {
         {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Send Payment</h1>
-          <p className="text-gray-400">Pay anyone in the GRAIN network instantly with 0% fees</p>
+          <p className="text-gray-400">Pay anyone in the GRAIN network instantly with 1% flat fee</p>
         </div>
 
         {/* Error Alert */}
@@ -669,7 +669,7 @@ function PayPageContent() {
                 <li>1. Appreciation (bonus GRAIN) is spent first</li>
                 <li>2. Then your credit line is used</li>
                 <li>3. Your protected deposit stays untouched</li>
-                <li>4. All network payments are instant with 0% fees</li>
+                <li>4. All network payments are instant with 1% flat fee</li>
               </ul>
             </div>
           </div>
