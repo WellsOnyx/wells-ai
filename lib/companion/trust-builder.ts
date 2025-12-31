@@ -8,9 +8,16 @@
  * Trust is the foundation of the Wells AI companion relationship. This module
  * tracks the relationship between Wells and each user, measuring trust through
  * actions and outcomes, not just words.
+ *
+ * Key Principles:
+ * - Faithfulness: "A faithful person will be richly blessed." - Proverbs 28:20
+ * - Integrity: "The integrity of the upright guides them." - Proverbs 11:3
+ * - Consistency: "Let us not become weary in doing good, for at the proper time we will reap." - Galatians 6:9
+ * - Stewardship: "Whoever can be trusted with very little can also be trusted with much." - Luke 16:10
  */
 
 import { query } from '@/lib/db'
+import { FaithFoundation, getCelebration, getEncouragement } from '@/lib/faith'
 
 // ============================================================================
 // TYPES
@@ -911,13 +918,15 @@ function isRevokingAutonomy(
 
 /**
  * Get human-readable tier description
+ * Descriptions reflect the principle: "Whoever can be trusted with very little
+ * can also be trusted with much."
  */
 export function getTierDescription(tier: TrustTier): string {
   const descriptions: Record<TrustTier, string> = {
-    new: 'Just getting started. Wells is learning about you.',
-    developing: 'Building trust. Wells is becoming more helpful.',
-    trusted: 'Strong partnership. Wells can act more autonomously.',
-    partner: 'Full trust. Wells is your autonomous AI partner.',
+    new: 'Just getting started. Wells is learning about you and earning your trust through consistent action.',
+    developing: 'Building trust together. Every successful interaction strengthens our partnership.',
+    trusted: 'Strong partnership built on proven results. Wells can act more autonomously on your behalf.',
+    partner: 'Full trust earned through faithful service. Wells operates as your autonomous AI partner.',
   }
   return descriptions[tier]
 }
@@ -1229,6 +1238,7 @@ export async function getTrustProgress(userId: string): Promise<{
 
 /**
  * Get trust summary for display in chat
+ * Includes encouraging messaging based on faith principles
  */
 export async function getTrustSummaryForChat(userId: string): Promise<string> {
   const trust = await getTrustScore(userId)
@@ -1237,28 +1247,44 @@ export async function getTrustSummaryForChat(userId: string): Promise<string> {
 
   const parts: string[] = []
 
-  // Trust level
-  parts.push(`**Trust Level:** ${trust.tier.charAt(0).toUpperCase() + trust.tier.slice(1)} (${trust.score}/100)`)
+  // Trust level with encouragement
+  const tierDisplay = trust.tier.charAt(0).toUpperCase() + trust.tier.slice(1)
+  parts.push(`**Trust Level:** ${tierDisplay} (${trust.score}/100)`)
+  parts.push(`_${getTierDescription(trust.tier)}_`)
 
-  // Value delivered
+  // Value delivered - celebrate the wins
   if (value.totalValue > 0) {
-    parts.push(`**Value Delivered:** $${value.totalValue.toLocaleString()}`)
+    parts.push(`\n**Value Delivered Together:** $${value.totalValue.toLocaleString()}`)
     if (value.moneySaved > 0) parts.push(`  - Saved: $${value.moneySaved.toLocaleString()}`)
     if (value.moneyEarned > 0) parts.push(`  - Earned: $${value.moneyEarned.toLocaleString()}`)
     if (value.risksAvoided > 0) parts.push(`  - Risks Avoided: ${value.risksAvoided}`)
+
+    // Add celebration message for significant value
+    if (value.totalValue >= 10000) {
+      const celebration = getCelebration('founder')
+      parts.push(`\n_${celebration.message}_`)
+    }
   }
 
-  // Milestones
+  // Milestones - each one represents consistent effort
   if (trust.milestones.length > 0) {
     const recentMilestones = trust.milestones
       .sort((a, b) => new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime())
       .slice(0, 3)
-    parts.push(`**Recent Achievements:** ${recentMilestones.map(m => m.name).join(', ')}`)
+    parts.push(`\n**Recent Achievements:** ${recentMilestones.map(m => m.name).join(', ')}`)
   }
 
-  // Progress to next tier
+  // Progress to next tier - encourage continued effort
   if (progress.nextTier) {
-    parts.push(`**Next Tier:** ${progress.nextTier} (${progress.pointsToNext} points away)`)
+    parts.push(`\n**Next Tier:** ${progress.nextTier} (${progress.pointsToNext} points away)`)
+
+    // Add encouraging next step
+    if (progress.recommendations.length > 0) {
+      parts.push(`\n_Suggestion: ${progress.recommendations[0]}_`)
+    }
+  } else {
+    // At partner level
+    parts.push(`\n_You've reached the highest trust level. Our partnership continues to grow stronger._`)
   }
 
   return parts.join('\n')

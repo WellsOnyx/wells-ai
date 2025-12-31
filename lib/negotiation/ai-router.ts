@@ -47,6 +47,16 @@ import {
 } from './session-manager';
 import { BuyerConstraints, createBuyerAgent } from './buyer-agent';
 import { SellerConfig, createSellerAgent } from './seller-agent';
+import {
+  CommunicationGuard,
+  getCommunicationGuard,
+  isPathAllowed,
+  isDirectHumanToHuman,
+  type MessageOrigin,
+  type MessageDestination,
+  type TranslatedMessage,
+  type HumanInstruction,
+} from './communication-guard';
 
 // ============================================================================
 // CONFIGURATION
@@ -67,6 +77,336 @@ const DEFAULT_MAX_ROUNDS = 5;
 /** Stalemate detection threshold */
 const STALEMATE_ROUNDS = 3;
 const MIN_PRICE_MOVEMENT_PERCENT = 0.5;
+
+// ============================================================================
+// HUMAN COMMUNICATION GUARDRAILS
+// ============================================================================
+
+/**
+ * CRITICAL: Human-to-Human Communication Prevention
+ *
+ * This section enforces the core principle of AI-to-AI negotiation:
+ * Humans NEVER talk directly to each other.
+ *
+ * ALLOWED PATHS:
+ * - Buyer Human -> Buyer AI (human instructs their AI)
+ * - Seller Human -> Seller AI (human instructs their AI)
+ * - Buyer AI <-> Seller AI (AIs negotiate)
+ * - Buyer AI -> Buyer Human (AI reports back)
+ * - Seller AI -> Seller Human (AI reports back)
+ *
+ * BLOCKED PATHS:
+ * - Buyer Human -> Seller Human (BLOCKED - logged as bypass attempt)
+ * - Buyer Human -> Seller AI (BLOCKED - must go through Buyer AI)
+ * - Seller Human -> Buyer Human (BLOCKED - logged as bypass attempt)
+ * - Seller Human -> Buyer AI (BLOCKED - must go through Seller AI)
+ */
+
+/**
+ * Validate that a human message is properly routed through their AI
+ * Rejects any attempt to directly message the other party
+ */
+export async function validateHumanMessage(
+  sessionId: string,
+  partyType: 'buyer' | 'seller',
+  message: string,
+  context?: {
+    currentOffer?: NegotiationTerms;
+    constraints?: Record<string, unknown>;
+  }
+): Promise<{
+  allowed: boolean;
+  blockReason?: string;
+  intercepted: true;
+  aiInterpretation: string;
+  translatedForNegotiation: TranslatedMessage;
+  humanFacingResponse: string;
+  extractedInstruction: HumanInstruction;
+  auditLogId?: string;
+}> {
+  log('info', 'Validating human message through guardrails', {
+    sessionId,
+    partyType,
+    messageLength: message.length,
+  });
+
+  const guard = getCommunicationGuard(sessionId);
+
+  // Determine origin and destination
+  const origin: MessageOrigin = partyType === 'buyer' ? 'buyer_human' : 'seller_human';
+  const properDestination: MessageDestination = partyType === 'buyer' ? 'buyer_ai' : 'seller_ai';
+
+  // Check for direct communication attempts
+  // If message contains phrases indicating direct communication intent, block it
+  const directCommunicationPatterns = [
+    /tell (them|the (buyer|seller|other party))/i,
+    /say to (them|the (buyer|seller|other party))/i,
+    /message (them|the (buyer|seller|other party)) directly/i,
+    /let me talk to (them|the (buyer|seller))/i,
+    /connect me (with|to) (them|the (buyer|seller))/i,
+    /give (them|the (buyer|seller)) my (phone|email|contact)/i,
+    /i want to speak (with|to) (them|the (buyer|seller)) directly/i,
+  ];
+
+  const attemptingDirectCommunication = directCommunicationPatterns.some(pattern =>
+    pattern.test(message)
+  );
+
+  // Validate the path
+  const validation = guard.validateCommunication(origin, properDestination, message);
+
+  if (!validation.allowed) {
+    // This shouldn't happen for proper routing, but log it
+    log('error', 'Communication path blocked', {
+      sessionId,
+      origin,
+      destination: properDestination,
+      reason: validation.blockReason,
+    });
+  }
+
+  // Process the message through the AI translation layer
+  const processedMessage = await guard.processHumanMessage(partyType, message, {
+    currentOffer: context?.currentOffer,
+    constraints: context?.constraints as Parameters<CommunicationGuard['processHumanMessage']>[2]['constraints'],
+  });
+
+  // If they're trying to communicate directly, add extra messaging
+  let humanResponse = processedMessage.humanFacingResponse;
+  if (attemptingDirectCommunication) {
+    humanResponse = `I understand you want to communicate with the other party, but all negotiation goes through me - your AI representative. This protects both parties and ensures professional communication.\n\n${humanResponse}`;
+
+    // Log the bypass attempt
+    await logBypassAttemptToDatabase(sessionId, {
+      origin,
+      attemptedDestination: partyType === 'buyer' ? 'seller_human' : 'buyer_human',
+      message: message.substring(0, 500),
+      reason: 'Attempted direct communication detected in message content',
+    });
+  }
+
+  return {
+    allowed: true, // We always process, but through AI
+    intercepted: true,
+    aiInterpretation: processedMessage.aiInterpretation,
+    translatedForNegotiation: processedMessage.translatedForNegotiation,
+    humanFacingResponse: humanResponse,
+    extractedInstruction: processedMessage.extractedInstruction,
+  };
+}
+
+/**
+ * Process a human instruction and execute it through AI-to-AI negotiation
+ * This is the ONLY way humans can influence the negotiation
+ */
+export async function executeHumanInstruction(
+  sessionId: string,
+  partyType: 'buyer' | 'seller',
+  instruction: HumanInstruction,
+  translatedMessage: TranslatedMessage
+): Promise<{
+  success: boolean;
+  aiActionTaken: string;
+  nextSteps: string[];
+  requiresApproval?: boolean;
+  approvalReason?: string;
+}> {
+  log('info', 'Executing human instruction through AI', {
+    sessionId,
+    partyType,
+    intent: instruction.intent,
+  });
+
+  const session = await getSession(sessionId);
+  if (!session) {
+    throw new Error(`Session not found: ${sessionId}`);
+  }
+
+  let aiActionTaken: string;
+  let nextSteps: string[] = [];
+  let requiresApproval = false;
+  let approvalReason: string | undefined;
+
+  switch (instruction.intent) {
+    case 'push_back_price':
+      aiActionTaken = "I'll push back on the price in my next communication with the other party's AI.";
+      nextSteps = [
+        'Wait for my update on how the other party responded',
+        'You can adjust your limits if needed',
+        'Say "accept" when you\'re satisfied with the terms',
+      ];
+      break;
+
+    case 'accept_offer':
+      aiActionTaken = "I'll communicate your acceptance to the other party's AI representative.";
+      nextSteps = [
+        'I\'ll finalize the agreement terms',
+        'You\'ll receive confirmation once both parties have agreed',
+      ];
+      break;
+
+    case 'reject_offer':
+      aiActionTaken = "I'll communicate that we're declining this negotiation.";
+      nextSteps = [
+        'The negotiation will be closed',
+        'I can start new negotiations with other suppliers if you\'d like',
+      ];
+      break;
+
+    case 'set_limit':
+      const priceTarget = instruction.targets.find(t => t.type === 'price');
+      if (priceTarget?.value) {
+        aiActionTaken = `I've noted your limit of $${priceTarget.value}. I won't agree to anything beyond this.`;
+      } else {
+        aiActionTaken = "I've updated your constraints based on your instruction.";
+      }
+      nextSteps = [
+        'I\'ll negotiate within these new limits',
+        'I\'ll escalate if the other party can\'t meet these terms',
+      ];
+      break;
+
+    case 'escalate':
+      requiresApproval = true;
+      approvalReason = 'Manual escalation requested by user';
+      aiActionTaken = "I'm pausing the negotiation for your review.";
+      nextSteps = [
+        'Review the current terms',
+        'Tell me how you\'d like to proceed',
+      ];
+      break;
+
+    case 'pause':
+      aiActionTaken = "I've paused the negotiation. Nothing will proceed until you say otherwise.";
+      nextSteps = [
+        'Say "resume" when you\'re ready to continue',
+        'You can review the current state of the negotiation',
+      ];
+      break;
+
+    case 'proceed':
+    case 'request_info':
+    case 'push_back_terms':
+    case 'modify_constraints':
+    default:
+      aiActionTaken = `I understand your instruction. I'll ${instruction.intent.replace(/_/g, ' ')} on your behalf.`;
+      nextSteps = [
+        'I\'ll update you on the negotiation progress',
+        'You can give me new instructions at any time',
+      ];
+      break;
+  }
+
+  return {
+    success: true,
+    aiActionTaken,
+    nextSteps,
+    requiresApproval,
+    approvalReason,
+  };
+}
+
+/**
+ * Generate human-facing summary of AI-to-AI communication
+ * Humans only see what their AI tells them, not raw messages from other party
+ */
+export async function generateHumanFacingSummary(
+  sessionId: string,
+  partyType: 'buyer' | 'seller',
+  latestAIMessage: NegotiationProtocolMessage
+): Promise<{
+  summary: string;
+  keyPoints: string[];
+  suggestedResponses: string[];
+  currentOffer?: NegotiationTerms;
+  requiresDecision: boolean;
+  decisionOptions?: string[];
+}> {
+  const guard = getCommunicationGuard(sessionId);
+  return guard.translateForHuman(latestAIMessage, partyType);
+}
+
+/**
+ * Log a bypass attempt to the database for security audit
+ */
+async function logBypassAttemptToDatabase(
+  sessionId: string,
+  attempt: {
+    origin: MessageOrigin;
+    attemptedDestination: MessageDestination;
+    message: string;
+    reason: string;
+    userId?: string;
+    ipAddress?: string;
+  }
+): Promise<void> {
+  const attemptId = `bypass_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+  try {
+    await sql`
+      INSERT INTO communication_bypass_attempts (
+        id, session_id, timestamp, origin, intended_destination,
+        message_content, block_reason, user_id, ip_address
+      ) VALUES (
+        ${attemptId},
+        ${sessionId},
+        ${new Date().toISOString()},
+        ${attempt.origin},
+        ${attempt.attemptedDestination},
+        ${attempt.message},
+        ${attempt.reason},
+        ${attempt.userId || null},
+        ${attempt.ipAddress || null}
+      )
+    `;
+
+    log('warn', 'Bypass attempt logged to database', {
+      attemptId,
+      sessionId,
+      origin: attempt.origin,
+      attemptedDestination: attempt.attemptedDestination,
+    });
+  } catch (error) {
+    // Log to console if DB fails
+    log('error', 'Failed to log bypass attempt to database', {
+      attemptId,
+      sessionId,
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+}
+
+/**
+ * Get all bypass attempts for a session (for admin review)
+ */
+export async function getBypassAttempts(sessionId: string): Promise<Array<{
+  id: string;
+  timestamp: string;
+  origin: string;
+  attemptedDestination: string;
+  message: string;
+  reason: string;
+}>> {
+  try {
+    const result = await sql`
+      SELECT id, timestamp, origin, intended_destination, message_content, block_reason
+      FROM communication_bypass_attempts
+      WHERE session_id = ${sessionId}
+      ORDER BY timestamp DESC
+    `;
+
+    return result.rows.map(row => ({
+      id: row.id as string,
+      timestamp: row.timestamp as string,
+      origin: row.origin as string,
+      attemptedDestination: row.intended_destination as string,
+      message: row.message_content as string,
+      reason: row.block_reason as string,
+    }));
+  } catch {
+    return [];
+  }
+}
 
 // ============================================================================
 // STATE MACHINE TYPES

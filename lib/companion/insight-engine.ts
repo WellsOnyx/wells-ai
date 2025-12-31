@@ -8,11 +8,24 @@
  * This engine generates proactive insights that make Wells feel like
  * a living companion that's always working for you. Wells doesn't wait -
  * it reaches out with actionable intelligence.
+ *
+ * Key Principles:
+ * - Foresight: "Plans fail for lack of counsel, but with many advisers they succeed." - Proverbs 15:22
+ * - Diligence: "The plans of the diligent lead to profit." - Proverbs 21:5
+ * - Encouragement: "Let us consider how we may spur one another on toward love and good deeds." - Hebrews 10:24
  */
 
 import Anthropic from '@anthropic-ai/sdk'
 import { query } from '@/lib/db'
 import { getWellsMemory, WellsMemory } from '@/lib/wells-memory'
+import {
+  FaithFoundation,
+  getEncouragement,
+  getCelebration,
+  getPerseveranceWisdom,
+  getDecisionWisdom,
+  type UserJourney as FaithUserJourney,
+} from '@/lib/faith'
 
 // ============================================================================
 // TYPES
@@ -792,6 +805,7 @@ function generateActionsForCategory(
 
 /**
  * Enhance insights with AI for personalization
+ * Incorporates faith-informed wisdom and encouragement
  */
 async function enhanceInsightsWithAI(
   insights: ProactiveInsight[],
@@ -801,8 +815,35 @@ async function enhanceInsightsWithAI(
     const userName = memory.preferredName || memory.firstName || 'there'
     const communicationStyle = memory.communicationStyle || 'direct'
 
+    // Map journey for faith context
+    const faithJourneyMap: Record<UserJourney, FaithUserJourney> = {
+      buyer: 'buyer',
+      seller: 'seller',
+      founder: 'founder',
+      job_seeker: 'job_seeker',
+    }
+
     for (const insight of insights) {
-      // Personalize the message based on communication style
+      // Get faith-informed guidance based on insight type
+      const faithJourney = faithJourneyMap[insight.journey] || 'founder'
+      let wisdomContext = ''
+
+      if (insight.category === 'celebration') {
+        const celebration = getCelebration(faithJourney)
+        wisdomContext = `Apply this wisdom: "${celebration.message}" Suggest next step: "${celebration.nextStepEncouragement}"`
+      } else if (insight.category === 'risk_alert' || insight.urgency === 'critical') {
+        const wisdom = getDecisionWisdom()
+        wisdomContext = wisdom.length > 0
+          ? `Apply this principle: "${wisdom[0].principle}" - ${wisdom[0].explanation}`
+          : 'Encourage thoughtful, measured action.'
+      } else if (insight.journey === 'job_seeker') {
+        const perseverance = getPerseveranceWisdom()
+        wisdomContext = perseverance.length > 0
+          ? `Be encouraging using: "${perseverance[0].principle}"`
+          : 'Be encouraging without toxic positivity.'
+      }
+
+      // Personalize the message based on communication style and faith wisdom
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 200,
@@ -814,6 +855,10 @@ async function enhanceInsightsWithAI(
 Original: "${insight.message}"
 
 User context: Name is ${userName}. ${memory.companyName ? `Company: ${memory.companyName}.` : ''}
+
+${wisdomContext ? `Tone guidance: ${wisdomContext}` : ''}
+
+IMPORTANT: Be wise and encouraging, not preachy. Express wisdom through practical advice, not religious language.
 
 Return ONLY the rewritten message, no explanation.`,
           },
@@ -979,6 +1024,7 @@ function rowToInsight(row: any): ProactiveInsight {
 
 /**
  * Generate a welcome back message with insights summary
+ * Incorporates faith-informed encouragement
  */
 export async function generateWelcomeBackMessage(
   userId: string,
@@ -994,15 +1040,30 @@ export async function generateWelcomeBackMessage(
       hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
     if (pendingInsights.length === 0) {
-      return `${greeting}, ${userName}! Everything looks good. I'm monitoring your accounts and will alert you if anything needs attention.`
+      // Add wisdom-informed encouragement for quiet days
+      const encouragingMessages = [
+        `Everything looks good. I'm keeping watch and will alert you if anything needs attention.`,
+        `All clear on my end. I've been monitoring things and you're in good shape.`,
+        `Nothing urgent today. I'm working in the background to find opportunities for you.`,
+        `Steady progress is still progress. I'll let you know when something needs your attention.`,
+      ]
+      const randomMsg = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)]
+      return `${greeting}, ${userName}! ${randomMsg}`
     }
 
     // Summarize key insights
     const criticalCount = pendingInsights.filter((i) => i.urgency === 'critical').length
     const highCount = pendingInsights.filter((i) => i.urgency === 'high').length
+    const celebrationCount = pendingInsights.filter((i) => i.category === 'celebration').length
     const totalValue = pendingInsights.reduce((sum, i) => sum + (i.potentialValue || 0), 0)
 
     let summaryParts: string[] = []
+
+    // Lead with celebrations when present (encouragement principle)
+    if (celebrationCount > 0) {
+      const celebration = getCelebration('founder')
+      summaryParts.push(`${celebrationCount} ${celebrationCount === 1 ? 'win to celebrate' : 'wins to celebrate'}`)
+    }
 
     if (criticalCount > 0) {
       summaryParts.push(`${criticalCount} urgent ${criticalCount === 1 ? 'item needs' : 'items need'} attention`)
@@ -1031,7 +1092,15 @@ export async function generateWelcomeBackMessage(
       ? ` Top priority: ${topInsight.title.toLowerCase()}.`
       : ''
 
-    return `${greeting}, ${userName}! While you were away, I found ${summary}.${previewMessage}`
+    // Add encouraging closer based on situation
+    let closer = ''
+    if (criticalCount > 0) {
+      closer = " Let's tackle them together."
+    } else if (celebrationCount > 0) {
+      closer = " Your consistent effort is paying off."
+    }
+
+    return `${greeting}, ${userName}! While you were away, I found ${summary}.${previewMessage}${closer}`
   } catch (error) {
     console.error('[InsightEngine] Error generating welcome message:', error)
     return 'Welcome back! Let me know how I can help you today.'

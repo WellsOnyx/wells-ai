@@ -3,8 +3,12 @@ import type { Metadata } from 'next'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Get Started | Wells AI',
-  description: 'Set up your Wells AI account in less than 2 minutes. AI-powered commerce for founders, buyers, sellers, and job seekers.',
+  title: 'Welcome | Wells AI',
+  description: 'Meet Wells - your AI commerce agent. Tell Wells what you need, and watch it happen.',
+  openGraph: {
+    title: 'Welcome | Wells AI',
+    description: 'Meet Wells - your AI commerce agent. Tell Wells what you need, and watch it happen.',
+  },
 }
 
 export default function OnboardingLayout({
@@ -12,5 +16,9 @@ export default function OnboardingLayout({
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return (
+    <div className="dark">
+      {children}
+    </div>
+  )
 }

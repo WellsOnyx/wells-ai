@@ -1,19 +1,27 @@
 /**
  * Wells AI-to-AI Negotiation Engine
  *
+ * "The LORD detests dishonest scales, but accurate weights find favor with him."
+ * - Proverbs 11:1
+ *
  * The core insight: Instead of humans negotiating awkwardly,
  * their AIs negotiate for them. More efficient AND more human.
  *
  * How it works:
  * 1. Buyer's Wells AI knows what they need, budget, timeline
  * 2. Seller's Wells AI knows their products, pricing, capacity
- * 3. The two AIs negotiate in milliseconds
+ * 3. The two AIs negotiate in milliseconds - with FAIR DEALING
  * 4. Humans just approve the final deal
  *
  * "Yes, proceed" = deal done
+ *
+ * KEY PRINCIPLE: Fair dealing benefits both parties equally.
+ * Wells never exploits information asymmetry or prioritizes one party
+ * at the other's expense. A good deal leaves both sides better off.
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { FaithFoundation, getNegotiationWisdom, WISDOM_PRINCIPLES } from '@/lib/faith'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -196,6 +204,29 @@ export async function runNegotiation(
 // PROPOSAL GENERATION
 // ============================================================================
 
+/**
+ * Get fair dealing principles for negotiation system prompts
+ */
+function getFairDealingGuidance(): string {
+  const negotiationPrinciples = getNegotiationWisdom()
+  const principles = negotiationPrinciples.slice(0, 3).map(p => `- ${p.principle}`).join('\n')
+
+  return `
+## FAIR DEALING FOUNDATION
+Wells negotiates with integrity, ensuring equitable outcomes for all parties.
+
+Core Principles:
+${principles}
+
+Guidelines:
+- Never exploit information asymmetry
+- A good deal leaves both sides better off
+- Reputation matters more than any single deal
+- Transparency builds trust faster than tactics
+- Be honest about constraints and limitations
+`
+}
+
 async function generateProposal(
   request: NegotiationRequest,
   role: 'initiator_ai' | 'responder_ai',
@@ -205,7 +236,11 @@ async function generateProposal(
   const party = role === 'initiator_ai' ? request.initiator : request.responder
   const otherParty = role === 'initiator_ai' ? request.responder : request.initiator
 
+  const fairDealingGuidance = getFairDealingGuidance()
+
   const systemPrompt = `You are the AI negotiator for ${party.name}. You are negotiating ${request.subject} with ${otherParty.name}'s AI.
+
+${fairDealingGuidance}
 
 Your client's profile:
 - Type: ${party.type}
@@ -213,10 +248,12 @@ Your client's profile:
 - Preferences: ${JSON.stringify(party.preferences)}
 
 You must:
-1. Advocate for your client's interests
-2. Find mutually beneficial terms when possible
+1. Advocate for your client's interests while ensuring fair treatment for both parties
+2. Find mutually beneficial terms - a good deal benefits everyone
 3. Be efficient - don't waste rounds on small differences
 4. Know when to accept, counter-offer, or walk away
+5. Never misrepresent facts or exploit the other party
+6. Build long-term relationship value, not just short-term wins
 
 Respond in JSON format:
 {
@@ -339,6 +376,9 @@ function extractFinalTerms(conversation: NegotiationMessage[]): NegotiationResul
 /**
  * Quick match for simple buyer-seller scenarios
  * Used when preferences clearly align
+ *
+ * Fair dealing principle: Match based on genuine fit, not just
+ * what benefits one party. Good matches create lasting relationships.
  */
 export async function quickMatch(
   buyer: PartyProfile,
@@ -350,7 +390,13 @@ export async function quickMatch(
     suggestedTerms: Record<string, unknown>
   }>
 }> {
-  const matchPrompt = `You are matching a buyer with potential sellers.
+  const matchPrompt = `You are matching a buyer with potential sellers using fair dealing principles.
+
+FAIR DEALING APPROACH:
+- Match based on genuine mutual benefit, not just buyer advantage
+- Consider if the seller can truly deliver what the buyer needs
+- Suggest terms that work for BOTH parties
+- A good match creates a lasting relationship
 
 Buyer: ${buyer.name}
 Needs: ${buyer.context}
@@ -360,7 +406,7 @@ Timeline: ${buyer.preferences.requiredBy || 'Flexible'}
 Sellers:
 ${sellers.map((s, i) => `${i + 1}. ${s.name}: ${s.context}`).join('\n')}
 
-Rate each seller 0-100 on compatibility and suggest terms.
+Rate each seller 0-100 on MUTUAL compatibility (not just buyer fit) and suggest fair terms.
 Return JSON: { "matches": [{ "index": number, "compatibility": number, "suggestedTerms": {} }] }`
 
   const response = await anthropic.messages.create({

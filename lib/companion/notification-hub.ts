@@ -6,6 +6,11 @@
  *
  * Multi-channel delivery system for proactive insights. Wells reaches out
  * through the right channel at the right time with the right message.
+ *
+ * Key Principles:
+ * - Timeliness: "Like cold water to a weary soul is good news from a distant land." - Proverbs 25:25
+ * - Clarity: "The words of the wise are like goads, their collected sayings like firmly embedded nails." - Ecclesiastes 12:11
+ * - Encouragement: "Therefore encourage one another and build each other up." - 1 Thessalonians 5:11
  */
 
 import { query } from '@/lib/db'
@@ -13,6 +18,7 @@ import { sendSMS } from '@/lib/notifications/twilio'
 import { sendEmail } from '@/lib/notifications/resend'
 import { ProactiveInsight, InsightUrgency } from './insight-engine'
 import { getEnhancedMemory, CommunicationPreference } from './memory-enhancement'
+import { FaithFoundation, getEncouragement, getCelebration } from '@/lib/faith'
 
 // ============================================================================
 // TYPES
@@ -1250,6 +1256,7 @@ export async function markChatQueueRead(
 
 /**
  * Build proactive chat greeting with pending notifications
+ * Incorporates faith-informed encouragement and wisdom
  */
 export async function buildProactiveChatGreeting(userId: string): Promise<{
   greeting: string
@@ -1285,6 +1292,7 @@ export async function buildProactiveChatGreeting(userId: string): Promise<{
 
   const criticalCount = pendingItems.filter((i) => i.priority === 'critical').length
   const highCount = pendingItems.filter((i) => i.priority === 'high').length
+  const celebrationCount = pendingItems.filter((i) => i.type === 'celebration').length
 
   // Build greeting based on time of day and pending items
   const hour = new Date().getHours()
@@ -1302,9 +1310,15 @@ export async function buildProactiveChatGreeting(userId: string): Promise<{
     const criticalItems = pendingItems.filter((i) => i.priority === 'critical')
     const highItems = pendingItems.filter((i) => i.priority === 'high')
     const completions = pendingItems.filter((i) => i.type === 'completion')
+    const celebrations = pendingItems.filter((i) => i.type === 'celebration')
     const insights = pendingItems.filter(
       (i) => i.type === 'insight' && i.priority !== 'critical' && i.priority !== 'high'
     )
+
+    // Lead with celebrations - encourage the wins
+    for (const item of celebrations.slice(0, 2)) {
+      greeting += `\n**[Star] Win:** ${item.message}`
+    }
 
     for (const item of criticalItems.slice(0, 2)) {
       greeting += `\n**[Warning] Critical:** ${item.message}`
@@ -1325,8 +1339,26 @@ export async function buildProactiveChatGreeting(userId: string): Promise<{
     if (potentialValue > 0) {
       greeting += `\n\n_Total potential value: $${potentialValue.toLocaleString()}_`
     }
+
+    // Add encouraging closer based on what's pending
+    if (criticalCount > 0) {
+      greeting += `\n\n_Let's tackle these together._`
+    } else if (celebrationCount > 0) {
+      const celebration = getCelebration('founder')
+      greeting += `\n\n_${celebration.message}_`
+    } else if (completions.length > 0) {
+      greeting += `\n\n_Consistent progress is building momentum._`
+    }
   } else {
-    greeting += " I've been monitoring things and all looks good. How can I help you today?"
+    // Quiet day messages - still encouraging
+    const quietDayMessages = [
+      "I've been monitoring things and all looks good. How can I help you today?",
+      "All clear on my end. I'm working in the background to find opportunities for you.",
+      "Nothing urgent right now. I'm here when you need me.",
+      "Things are looking steady. Ready to help when you are.",
+    ]
+    const randomMsg = quietDayMessages[Math.floor(Math.random() * quietDayMessages.length)]
+    greeting += ` ${randomMsg}`
   }
 
   return {

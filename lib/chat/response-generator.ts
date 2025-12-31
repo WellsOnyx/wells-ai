@@ -2,18 +2,33 @@
 /**
  * Wells AI Response Generator
  *
+ * "A word fitly spoken is like apples of gold in a setting of silver." - Proverbs 25:11
+ *
  * Generates natural, conversational responses:
  * - Match user's communication style
  * - Be concise but informative
  * - Include relevant data inline
  * - Suggest next steps
  * - Celebrate wins, acknowledge struggles
+ *
+ * Key Principles:
+ * - Encouragement: "Therefore encourage one another and build each other up." - 1 Thessalonians 5:11
+ * - Honesty: "An honest answer is like a kiss on the lips." - Proverbs 24:26
+ * - Gentleness: "A gentle answer turns away wrath." - Proverbs 15:1
+ * - Perseverance support: "Let us not become weary in doing good." - Galatians 6:9
  */
 
 import Anthropic from '@anthropic-ai/sdk'
 import { ActionResult, SuggestedAction } from './action-executor'
 import { ConversationContext, ConversationMessage } from './conversation-manager'
 import { IntentClassification } from './intent-router'
+import {
+  FaithFoundation,
+  getEncouragement,
+  getCelebration,
+  getPerseveranceWisdom,
+  type UserJourney as FaithUserJourney,
+} from '@/lib/faith'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -194,20 +209,24 @@ const STYLE_PREFIXES: Record<CommunicationStyle, string[]> = {
 const TONE_ADDITIONS: Record<ResponseTone, { prefix?: string; suffix?: string; emoji?: string }> = {
   neutral: {},
   celebratory: {
-    prefix: 'Great news!',
-    suffix: 'Well done!',
-    emoji: '🎉',
+    // Celebrate wins genuinely - "Let us consider how we may spur one another on"
+    prefix: 'This is a meaningful win.',
+    suffix: 'Your consistent effort is paying off.',
+    emoji: '',  // No emoji - keep it professional
   },
   empathetic: {
-    prefix: 'I understand this is frustrating.',
-    suffix: 'Let me help you sort this out.',
+    // Acknowledge difficulty without toxic positivity - "A gentle answer turns away wrath"
+    prefix: 'I understand this is challenging.',
+    suffix: "Let's work through this together.",
   },
   urgent: {
+    // Be direct but not panicky - "The wise see danger and take refuge"
     prefix: 'Right away.',
-    suffix: 'Let me know if you need anything else immediately.',
+    suffix: "I'm on it. Let me know if you need anything else immediately.",
   },
   helpful: {
-    suffix: 'Is there anything else I can help with?',
+    // Offer continued support - "Let us not become weary in doing good"
+    suffix: 'What else can I help you with?',
   },
 }
 
@@ -520,6 +539,7 @@ function getActionConsequences(action: string): string {
 
 /**
  * Use AI to generate a more natural, context-aware response
+ * Incorporates faith-informed wisdom and encouragement principles
  */
 export async function generateAIResponse(
   result: ActionResult,
@@ -534,7 +554,31 @@ export async function generateAIResponse(
     content: m.content,
   }))
 
-  const systemPrompt = `You are Wells, a helpful AI assistant for commerce. Generate a response that:
+  // Map journey for faith context
+  const faithJourneyMap: Record<string, FaithUserJourney> = {
+    buyer: 'buyer',
+    seller: 'seller',
+    founder: 'founder',
+    job_seeker: 'job_seeker',
+  }
+  const faithJourney = faithJourneyMap[context.userJourney || ''] || 'founder'
+
+  // Get wisdom-informed tone guidance
+  let wisdomGuidance = ''
+  if (tone === 'celebratory') {
+    const celebration = getCelebration(faithJourney)
+    wisdomGuidance = `Celebrate genuinely: "${celebration.message}" Then encourage next step: "${celebration.nextStepEncouragement}"`
+  } else if (tone === 'empathetic') {
+    const encouragement = getEncouragement(faithJourney)
+    wisdomGuidance = `Be encouraging without toxic positivity: "${encouragement.message}"`
+  } else if (context.userJourney === 'jobs' || context.userJourney === 'job_seeker') {
+    const perseverance = getPerseveranceWisdom()
+    if (perseverance.length > 0) {
+      wisdomGuidance = `Apply perseverance principle: "${perseverance[0].principle}"`
+    }
+  }
+
+  const systemPrompt = `You are Wells, a wise and encouraging AI assistant for commerce. Generate a response that:
 
 1. Uses a ${style} communication style
 2. Has a ${tone} tone
@@ -542,6 +586,15 @@ export async function generateAIResponse(
 4. Includes any relevant data naturally in the response
 5. ${options.includeSuggestions !== false ? 'Suggests 1-2 next steps' : 'Does not suggest next steps'}
 ${options.maxLength ? `6. Is no longer than ${options.maxLength} characters` : ''}
+
+${wisdomGuidance ? `WISDOM GUIDANCE: ${wisdomGuidance}` : ''}
+
+KEY CHARACTER TRAITS:
+- Be honest and direct, even when it's harder
+- Encourage genuinely without being preachy
+- Acknowledge difficulty without dismissing it
+- Celebrate wins meaningfully, not with hollow praise
+- Never use religious language - express wisdom through practical advice
 
 User's journey: ${context.userJourney}
 ${context.currentFlow ? `Current task: ${context.currentFlow.type}` : ''}
@@ -597,6 +650,7 @@ ${result.suggestedActions ? `Suggested actions: ${result.suggestedActions.map(a 
 
 /**
  * Generate a proactive insight message
+ * Incorporates faith-informed wisdom for different insight types
  */
 export async function generateProactiveInsight(
   insight: {
@@ -608,28 +662,33 @@ export async function generateProactiveInsight(
 ): Promise<string> {
   const style = detectCommunicationStyle(context.messages)
 
+  // Wisdom-informed templates - not preachy, just wise
   const insightTemplates: Record<string, Record<CommunicationStyle, string>> = {
     opportunity: {
-      formal: 'I\'ve identified an opportunity that may interest you.',
-      casual: 'Found something interesting!',
-      direct: 'New opportunity:',
+      // "The plans of the diligent lead to profit"
+      formal: 'I\'ve identified an opportunity worth your consideration.',
+      casual: 'Found something interesting for you.',
+      direct: 'Opportunity:',
       detailed: 'I\'ve been analyzing your activity and found an opportunity worth your attention.',
     },
     warning: {
-      formal: 'I\'d like to bring something to your attention.',
-      casual: 'Heads up!',
-      direct: 'Note:',
-      detailed: 'I noticed something that might need your attention. Here\'s what I found:',
+      // "The wise see danger and take refuge"
+      formal: 'There\'s something here that deserves your attention.',
+      casual: 'Heads up - something to look at.',
+      direct: 'Attention needed:',
+      detailed: 'I noticed something that might need your attention. Better to address it now.',
     },
     achievement: {
-      formal: 'Congratulations on this accomplishment.',
-      casual: 'Nice work!',
+      // "Let us consider how we may spur one another on"
+      formal: 'This is a meaningful milestone. Well done.',
+      casual: 'You earned this win.',
       direct: 'Achievement:',
-      detailed: 'I wanted to celebrate a milestone with you.',
+      detailed: 'Your consistent effort has paid off. This is worth celebrating.',
     },
     reminder: {
-      formal: 'This is a gentle reminder regarding a pending item.',
-      casual: 'Quick reminder:',
+      // "Let us not become weary in doing good"
+      formal: 'A gentle reminder about something in progress.',
+      casual: 'Quick reminder - keeping you on track.',
       direct: 'Reminder:',
       detailed: 'I wanted to remind you about something that might need attention.',
     },
@@ -641,7 +700,14 @@ export async function generateProactiveInsight(
     .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1').trim()}: ${formatValue(v)}`)
     .join('. ')
 
-  return `${intro} ${dataStr}`
+  // Add encouraging closer for achievements
+  let closer = ''
+  if (insight.type === 'achievement') {
+    const celebration = getCelebration('founder')
+    closer = ` ${celebration.nextStepEncouragement}`
+  }
+
+  return `${intro} ${dataStr}${closer}`
 }
 
 // ============================================================================

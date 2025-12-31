@@ -161,6 +161,53 @@ export {
 } from './escalation-service';
 
 // ============================================================================
+// COMMUNICATION GUARD - HUMAN-TO-HUMAN PREVENTION
+// ============================================================================
+
+// Communication Guard - Ensures humans never talk directly
+export {
+  CommunicationGuard,
+  getCommunicationGuard,
+  cleanupGuard,
+  isPathAllowed,
+  isHuman,
+  isHumanDestination,
+  isDirectHumanToHuman,
+
+  // Types
+  type MessageOrigin,
+  type MessageDestination,
+  type CommunicationValidation,
+  type TranslatedMessage,
+  type NegotiationPosition,
+  type HumanInstruction,
+  type HumanInstructionIntent,
+  type InstructionTarget,
+  type BypassAttempt,
+  type AIAgentState,
+} from './communication-guard';
+
+// Human Communication Guardrails (from AI Router)
+export {
+  validateHumanMessage,
+  executeHumanInstruction,
+  generateHumanFacingSummary,
+  getBypassAttempts,
+} from './ai-router';
+
+// Agent System Prompts
+export {
+  BASE_AGENT_PROMPT,
+  getBuyerAgentPrompt,
+  getSellerAgentPrompt,
+  HUMAN_SUMMARY_PROMPT,
+  HUMAN_INSTRUCTION_PROMPT,
+  TRANSLATION_LAYER_PROMPT,
+  ESCALATION_DECISION_PROMPT,
+  getOfferEvaluationPrompt,
+} from './agent-prompts';
+
+// ============================================================================
 // CONVERSATIONAL NEGOTIATION ENGINE
 // ============================================================================
 

@@ -1,11 +1,23 @@
-import { redirect } from 'next/navigation'
+'use client'
 
-export const metadata = {
-  title: 'Talk to Wells | Founder Journey',
-  description: 'Tell Wells what you need. Find talent, suppliers, customers, and investors.',
-}
+/**
+ * Founder Chat Page
+ *
+ * Pure conversational interface for founders.
+ * Hire talent, source suppliers, find customers, get investors.
+ * No forms, no buttons - just talk to Wells.
+ */
+
+import WellsConversationalChat from '@/components/chat/WellsConversationalChat'
 
 export default function FounderChatPage() {
-  // Redirect to new unified dashboard
-  redirect('/dashboard')
+  return (
+    <WellsConversationalChat
+      journey="founder"
+      onDataExtracted={(data) => {
+        console.log('Founder data extracted:', data)
+        // Handle extracted founder needs (hiring, sourcing, fundraising)
+      }}
+    />
+  )
 }

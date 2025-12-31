@@ -1,11 +1,22 @@
-import { redirect } from 'next/navigation'
+'use client'
 
-export const metadata = {
-  title: 'Talk to Wells | Buyer Journey',
-  description: 'Describe what you need. Get quotes from verified suppliers with escrow protection.',
-}
+/**
+ * Buyer Chat Page
+ *
+ * Pure conversational interface for buyers to source products.
+ * No forms, no buttons - just talk to Wells.
+ */
+
+import WellsConversationalChat from '@/components/chat/WellsConversationalChat'
 
 export default function BuyerChatPage() {
-  // Redirect to new unified dashboard
-  redirect('/dashboard')
+  return (
+    <WellsConversationalChat
+      journey="buyer"
+      onDataExtracted={(data) => {
+        console.log('Buyer data extracted:', data)
+        // Handle extracted procurement data (product, quantity, budget, timeline)
+      }}
+    />
+  )
 }

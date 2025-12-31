@@ -19,12 +19,8 @@ import { extractText } from '@/lib/files/processors';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Increase body size limit for file uploads
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Max body size for file uploads (50MB)
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {

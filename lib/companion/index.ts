@@ -4,37 +4,44 @@
  *
  * "Iron sharpens iron, and one man sharpens another." - Proverbs 27:17
  *
- * This module makes Wells feel like a living companion that's always working for you.
- * Wells doesn't wait - it reaches out with insights, remembers your preferences,
- * learns from interactions, and builds trust over time.
+ * Like Ghost from Destiny, Wells is always there - always scanning, analyzing,
+ * protecting, and celebrating victories with you. Wells doesn't wait - it reaches
+ * out with insights, remembers your preferences, learns from interactions, and
+ * builds trust over time.
+ *
+ * NEW IN THIS VERSION:
+ * - Persistent Presence: Wells feels alive, always working in the background
+ * - Deep Memory: Remembers communication style, deals, relationships, goals
+ * - Trust & Autonomy: Earns trust over time, gains more autonomy
+ * - Proactive Outreach: Morning briefings, celebrations, warnings
+ * - Consistent Voice: Warm but professional, confident but humble
+ * - Personalized Greetings: Context-aware, relationship-aware
  *
  * @example
  * ```typescript
  * import {
- *   InsightEngine,
- *   NotificationHub,
- *   TrustBuilder,
- *   MemoryEnhancement,
- *   InsightGenerator
+ *   CompanionPresence,
+ *   DeepMemory,
+ *   RelationshipService,
+ *   VoiceService,
+ *   ProactiveService,
+ *   GreetingService,
  * } from '@/lib/companion';
  *
- * // Generate and deliver proactive insights
- * const insights = await InsightEngine.generateInsights(context);
- * for (const insight of insights) {
- *   await InsightEngine.storeInsight(insight);
- *   await NotificationHub.deliverInsight(insight);
- * }
+ * // Get Wells presence and status
+ * const presence = await CompanionPresence.getPresence(userId);
+ * const greeting = await GreetingService.generateWelcome(userId);
  *
- * // Track trust and relationship
- * await TrustBuilder.recordTrustEvent(userId, 'deal_completed', { value: 10000 });
- * const trustScore = await TrustBuilder.getTrustScore(userId);
+ * // Check autonomy before taking action
+ * const canNegotiate = await RelationshipService.canActAutonomously(userId, { type: 'negotiate' });
  *
- * // Get enhanced user memory
- * const memory = await MemoryEnhancement.getEnhancedMemory(userId);
- * const contextForAI = await MemoryEnhancement.buildEnhancedContext(userId);
+ * // Generate proactive outreach
+ * await ProactiveService.generateMorningBriefing(userId);
+ * await ProactiveService.generateOpportunityAlert(userId, opportunity);
  *
- * // Run background insight generation
- * await InsightGenerator.run();
+ * // Get voice settings for personalized communication
+ * const voice = await VoiceService.getVoice(userId);
+ * const message = await VoiceService.formatWithVoice(userId, content);
  * ```
  */
 
@@ -206,39 +213,236 @@ export {
 } from './wells-status'
 
 // ============================================================================
+// NEW COMPANION PRESENCE MODULES - "Like Ghost from Destiny"
+// ============================================================================
+
+// Companion Presence - Persistent, always-there presence
+export {
+  CompanionPresenceService,
+  getPresence,
+  updateHeartbeat,
+  setActivity,
+  clearActivity,
+  addBackgroundWork,
+  removeBackgroundWork,
+  updateBackgroundWorkProgress,
+  generateAmbientMessage,
+  getPresenceForWidget,
+  getActivityIcon,
+  type CompanionPresence,
+  type CompanionActivity,
+  type ActivityType,
+  type BackgroundWorkItem,
+  type WorkItemType,
+  type AmbientStatus,
+  type PresenceWidgetData,
+} from './presence'
+
+// Deep Memory - Remember everything about the user
+export {
+  DeepMemoryService,
+  getDeepMemory,
+  getCommunicationStyle,
+  updateCommunicationStyle,
+  learnFromConversation,
+  storeDealMemory,
+  getDealMemory,
+  getRecentDeals,
+  updatePreferences,
+  getPreferences,
+  storeRelationship,
+  getRelationship,
+  getAllRelationships,
+  storeDate,
+  getUpcomingImportantDates,
+  storeGoal,
+  getGoals,
+  updateGoalProgress as updateDeepGoalProgress,
+  storeContext,
+  getRecentContext,
+  recallRelevantMemories,
+  getMemorySummaryForChat,
+  type DeepMemory,
+  type CommunicationStyle,
+  type DealMemory,
+  type DealOutcome,
+  type UserPreferences,
+  type RelationshipMemory,
+  type RelationshipType,
+  type DateMemory,
+  type DateType,
+  type GoalMemory,
+  type GoalStatus,
+  type ConversationContext,
+  type WellsLearning,
+  type MemorySummary,
+} from './memory'
+
+// Relationship Service - Trust, autonomy, and relationship deepening
+export {
+  RelationshipService,
+  getCompanionRelationship,
+  recordInteraction,
+  canActAutonomously,
+  grantAutonomy,
+  revokeAutonomy,
+  addMilestone,
+  getMilestones,
+  assessRelationshipHealth,
+  getRelationshipSummary,
+  generateTrustInsight,
+  type CompanionRelationship,
+  type RelationshipTier,
+  type AutonomyConfig,
+  type Milestone,
+  type MilestoneType,
+  type InteractionRecord,
+  type InteractionType as RelationshipInteractionType,
+  type InteractionSentiment,
+  type RelationshipHealth,
+  type HealthStatus,
+  type TrustInsight,
+} from './relationship'
+
+// Voice Service - Personality, tone, and language patterns
+export {
+  VoiceService,
+  getVoice,
+  updateVoice,
+  getGreeting,
+  getCelebration,
+  getEncouragement,
+  getAffirmation,
+  formatWithVoice,
+  generateProactiveMessage,
+  getPersonalityPrompt,
+  adaptVoiceToMood,
+  type CompanionVoice,
+  type PersonalityTraits,
+  type ToneSettings,
+  type LanguagePatterns,
+  type UserMood,
+  type MessageContext,
+  type VoiceAdaptation,
+} from './voice'
+
+// Proactive Service - Reach out, don't just respond
+export {
+  ProactiveService,
+  generateMorningBriefing,
+  generateOpportunityAlert,
+  generateWarningAlert,
+  generateCelebration as generateCelebrationOutreach,
+  generateReminder,
+  generateCheckIn,
+  generateGoalProgressUpdate,
+  generateRelationshipNudge,
+  getOutreachHistory,
+  shouldSendOutreach,
+  recordOutreachDelivery,
+  runScheduledOutreach,
+  getNextOutreachTime,
+  type ProactiveOutreach,
+  type OutreachType,
+  type OutreachPriority,
+  type OutreachChannel,
+  type MorningBriefing,
+  type OpportunityData,
+  type WarningData,
+  type CelebrationData,
+  type ReminderData,
+  type OutreachDelivery,
+  type OutreachSchedule,
+} from './proactive'
+
+// Greeting Service - Personalized, context-aware greetings
+export {
+  GreetingService,
+  generateWelcome,
+  generateQuickGreeting,
+  generateReturnGreeting,
+  getTimeOfDay,
+  getWorkSummary,
+  detectSpecialOccasions,
+  buildWelcomeContext,
+  type WelcomeContext,
+  type TimeOfDay,
+  type SpecialOccasion,
+  type WorkSummary,
+  type GreetingResult,
+  type GreetingAction,
+  type GreetingMood,
+} from './greetings'
+
+// ============================================================================
 // COMPANION SYSTEM OVERVIEW
 // ============================================================================
 
 /**
  * The Wells AI Companion System provides:
  *
- * 1. PROACTIVE INSIGHTS
+ * 1. PERSISTENT PRESENCE (Ghost from Destiny)
+ *    - Always there, always working in the background
+ *    - Activity tracking: scanning, analyzing, monitoring, negotiating
+ *    - Ambient status messages: "Wells is reviewing 3 new supplier quotes..."
+ *    - Background work visibility for dashboard widgets
+ *    - Heartbeat system ensures Wells feels alive
+ *
+ * 2. DEEP MEMORY (Remembers Everything)
+ *    - Communication style preferences (formal/casual, brief/detailed)
+ *    - Past deals with outcomes and learnings
+ *    - User preferences and settings
+ *    - Relationship memory (who they work with, history)
+ *    - Important dates (contract renewals, birthdays, deadlines)
+ *    - Goals and progress tracking
+ *    - Conversation context for continuity
+ *
+ * 3. TRUST & AUTONOMY (Earns Capabilities Over Time)
+ *    - Trust tiers: new_acquaintance -> developing -> established -> trusted_partner -> guardian
+ *    - Autonomy unlocks: auto-negotiate, auto-approve, proactive outreach
+ *    - Milestone tracking for relationship progression
+ *    - Value delivered tracking (money saved, earned, risks avoided)
+ *    - Relationship health assessment
+ *
+ * 4. PROACTIVE OUTREACH (Reaches Out, Doesn't Just Respond)
+ *    - Morning briefings with overnight activity summary
+ *    - Opportunity alerts when matches are found
+ *    - Warning alerts for risks or issues
+ *    - Celebrations for wins and milestones
+ *    - Reminders for important deadlines
+ *    - Check-ins when user has been away
+ *    - Goal progress updates
+ *    - Relationship nudges for neglected contacts
+ *
+ * 5. CONSISTENT VOICE (Personality That Feels Real)
+ *    - Personality traits: warmth, confidence, proactivity, directness
+ *    - Tone settings: formality, verbosity, emotional range, humor
+ *    - Language patterns: greetings, affirmations, encouragements
+ *    - Context-aware messaging based on time, mood, urgency
+ *    - Adapts to user preferences over time
+ *
+ * 6. PERSONALIZED GREETINGS (Context-Aware Welcome)
+ *    - Time-of-day appropriate greetings
+ *    - Return greetings after absence
+ *    - Work summary integration
+ *    - Special occasion detection
+ *    - Trust-tier appropriate formality
+ *    - Suggested actions based on context
+ *
+ * 7. PROACTIVE INSIGHTS (Original System)
  *    - Buyer insights: Cost increases, contract expirations, supplier risks
  *    - Seller insights: New RFQs, response time coaching, competitor alerts
  *    - Founder insights: Runway alerts, customer churn, price opportunities
  *    - Job seeker insights: Role matches, salary data, profile views
  *
- * 2. MULTI-CHANNEL DELIVERY
+ * 8. MULTI-CHANNEL DELIVERY
  *    - In-app chat (primary)
  *    - Email (daily/weekly digests)
  *    - Slack/Teams (urgent alerts)
  *    - SMS (critical only)
  *    - User controls frequency and channels
  *
- * 3. TRUST & RELATIONSHIP BUILDING
- *    - Trust tiers: new -> developing -> trusted -> partner
- *    - Milestones for achievements
- *    - Autonomy settings based on trust level
- *    - Value delivered tracking (money saved, earned, risks avoided)
- *
- * 4. DEEP USER MEMORY
- *    - Communication preferences (formal/casual, verbose/concise)
- *    - Goals and timeline tracking
- *    - Past conversation references
- *    - Personality adaptation
- *    - Important dates and relationships
- *
- * 5. BACKGROUND PROCESSING
+ * 9. BACKGROUND PROCESSING
  *    - Periodic insight generation
  *    - Learning from insight outcomes
  *    - Scheduled delivery processing
@@ -256,6 +460,7 @@ export const EXAMPLE_MESSAGES = {
 }
 
 export default {
+  // Original modules
   InsightEngine,
   InsightEngineService,
   NotificationHub,
@@ -265,4 +470,11 @@ export default {
   BackgroundWorker,
   WellsStatusService,
   EXAMPLE_MESSAGES,
+  // New companion presence modules - "Like Ghost from Destiny"
+  CompanionPresenceService,
+  DeepMemoryService,
+  RelationshipService,
+  VoiceService,
+  ProactiveService,
+  GreetingService,
 }
