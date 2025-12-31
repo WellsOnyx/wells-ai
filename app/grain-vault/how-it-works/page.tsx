@@ -6,20 +6,38 @@
  *
  * A cinematic, scroll-driven journey through the GRAIN ecosystem
  *
- * THE REAL GRAIN MODEL:
- * - Deposit USD → Get GRAIN at 1:1
- * - Treasury invests in real assets (commercial real estate, etc.)
- * - Assets appreciate → GRAIN purchasing power grows
- * - SPENDING in ecosystem: Use full balance (principal + appreciation)
- * - CASH OUT to USD: Only get original principal back (1:1)
- * - This creates natural retention while being honest about liquidity
+ * THE GRAIN MODEL (CLEAN VERSION):
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * 1 GRAIN = $1 USD (always, for cash out)
+ * 1 GRAIN = 1 GRAIN (the unit of the ecosystem)
+ *
+ * The value isn't in appreciation—it's in UTILITY:
+ * - Zero fees on every transaction (vs 2.9% + $0.30 on cards)
+ * - Instant settlement globally (vs 3-5 days)
+ * - Run payroll, pay vendors, accept payments—all fee-free
+ * - The more you use it, the more you save
+ *
+ * WHY STAY IN GRAIN?
+ * - Cash out = go back to paying fees everywhere
+ * - Stay in = zero fees on everything
+ * - The money works harder when it circulates
+ *
+ * CLOSED LOOP:
+ * Customer pays seller → Seller pays vendor → Vendor pays employee →
+ * Employee buys from seller → Repeat forever. Zero fees extracted.
+ *
+ * MULTI-CURRENCY (via Circle Mint):
+ * - 180+ countries supported
+ * - Deposit in local currency → Get GRAIN
+ * - Dashboard shows balance in your preferred currency
+ * - Cash out to local currency anytime
  *
  * SETTLEMENTS:
- * - "Instant" settlement with 24-72hr escrow hold
- * - 24hr: Standard transactions
- * - 48hr: High value (>$10k)
- * - 72hr: New users (<30 days) or flagged accounts
- * - No chargebacks - escrow handles disputes
+ * - Instant on ledger, 24-72hr escrow for protection
+ * - No chargebacks—escrow handles disputes
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -140,232 +158,180 @@ function ParticleField() {
   )
 }
 
-// Interactive deposit simulator - Now shows Principal vs Appreciation
+// Interactive savings calculator - Shows fee savings from using GRAIN
 function DepositSimulator() {
-  const [amount, setAmount] = useState(1000)
-  const [months, setMonths] = useState(12)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentMonth, setCurrentMonth] = useState(0)
-  const [showCashOutInfo, setShowCashOutInfo] = useState(false)
+  const [monthlyVolume, setMonthlyVolume] = useState(50000)
+  const [currency, setCurrency] = useState('USD')
+  const [showBreakdown, setShowBreakdown] = useState(false)
 
-  // Simulated appreciation (2% per month average from real estate, etc.)
-  const monthlyRate = 0.02
+  // Fee calculations (what they'd pay traditionally)
+  const cardProcessingFee = 0.029 // 2.9%
+  const cardFixedFee = 0.30 // per transaction
+  const avgTransactionSize = 75 // average $75 per transaction
+  const transactionsPerMonth = monthlyVolume / avgTransactionSize
 
-  // Traditional savings comparison (0.5% APY)
-  const traditionalRate = 0.005 / 12
+  const monthlyCardFees = (monthlyVolume * cardProcessingFee) + (transactionsPerMonth * cardFixedFee)
+  const yearlyCardFees = monthlyCardFees * 12
 
-  useEffect(() => {
-    if (!isPlaying) return
+  // Payroll savings (assume 20% of volume is payroll)
+  const payrollVolume = monthlyVolume * 0.2
+  const payrollTransactions = payrollVolume / 3000 // ~$3k avg salary
+  const payrollFeePerTx = 7.50
+  const monthlyPayrollFees = payrollTransactions * payrollFeePerTx
+  const yearlyPayrollFees = monthlyPayrollFees * 12
 
-    const interval = setInterval(() => {
-      setCurrentMonth(prev => {
-        if (prev >= months) {
-          setIsPlaying(false)
-          return months
-        }
-        return prev + 1
-      })
-    }, 200)
+  // Wire/vendor savings (assume 30% of volume)
+  const vendorVolume = monthlyVolume * 0.3
+  const vendorTransactions = vendorVolume / 2000 // ~$2k avg vendor payment
+  const wireFeePerTx = 15
+  const monthlyWireFees = vendorTransactions * wireFeePerTx
+  const yearlyWireFees = monthlyWireFees * 12
 
-    return () => clearInterval(interval)
-  }, [isPlaying, months])
+  // Total savings
+  const monthlyTotalSavings = monthlyCardFees + monthlyPayrollFees + monthlyWireFees
+  const yearlyTotalSavings = yearlyCardFees + yearlyPayrollFees + yearlyWireFees
 
-  // GRAIN Values - The Real Model
-  const principal = amount // Original deposit - always withdrawable 1:1
-  const totalGrainValue = amount * Math.pow(1 + monthlyRate, currentMonth)
-  const appreciation = totalGrainValue - principal // Gains from treasury growth
-  const spendingPower = totalGrainValue // Can spend full amount in ecosystem
-  const cashOutValue = principal // Can only withdraw original deposit
-  const appreciationPercent = ((totalGrainValue / principal) - 1) * 100
+  // Currency conversion display
+  const fxRates: Record<string, { rate: number; symbol: string }> = {
+    USD: { rate: 1, symbol: '$' },
+    EUR: { rate: 0.92, symbol: '€' },
+    GBP: { rate: 0.79, symbol: '£' },
+    MXN: { rate: 17.15, symbol: '$' },
+    BRL: { rate: 4.97, symbol: 'R$' },
+    CAD: { rate: 1.36, symbol: 'C$' },
+  }
+  const fx = fxRates[currency] || fxRates.USD
+
+  const formatCurrency = (usd: number) => {
+    const local = usd * fx.rate
+    if (currency === 'USD') return `$${local.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+    return `${fx.symbol}${local.toLocaleString(undefined, { maximumFractionDigits: 0 })} (≈$${usd.toLocaleString(undefined, { maximumFractionDigits: 0 })})`
+  }
 
   return (
     <div className="relative">
       <div className="absolute -inset-1 bg-gradient-to-r from-green-500 to-blue-500 rounded-2xl blur opacity-20" />
       <div className="relative bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
         <div className="flex items-center justify-between mb-8">
-          <h3 className="text-2xl font-bold text-white">See How GRAIN Works</h3>
+          <h3 className="text-2xl font-bold text-white">See How Much You'd Save</h3>
           <div className="flex items-center gap-2 text-sm text-green-400">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            Live Simulator
+            Live Calculator
           </div>
         </div>
 
-        {/* Amount Slider */}
+        {/* Volume Slider */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-gray-400">Your Deposit</span>
-            <span className="text-2xl font-bold text-white">${amount.toLocaleString()}</span>
+            <span className="text-gray-400">Monthly Transaction Volume</span>
+            <span className="text-2xl font-bold text-white">{formatCurrency(monthlyVolume)}</span>
           </div>
           <input
             type="range"
-            min={100}
-            max={100000}
-            step={100}
-            value={amount}
-            onChange={(e) => {
-              setAmount(Number(e.target.value))
-              setCurrentMonth(0)
-            }}
+            min={1000}
+            max={1000000}
+            step={1000}
+            value={monthlyVolume}
+            onChange={(e) => setMonthlyVolume(Number(e.target.value))}
             className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-green-500"
           />
           <div className="flex justify-between text-xs text-gray-500 mt-2">
-            <span>$100</span>
-            <span>$100,000</span>
+            <span>$1,000</span>
+            <span>$1,000,000</span>
           </div>
         </div>
 
-        {/* Time Slider */}
+        {/* Currency Selector */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-gray-400">Time Period</span>
-            <span className="text-2xl font-bold text-white">{months} months</span>
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={60}
-            value={months}
-            onChange={(e) => {
-              setMonths(Number(e.target.value))
-              setCurrentMonth(0)
-            }}
-            className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-green-500"
-          />
-          <div className="flex justify-between text-xs text-gray-500 mt-2">
-            <span>1 month</span>
-            <span>5 years</span>
+          <div className="text-sm text-gray-400 mb-3">Display Currency (180+ supported)</div>
+          <div className="flex gap-2 flex-wrap">
+            {Object.keys(fxRates).map(c => (
+              <button
+                key={c}
+                onClick={() => setCurrency(c)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  currency === c
+                    ? 'bg-green-500 text-black'
+                    : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Play Button */}
-        <button
-          onClick={() => {
-            if (currentMonth >= months) setCurrentMonth(0)
-            setIsPlaying(!isPlaying)
-          }}
-          className="w-full py-4 mb-8 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-black font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform"
-        >
-          {isPlaying ? (
-            <>
-              <Pause className="w-5 h-5" />
-              Pause Simulation
-            </>
-          ) : (
-            <>
-              <Play className="w-5 h-5" />
-              Watch Your GRAIN Grow
-            </>
-          )}
-        </button>
-
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-green-500 to-emerald-400"
-              initial={{ width: 0 }}
-              animate={{ width: `${(currentMonth / months) * 100}%` }}
-              transition={{ duration: 0.2 }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-gray-500 mt-2">
-            <span>Month 0</span>
-            <span className="text-green-400 font-medium">Month {currentMonth}</span>
-            <span>Month {months}</span>
-          </div>
-        </div>
-
-        {/* GRAIN Balance Breakdown - The Real Model */}
+        {/* Results */}
         <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/30 rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-black" />
-              </div>
-              <div>
-                <div className="text-sm text-gray-400">Your GRAIN Balance</div>
-                <div className="text-3xl font-bold text-white">
-                  {totalGrainValue.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-lg text-green-400">GRAIN</span>
-                </div>
-              </div>
+          <div className="text-center mb-6">
+            <div className="text-sm text-gray-400 mb-2">Your Annual Savings with GRAIN</div>
+            <div className="text-5xl font-bold text-green-400">
+              {formatCurrency(yearlyTotalSavings)}
             </div>
-            {appreciationPercent > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-lg">
-                <TrendingUp className="w-4 h-4 text-green-400" />
-                <span className="text-green-400 font-bold">+{appreciationPercent.toFixed(1)}%</span>
-              </div>
-            )}
-          </div>
-
-          {/* Principal vs Appreciation Breakdown */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-black/30 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Landmark className="w-4 h-4 text-blue-400" />
-                <span className="text-sm text-gray-400">Principal</span>
-              </div>
-              <div className="text-2xl font-bold text-white">${principal.toLocaleString()}</div>
-              <div className="text-xs text-gray-500 mt-1">Your original deposit</div>
-            </div>
-            <div className="bg-black/30 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-green-400" />
-                <span className="text-sm text-gray-400">Appreciation</span>
-              </div>
-              <div className="text-2xl font-bold text-green-400">
-                +${appreciation.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">From treasury growth</div>
+            <div className="text-sm text-gray-500 mt-2">
+              That's {formatCurrency(monthlyTotalSavings)}/month back in your pocket
             </div>
           </div>
 
-          {/* Key Insight: Spend vs Cash Out */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-green-500/20 border border-green-500/40 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <ShoppingCart className="w-4 h-4 text-green-400" />
-                <span className="text-sm font-medium text-green-400">Spend in GRAIN</span>
-              </div>
-              <div className="text-2xl font-bold text-white">
-                ${spendingPower.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </div>
-              <div className="text-xs text-green-400/70 mt-1">Full purchasing power</div>
-            </div>
-            <div
-              className="bg-blue-500/20 border border-blue-500/40 rounded-lg p-4 cursor-pointer hover:bg-blue-500/30 transition-colors"
-              onClick={() => setShowCashOutInfo(!showCashOutInfo)}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Banknote className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-medium text-blue-400">Cash Out to USD</span>
-                <AlertCircle className="w-3 h-3 text-blue-400/50" />
-              </div>
-              <div className="text-2xl font-bold text-white">${cashOutValue.toLocaleString()}</div>
-              <div className="text-xs text-blue-400/70 mt-1">1:1 with deposit</div>
-            </div>
-          </div>
+          {/* Breakdown toggle */}
+          <button
+            onClick={() => setShowBreakdown(!showBreakdown)}
+            className="w-full py-3 rounded-lg bg-white/10 text-gray-300 font-medium hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
+          >
+            {showBreakdown ? 'Hide' : 'Show'} Fee Breakdown
+            <ChevronRight className={`w-4 h-4 transition-transform ${showBreakdown ? 'rotate-90' : ''}`} />
+          </button>
 
-          {/* Cash Out Explanation */}
           <AnimatePresence>
-            {showCashOutInfo && (
+            {showBreakdown && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg"
+                className="mt-4 space-y-3"
               >
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-gray-300">
-                    <p className="font-medium text-blue-400 mb-2">Why is cash-out limited to principal?</p>
-                    <p className="text-gray-400 mb-2">
-                      Your appreciation comes from real asset growth (commercial real estate, etc.).
-                      These assets aren't fully liquid, so we can't pay out gains in cash.
-                    </p>
-                    <p className="text-gray-400">
-                      <strong className="text-green-400">The benefit:</strong> Spend your full balance within the GRAIN ecosystem
-                      and enjoy all your gains. Your money works harder when it stays in GRAIN.
-                    </p>
+                {/* Card Processing */}
+                <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="w-5 h-5 text-red-400" />
+                    <div>
+                      <div className="text-sm text-white">Card Processing Fees</div>
+                      <div className="text-xs text-gray-500">2.9% + $0.30 per transaction</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-red-400 font-bold">{formatCurrency(yearlyCardFees)}/yr</div>
+                    <div className="text-xs text-gray-500">You'd pay → GRAIN: $0</div>
+                  </div>
+                </div>
+
+                {/* Payroll */}
+                <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Banknote className="w-5 h-5 text-red-400" />
+                    <div>
+                      <div className="text-sm text-white">Payroll Provider Fees</div>
+                      <div className="text-xs text-gray-500">~$7.50 per payment</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-red-400 font-bold">{formatCurrency(yearlyPayrollFees)}/yr</div>
+                    <div className="text-xs text-gray-500">You'd pay → GRAIN: $0</div>
+                  </div>
+                </div>
+
+                {/* Wire/Vendor */}
+                <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Send className="w-5 h-5 text-red-400" />
+                    <div>
+                      <div className="text-sm text-white">Wire & ACH Fees</div>
+                      <div className="text-xs text-gray-500">~$15 per transfer</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-red-400 font-bold">{formatCurrency(yearlyWireFees)}/yr</div>
+                    <div className="text-xs text-gray-500">You'd pay → GRAIN: $0</div>
                   </div>
                 </div>
               </motion.div>
@@ -373,47 +339,25 @@ function DepositSimulator() {
           </AnimatePresence>
         </div>
 
-        {/* Comparison with Bank */}
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-red-400" />
-              </div>
-              <div>
-                <div className="text-sm text-gray-400">Same deposit in a bank</div>
-                <div className="text-xl font-bold text-white">
-                  ${(amount * Math.pow(1 + traditionalRate, currentMonth)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs text-gray-500">0.5% APY</div>
-              <div className="text-red-400 text-sm">
-                +${((amount * Math.pow(1 + traditionalRate, currentMonth)) - amount).toFixed(2)}
-              </div>
+        {/* The Key Point */}
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <RefreshCw className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="text-blue-400 font-medium mb-1">The Closed Loop Effect</p>
+              <p className="text-gray-400">
+                When you pay vendors and employees in GRAIN, they spend it too—on other
+                businesses in the network. Your {formatCurrency(monthlyVolume)}/month creates
+                a multiplier effect. One dollar, infinite transactions, zero fees extracted.
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Bottom callout */}
-        {appreciation > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 p-4 rounded-xl bg-gradient-to-r from-green-500/20 to-blue-500/20 border border-green-500/30"
-          >
-            <div className="text-center">
-              <span className="text-gray-400">Extra purchasing power with GRAIN: </span>
-              <span className="text-2xl font-bold text-green-400">
-                ${appreciation.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </span>
-            </div>
-            <div className="text-center text-xs text-gray-500 mt-2">
-              Use it for payments, transfers, or purchases within the GRAIN network
-            </div>
-          </motion.div>
-        )}
+        {/* Cash Out Reminder */}
+        <div className="mt-6 text-center text-sm text-gray-500">
+          <span className="text-green-400 font-medium">1 GRAIN = $1 USD</span> • Cash out anytime, no lock-ups
+        </div>
       </div>
     </div>
   )
@@ -495,49 +439,49 @@ export default function HowItWorksPage() {
   const steps = [
     {
       icon: Wallet,
-      title: 'Deposit Funds',
-      description: 'Add money instantly using your card or bank account. Your deposit becomes your principal - always withdrawable 1:1.',
+      title: 'Deposit & Convert',
+      description: 'Add money from 180+ countries. Deposit in your local currency, receive GRAIN at 1:1 with USD.',
       features: [
-        'Instant deposits with card or bank',
+        'Instant deposits via card or bank',
         'Zero deposit fees',
-        'Available in 180+ countries',
-        'Principal always protected'
+        '180+ countries via Circle Mint',
+        '1 GRAIN = $1 USD always'
       ],
       color: 'from-blue-500 to-cyan-500'
     },
     {
-      icon: Building2,
-      title: 'Treasury Invests',
-      description: 'Your deposit backs GRAIN while our treasury invests in real assets - commercial real estate, income properties, and more.',
+      icon: RefreshCw,
+      title: 'Run Your Business',
+      description: 'Use GRAIN for everything: accept payments, pay vendors, run payroll, hire contractors. All with zero fees.',
       features: [
-        '100% asset-backed reserves',
-        'Commercial real estate portfolio',
-        'Diversified investments',
-        'Professional management'
+        'Accept customer payments (0% fees)',
+        'Pay vendors instantly (no wire fees)',
+        'Run payroll (no provider fees)',
+        'Invoice in any currency'
       ],
       color: 'from-green-500 to-emerald-500'
     },
     {
-      icon: TrendingUp,
-      title: 'Appreciation Grows',
-      description: 'As treasury assets appreciate, your GRAIN purchasing power grows. All holders benefit equally from ecosystem growth.',
+      icon: Globe,
+      title: 'The Closed Loop',
+      description: 'Your vendors pay their vendors. Employees spend at other businesses. Money circulates infinitely, fees never extracted.',
       features: [
-        'Real asset appreciation',
-        'Purchasing power increases',
-        'Anti-inflationary by design',
-        'Compound growth over time'
+        'Every transaction is fee-free',
+        'Money multiplies its impact',
+        'Global network, local feel',
+        'Build in any currency'
       ],
       color: 'from-purple-500 to-pink-500'
     },
     {
-      icon: ShoppingCart,
-      title: 'Spend or Hold',
-      description: 'Use your full GRAIN balance for payments and transfers. Cash out to USD anytime at 1:1 with your original deposit.',
+      icon: Banknote,
+      title: 'Cash Out Anytime',
+      description: '1 GRAIN = $1 USD, always. Withdraw to your bank in your local currency whenever you want. No lock-ups, no tricks.',
       features: [
-        'Full balance spendable in ecosystem',
-        'Zero transaction fees',
-        'Cash out principal anytime',
-        'Appreciation unlocks in GRAIN'
+        'Instant withdrawals',
+        'Convert to local currency',
+        'No minimum hold period',
+        'Full balance always accessible'
       ],
       color: 'from-amber-500 to-orange-500'
     }
@@ -673,39 +617,42 @@ export default function HowItWorksPage() {
               The Problem
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Your money is losing value.{' '}
-              <span className="text-red-400">Every single day.</span>
+              Every transaction costs you money.{' '}
+              <span className="text-red-400">Every single one.</span>
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Inflation erodes your purchasing power while banks profit from your deposits.
-              It's a system designed to work against you.
+              Credit card fees. Wire transfers. Payroll providers. FX costs.
+              The financial system extracts value at every step.
             </p>
           </motion.div>
 
-          {/* Inflation visualization */}
+          {/* Fee visualization */}
           <div className="grid md:grid-cols-3 gap-8 mb-16">
             {[
               {
-                year: '2020',
-                value: 100,
-                label: '$100 could buy',
-                items: ['Full grocery cart', '2 movie tickets + dinner', '1 tank of gas']
+                title: 'Accept a Payment',
+                amount: '$100',
+                fees: '$3.20',
+                you_get: '$96.80',
+                breakdown: ['2.9% card processing', '$0.30 per transaction', 'Chargeback risk']
               },
               {
-                year: '2023',
-                value: 82,
-                label: '$100 now buys',
-                items: ['3/4 grocery cart', '1 movie ticket + dinner', '3/4 tank of gas']
+                title: 'Pay a Vendor',
+                amount: '$1,000',
+                fees: '$15-25',
+                you_get: '$975-985',
+                breakdown: ['Wire transfer fees', '1-3 day settlement', 'FX fees if international']
               },
               {
-                year: '2025',
-                value: 71,
-                label: '$100 will buy',
-                items: ['Half grocery cart', 'Just dinner', 'Half tank of gas']
+                title: 'Run Payroll',
+                amount: '$10,000',
+                fees: '$75+',
+                you_get: '$9,925',
+                breakdown: ['~$7.50 per employee', 'Monthly platform fee', 'Tax filing fees']
               }
             ].map((item, i) => (
               <motion.div
-                key={item.year}
+                key={item.title}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -713,31 +660,39 @@ export default function HowItWorksPage() {
                 className="relative"
               >
                 <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8">
-                  <div className="text-sm text-red-400 font-medium mb-2">{item.year}</div>
-                  <div className="text-5xl font-bold text-white mb-2">${item.value}</div>
-                  <div className="text-sm text-gray-500 mb-6">purchasing power</div>
+                  <div className="text-sm text-red-400 font-medium mb-2">{item.title}</div>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-3xl font-bold text-white">{item.amount}</span>
+                    <span className="text-gray-500">→</span>
+                    <span className="text-2xl font-bold text-red-400">{item.you_get}</span>
+                  </div>
+                  <div className="text-sm text-gray-500 mb-4">
+                    Lost to fees: <span className="text-red-400 font-medium">{item.fees}</span>
+                  </div>
                   <div className="space-y-2">
-                    {item.items.map((text, j) => (
+                    {item.breakdown.map((text, j) => (
                       <div key={j} className="flex items-center gap-2 text-sm text-gray-400">
-                        {i === 0 ? (
-                          <Check className="w-4 h-4 text-green-400" />
-                        ) : (
-                          <X className="w-4 h-4 text-red-400" />
-                        )}
+                        <X className="w-4 h-4 text-red-400 flex-shrink-0" />
                         {text}
                       </div>
                     ))}
                   </div>
                 </div>
-                {/* Connecting arrow */}
-                {i < 2 && (
-                  <div className="hidden md:block absolute top-1/2 -right-6 transform -translate-y-1/2 text-red-500/50">
-                    <ChevronRight className="w-8 h-8" />
-                  </div>
-                )}
               </motion.div>
             ))}
           </div>
+
+          {/* Total cost callout */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center bg-red-500/10 border border-red-500/30 rounded-2xl p-8"
+          >
+            <div className="text-gray-400 mb-2">A business doing $100k/month loses approximately</div>
+            <div className="text-5xl font-bold text-red-400 mb-2">$36,000+/year</div>
+            <div className="text-gray-500">to payment processing, payroll, and transfer fees</div>
+          </motion.div>
         </div>
       </section>
 
@@ -751,16 +706,16 @@ export default function HowItWorksPage() {
             className="text-center mb-16"
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-sm font-medium mb-6">
-              <TrendingUp className="w-4 h-4" />
+              <Zap className="w-4 h-4" />
               The Solution
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
               GRAIN:{' '}
-              <span className="text-green-400">Money that appreciates.</span>
+              <span className="text-green-400">Zero fees. Forever.</span>
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Instead of losing value, your GRAIN grows as our treasury expands.
-              Every holder benefits equally from ecosystem growth.
+              A closed-loop payment network where money circulates without
+              middlemen extracting fees at every step. Keep 100% of every transaction.
             </p>
           </motion.div>
 
