@@ -1,19 +1,16 @@
 'use client'
 
 /**
- * Unified Join/Signup Page - WellsAI
+ * Unified Join/Signup Page - Dynamic Branding
  *
- * Single entry point for all users with:
- * - Email + company collection
- * - Role selection (CFO/Controller/Procurement/Other)
- * - Need selection (Treasury, Payments, Sourcing, Hiring, All)
- * - Optional ERP connection during signup
- * - Smart routing to appropriate journey after signup
+ * Automatically adapts branding based on journey:
+ * - Treasury (Grain & Vault): Black/green theme, treasury messaging
+ * - Default (WellsAI): Light/blue theme, sourcing messaging
  *
- * Design: Premium light aesthetic matching WellsAI brand
+ * Includes interactive GRAIN demo for treasury users
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSignUp, useUser } from '@clerk/nextjs'
 import Link from 'next/link'
@@ -32,13 +29,16 @@ import {
   Zap,
   Shield,
   TrendingUp,
+  TrendingDown,
   Database,
-  Link2,
-  ChevronDown,
   Mail,
   Lock,
-  User,
   AlertCircle,
+  Play,
+  DollarSign,
+  Globe,
+  Clock,
+  Activity,
 } from 'lucide-react'
 import {
   JourneyRouter,
@@ -55,6 +55,7 @@ import {
 // ============================================================================
 
 type Step = 'welcome' | 'info' | 'role' | 'needs' | 'erp' | 'account' | 'complete'
+type JourneyType = 'treasury' | 'sourcing' | 'sales' | 'hiring' | null
 
 interface FormData {
   email: string
@@ -67,11 +68,58 @@ interface FormData {
 }
 
 // ============================================================================
+// BRAND THEMES
+// ============================================================================
+
+const TREASURY_THEME = {
+  name: 'Grain & Vault',
+  logo: 'grain-vault',
+  bgGradient: 'from-black via-gray-900 to-black',
+  panelBg: 'from-emerald-900 via-green-900 to-black',
+  accent: 'emerald',
+  accentGradient: 'from-emerald-500 to-green-600',
+  buttonGradient: 'from-amber-500 to-orange-600',
+  buttonShadow: 'shadow-amber-500/25 hover:shadow-amber-500/40',
+  textPrimary: 'text-white',
+  textSecondary: 'text-gray-400',
+  inputBg: 'bg-white/5',
+  inputBorder: 'border-white/10',
+  inputFocus: 'focus:border-emerald-500 focus:ring-emerald-500/20',
+  cardBg: 'bg-white/5 border-white/10',
+  selectedBorder: 'border-emerald-500 bg-emerald-500/10',
+  selectedBg: 'bg-emerald-500',
+  progressBar: 'from-emerald-500 to-green-600',
+  href: '/grain-vault',
+}
+
+const WELLS_THEME = {
+  name: 'WellsAI',
+  logo: 'wells',
+  bgGradient: 'from-white to-gray-50',
+  panelBg: 'from-blue-600 via-blue-700 to-indigo-800',
+  accent: 'blue',
+  accentGradient: 'from-blue-500 to-blue-600',
+  buttonGradient: 'from-blue-600 to-blue-700',
+  buttonShadow: 'shadow-blue-500/25 hover:shadow-blue-500/40',
+  textPrimary: 'text-gray-900',
+  textSecondary: 'text-gray-600',
+  inputBg: 'bg-white',
+  inputBorder: 'border-gray-200',
+  inputFocus: 'focus:border-blue-500 focus:ring-blue-500/20',
+  cardBg: 'bg-white border-gray-200',
+  selectedBorder: 'border-blue-500 bg-blue-50',
+  selectedBg: 'bg-blue-500',
+  progressBar: 'from-blue-500 to-blue-600',
+  href: '/',
+}
+
+// ============================================================================
 // ERP OPTIONS
 // ============================================================================
 
 const ERP_SYSTEMS = [
-  { id: 'wells_native', name: 'WellsAI (Recommended)', description: 'Use WellsAI as your ERP', icon: Sparkles, recommended: true },
+  { id: 'grain_native', name: 'Grain & Vault Native', description: 'Full treasury SDK access', icon: Wallet, recommended: true, treasuryOnly: true },
+  { id: 'wells_native', name: 'WellsAI Native', description: 'Use WellsAI as your ERP', icon: Sparkles, recommended: true, treasuryOnly: false },
   { id: 'netsuite', name: 'Oracle NetSuite', description: 'Connect your NetSuite instance', icon: Database },
   { id: 'sap', name: 'SAP', description: 'Connect SAP S/4HANA or Business One', icon: Database },
   { id: 'dynamics365', name: 'Microsoft Dynamics 365', description: 'Connect D365 Finance', icon: Database },
@@ -94,6 +142,15 @@ const ROLE_OPTIONS: { id: UserRole; name: string; description: string; icon: Rea
   { id: 'other', name: 'Other', description: 'Something else', icon: Building2 },
 ]
 
+// Treasury-focused roles shown first for treasury journey
+const TREASURY_ROLE_OPTIONS: { id: UserRole; name: string; description: string; icon: React.ElementType }[] = [
+  { id: 'cfo', name: 'CFO', description: 'Chief Financial Officer', icon: Wallet },
+  { id: 'controller', name: 'Controller / Treasurer', description: 'Treasury & Finance', icon: Briefcase },
+  { id: 'founder', name: 'Founder / CEO', description: 'Building a company', icon: Rocket },
+  { id: 'procurement', name: 'Finance Ops', description: 'Payments & Operations', icon: DollarSign },
+  { id: 'other', name: 'Other', description: 'Something else', icon: Building2 },
+]
+
 // ============================================================================
 // NEED OPTIONS
 // ============================================================================
@@ -105,6 +162,14 @@ const NEED_OPTIONS: { id: UserNeed; name: string; description: string; icon: Rea
   { id: 'hiring', name: 'Hiring', description: 'Recruit talent', icon: Users },
   { id: 'selling', name: 'Selling', description: 'Find customers', icon: TrendingUp },
   { id: 'all', name: 'All of the Above', description: 'I need everything', icon: Sparkles },
+]
+
+// Treasury-focused needs
+const TREASURY_NEED_OPTIONS: { id: UserNeed; name: string; description: string; icon: React.ElementType }[] = [
+  { id: 'treasury', name: 'Treasury & GRAIN', description: 'Hold appreciating stablecoin', icon: Wallet },
+  { id: 'payments', name: 'Zero-Friction Payments', description: 'Instant settlement, no fees', icon: Zap },
+  { id: 'sourcing', name: 'Vendor Payments', description: 'Pay suppliers in GRAIN', icon: Globe },
+  { id: 'all', name: 'Full Treasury Suite', description: 'Everything above', icon: Sparkles },
 ]
 
 // ============================================================================
@@ -148,7 +213,11 @@ export default function JoinPage() {
 
   // Check for referral code and journey context
   const referralCode = searchParams.get('ref') || searchParams.get('invite')
-  const journeyFromUrl = searchParams.get('journey') as 'treasury' | 'sourcing' | 'sales' | 'hiring' | null
+  const journeyFromUrl = searchParams.get('journey') as JourneyType
+
+  // Determine which theme to use
+  const isTreasury = journeyFromUrl === 'treasury'
+  const theme = isTreasury ? TREASURY_THEME : WELLS_THEME
 
   // Pre-select treasury need if coming from Grain & Vault
   useEffect(() => {
@@ -163,15 +232,14 @@ export default function JoinPage() {
   // If already signed in, redirect to dashboard
   useEffect(() => {
     if (userLoaded && user) {
-      // Check if onboarding is complete
       const meta = user.publicMetadata as Record<string, unknown>
       if (meta.onboardingCompleted) {
-        router.push('/dashboard')
+        router.push(isTreasury ? '/dashboard?journey=treasury' : '/dashboard')
       } else if (meta.onboardingStarted) {
         router.push('/onboarding')
       }
     }
-  }, [userLoaded, user, router])
+  }, [userLoaded, user, router, isTreasury])
 
   // Navigation
   const goToNextStep = () => {
@@ -199,10 +267,8 @@ export default function JoinPage() {
   // Handle need toggle
   const handleNeedToggle = (need: UserNeed) => {
     if (need === 'all') {
-      // If selecting "all", clear others and just use all
       setFormData({ ...formData, needs: ['all'] })
     } else {
-      // Remove 'all' if selecting specific needs
       const filtered = formData.needs.filter(n => n !== 'all')
       if (filtered.includes(need)) {
         setFormData({ ...formData, needs: filtered.filter(n => n !== need) })
@@ -214,7 +280,7 @@ export default function JoinPage() {
 
   // Handle ERP selection
   const handleErpSelect = (erpId: string) => {
-    setFormData({ ...formData, erpSystem: erpId, connectErp: erpId !== 'none' && erpId !== 'wells_native' })
+    setFormData({ ...formData, erpSystem: erpId, connectErp: erpId !== 'none' && !erpId.includes('native') })
   }
 
   // Create account with Clerk
@@ -225,21 +291,16 @@ export default function JoinPage() {
     setError(null)
 
     try {
-      // Create the signup
       const result = await signUp.create({
         emailAddress: formData.email,
         password: formData.password,
       })
 
-      // Prepare email verification
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
 
-      // For now, skip verification in development and complete signup
-      // In production, you'd redirect to email verification
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId })
 
-        // Save user context
         const signupData: SignupData = {
           email: formData.email,
           companyName: formData.companyName,
@@ -252,20 +313,18 @@ export default function JoinPage() {
         const context = JourneyRouter.createUserContext(result.createdUserId || '', signupData)
         saveUserContext(context)
 
-        // Save to API for server-side persistence
         await fetch('/api/join/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...signupData,
-            primaryJourney: context.primaryJourney,
+            primaryJourney: isTreasury ? 'treasury' : context.primaryJourney,
             activeJourneys: context.activeJourneys,
           }),
         })
 
         goToNextStep()
       } else {
-        // Need email verification
         goToNextStep()
       }
     } catch (err: unknown) {
@@ -279,6 +338,11 @@ export default function JoinPage() {
 
   // Go to dashboard
   const handleGoToDashboard = () => {
+    if (isTreasury) {
+      router.push('/dashboard?journey=treasury')
+      return
+    }
+
     if (!formData.role) {
       router.push('/dashboard')
       return
@@ -301,7 +365,7 @@ export default function JoinPage() {
   const renderStep = () => {
     switch (step) {
       case 'welcome':
-        return <WelcomeStep onContinue={goToNextStep} />
+        return <WelcomeStep onContinue={goToNextStep} theme={theme} isTreasury={isTreasury} />
 
       case 'info':
         return (
@@ -310,6 +374,8 @@ export default function JoinPage() {
             onChange={(updates) => setFormData({ ...formData, ...updates })}
             onContinue={goToNextStep}
             onBack={goToPreviousStep}
+            theme={theme}
+            isTreasury={isTreasury}
           />
         )
 
@@ -319,6 +385,8 @@ export default function JoinPage() {
             selectedRole={formData.role}
             onSelect={handleRoleSelect}
             onBack={goToPreviousStep}
+            theme={theme}
+            isTreasury={isTreasury}
           />
         )
 
@@ -329,6 +397,8 @@ export default function JoinPage() {
             onToggle={handleNeedToggle}
             onContinue={goToNextStep}
             onBack={goToPreviousStep}
+            theme={theme}
+            isTreasury={isTreasury}
           />
         )
 
@@ -339,6 +409,8 @@ export default function JoinPage() {
             onSelect={handleErpSelect}
             onContinue={goToNextStep}
             onBack={goToPreviousStep}
+            theme={theme}
+            isTreasury={isTreasury}
           />
         )
 
@@ -351,6 +423,8 @@ export default function JoinPage() {
             onBack={goToPreviousStep}
             isLoading={isLoading}
             error={error}
+            theme={theme}
+            isTreasury={isTreasury}
           />
         )
 
@@ -359,6 +433,8 @@ export default function JoinPage() {
           <CompleteStep
             formData={formData}
             onGoToDashboard={handleGoToDashboard}
+            theme={theme}
+            isTreasury={isTreasury}
           />
         )
 
@@ -368,16 +444,30 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex">
+    <div className={`min-h-screen bg-gradient-to-b ${theme.bgGradient} flex`}>
       {/* Left Panel - Form */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="p-6">
-          <Link href="/" className="inline-flex items-center gap-2.5 text-gray-900 font-semibold text-lg hover:opacity-80 transition-opacity">
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            WellsAI
+          <Link href={theme.href} className={`inline-flex items-center gap-2.5 ${theme.textPrimary} font-semibold text-lg hover:opacity-80 transition-opacity`}>
+            {isTreasury ? (
+              <>
+                <div className="relative">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+                    <div className="w-4 h-4 bg-black rounded-sm" />
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-sm" />
+                </div>
+                <span>Grain & Vault</span>
+              </>
+            ) : (
+              <>
+                <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <span>WellsAI</span>
+              </>
+            )}
           </Link>
         </header>
 
@@ -386,13 +476,13 @@ export default function JoinPage() {
           <div className="px-6">
             <div className="max-w-lg mx-auto">
               <div className="flex items-center gap-3 mb-2">
-                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className={`flex-1 h-1.5 ${isTreasury ? 'bg-white/10' : 'bg-gray-100'} rounded-full overflow-hidden`}>
                   <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out"
+                    className={`h-full bg-gradient-to-r ${theme.progressBar} rounded-full transition-all duration-500 ease-out`}
                     style={{ width: `${getProgress(step)}%` }}
                   />
                 </div>
-                <span className="text-sm font-medium text-gray-500">{getProgress(step)}%</span>
+                <span className={`text-sm font-medium ${theme.textSecondary}`}>{getProgress(step)}%</span>
               </div>
             </div>
           </div>
@@ -400,16 +490,16 @@ export default function JoinPage() {
 
         {/* Content */}
         <main className="flex-1 flex items-center justify-center p-6">
-          <div className="w-full max-w-lg animate-slide-up">
+          <div className="w-full max-w-lg">
             {renderStep()}
           </div>
         </main>
 
         {/* Footer */}
         <footer className="p-6 text-center">
-          <p className="text-sm text-gray-500">
+          <p className={`text-sm ${theme.textSecondary}`}>
             Already have an account?{' '}
-            <Link href="/sign-in" className="text-blue-600 font-medium hover:underline">
+            <Link href="/sign-in" className={`${isTreasury ? 'text-emerald-400 hover:text-emerald-300' : 'text-blue-600 hover:text-blue-500'} font-medium`}>
               Sign in
             </Link>
           </p>
@@ -417,33 +507,19 @@ export default function JoinPage() {
       </div>
 
       {/* Right Panel - Branding (Desktop Only) */}
-      <div className="hidden lg:flex w-[480px] bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-12 items-center justify-center relative overflow-hidden">
+      <div className={`hidden lg:flex w-[520px] bg-gradient-to-br ${theme.panelBg} p-12 items-center justify-center relative overflow-hidden`}>
         {/* Decorative elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 -right-20 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl" />
+          <div className={`absolute top-1/4 -right-20 w-80 h-80 ${isTreasury ? 'bg-emerald-500/10' : 'bg-white/5'} rounded-full blur-3xl`} />
+          <div className={`absolute bottom-1/4 -left-20 w-80 h-80 ${isTreasury ? 'bg-green-500/10' : 'bg-blue-400/10'} rounded-full blur-3xl`} />
         </div>
 
         <div className="relative z-10 text-center">
-          <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 border border-white/20">
-            <Sparkles className="w-10 h-10 text-white" />
-          </div>
-
-          <h2 className="text-3xl font-semibold text-white mb-4">
-            AI That Actually Does Things
-          </h2>
-
-          <p className="text-white/80 text-lg mb-10 leading-relaxed">
-            Tell Wells what you need. Get it done.
-            <br />
-            AI-to-AI negotiation with human approval.
-          </p>
-
-          <div className="space-y-4">
-            <Feature icon={Zap} text="Get quotes in 48 hours, not weeks" />
-            <Feature icon={Shield} text="500+ vetted suppliers ready to bid" />
-            <Feature icon={TrendingUp} text="1% success fee - only pay when deals close" />
-          </div>
+          {isTreasury ? (
+            <TreasuryPanel />
+          ) : (
+            <WellsPanel />
+          )}
         </div>
       </div>
     </div>
@@ -451,8 +527,158 @@ export default function JoinPage() {
 }
 
 // ============================================================================
-// SUB-COMPONENTS
+// RIGHT PANEL COMPONENTS
 // ============================================================================
+
+function TreasuryPanel() {
+  const [demoStep, setDemoStep] = useState(0)
+  const [grainPrice, setGrainPrice] = useState(1.00)
+  const [depositAmount, setDepositAmount] = useState(1000)
+  const [grainReceived, setGrainReceived] = useState(1000)
+
+  // Animate GRAIN appreciation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGrainPrice(prev => {
+        const newPrice = prev + 0.001
+        return newPrice > 1.05 ? 1.00 : newPrice
+      })
+    }, 100)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    setGrainReceived(Math.floor(depositAmount / grainPrice))
+  }, [depositAmount, grainPrice])
+
+  return (
+    <div className="space-y-8">
+      {/* Logo */}
+      <div className="flex items-center justify-center gap-3 mb-2">
+        <div className="relative">
+          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <div className="w-6 h-6 bg-black rounded-md" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-md" />
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-3xl font-bold text-white mb-3">
+          Treasury that <span className="text-emerald-400">appreciates</span>
+        </h2>
+        <p className="text-white/70 text-lg">
+          GRAIN is the anti-inflationary stablecoin.
+          <br />
+          Your money grows while you hold.
+        </p>
+      </div>
+
+      {/* Interactive Demo */}
+      <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 text-left">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-sm text-emerald-400 font-medium">Live Demo</span>
+          <span className="text-xs text-white/50">Price updates in real-time</span>
+        </div>
+
+        {/* Current Price */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+          <div>
+            <p className="text-sm text-white/50 mb-1">GRAIN Price</p>
+            <p className="text-3xl font-bold text-white">${grainPrice.toFixed(4)}</p>
+          </div>
+          <div className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/20 rounded-full">
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm font-medium text-emerald-400">
+              +{((grainPrice - 1) * 100).toFixed(2)}%
+            </span>
+          </div>
+        </div>
+
+        {/* Deposit Simulator */}
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm text-white/50 mb-2 block">If you deposit</label>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-white">$</span>
+              <input
+                type="number"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
+                className="bg-transparent border-none text-2xl font-bold text-white w-24 focus:outline-none"
+              />
+              <span className="text-white/50">USD</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-white/30">
+            <ArrowRight className="w-5 h-5" />
+          </div>
+
+          <div>
+            <label className="text-sm text-white/50 mb-2 block">You receive</label>
+            <p className="text-2xl font-bold text-emerald-400">
+              {grainReceived.toLocaleString()} <span className="text-lg font-normal text-white/50">GRAIN</span>
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-sm text-white/50 mb-1">Future value (if price hits $1.10)</p>
+            <p className="text-xl font-bold text-white">
+              ${(grainReceived * 1.10).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              <span className="text-emerald-400 text-sm ml-2">+${((grainReceived * 1.10) - depositAmount).toFixed(2)}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Features */}
+      <div className="space-y-3">
+        <TreasuryFeature icon={TrendingUp} text="GRAIN only goes up - $1.00 floor guaranteed" />
+        <TreasuryFeature icon={Zap} text="Instant settlement, under 1 second" />
+        <TreasuryFeature icon={Shield} text="100% collateralized, real-time audits" />
+        <TreasuryFeature icon={Globe} text="Available in 180+ countries" />
+      </div>
+    </div>
+  )
+}
+
+function TreasuryFeature({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+  return (
+    <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/5">
+      <div className="w-9 h-9 bg-emerald-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+        <Icon className="w-5 h-5 text-emerald-400" />
+      </div>
+      <span className="text-white/90 text-sm">{text}</span>
+    </div>
+  )
+}
+
+function WellsPanel() {
+  return (
+    <>
+      <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-8 border border-white/20">
+        <Sparkles className="w-10 h-10 text-white" />
+      </div>
+
+      <h2 className="text-3xl font-semibold text-white mb-4">
+        AI That Actually Does Things
+      </h2>
+
+      <p className="text-white/80 text-lg mb-10 leading-relaxed">
+        Tell Wells what you need. Get it done.
+        <br />
+        AI-to-AI negotiation with human approval.
+      </p>
+
+      <div className="space-y-4">
+        <Feature icon={Zap} text="Get quotes in 48 hours, not weeks" />
+        <Feature icon={Shield} text="500+ vetted suppliers ready to bid" />
+        <Feature icon={TrendingUp} text="1% success fee - only pay when deals close" />
+      </div>
+    </>
+  )
+}
 
 function Feature({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
   return (
@@ -469,32 +695,70 @@ function Feature({ icon: Icon, text }: { icon: React.ElementType; text: string }
 // STEP COMPONENTS
 // ============================================================================
 
-function WelcomeStep({ onContinue }: { onContinue: () => void }) {
+interface StepProps {
+  theme: typeof TREASURY_THEME | typeof WELLS_THEME
+  isTreasury: boolean
+}
+
+function WelcomeStep({ onContinue, theme, isTreasury }: { onContinue: () => void } & StepProps) {
   return (
     <div className="text-center">
-      <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/20">
-        <Sparkles className="w-10 h-10 text-white" />
-      </div>
+      {isTreasury ? (
+        <>
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-xl shadow-emerald-500/20">
+              <div className="w-8 h-8 bg-black rounded-lg" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-lg" />
+          </div>
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-3">
-        Welcome to WellsAI
-      </h1>
+          <h1 className="text-3xl font-bold text-white mb-3">
+            Welcome to Grain & Vault
+          </h1>
 
-      <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
-        Your AI-powered business operations platform. Let's get you set up in under 2 minutes.
-      </p>
+          <p className="text-lg text-gray-400 mb-8 max-w-md mx-auto">
+            Treasury infrastructure for modern finance. Set up your GRAIN wallet in under 2 minutes.
+          </p>
 
-      <button
-        onClick={onContinue}
-        className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
-      >
-        Get Started
-        <ArrowRight className="w-5 h-5" />
-      </button>
+          <button
+            onClick={onContinue}
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            Get Started
+            <ArrowRight className="w-5 h-5" />
+          </button>
 
-      <p className="mt-6 text-sm text-gray-500">
-        No credit card required
-      </p>
+          <p className="mt-6 text-sm text-gray-500">
+            No credit card required
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/20">
+            <Sparkles className="w-10 h-10 text-white" />
+          </div>
+
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">
+            Welcome to WellsAI
+          </h1>
+
+          <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
+            Your AI-powered business operations platform. Let's get you set up in under 2 minutes.
+          </p>
+
+          <button
+            onClick={onContinue}
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            Get Started
+            <ArrowRight className="w-5 h-5" />
+          </button>
+
+          <p className="mt-6 text-sm text-gray-500">
+            No credit card required
+          </p>
+        </>
+      )}
     </div>
   )
 }
@@ -504,62 +768,64 @@ function InfoStep({
   onChange,
   onContinue,
   onBack,
+  theme,
+  isTreasury,
 }: {
   formData: FormData
   onChange: (updates: Partial<FormData>) => void
   onContinue: () => void
   onBack: () => void
-}) {
+} & StepProps) {
   const isValid = formData.email.includes('@') && formData.companyName.length > 0
 
   return (
     <div>
       <button
         onClick={onBack}
-        className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+        className={`inline-flex items-center gap-1 ${theme.textSecondary} hover:${theme.textPrimary} mb-6 transition-colors`}
       >
         <ArrowLeft className="w-4 h-4" />
         Back
       </button>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">
+      <h1 className={`text-2xl font-bold ${theme.textPrimary} mb-2`}>
         Tell us about you
       </h1>
-      <p className="text-gray-600 mb-8">
-        We'll use this to personalize your experience
+      <p className={`${theme.textSecondary} mb-8`}>
+        We'll use this to personalize your {isTreasury ? 'treasury' : ''} experience
       </p>
 
       <div className="space-y-5">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor="email" className={`block text-sm font-medium ${isTreasury ? 'text-gray-300' : 'text-gray-700'} mb-1.5`}>
             Work Email
           </label>
           <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isTreasury ? 'text-gray-500' : 'text-gray-400'}`} />
             <input
               id="email"
               type="email"
               value={formData.email}
               onChange={(e) => onChange({ email: e.target.value })}
               placeholder="you@company.com"
-              className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className={`w-full pl-12 pr-4 py-3.5 ${theme.inputBg} border ${theme.inputBorder} rounded-xl ${theme.textPrimary} placeholder-gray-500 focus:outline-none ${theme.inputFocus} transition-all`}
             />
           </div>
         </div>
 
         <div>
-          <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor="company" className={`block text-sm font-medium ${isTreasury ? 'text-gray-300' : 'text-gray-700'} mb-1.5`}>
             Company Name
           </label>
           <div className="relative">
-            <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Building2 className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isTreasury ? 'text-gray-500' : 'text-gray-400'}`} />
             <input
               id="company"
               type="text"
               value={formData.companyName}
               onChange={(e) => onChange({ companyName: e.target.value })}
               placeholder="Acme Inc"
-              className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className={`w-full pl-12 pr-4 py-3.5 ${theme.inputBg} border ${theme.inputBorder} rounded-xl ${theme.textPrimary} placeholder-gray-500 focus:outline-none ${theme.inputFocus} transition-all`}
             />
           </div>
         </div>
@@ -568,7 +834,7 @@ function InfoStep({
       <button
         onClick={onContinue}
         disabled={!isValid}
-        className="w-full mt-8 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+        className={`w-full mt-8 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r ${theme.buttonGradient} text-white font-semibold rounded-xl shadow-lg ${theme.buttonShadow} transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none`}
       >
         Continue
         <ArrowRight className="w-5 h-5" />
@@ -581,30 +847,34 @@ function RoleStep({
   selectedRole,
   onSelect,
   onBack,
+  theme,
+  isTreasury,
 }: {
   selectedRole: UserRole | null
   onSelect: (role: UserRole) => void
   onBack: () => void
-}) {
+} & StepProps) {
+  const roles = isTreasury ? TREASURY_ROLE_OPTIONS : ROLE_OPTIONS
+
   return (
     <div>
       <button
         onClick={onBack}
-        className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+        className={`inline-flex items-center gap-1 ${theme.textSecondary} hover:${theme.textPrimary} mb-6 transition-colors`}
       >
         <ArrowLeft className="w-4 h-4" />
         Back
       </button>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">
+      <h1 className={`text-2xl font-bold ${theme.textPrimary} mb-2`}>
         What's your role?
       </h1>
-      <p className="text-gray-600 mb-6">
-        We'll customize Wells for how you work
+      <p className={`${theme.textSecondary} mb-6`}>
+        We'll customize {isTreasury ? 'your treasury' : 'Wells'} for how you work
       </p>
 
       <div className="grid grid-cols-2 gap-3">
-        {ROLE_OPTIONS.map((role) => {
+        {roles.map((role) => {
           const Icon = role.icon
           const isSelected = selectedRole === role.id
           return (
@@ -613,17 +883,17 @@ function RoleStep({
               onClick={() => onSelect(role.id)}
               className={`p-4 rounded-xl border-2 text-left transition-all hover:scale-[1.02] ${
                 isSelected
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? theme.selectedBorder
+                  : `${theme.cardBg} ${isTreasury ? 'hover:border-white/20' : 'hover:border-gray-300'}`
               }`}
             >
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
-                isSelected ? 'bg-blue-500' : 'bg-gray-100'
+                isSelected ? theme.selectedBg : (isTreasury ? 'bg-white/10' : 'bg-gray-100')
               }`}>
-                <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-gray-600'}`} />
+                <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : (isTreasury ? 'text-gray-400' : 'text-gray-600')}`} />
               </div>
-              <h3 className="font-semibold text-gray-900">{role.name}</h3>
-              <p className="text-sm text-gray-500">{role.description}</p>
+              <h3 className={`font-semibold ${theme.textPrimary}`}>{role.name}</h3>
+              <p className={`text-sm ${theme.textSecondary}`}>{role.description}</p>
             </button>
           )
         })}
@@ -637,31 +907,35 @@ function NeedsStep({
   onToggle,
   onContinue,
   onBack,
+  theme,
+  isTreasury,
 }: {
   selectedNeeds: UserNeed[]
   onToggle: (need: UserNeed) => void
   onContinue: () => void
   onBack: () => void
-}) {
+} & StepProps) {
+  const needs = isTreasury ? TREASURY_NEED_OPTIONS : NEED_OPTIONS
+
   return (
     <div>
       <button
         onClick={onBack}
-        className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+        className={`inline-flex items-center gap-1 ${theme.textSecondary} hover:${theme.textPrimary} mb-6 transition-colors`}
       >
         <ArrowLeft className="w-4 h-4" />
         Back
       </button>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">
-        What do you need?
+      <h1 className={`text-2xl font-bold ${theme.textPrimary} mb-2`}>
+        {isTreasury ? 'What treasury features do you need?' : 'What do you need?'}
       </h1>
-      <p className="text-gray-600 mb-6">
+      <p className={`${theme.textSecondary} mb-6`}>
         Select all that apply - you can always add more later
       </p>
 
       <div className="space-y-3">
-        {NEED_OPTIONS.map((need) => {
+        {needs.map((need) => {
           const Icon = need.icon
           const isSelected = selectedNeeds.includes(need.id)
           return (
@@ -670,21 +944,21 @@ function NeedsStep({
               onClick={() => onToggle(need.id)}
               className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${
                 isSelected
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? theme.selectedBorder
+                  : `${theme.cardBg} ${isTreasury ? 'hover:border-white/20' : 'hover:border-gray-300'}`
               }`}
             >
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                isSelected ? 'bg-blue-500' : 'bg-gray-100'
+                isSelected ? theme.selectedBg : (isTreasury ? 'bg-white/10' : 'bg-gray-100')
               }`}>
-                <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-gray-600'}`} />
+                <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : (isTreasury ? 'text-gray-400' : 'text-gray-600')}`} />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">{need.name}</h3>
-                <p className="text-sm text-gray-500">{need.description}</p>
+                <h3 className={`font-semibold ${theme.textPrimary}`}>{need.name}</h3>
+                <p className={`text-sm ${theme.textSecondary}`}>{need.description}</p>
               </div>
               {isSelected && (
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className={`w-6 h-6 ${theme.selectedBg} rounded-full flex items-center justify-center flex-shrink-0`}>
                   <Check className="w-4 h-4 text-white" />
                 </div>
               )}
@@ -696,7 +970,7 @@ function NeedsStep({
       <button
         onClick={onContinue}
         disabled={selectedNeeds.length === 0}
-        className="w-full mt-6 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+        className={`w-full mt-6 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r ${theme.buttonGradient} text-white font-semibold rounded-xl shadow-lg ${theme.buttonShadow} transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none`}
       >
         Continue
         <ArrowRight className="w-5 h-5" />
@@ -710,73 +984,85 @@ function ErpStep({
   onSelect,
   onContinue,
   onBack,
+  theme,
+  isTreasury,
 }: {
   selectedErp: string
   onSelect: (erpId: string) => void
   onContinue: () => void
   onBack: () => void
-}) {
+} & StepProps) {
+  const erps = ERP_SYSTEMS.filter(erp => {
+    if (isTreasury && erp.id === 'wells_native') return false
+    if (!isTreasury && erp.treasuryOnly) return false
+    return true
+  })
+
   return (
     <div>
       <button
         onClick={onBack}
-        className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+        className={`inline-flex items-center gap-1 ${theme.textSecondary} hover:${theme.textPrimary} mb-6 transition-colors`}
       >
         <ArrowLeft className="w-4 h-4" />
         Back
       </button>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">
-        Connect your ERP
+      <h1 className={`text-2xl font-bold ${theme.textPrimary} mb-2`}>
+        {isTreasury ? 'Connect your treasury' : 'Connect your ERP'}
       </h1>
-      <p className="text-gray-600 mb-6">
-        Wells works best when connected to your systems - or use WellsAI as your ERP
+      <p className={`${theme.textSecondary} mb-6`}>
+        {isTreasury
+          ? 'Native SDK or connect your existing ERP for seamless integration'
+          : 'Wells works best when connected to your systems'
+        }
       </p>
 
-      <div className="space-y-3">
-        {ERP_SYSTEMS.map((erp) => {
+      <div className="space-y-3 max-h-[400px] overflow-y-auto">
+        {erps.map((erp) => {
           const Icon = erp.icon
           const isSelected = selectedErp === erp.id
+          const isRecommended = erp.recommended
           return (
             <button
               key={erp.id}
               onClick={() => onSelect(erp.id)}
               className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${
                 isSelected
-                  ? 'border-blue-500 bg-blue-50'
-                  : erp.recommended
-                    ? 'border-blue-200 bg-blue-50/50 hover:border-blue-300'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? theme.selectedBorder
+                  : isRecommended
+                    ? (isTreasury ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-blue-200 bg-blue-50/50')
+                    : `${theme.cardBg} ${isTreasury ? 'hover:border-white/20' : 'hover:border-gray-300'}`
               }`}
             >
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                 isSelected
-                  ? 'bg-blue-500'
-                  : erp.recommended
-                    ? 'bg-blue-100'
-                    : 'bg-gray-100'
+                  ? theme.selectedBg
+                  : isRecommended
+                    ? (isTreasury ? 'bg-emerald-500/20' : 'bg-blue-100')
+                    : (isTreasury ? 'bg-white/10' : 'bg-gray-100')
               }`}>
                 <Icon className={`w-5 h-5 ${
                   isSelected
                     ? 'text-white'
-                    : erp.recommended
-                      ? 'text-blue-600'
-                      : 'text-gray-600'
+                    : isRecommended
+                      ? (isTreasury ? 'text-emerald-400' : 'text-blue-600')
+                      : (isTreasury ? 'text-gray-400' : 'text-gray-600')
                 }`} />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-gray-900">{erp.name}</h3>
-                  {erp.recommended && !isSelected && (
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                  <h3 className={`font-semibold ${theme.textPrimary}`}>{erp.name}</h3>
+                  {isRecommended && !isSelected && (
+                    <span className={`px-2 py-0.5 ${isTreasury ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-100 text-blue-700'} text-xs font-medium rounded-full`}>
                       Recommended
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-500">{erp.description}</p>
+                <p className={`text-sm ${theme.textSecondary}`}>{erp.description}</p>
               </div>
               {isSelected && (
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className={`w-6 h-6 ${theme.selectedBg} rounded-full flex items-center justify-center flex-shrink-0`}>
                   <Check className="w-4 h-4 text-white" />
                 </div>
               )}
@@ -788,7 +1074,7 @@ function ErpStep({
       <button
         onClick={onContinue}
         disabled={!selectedErp}
-        className="w-full mt-6 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+        className={`w-full mt-6 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r ${theme.buttonGradient} text-white font-semibold rounded-xl shadow-lg ${theme.buttonShadow} transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none`}
       >
         Continue
         <ArrowRight className="w-5 h-5" />
@@ -796,7 +1082,7 @@ function ErpStep({
 
       <button
         onClick={() => { onSelect('none'); onContinue() }}
-        className="w-full mt-3 px-6 py-3 text-gray-500 hover:text-gray-700 font-medium transition-colors"
+        className={`w-full mt-3 px-6 py-3 ${theme.textSecondary} hover:${theme.textPrimary} font-medium transition-colors`}
       >
         Skip for now
       </button>
@@ -811,6 +1097,8 @@ function AccountStep({
   onBack,
   isLoading,
   error,
+  theme,
+  isTreasury,
 }: {
   formData: FormData
   onChange: (updates: Partial<FormData>) => void
@@ -818,7 +1106,7 @@ function AccountStep({
   onBack: () => void
   isLoading: boolean
   error: string | null
-}) {
+} & StepProps) {
   const isValid = formData.email.includes('@') && formData.password.length >= 8
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -830,50 +1118,50 @@ function AccountStep({
     <div>
       <button
         onClick={onBack}
-        className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700 mb-6 transition-colors"
+        className={`inline-flex items-center gap-1 ${theme.textSecondary} hover:${theme.textPrimary} mb-6 transition-colors`}
       >
         <ArrowLeft className="w-4 h-4" />
         Back
       </button>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">
+      <h1 className={`text-2xl font-bold ${theme.textPrimary} mb-2`}>
         Create your account
       </h1>
-      <p className="text-gray-600 mb-6">
-        One last step - secure your account
+      <p className={`${theme.textSecondary} mb-6`}>
+        One last step - secure your {isTreasury ? 'treasury' : ''} account
       </p>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+        <div className={`mb-6 p-4 ${isTreasury ? 'bg-red-500/10 border-red-500/20' : 'bg-red-50 border-red-200'} border rounded-xl flex items-start gap-3`}>
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700">{error}</p>
+          <p className={`text-sm ${isTreasury ? 'text-red-400' : 'text-red-700'}`}>{error}</p>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label htmlFor="account-email" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor="account-email" className={`block text-sm font-medium ${isTreasury ? 'text-gray-300' : 'text-gray-700'} mb-1.5`}>
             Email
           </label>
           <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isTreasury ? 'text-gray-500' : 'text-gray-400'}`} />
             <input
               id="account-email"
               type="email"
               value={formData.email}
               onChange={(e) => onChange({ email: e.target.value })}
               placeholder="you@company.com"
-              className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className={`w-full pl-12 pr-4 py-3.5 ${theme.inputBg} border ${theme.inputBorder} rounded-xl ${theme.textPrimary} placeholder-gray-500 focus:outline-none ${theme.inputFocus} transition-all`}
             />
           </div>
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label htmlFor="password" className={`block text-sm font-medium ${isTreasury ? 'text-gray-300' : 'text-gray-700'} mb-1.5`}>
             Password
           </label>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isTreasury ? 'text-gray-500' : 'text-gray-400'}`} />
             <input
               id="password"
               type="password"
@@ -881,7 +1169,7 @@ function AccountStep({
               onChange={(e) => onChange({ password: e.target.value })}
               placeholder="Minimum 8 characters"
               minLength={8}
-              className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className={`w-full pl-12 pr-4 py-3.5 ${theme.inputBg} border ${theme.inputBorder} rounded-xl ${theme.textPrimary} placeholder-gray-500 focus:outline-none ${theme.inputFocus} transition-all`}
             />
           </div>
         </div>
@@ -891,20 +1179,20 @@ function AccountStep({
             type="checkbox"
             required
             id="terms"
-            className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className={`mt-1 w-4 h-4 rounded ${isTreasury ? 'border-white/20 bg-white/5 text-emerald-500 focus:ring-emerald-500' : 'border-gray-300 text-blue-600 focus:ring-blue-500'}`}
           />
-          <label htmlFor="terms" className="text-sm text-gray-600">
+          <label htmlFor="terms" className={`text-sm ${theme.textSecondary}`}>
             I agree to the{' '}
-            <Link href="/terms" className="text-blue-600 hover:underline">Terms of Service</Link>
+            <Link href="/terms" className={`${isTreasury ? 'text-emerald-400 hover:text-emerald-300' : 'text-blue-600 hover:underline'}`}>Terms of Service</Link>
             {' '}and{' '}
-            <Link href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>
+            <Link href="/privacy" className={`${isTreasury ? 'text-emerald-400 hover:text-emerald-300' : 'text-blue-600 hover:underline'}`}>Privacy Policy</Link>
           </label>
         </div>
 
         <button
           type="submit"
           disabled={!isValid || isLoading}
-          className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+          className={`w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r ${theme.buttonGradient} text-white font-semibold rounded-xl shadow-lg ${theme.buttonShadow} transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none`}
         >
           {isLoading ? (
             <>
@@ -924,15 +1212,15 @@ function AccountStep({
       <div className="mt-6">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200" />
+            <div className={`w-full border-t ${isTreasury ? 'border-white/10' : 'border-gray-200'}`} />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-gradient-to-b from-white to-gray-50 text-gray-500">Or continue with</span>
+            <span className={`px-4 ${isTreasury ? 'bg-black text-gray-500' : 'bg-gradient-to-b from-white to-gray-50 text-gray-500'}`}>Or continue with</span>
           </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
-          <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all">
+          <button className={`flex items-center justify-center gap-2 px-4 py-3 ${theme.cardBg} border rounded-xl text-sm font-medium ${theme.textPrimary} hover:opacity-80 transition-all`}>
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -941,7 +1229,7 @@ function AccountStep({
             </svg>
             Google
           </button>
-          <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all">
+          <button className={`flex items-center justify-center gap-2 px-4 py-3 ${theme.cardBg} border rounded-xl text-sm font-medium ${theme.textPrimary} hover:opacity-80 transition-all`}>
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
             </svg>
@@ -956,53 +1244,58 @@ function AccountStep({
 function CompleteStep({
   formData,
   onGoToDashboard,
+  theme,
+  isTreasury,
 }: {
   formData: FormData
   onGoToDashboard: () => void
-}) {
+} & StepProps) {
   return (
     <div className="text-center">
-      <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-green-500/20">
+      <div className={`w-20 h-20 bg-gradient-to-br ${isTreasury ? 'from-emerald-500 to-green-600 shadow-emerald-500/20' : 'from-green-500 to-emerald-600 shadow-green-500/20'} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl`}>
         <Check className="w-10 h-10 text-white" />
       </div>
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-3">
+      <h1 className={`text-3xl font-bold ${theme.textPrimary} mb-3`}>
         You're all set!
       </h1>
 
-      <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
-        Welcome to WellsAI, {formData.companyName || 'there'}. Your AI assistant is ready to help you get things done.
+      <p className={`text-lg ${theme.textSecondary} mb-8 max-w-md mx-auto`}>
+        {isTreasury
+          ? `Welcome to Grain & Vault, ${formData.companyName || 'there'}. Your treasury is ready.`
+          : `Welcome to WellsAI, ${formData.companyName || 'there'}. Your AI assistant is ready to help.`
+        }
       </p>
 
       {/* Summary */}
-      <div className="bg-gray-50 rounded-2xl p-6 mb-8 text-left">
-        <h3 className="font-semibold text-gray-900 mb-4">Your setup:</h3>
+      <div className={`${isTreasury ? 'bg-white/5 border-white/10' : 'bg-gray-50'} rounded-2xl p-6 mb-8 text-left border`}>
+        <h3 className={`font-semibold ${theme.textPrimary} mb-4`}>Your setup:</h3>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-blue-600" />
+            <div className={`w-8 h-8 ${isTreasury ? 'bg-emerald-500/20' : 'bg-blue-100'} rounded-lg flex items-center justify-center`}>
+              <Building2 className={`w-4 h-4 ${isTreasury ? 'text-emerald-400' : 'text-blue-600'}`} />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Company</p>
-              <p className="font-medium text-gray-900">{formData.companyName || 'Not set'}</p>
+              <p className={`text-sm ${theme.textSecondary}`}>Company</p>
+              <p className={`font-medium ${theme.textPrimary}`}>{formData.companyName || 'Not set'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Briefcase className="w-4 h-4 text-purple-600" />
+            <div className={`w-8 h-8 ${isTreasury ? 'bg-purple-500/20' : 'bg-purple-100'} rounded-lg flex items-center justify-center`}>
+              <Briefcase className={`w-4 h-4 ${isTreasury ? 'text-purple-400' : 'text-purple-600'}`} />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Role</p>
-              <p className="font-medium text-gray-900">{formData.role ? getRoleDisplayName(formData.role) : 'Not set'}</p>
+              <p className={`text-sm ${theme.textSecondary}`}>Role</p>
+              <p className={`font-medium ${theme.textPrimary}`}>{formData.role ? getRoleDisplayName(formData.role) : 'Not set'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-emerald-600" />
+            <div className={`w-8 h-8 ${isTreasury ? 'bg-green-500/20' : 'bg-emerald-100'} rounded-lg flex items-center justify-center`}>
+              <Sparkles className={`w-4 h-4 ${isTreasury ? 'text-green-400' : 'text-emerald-600'}`} />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Focus Areas</p>
-              <p className="font-medium text-gray-900">
+              <p className={`text-sm ${theme.textSecondary}`}>Focus Areas</p>
+              <p className={`font-medium ${theme.textPrimary}`}>
                 {formData.needs.length > 0
                   ? formData.needs.map(n => getNeedDisplayName(n)).join(', ')
                   : 'Not set'}
@@ -1011,12 +1304,12 @@ function CompleteStep({
           </div>
           {formData.erpSystem && formData.erpSystem !== 'none' && (
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Database className="w-4 h-4 text-orange-600" />
+              <div className={`w-8 h-8 ${isTreasury ? 'bg-amber-500/20' : 'bg-orange-100'} rounded-lg flex items-center justify-center`}>
+                <Database className={`w-4 h-4 ${isTreasury ? 'text-amber-400' : 'text-orange-600'}`} />
               </div>
               <div>
-                <p className="text-sm text-gray-500">ERP</p>
-                <p className="font-medium text-gray-900">
+                <p className={`text-sm ${theme.textSecondary}`}>Integration</p>
+                <p className={`font-medium ${theme.textPrimary}`}>
                   {ERP_SYSTEMS.find(e => e.id === formData.erpSystem)?.name || formData.erpSystem}
                 </p>
               </div>
@@ -1027,9 +1320,9 @@ function CompleteStep({
 
       <button
         onClick={onGoToDashboard}
-        className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
+        className={`inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r ${theme.buttonGradient} text-white font-semibold rounded-xl shadow-lg ${theme.buttonShadow} hover:scale-[1.02] active:scale-[0.98] transition-all`}
       >
-        Go to Dashboard
+        {isTreasury ? 'Go to Treasury' : 'Go to Dashboard'}
         <ArrowRight className="w-5 h-5" />
       </button>
     </div>
