@@ -5,6 +5,21 @@
  * Interactive Commercial Demo Experience
  *
  * A cinematic, scroll-driven journey through the GRAIN ecosystem
+ *
+ * THE REAL GRAIN MODEL:
+ * - Deposit USD → Get GRAIN at 1:1
+ * - Treasury invests in real assets (commercial real estate, etc.)
+ * - Assets appreciate → GRAIN purchasing power grows
+ * - SPENDING in ecosystem: Use full balance (principal + appreciation)
+ * - CASH OUT to USD: Only get original principal back (1:1)
+ * - This creates natural retention while being honest about liquidity
+ *
+ * SETTLEMENTS:
+ * - "Instant" settlement with 24-72hr escrow hold
+ * - 24hr: Standard transactions
+ * - 48hr: High value (>$10k)
+ * - 72hr: New users (<30 days) or flagged accounts
+ * - No chargebacks - escrow handles disputes
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -40,7 +55,13 @@ import {
   BadgePercent,
   Timer,
   Eye,
-  FileCheck
+  FileCheck,
+  AlertCircle,
+  ShoppingCart,
+  Send,
+  Landmark,
+  Scale,
+  HandshakeIcon
 } from 'lucide-react'
 
 // Animated counter component
@@ -119,23 +140,19 @@ function ParticleField() {
   )
 }
 
-// Interactive deposit simulator
+// Interactive deposit simulator - Now shows Principal vs Appreciation
 function DepositSimulator() {
   const [amount, setAmount] = useState(1000)
   const [months, setMonths] = useState(12)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(0)
+  const [showCashOutInfo, setShowCashOutInfo] = useState(false)
 
-  // Simulated appreciation (2% per month average)
+  // Simulated appreciation (2% per month average from real estate, etc.)
   const monthlyRate = 0.02
-  const projectedValue = amount * Math.pow(1 + monthlyRate, months)
-  const totalGain = projectedValue - amount
-  const percentGain = ((projectedValue / amount) - 1) * 100
 
   // Traditional savings comparison (0.5% APY)
   const traditionalRate = 0.005 / 12
-  const traditionalValue = amount * Math.pow(1 + traditionalRate, months)
-  const traditionalGain = traditionalValue - amount
 
   useEffect(() => {
     if (!isPlaying) return
@@ -153,14 +170,20 @@ function DepositSimulator() {
     return () => clearInterval(interval)
   }, [isPlaying, months])
 
-  const currentValue = amount * Math.pow(1 + monthlyRate, currentMonth)
+  // GRAIN Values - The Real Model
+  const principal = amount // Original deposit - always withdrawable 1:1
+  const totalGrainValue = amount * Math.pow(1 + monthlyRate, currentMonth)
+  const appreciation = totalGrainValue - principal // Gains from treasury growth
+  const spendingPower = totalGrainValue // Can spend full amount in ecosystem
+  const cashOutValue = principal // Can only withdraw original deposit
+  const appreciationPercent = ((totalGrainValue / principal) - 1) * 100
 
   return (
     <div className="relative">
       <div className="absolute -inset-1 bg-gradient-to-r from-green-500 to-blue-500 rounded-2xl blur opacity-20" />
       <div className="relative bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
         <div className="flex items-center justify-between mb-8">
-          <h3 className="text-2xl font-bold text-white">Try It Yourself</h3>
+          <h3 className="text-2xl font-bold text-white">See How GRAIN Works</h3>
           <div className="flex items-center gap-2 text-sm text-green-400">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             Live Simulator
@@ -170,7 +193,7 @@ function DepositSimulator() {
         {/* Amount Slider */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-gray-400">Deposit Amount</span>
+            <span className="text-gray-400">Your Deposit</span>
             <span className="text-2xl font-bold text-white">${amount.toLocaleString()}</span>
           </div>
           <input
@@ -230,7 +253,7 @@ function DepositSimulator() {
           ) : (
             <>
               <Play className="w-5 h-5" />
-              Watch Your Money Grow
+              Watch Your GRAIN Grow
             </>
           )}
         </button>
@@ -252,66 +275,142 @@ function DepositSimulator() {
           </div>
         </div>
 
-        {/* Results Comparison */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* GRAIN */}
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-black" />
+        {/* GRAIN Balance Breakdown - The Real Model */}
+        <div className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border border-green-500/30 rounded-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                <Zap className="w-6 h-6 text-black" />
               </div>
-              <span className="font-bold text-green-400">GRAIN</span>
+              <div>
+                <div className="text-sm text-gray-400">Your GRAIN Balance</div>
+                <div className="text-3xl font-bold text-white">
+                  {totalGrainValue.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-lg text-green-400">GRAIN</span>
+                </div>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-white mb-2">
-              ${currentValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {appreciationPercent > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-lg">
+                <TrendingUp className="w-4 h-4 text-green-400" />
+                <span className="text-green-400 font-bold">+{appreciationPercent.toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
+
+          {/* Principal vs Appreciation Breakdown */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-black/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Landmark className="w-4 h-4 text-blue-400" />
+                <span className="text-sm text-gray-400">Principal</span>
+              </div>
+              <div className="text-2xl font-bold text-white">${principal.toLocaleString()}</div>
+              <div className="text-xs text-gray-500 mt-1">Your original deposit</div>
             </div>
-            <div className="flex items-center gap-2 text-green-400">
-              <TrendingUp className="w-4 h-4" />
-              <span className="font-medium">
-                +${(currentValue - amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </span>
-              <span className="text-green-400/60">
-                ({(((currentValue / amount) - 1) * 100).toFixed(1)}%)
-              </span>
+            <div className="bg-black/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-green-400" />
+                <span className="text-sm text-gray-400">Appreciation</span>
+              </div>
+              <div className="text-2xl font-bold text-green-400">
+                +${appreciation.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">From treasury growth</div>
             </div>
           </div>
 
-          {/* Traditional */}
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-red-400" />
+          {/* Key Insight: Spend vs Cash Out */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-green-500/20 border border-green-500/40 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <ShoppingCart className="w-4 h-4 text-green-400" />
+                <span className="text-sm font-medium text-green-400">Spend in GRAIN</span>
               </div>
-              <span className="font-bold text-red-400">Bank Savings</span>
+              <div className="text-2xl font-bold text-white">
+                ${spendingPower.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </div>
+              <div className="text-xs text-green-400/70 mt-1">Full purchasing power</div>
             </div>
-            <div className="text-3xl font-bold text-white mb-2">
-              ${(amount * Math.pow(1 + traditionalRate, currentMonth)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            <div
+              className="bg-blue-500/20 border border-blue-500/40 rounded-lg p-4 cursor-pointer hover:bg-blue-500/30 transition-colors"
+              onClick={() => setShowCashOutInfo(!showCashOutInfo)}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Banknote className="w-4 h-4 text-blue-400" />
+                <span className="text-sm font-medium text-blue-400">Cash Out to USD</span>
+                <AlertCircle className="w-3 h-3 text-blue-400/50" />
+              </div>
+              <div className="text-2xl font-bold text-white">${cashOutValue.toLocaleString()}</div>
+              <div className="text-xs text-blue-400/70 mt-1">1:1 with deposit</div>
             </div>
-            <div className="flex items-center gap-2 text-red-400">
-              <TrendingDown className="w-4 h-4" />
-              <span className="font-medium">
-                +${((amount * Math.pow(1 + traditionalRate, currentMonth)) - amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </span>
-              <span className="text-red-400/60">
-                (0.5% APY)
-              </span>
+          </div>
+
+          {/* Cash Out Explanation */}
+          <AnimatePresence>
+            {showCashOutInfo && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg"
+              >
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-gray-300">
+                    <p className="font-medium text-blue-400 mb-2">Why is cash-out limited to principal?</p>
+                    <p className="text-gray-400 mb-2">
+                      Your appreciation comes from real asset growth (commercial real estate, etc.).
+                      These assets aren't fully liquid, so we can't pay out gains in cash.
+                    </p>
+                    <p className="text-gray-400">
+                      <strong className="text-green-400">The benefit:</strong> Spend your full balance within the GRAIN ecosystem
+                      and enjoy all your gains. Your money works harder when it stays in GRAIN.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Comparison with Bank */}
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <div className="text-sm text-gray-400">Same deposit in a bank</div>
+                <div className="text-xl font-bold text-white">
+                  ${(amount * Math.pow(1 + traditionalRate, currentMonth)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-500">0.5% APY</div>
+              <div className="text-red-400 text-sm">
+                +${((amount * Math.pow(1 + traditionalRate, currentMonth)) - amount).toFixed(2)}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Difference callout */}
-        {currentMonth > 0 && (
+        {/* Bottom callout */}
+        {appreciation > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="mt-6 p-4 rounded-xl bg-gradient-to-r from-green-500/20 to-blue-500/20 border border-green-500/30"
           >
             <div className="text-center">
-              <span className="text-gray-400">With GRAIN you earn </span>
+              <span className="text-gray-400">Extra purchasing power with GRAIN: </span>
               <span className="text-2xl font-bold text-green-400">
-                ${((currentValue - amount) - ((amount * Math.pow(1 + traditionalRate, currentMonth)) - amount)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                ${appreciation.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </span>
-              <span className="text-gray-400"> more</span>
+            </div>
+            <div className="text-center text-xs text-gray-500 mt-2">
+              Use it for payments, transfers, or purchases within the GRAIN network
             </div>
           </motion.div>
         )}
@@ -397,48 +496,48 @@ export default function HowItWorksPage() {
     {
       icon: Wallet,
       title: 'Deposit Funds',
-      description: 'Add money instantly using your card or bank account. Available in 180+ countries with zero deposit fees.',
+      description: 'Add money instantly using your card or bank account. Your deposit becomes your principal - always withdrawable 1:1.',
       features: [
         'Instant deposits with card or bank',
         'Zero deposit fees',
         'Available in 180+ countries',
-        'Secure & encrypted'
+        'Principal always protected'
       ],
       color: 'from-blue-500 to-cyan-500'
     },
     {
-      icon: RefreshCw,
-      title: 'Convert to GRAIN',
-      description: 'Your deposit automatically converts to GRAIN at the current market rate. GRAIN is 100% backed by real assets.',
+      icon: Building2,
+      title: 'Treasury Invests',
+      description: 'Your deposit backs GRAIN while our treasury invests in real assets - commercial real estate, income properties, and more.',
       features: [
-        'Instant conversion',
-        '100% asset-backed',
-        'Real-time pricing',
-        'No hidden fees'
+        '100% asset-backed reserves',
+        'Commercial real estate portfolio',
+        'Diversified investments',
+        'Professional management'
       ],
       color: 'from-green-500 to-emerald-500'
     },
     {
       icon: TrendingUp,
-      title: 'Watch It Grow',
-      description: 'Unlike traditional money that loses value to inflation, GRAIN is designed to appreciate as our treasury grows.',
+      title: 'Appreciation Grows',
+      description: 'As treasury assets appreciate, your GRAIN purchasing power grows. All holders benefit equally from ecosystem growth.',
       features: [
+        'Real asset appreciation',
+        'Purchasing power increases',
         'Anti-inflationary by design',
-        'Treasury-backed appreciation',
-        'All holders benefit equally',
-        'Compound growth'
+        'Compound growth over time'
       ],
       color: 'from-purple-500 to-pink-500'
     },
     {
-      icon: Globe,
-      title: 'Use Anywhere',
-      description: 'Spend, send, or withdraw your GRAIN anytime. Instant transfers globally with zero fees.',
+      icon: ShoppingCart,
+      title: 'Spend or Hold',
+      description: 'Use your full GRAIN balance for payments and transfers. Cash out to USD anytime at 1:1 with your original deposit.',
       features: [
-        'Instant global transfers',
+        'Full balance spendable in ecosystem',
         'Zero transaction fees',
-        'Convert back anytime',
-        'Full control, always'
+        'Cash out principal anytime',
+        'Appreciation unlocks in GRAIN'
       ],
       color: 'from-amber-500 to-orange-500'
     }
@@ -532,13 +631,13 @@ export default function HowItWorksPage() {
               <div className="text-4xl font-bold text-blue-400 mb-2">
                 <AnimatedNumber value={100} suffix="%" />
               </div>
-              <div className="text-sm text-gray-500">Collateralized</div>
+              <div className="text-sm text-gray-500">Asset-Backed</div>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold text-purple-400 mb-2">
-                {'<'}<AnimatedNumber value={1} />s
+                <AnimatedNumber value={0} suffix="%" />
               </div>
-              <div className="text-sm text-gray-500">Settlement</div>
+              <div className="text-sm text-gray-500">Transaction Fees</div>
             </div>
           </motion.div>
 
@@ -774,6 +873,158 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
+      {/* Settlements & Escrow Section */}
+      <section className="relative py-32 px-6">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-sm font-medium mb-6">
+              <Clock className="w-4 h-4" />
+              Instant Settlements*
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Fast payments.{' '}
+              <span className="text-amber-400">Protected by escrow.</span>
+            </h2>
+            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+              GRAIN transactions settle instantly on your ledger, with a short escrow period to ensure
+              order completion and prevent disputes. No chargebacks, no surprises.
+            </p>
+          </motion.div>
+
+          {/* Escrow Timeline */}
+          <div className="relative mb-16">
+            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-amber-500 via-green-500 to-green-500/0" />
+
+            <div className="space-y-12">
+              {/* Payment Initiated */}
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="relative grid md:grid-cols-2 gap-8 items-center"
+              >
+                <div className="md:text-right">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium mb-3">
+                    <Send className="w-3 h-3" />
+                    Step 1
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Payment Initiated</h3>
+                  <p className="text-gray-400">
+                    You send GRAIN to a merchant or another user. The transaction appears instantly on both ledgers.
+                  </p>
+                </div>
+                <div className="hidden md:block" />
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-500 border-4 border-black" />
+              </motion.div>
+
+              {/* Escrow Period */}
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="relative grid md:grid-cols-2 gap-8 items-center"
+              >
+                <div className="hidden md:block" />
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-sm font-medium mb-3">
+                    <Timer className="w-3 h-3" />
+                    Step 2
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Escrow Hold</h3>
+                  <p className="text-gray-400 mb-4">
+                    Funds are held in secure escrow while the order is fulfilled. This protects both parties.
+                  </p>
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                    <div className="text-sm text-amber-400 font-medium mb-2">Hold Duration</div>
+                    <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-white">24hr</div>
+                        <div className="text-gray-500">Standard</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-white">48hr</div>
+                        <div className="text-gray-500">High value</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-white">72hr</div>
+                        <div className="text-gray-500">New users</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-amber-500 border-4 border-black" />
+              </motion.div>
+
+              {/* Released */}
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="relative grid md:grid-cols-2 gap-8 items-center"
+              >
+                <div className="md:text-right">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm font-medium mb-3">
+                    <CheckCircle className="w-3 h-3" />
+                    Step 3
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Funds Released</h3>
+                  <p className="text-gray-400">
+                    After the escrow period, funds are automatically released to the recipient. No action needed.
+                  </p>
+                </div>
+                <div className="hidden md:block" />
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-green-500 border-4 border-black" />
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Dispute Resolution */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-2xl p-8"
+          >
+            <div className="flex items-start gap-6">
+              <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                <Scale className="w-8 h-8 text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-3">Dispute Resolution</h3>
+                <p className="text-gray-400 mb-6">
+                  If there's an issue with your transaction, you can open a dispute during the escrow period.
+                  Our resolution team reviews evidence from both parties and makes a fair decision.
+                </p>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <div className="text-purple-400 font-medium mb-1">No Chargebacks</div>
+                    <div className="text-sm text-gray-500">Escrow replaces traditional chargebacks for cleaner resolution</div>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <div className="text-purple-400 font-medium mb-1">Evidence-Based</div>
+                    <div className="text-sm text-gray-500">Both parties submit proof, we make fair decisions</div>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <div className="text-purple-400 font-medium mb-1">Fast Resolution</div>
+                    <div className="text-sm text-gray-500">Most disputes resolved within 24-48 hours</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Asterisk note */}
+          <div className="mt-8 text-center text-sm text-gray-500">
+            * Transactions appear instantly on your ledger. Funds are held in escrow for 24-72 hours depending on transaction type and account status.
+          </div>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="relative py-32 px-6">
         <div className="max-w-4xl mx-auto">
@@ -802,12 +1053,12 @@ export default function HowItWorksPage() {
               </motion.div>
 
               <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
-                Ready to grow your money?
+                Ready to grow your purchasing power?
               </h2>
 
               <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
                 Join thousands who've already made the switch.
-                Start with any amount. Withdraw anytime.
+                Start with any amount. Your principal is always protected.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -834,11 +1085,11 @@ export default function HowItWorksPage() {
                 </span>
                 <span className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4" />
-                  No lock-ups
+                  0% fees
                 </span>
                 <span className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4" />
-                  Withdraw anytime
+                  Principal protected
                 </span>
               </div>
             </div>
