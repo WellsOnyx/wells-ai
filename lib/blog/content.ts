@@ -1961,5 +1961,1428 @@ console.log(\`Backing Ratio: \${(backingRatio * 100).toFixed(2)}%\`)
         content: 'Retainer billing in GRAIN creates interesting dynamics. Clients who prepay retainers earn yield while funds await application. Milestone payments settle instantly upon deliverable acceptance. The reduced friction encourages faster payment and improves cash conversion cycle for the services firm.'
       }
     ]
+  },
+
+  // ============================================================================
+  // DEFI TREASURY (3 articles)
+  // ============================================================================
+
+  'defi-yield-strategies-treasury': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'DeFi protocols are sitting on substantial treasuries—often tens or hundreds of millions in stablecoins, governance tokens, and ETH. Yet most protocol treasuries remain idle, generating zero yield while inflation erodes purchasing power. Sophisticated DeFi treasury management can generate 5-15% annual returns through diversified yield strategies, transforming dormant capital into a competitive advantage. This guide examines institutional-grade yield strategies for DeFi protocol treasuries.'
+      },
+      {
+        type: 'heading',
+        content: 'The Idle Treasury Problem',
+        icon: PiggyBank,
+        iconColor: 'amber'
+      },
+      {
+        type: 'paragraph',
+        content: 'A survey of the top 50 DeFi protocols by TVL reveals a striking pattern: over $2 billion in treasury assets earn zero yield. Protocol teams, focused on product development and growth, often neglect treasury optimization. Meanwhile, these idle assets depreciate against inflation at 3-5% annually—effectively a hidden tax on the protocol and its token holders.'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '$2B+', label: 'Idle DeFi Treasury Assets', color: 'red' },
+          { value: '0%', label: 'Yield on Idle Holdings', color: 'red' },
+          { value: '5-15%', label: 'Achievable Treasury Yield', color: 'green' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Diversified Yield Strategy Framework',
+        icon: Layers,
+        iconColor: 'green'
+      },
+      {
+        type: 'paragraph',
+        content: 'Effective DeFi treasury management requires a layered approach balancing yield, risk, and liquidity. The core framework allocates treasury across three tiers: liquid reserves for operational needs, medium-term yield strategies for stable returns, and growth allocations for higher-risk opportunities.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Tier 1 - Liquid Reserves (30-40%): Stablecoins in blue-chip lending protocols (Aave, Compound) earning 3-5% APY',
+          'Tier 2 - Yield Optimization (40-50%): LP positions in stable pairs, yield aggregators, and real-world asset protocols earning 5-10% APY',
+          'Tier 3 - Growth Allocation (10-20%): Strategic token positions, ecosystem investments, and higher-yield DeFi strategies earning 10-20%+ APY'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Risk Management Framework',
+        icon: Shield,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'DeFi yield comes with unique risks: smart contract vulnerabilities, protocol insolvency, oracle manipulation, and impermanent loss. Institutional-grade treasury management requires explicit risk budgets, diversification across protocols and chains, and real-time monitoring of position health. No single strategy should exceed 15% of total treasury.'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// DeFi Treasury Allocation Framework
+interface TreasuryAllocation {
+  protocol: string
+  chain: string
+  strategy: 'lending' | 'lp' | 'staking' | 'vault'
+  allocation: number  // Percentage of total treasury
+  expectedAPY: number
+  riskScore: 1 | 2 | 3 | 4 | 5  // 1 = lowest risk
+  maxAllocation: number  // Risk-adjusted max
+}
+
+const treasuryStrategy: TreasuryAllocation[] = [
+  { protocol: 'Aave V3', chain: 'ethereum', strategy: 'lending', allocation: 25, expectedAPY: 4.5, riskScore: 1, maxAllocation: 30 },
+  { protocol: 'Compound', chain: 'ethereum', strategy: 'lending', allocation: 15, expectedAPY: 4.2, riskScore: 1, maxAllocation: 25 },
+  { protocol: 'Curve 3pool', chain: 'ethereum', strategy: 'lp', allocation: 20, expectedAPY: 6.5, riskScore: 2, maxAllocation: 20 },
+  { protocol: 'Yearn USDC', chain: 'ethereum', strategy: 'vault', allocation: 15, expectedAPY: 8.0, riskScore: 2, maxAllocation: 15 },
+  { protocol: 'Maple RWA', chain: 'ethereum', strategy: 'lending', allocation: 10, expectedAPY: 10.0, riskScore: 3, maxAllocation: 15 },
+  // Remaining 15% in operational reserves
+]
+
+// Weighted average yield: ~6.2% APY with diversified risk`
+      },
+      {
+        type: 'callout',
+        title: 'Governance Considerations',
+        content: 'Treasury yield strategies should be approved through DAO governance with clear risk parameters, reporting requirements, and exit triggers. Transparency builds community trust and ensures treasury management aligns with protocol values and risk tolerance.',
+        color: 'green'
+      }
+    ]
+  },
+
+  'liquidity-pool-treasury-management': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'Protocol-owned liquidity (POL) has emerged as a crucial treasury strategy, with protocols deploying treasury assets into automated market makers (AMMs) to deepen liquidity for their tokens while generating trading fees. However, POL management is complex: impermanent loss can destroy value, pool composition affects token price dynamics, and multi-chain liquidity fragmentation creates operational challenges. This guide provides a comprehensive framework for managing treasury across AMMs.'
+      },
+      {
+        type: 'heading',
+        content: 'Why Protocol-Owned Liquidity',
+        icon: Coins,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'Traditional liquidity mining rents liquidity from mercenary capital—LPs who farm rewards then leave when incentives end. Protocol-owned liquidity flips this model: the treasury provides liquidity permanently, earning trading fees while ensuring token markets remain deep and stable. POL transforms liquidity from an operating expense into a treasury asset.'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '$500M+', label: 'Total POL Across DeFi', color: 'blue' },
+          { value: '10-30%', label: 'Fee APY on Active Pairs', color: 'green' },
+          { value: '0%', label: 'Ongoing Incentive Cost', color: 'green' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Impermanent Loss Management',
+        icon: AlertTriangle,
+        iconColor: 'amber'
+      },
+      {
+        type: 'paragraph',
+        content: 'Impermanent loss (IL) occurs when pool assets diverge in price from deposit. For volatile token pairs, IL can exceed fee earnings, destroying treasury value. Effective POL management requires understanding IL dynamics: concentrated liquidity positions amplify both fees and IL; stable pairs minimize IL; and single-sided liquidity products eliminate IL entirely.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Full-Range Positions: Lower IL sensitivity, lower fee capture—suitable for volatile pairs',
+          'Concentrated Liquidity: Higher fees but higher IL risk—requires active management',
+          'Stable Pairs: Minimal IL for correlated assets (USDC/DAI, stETH/ETH)',
+          'Single-Sided LPs: Protocols like Bancor offer IL protection—evaluate tradeoffs carefully',
+          'Delta-Neutral Strategies: Hedge directional exposure to isolate fee income'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Multi-Chain Liquidity Strategy',
+        icon: Network,
+        iconColor: 'purple'
+      },
+      {
+        type: 'paragraph',
+        content: 'DeFi is increasingly multi-chain, and token liquidity must follow users across networks. Treasury POL should be distributed across chains proportional to trading activity, with bridges enabling rebalancing as activity shifts. Monitor liquidity depth on each chain and maintain minimum thresholds to prevent slippage-induced sell pressure.'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// Multi-Chain POL Monitoring
+interface ChainLiquidity {
+  chain: string
+  dex: string
+  poolAddress: string
+  tokenReserve: number
+  stableReserve: number
+  depth2Percent: number  // Liquidity within 2% of spot
+  dailyVolume: number
+  feeAPY: number
+}
+
+async function rebalancePOL(chains: ChainLiquidity[]) {
+  const totalVolume = chains.reduce((sum, c) => sum + c.dailyVolume, 0)
+
+  for (const chain of chains) {
+    const targetShare = chain.dailyVolume / totalVolume
+    const currentShare = chain.tokenReserve / totalTokenReserves
+
+    if (Math.abs(targetShare - currentShare) > 0.10) {
+      // Rebalance needed - bridge liquidity
+      await bridgeLiquidity({
+        from: overweightChain,
+        to: chain.chain,
+        amount: calculateRebalanceAmount(targetShare, currentShare)
+      })
+    }
+  }
+}`
+      },
+      {
+        type: 'callout',
+        title: 'POL Success Metrics',
+        content: 'Track POL performance through: Fee APY (target: 10%+ for active pairs), IL ratio (fees should exceed IL 2:1), liquidity depth (2% depth should handle typical trade sizes), and capital efficiency (concentrated positions should outperform full-range).',
+        color: 'blue'
+      }
+    ]
+  },
+
+  'dao-treasury-best-practices': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'DAO treasuries collectively hold over $20 billion in assets, yet governance and management practices remain immature. Without clear policies, treasuries suffer from decision paralysis, insufficient diversification, and misaligned spending. Best-in-class DAOs are developing sophisticated treasury governance frameworks that balance decentralization with operational efficiency. This guide synthesizes emerging best practices from leading DAO treasuries.'
+      },
+      {
+        type: 'heading',
+        content: 'Treasury Governance Structure',
+        icon: Landmark,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'Effective treasury governance separates strategic decisions (made by token holders) from operational execution (delegated to committees or multisigs). Full DAO votes on major policy: diversification targets, risk parameters, spending categories. A treasury committee handles implementation: selecting specific protocols, executing rebalances, managing vendor relationships.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Strategic Layer: Token holder governance sets policy, risk limits, allocation bands',
+          'Committee Layer: Elected multisig (5-of-9 typical) executes within policy bounds',
+          'Operational Layer: Designated signers handle routine transactions under committee oversight',
+          'Reporting Layer: Transparent dashboards and regular community updates on treasury health'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Diversification Framework',
+        icon: PieChart,
+        iconColor: 'green'
+      },
+      {
+        type: 'paragraph',
+        content: 'Most DAO treasuries are dangerously concentrated in native tokens—often 80-95% of total value. A market downturn can slash runway from years to months. Best practice targets significant stablecoin allocation (25-50% depending on burn rate) plus diversification into blue-chip assets. Diversification should be gradual to minimize market impact.'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '80-95%', label: 'Typical Native Token Concentration', color: 'red' },
+          { value: '25-50%', label: 'Recommended Stablecoin Allocation', color: 'green' },
+          { value: '24 months', label: 'Minimum Runway Target', color: 'blue' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Spending Policies',
+        icon: Receipt,
+        iconColor: 'amber'
+      },
+      {
+        type: 'paragraph',
+        content: 'Clear spending policies prevent treasury depletion and ensure resources align with protocol priorities. Establish spending categories (core development, growth, grants, operations), budget envelopes for each, and approval thresholds. Small recurring expenses can be pre-approved; large one-time expenditures require full governance.'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// DAO Treasury Policy Framework
+interface TreasuryPolicy {
+  diversification: {
+    nativeTokenMax: 0.60,        // Max 60% in native token
+    stablecoinMin: 0.25,         // Min 25% stablecoins
+    ethMax: 0.15,                // Max 15% ETH
+    rebalanceTrigger: 0.10      // Rebalance when 10% off target
+  },
+  spending: {
+    categories: ['core-dev', 'growth', 'grants', 'operations'],
+    monthlyBudgets: {
+      'core-dev': 500_000,       // $500K/month
+      'growth': 200_000,
+      'grants': 150_000,
+      'operations': 50_000
+    },
+    approvalThresholds: {
+      routine: { max: 10_000, approvers: 2 },
+      standard: { max: 100_000, approvers: 4 },
+      major: { max: Infinity, approvers: 'governance' }
+    }
+  },
+  runway: {
+    minimumMonths: 24,
+    warningMonths: 36,
+    targetMonths: 48
+  }
+}`
+      },
+      {
+        type: 'callout',
+        title: 'Transparency Requirements',
+        content: 'DAO treasuries operate with community capital and demand radical transparency. Publish real-time treasury dashboards, monthly financial reports, and all transaction histories. Transparency builds trust and enables informed governance participation.',
+        color: 'green'
+      }
+    ]
+  },
+
+  // ============================================================================
+  // ENTERPRISE ADOPTION (3 articles)
+  // ============================================================================
+
+  'cfo-guide-digital-assets': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'The CFO role is evolving. Digital assets—once dismissed as speculative toys—are becoming material to enterprise treasury operations. Major corporations hold Bitcoin on balance sheets. Stablecoins process billions in B2B payments. Central banks are launching digital currencies. The modern CFO must understand digital asset treasury: the opportunities, risks, regulatory landscape, and implementation pathways. This guide provides a comprehensive framework for CFOs evaluating digital asset treasury strategies.'
+      },
+      {
+        type: 'heading',
+        content: 'The Strategic Imperative',
+        icon: Target,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'Digital asset treasury is no longer a question of if but when. Early movers gain operational advantages: lower payment costs, faster settlement, yield on stable holdings. Late adopters risk competitive disadvantage as vendors and customers expect digital payment options. The CFO must lead this transformation, balancing innovation with fiduciary responsibility.'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '85%', label: 'of Fortune 500 exploring blockchain', color: 'blue' },
+          { value: '$150B+', label: 'Daily stablecoin transaction volume', color: 'green' },
+          { value: '60%', label: 'CFOs planning digital asset initiatives', color: 'green' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Risk Assessment Framework',
+        icon: Shield,
+        iconColor: 'amber'
+      },
+      {
+        type: 'paragraph',
+        content: 'Digital asset treasury introduces new risk categories requiring explicit assessment: technology risk (smart contract vulnerabilities, custody failures), regulatory risk (evolving compliance requirements), market risk (stablecoin depeg scenarios), and operational risk (key management, access controls). Each risk requires specific mitigations within the enterprise risk framework.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Technology Risk: Use audited protocols, institutional custody, multi-sig controls',
+          'Regulatory Risk: Work with experienced legal counsel, choose regulated infrastructure',
+          'Market Risk: Stick to fully-backed stablecoins, avoid algorithmic or under-collateralized options',
+          'Operational Risk: Implement SOC 2 compliant processes, insurance coverage, key ceremony procedures',
+          'Counterparty Risk: Evaluate custodians and protocol operators as carefully as banking partners'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Implementation Roadmap',
+        icon: Layers,
+        iconColor: 'green'
+      },
+      {
+        type: 'paragraph',
+        content: 'Enterprise digital asset adoption follows a maturity curve: education, pilot, scale, optimization. Most organizations should start with a limited pilot—perhaps vendor payments in a single geography—before broader rollout. Each phase builds organizational capability and confidence.'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// CFO Digital Asset Maturity Model
+const maturityStages = {
+  stage1_education: {
+    duration: '1-3 months',
+    activities: [
+      'Executive education on digital assets',
+      'Legal/regulatory assessment',
+      'Vendor landscape evaluation',
+      'Risk framework development'
+    ],
+    deliverable: 'Board-ready digital asset strategy'
+  },
+  stage2_pilot: {
+    duration: '3-6 months',
+    activities: [
+      'Select pilot use case (vendor payments, treasury yield)',
+      'Implement infrastructure with single partner',
+      'Develop operational procedures',
+      'Train treasury team'
+    ],
+    deliverable: 'Validated use case with measured ROI'
+  },
+  stage3_scale: {
+    duration: '6-12 months',
+    activities: [
+      'Expand to additional use cases/geographies',
+      'ERP integration',
+      'Full compliance documentation',
+      'Insurance coverage'
+    ],
+    deliverable: 'Production-grade digital asset treasury'
+  }
+}`
+      },
+      {
+        type: 'callout',
+        title: 'Board Communication',
+        content: 'Digital asset initiatives require board awareness and, often, explicit approval. Frame the opportunity in familiar terms: cost reduction, working capital efficiency, competitive positioning. Acknowledge risks with specific mitigations. Position as operational innovation, not speculation.',
+        color: 'blue'
+      }
+    ]
+  },
+
+  'board-presentation-stablecoins': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'Presenting a stablecoin treasury strategy to the board of directors requires translating complex technology into business value. Directors care about risk management, competitive advantage, and fiduciary responsibility—not blockchain architecture. This guide provides a framework for crafting board presentations that secure approval for stablecoin treasury initiatives, addressing the questions and concerns boards inevitably raise.'
+      },
+      {
+        type: 'heading',
+        content: 'Framing the Opportunity',
+        icon: Lightbulb,
+        iconColor: 'amber'
+      },
+      {
+        type: 'paragraph',
+        content: 'Lead with business outcomes, not technology. Stablecoins enable: instant settlement (improving working capital), lower payment costs (increasing margins), yield on stable holdings (generating income), and global payment reach (enabling expansion). These are operational improvements the board understands—the blockchain is merely the infrastructure enabling them.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Working Capital: "Instant settlement frees $X million in payment float"',
+          'Cost Reduction: "Eliminating wire fees saves $X per year"',
+          'Yield Generation: "Treasury earns X% instead of 0% on stable holdings"',
+          'Competitive Position: "Faster payments improve vendor relationships and supplier terms"',
+          'Global Efficiency: "Single payment rail replaces 15 correspondent banking relationships"'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Addressing Risk Concerns',
+        icon: Shield,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'Boards will ask about risk. Be prepared with specific mitigations for each concern. Use analogies to familiar financial instruments: stablecoins backed by T-bills are similar to money market funds; smart contract controls are like automated compliance rules; multi-sig wallets are like dual-authorization requirements.'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '100%+', label: 'GRAIN Reserve Backing', color: 'green' },
+          { value: 'Monthly', label: 'Independent Attestations', color: 'blue' },
+          { value: 'SOC 2', label: 'Compliance Certification', color: 'green' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Regulatory Positioning',
+        icon: Landmark,
+        iconColor: 'purple'
+      },
+      {
+        type: 'paragraph',
+        content: 'Regulatory uncertainty is a board concern. Address it directly: major jurisdictions are implementing stablecoin frameworks (MiCA in EU, pending US legislation). The trend is toward regulatory clarity, not prohibition. Position the initiative as working with regulated infrastructure (Circle/USDC) that anticipates compliance requirements.'
+      },
+      {
+        type: 'callout',
+        title: 'The Ask',
+        content: 'Be explicit about what you need: board approval for a pilot program with defined scope, budget, and success metrics. Frame approval as low-risk exploration, not enterprise-wide commitment. Success in pilot phase earns the right to propose expansion.',
+        color: 'green'
+      },
+      {
+        type: 'heading',
+        content: 'Sample Board Presentation Outline',
+        icon: FileText,
+        iconColor: 'blue'
+      },
+      {
+        type: 'list',
+        items: [
+          'Slide 1: Executive Summary - 3 key benefits, proposed pilot, approval request',
+          'Slide 2: Market Context - Institutional adoption trends, regulatory progress',
+          'Slide 3: Business Case - Quantified benefits with conservative assumptions',
+          'Slide 4: Risk Framework - Key risks with specific mitigations',
+          'Slide 5: Implementation Plan - Pilot scope, timeline, success metrics',
+          'Slide 6: Governance & Oversight - Reporting, controls, escalation procedures',
+          'Appendix: Technical details, vendor evaluation, regulatory analysis'
+        ]
+      }
+    ]
+  },
+
+  'pilot-to-production-treasury': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'The gap between successful pilot and production deployment is where many digital treasury initiatives stall. A pilot processing $100K monthly in vendor payments operates differently than production infrastructure handling $50M. Scaling requires hardening operational procedures, integrating with core systems, building organizational capability, and satisfying compliance requirements that were waived for small-scale testing. This guide provides a practical framework for scaling from pilot to production treasury operations.'
+      },
+      {
+        type: 'heading',
+        content: 'Pilot Success Criteria',
+        icon: CheckCircle,
+        iconColor: 'green'
+      },
+      {
+        type: 'paragraph',
+        content: 'Before scaling, validate that the pilot achieved its objectives. Success criteria should have been defined upfront: transaction success rates, settlement times, cost savings, operational overhead. Compare actual results against targets. Understand what worked, what required workarounds, and what needs redesign for scale.'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '99.5%+', label: 'Target Transaction Success Rate', color: 'green' },
+          { value: '<30s', label: 'Target Settlement Time', color: 'green' },
+          { value: '>50%', label: 'Target Cost Reduction vs. Wire', color: 'blue' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Infrastructure Hardening',
+        icon: Server,
+        iconColor: 'purple'
+      },
+      {
+        type: 'paragraph',
+        content: 'Production infrastructure requires enterprise-grade reliability. This means redundant systems, automated failover, comprehensive monitoring, incident response procedures, and disaster recovery planning. What worked manually in pilot must be automated for scale. Single points of failure must be eliminated.'
+      },
+      {
+        type: 'list',
+        items: [
+          'High Availability: Redundant infrastructure across availability zones',
+          'Monitoring: Real-time alerting on transaction failures, balance thresholds, security events',
+          'Backup Systems: Hot standby for critical components, tested recovery procedures',
+          'Incident Response: Documented playbooks for common failure scenarios',
+          'Change Management: Controlled deployment processes with rollback capability'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'ERP Integration',
+        icon: Database,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'Pilot programs often operate alongside existing systems with manual reconciliation. Production requires deep ERP integration: automated payment initiation, real-time settlement updates, GL posting, and variance handling. Integration complexity varies by ERP—plan adequate time and resources.'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// Production Integration Checklist
+const integrationRequirements = {
+  paymentInitiation: {
+    automated: true,
+    approvalWorkflow: 'ERP-native with digital signature',
+    batchProcessing: false, // Real-time preferred
+    errorHandling: 'Queue with retry + alert'
+  },
+  settlementReconciliation: {
+    frequency: 'Real-time webhooks',
+    matching: 'Automatic by payment reference',
+    exceptions: 'Workflow for manual resolution',
+    glPosting: 'Automatic on settlement confirmation'
+  },
+  reporting: {
+    dashboards: 'Real-time treasury visibility',
+    compliance: 'Automated SAR/CTR generation',
+    audit: 'Immutable transaction logs',
+    management: 'KPI tracking vs. traditional rails'
+  }
+}`
+      },
+      {
+        type: 'heading',
+        content: 'Organizational Readiness',
+        icon: Users,
+        iconColor: 'amber'
+      },
+      {
+        type: 'paragraph',
+        content: 'Scaling to production is as much organizational as technical. Treasury staff need training on new workflows. Finance teams need updated reconciliation procedures. Audit and compliance need documentation. Vendor management needs updated payment terms. Plan for change management alongside technical implementation.'
+      },
+      {
+        type: 'callout',
+        title: 'Scaling Timeline',
+        content: 'Realistic timeline from pilot success to production: 3-6 months for infrastructure hardening and ERP integration, 1-2 months for compliance documentation and audit preparation, 1 month for staff training and procedure updates. Rush this timeline at your peril.',
+        color: 'amber'
+      }
+    ]
+  },
+
+  // ============================================================================
+  // TECHNICAL DEEP DIVES (3 articles)
+  // ============================================================================
+
+  'smart-contract-treasury-architecture': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'Smart contracts form the backbone of on-chain treasury infrastructure. Unlike traditional treasury systems that rely on bank APIs and trust assumptions, smart contract treasuries encode business logic into immutable, transparent, and automatically executed code. This deep dive examines the architectural patterns, security considerations, and design trade-offs in building enterprise-grade treasury smart contracts.'
+      },
+      {
+        type: 'heading',
+        content: 'Core Architectural Components',
+        icon: CircuitBoard,
+        iconColor: 'purple'
+      },
+      {
+        type: 'paragraph',
+        content: 'A complete treasury smart contract system comprises several interlocking components: vault contracts holding assets, access control contracts managing permissions, payment contracts executing transfers, and oracle contracts providing external data. Each component should be modular, upgradeable (where appropriate), and independently auditable.'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// Treasury Smart Contract Architecture
+// Simplified Solidity patterns (pseudocode)
+
+contract TreasuryVault {
+  mapping(address => uint256) public balances;
+  AccessControl public accessControl;
+
+  function deposit(address token, uint256 amount) external {
+    require(accessControl.canDeposit(msg.sender), "Unauthorized");
+    IERC20(token).transferFrom(msg.sender, address(this), amount);
+    balances[token] += amount;
+    emit Deposit(msg.sender, token, amount);
+  }
+
+  function withdraw(address token, uint256 amount, address recipient) external {
+    require(accessControl.canWithdraw(msg.sender, amount), "Unauthorized");
+    require(balances[token] >= amount, "Insufficient balance");
+    balances[token] -= amount;
+    IERC20(token).transfer(recipient, amount);
+    emit Withdrawal(recipient, token, amount);
+  }
+}
+
+contract AccessControl {
+  mapping(address => Role) public roles;
+  mapping(Role => SpendingLimit) public limits;
+
+  function canWithdraw(address user, uint256 amount) public view returns (bool) {
+    Role role = roles[user];
+    SpendingLimit limit = limits[role];
+    return amount <= limit.perTransaction &&
+           dailySpend[user] + amount <= limit.daily;
+  }
+}`
+      },
+      {
+        type: 'heading',
+        content: 'Security Patterns',
+        icon: Lock,
+        iconColor: 'red'
+      },
+      {
+        type: 'list',
+        items: [
+          'Reentrancy Guards: Prevent recursive call attacks with mutex patterns',
+          'Check-Effects-Interactions: Update state before external calls',
+          'Access Control: Role-based permissions with principle of least privilege',
+          'Rate Limiting: Velocity controls on high-value operations',
+          'Emergency Stops: Circuit breakers for detected anomalies',
+          'Upgrade Patterns: Proxy contracts for bug fixes while preserving state'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Upgradeability Trade-offs',
+        icon: RefreshCw,
+        iconColor: 'amber'
+      },
+      {
+        type: 'paragraph',
+        content: 'Immutability is blockchain\'s superpower—code that cannot be changed provides strong guarantees. But bugs happen, and immutable bugs are permanent. Proxy patterns (UUPS, Transparent Proxy) enable upgrades while preserving address and state. The trade-off: upgradeability introduces admin key risk. Mitigate with timelocks, multi-sig upgrade requirements, and thorough testing.'
+      },
+      {
+        type: 'callout',
+        title: 'Audit Requirements',
+        content: 'Production treasury contracts require multiple independent security audits. Budget 4-8 weeks and $50K-$200K depending on complexity. Audits are necessary but not sufficient—they catch common issues but cannot guarantee security. Combine with formal verification, bug bounties, and monitoring.',
+        color: 'red'
+      },
+      {
+        type: 'heading',
+        content: 'Testing Strategy',
+        icon: CheckCircle,
+        iconColor: 'green'
+      },
+      {
+        type: 'paragraph',
+        content: 'Smart contract bugs are expensive—potentially catastrophically so. Testing must be exhaustive: unit tests for individual functions, integration tests for component interactions, fuzz testing for edge cases, and formal verification for critical invariants. Aim for 100% code coverage and explicit tests for every documented behavior.'
+      }
+    ]
+  },
+
+  'oracle-integration-treasury': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'Oracles bridge the gap between on-chain smart contracts and off-chain data. For treasury applications, oracles provide critical inputs: asset prices for NAV calculations, interest rates for yield optimization, and external event triggers for conditional payments. However, oracles introduce trust assumptions and attack surfaces that require careful consideration. This guide examines oracle integration patterns for treasury infrastructure.'
+      },
+      {
+        type: 'heading',
+        content: 'Why Treasuries Need Oracles',
+        icon: Database,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'Smart contracts are deterministic—they can only access data already on-chain. But treasury operations depend on external information: the current USDC/USD exchange rate for NAV calculation, T-bill yields for rebalancing decisions, or confirmation of off-chain events like invoice receipt. Oracles provide this bridge, but each oracle dependency is a potential point of failure or manipulation.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Price Feeds: Token prices for portfolio valuation and rebalancing',
+          'Interest Rates: Off-chain rates (SOFR, T-bills) for yield comparison',
+          'Asset Attestations: Proof of off-chain reserve holdings',
+          'Event Triggers: External conditions triggering payments or actions',
+          'Random Numbers: For fair processes requiring unpredictability'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Chainlink Integration Patterns',
+        icon: Network,
+        iconColor: 'purple'
+      },
+      {
+        type: 'paragraph',
+        content: 'Chainlink is the dominant oracle network, providing price feeds, proof of reserves, and custom data feeds. For treasury applications, focus on their Data Feeds (price/rate data) and Proof of Reserve (attestation of off-chain holdings). Integration is straightforward but requires understanding staleness, deviation thresholds, and failure modes.'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// Chainlink Oracle Integration
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
+contract TreasuryOracle {
+  AggregatorV3Interface internal priceFeed;
+  uint256 public constant STALENESS_THRESHOLD = 1 hours;
+
+  constructor(address _priceFeed) {
+    priceFeed = AggregatorV3Interface(_priceFeed);
+  }
+
+  function getLatestPrice() public view returns (uint256 price, bool isValid) {
+    (
+      uint80 roundId,
+      int256 answer,
+      uint256 startedAt,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    ) = priceFeed.latestRoundData();
+
+    // Validate freshness
+    bool isFresh = block.timestamp - updatedAt < STALENESS_THRESHOLD;
+
+    // Validate round completion
+    bool isComplete = answeredInRound >= roundId;
+
+    // Validate positive price
+    bool isPositive = answer > 0;
+
+    return (uint256(answer), isFresh && isComplete && isPositive);
+  }
+
+  function calculateNAV(uint256 grainSupply) public view returns (uint256) {
+    (uint256 usdcPrice, bool isValid) = getLatestPrice();
+    require(isValid, "Oracle data invalid");
+
+    uint256 totalReserves = getReserveBalance();
+    return (totalReserves * usdcPrice) / grainSupply;
+  }
+}`
+      },
+      {
+        type: 'heading',
+        content: 'Oracle Security Considerations',
+        icon: Shield,
+        iconColor: 'red'
+      },
+      {
+        type: 'paragraph',
+        content: 'Oracle manipulation is a leading cause of DeFi exploits. Attackers manipulate price feeds through flash loans, thin liquidity exploitation, or direct oracle attacks. Treasury contracts must implement safeguards: multiple oracle sources, deviation checks, time-weighted averages, and circuit breakers when data appears anomalous.'
+      },
+      {
+        type: 'callout',
+        title: 'Defense in Depth',
+        content: 'Never depend on a single oracle for critical operations. Aggregate multiple sources, implement sanity bounds, and design graceful degradation for oracle failures. If oracles disagree significantly, pause operations and alert operators rather than proceeding with potentially manipulated data.',
+        color: 'amber'
+      }
+    ]
+  },
+
+  'cross-chain-treasury-bridges': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'Multi-chain DeFi is the new normal. Treasury assets, liquidity, and operations span Ethereum, Layer 2s, and alternative L1s. Managing treasury across chains requires bridging infrastructure—moving assets, synchronizing state, and maintaining unified control across disparate networks. This guide examines cross-chain treasury architecture, bridge security, and operational patterns for multi-chain treasury management.'
+      },
+      {
+        type: 'heading',
+        content: 'Multi-Chain Treasury Challenges',
+        icon: Network,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'Cross-chain operations introduce complexity at every layer. Asset representation differs (canonical vs. bridged tokens). Transaction finality varies (seconds on L2s, minutes on Ethereum, hours for security). Governance must span chains. And bridges themselves are high-value targets with billions in cumulative losses. Navigating this landscape requires understanding trade-offs and implementing robust controls.'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '$2B+', label: 'Lost to Bridge Exploits', color: 'red' },
+          { value: '15+', label: 'Major Bridge Hacks', color: 'red' },
+          { value: '30%', label: 'of DeFi TVL is Cross-Chain', color: 'blue' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Bridge Security Spectrum',
+        icon: Shield,
+        iconColor: 'amber'
+      },
+      {
+        type: 'list',
+        items: [
+          'Native Bridges: Canonical bridges with protocol-level security (e.g., Optimism bridge)—highest security, slowest finality',
+          'Validator Bridges: Multi-sig or validator set secures transfers—trust the validators, faster than native',
+          'Liquidity Networks: Atomic swaps with liquidity providers—no bridge trust, limited by liquidity depth',
+          'Messaging Protocols: Cross-chain communication (LayerZero, Axelar)—flexible but adds trust assumptions',
+          'Intent-Based: Solver networks fulfill user intents—user experience focused, solver trust required'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Cross-Chain Treasury Architecture',
+        icon: Layers,
+        iconColor: 'purple'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// Cross-Chain Treasury Management
+interface ChainConfig {
+  chainId: number
+  bridge: 'native' | 'cctp' | 'layerzero'
+  treasuryAddress: string
+  minConfirmations: number
+}
+
+const treasuryChains: ChainConfig[] = [
+  { chainId: 1, bridge: 'native', treasuryAddress: '0x...', minConfirmations: 12 },
+  { chainId: 8453, bridge: 'native', treasuryAddress: '0x...', minConfirmations: 1 },  // Base
+  { chainId: 42161, bridge: 'cctp', treasuryAddress: '0x...', minConfirmations: 1 },  // Arbitrum
+]
+
+async function bridgeToChain(
+  fromChain: number,
+  toChain: number,
+  amount: bigint,
+  token: 'USDC' | 'GRAIN'
+) {
+  const fromConfig = treasuryChains.find(c => c.chainId === fromChain)
+  const toConfig = treasuryChains.find(c => c.chainId === toChain)
+
+  // For USDC, prefer CCTP (Circle's native bridge) when available
+  if (token === 'USDC' && supportsCCTP(fromChain, toChain)) {
+    return await bridgeViaCCTP(fromConfig, toConfig, amount)
+  }
+
+  // For L2s to Ethereum, use canonical bridges (slower but trustless)
+  if (toChain === 1 && isL2(fromChain)) {
+    return await bridgeViaCanonical(fromConfig, toConfig, amount)
+  }
+
+  // Default to validated messaging protocol
+  return await bridgeViaLayerZero(fromConfig, toConfig, amount)
+}
+
+// Monitor bridge transactions for finality
+async function monitorBridge(txHash: string, bridge: string): Promise<BridgeStatus> {
+  // Implementation varies by bridge type
+  // Native bridges: monitor L1 inclusion
+  // CCTP: monitor attestation service
+  // LZ: monitor relayer confirmation
+}`
+      },
+      {
+        type: 'callout',
+        title: 'Operational Best Practices',
+        content: 'For treasury-scale operations: prefer canonical bridges despite slower finality; use Circle\'s CCTP for USDC transfers (eliminates bridge token risk); maintain chain-specific reserves for operational liquidity; implement cross-chain balance monitoring with rebalancing triggers.',
+        color: 'green'
+      }
+    ]
+  },
+
+  // ============================================================================
+  // PAYMENT INNOVATION (3 articles)
+  // ============================================================================
+
+  'programmable-money-enterprise': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'Programmable money represents a fundamental evolution in how enterprises transfer value. Unlike traditional payments that simply move numbers between accounts, programmable payments carry embedded logic: conditions that must be met before release, automatic routing based on real-time data, and self-executing business rules. This capability transforms payments from dumb pipes into intelligent infrastructure that automates complex financial workflows.'
+      },
+      {
+        type: 'heading',
+        content: 'What Makes Money Programmable',
+        icon: Code,
+        iconColor: 'purple'
+      },
+      {
+        type: 'paragraph',
+        content: 'Traditional payments are instructions: "move $X from A to B." Programmable payments are programs: "when condition C is true, move $X from A to B, unless D, in which case split between B and C according to formula F." The payment itself contains business logic that executes automatically, removing manual intervention and eliminating execution risk.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Conditional Release: Funds transfer only when specified conditions verify (delivery confirmation, milestone completion)',
+          'Dynamic Routing: Payment destination or amount adjusts based on real-time data (FX rates, inventory levels)',
+          'Automatic Splitting: Revenue shares, royalties, and commissions calculated and distributed atomically',
+          'Time-Based Logic: Vesting schedules, installment payments, and time-locked releases execute automatically',
+          'Composite Transactions: Multiple operations execute as atomic units—all succeed or all fail'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Enterprise Use Cases',
+        icon: Building2,
+        iconColor: 'blue'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// Programmable Payment Examples
+
+// 1. Milestone-Based Contractor Payment
+const projectPayment = await treasury.createProgrammablePayment({
+  totalAmount: 50_000,
+  currency: 'GRAIN',
+  recipient: contractorWallet,
+  milestones: [
+    { description: 'Design complete', amount: 10_000, verifier: designApprover },
+    { description: 'MVP delivered', amount: 20_000, verifier: productManager },
+    { description: 'Launch complete', amount: 20_000, verifier: cto }
+  ],
+  // Funds held in escrow, released as milestones verified
+})
+
+// 2. Dynamic Revenue Splitting
+const salesPayment = await treasury.createProgrammablePayment({
+  amount: saleAmount,
+  currency: 'GRAIN',
+  splits: [
+    { recipient: 'platform', percentage: 10 },  // Platform fee
+    { recipient: 'seller', percentage: 85 },     // Seller proceeds
+    { recipient: 'affiliate', percentage: 5, condition: hasAffiliate }
+  ],
+  // Executed atomically - no reconciliation needed
+})
+
+// 3. Conditional Supply Chain Payment
+const supplierPayment = await treasury.createProgrammablePayment({
+  amount: invoiceAmount,
+  currency: 'GRAIN',
+  recipient: supplierWallet,
+  conditions: [
+    { type: 'oracle', source: 'shipmentTracker', event: 'delivered' },
+    { type: 'inspection', approver: qualityTeam, timeout: '48h' }
+  ],
+  fallback: { action: 'refund', after: '7d' }
+})`
+      },
+      {
+        type: 'heading',
+        content: 'Implementation Considerations',
+        icon: Lightbulb,
+        iconColor: 'amber'
+      },
+      {
+        type: 'paragraph',
+        content: 'Programmable payments require careful design: conditions must be unambiguous and verifiable; edge cases need explicit handling; and dispute resolution processes must exist for when automation fails. Start with simple conditions and well-defined oracles before attempting complex multi-party logic.'
+      },
+      {
+        type: 'callout',
+        title: 'The Transformation',
+        content: 'Programmable money doesn\'t just automate existing processes—it enables new business models. Micro-payments become viable when execution is free. Real-time revenue sharing eliminates accounting overhead. Trustless escrow removes the need for intermediaries. Think about what becomes possible, not just what becomes faster.',
+        color: 'green'
+      }
+    ]
+  },
+
+  'streaming-payments-saas': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'Subscription billing operates on an outdated paradigm: periodic lump-sum invoices that create revenue recognition challenges, cash flow timing mismatches, and customer friction around renewal dates. Streaming payments offer a radical alternative: continuous, real-time money flow where customers pay by the second and revenue accrues continuously. This model aligns payment with usage, eliminates billing cycles, and creates new possibilities for SaaS pricing and customer relationships.'
+      },
+      {
+        type: 'heading',
+        content: 'How Payment Streaming Works',
+        icon: RefreshCw,
+        iconColor: 'green'
+      },
+      {
+        type: 'paragraph',
+        content: 'Payment streaming protocols (Superfluid, Sablier) enable continuous token transfers. A customer opens a stream by depositing funds and setting a flow rate (e.g., 0.00038 GRAIN per second = $1,000/month). Tokens flow from customer to vendor continuously—not in batches, but truly per-second. The vendor\'s balance increases in real-time; the customer\'s decreases.'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: 'Per-Second', label: 'Payment Granularity', color: 'green' },
+          { value: '0%', label: 'Failed Payment Rate', color: 'green' },
+          { value: 'Real-Time', label: 'Revenue Recognition', color: 'blue' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'SaaS Implementation',
+        icon: Code,
+        iconColor: 'purple'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// Streaming Subscription Implementation
+import { Framework } from "@superfluid-finance/sdk-core"
+
+async function createSubscription(
+  customer: string,
+  plan: 'starter' | 'pro' | 'enterprise',
+  currency: 'GRAIN'
+) {
+  const monthlyRates = {
+    starter: 29_00,    // $29/month
+    pro: 99_00,        // $99/month
+    enterprise: 499_00 // $499/month
+  }
+
+  // Convert monthly rate to per-second flow
+  const secondsPerMonth = 30 * 24 * 60 * 60
+  const flowRate = (monthlyRates[plan] * 1e18) / secondsPerMonth
+
+  const sf = await Framework.create({ chainId: 8453 })
+
+  // Customer authorizes continuous payment stream
+  const createFlowOp = sf.cfaV1.createFlow({
+    sender: customer,
+    receiver: treasuryAddress,
+    superToken: grainSuperToken,
+    flowRate: flowRate.toString()
+  })
+
+  await createFlowOp.exec(customerSigner)
+
+  // Stream is now active - vendor receives payment continuously
+  // Customer can cancel anytime - stream stops instantly
+  // No more billing cycles, payment failures, or renewal friction
+}
+
+// Revenue accrues in real-time
+async function getCurrentARR() {
+  const sf = await Framework.create({ chainId: 8453 })
+  const netFlow = await sf.cfaV1.getNetFlow({
+    superToken: grainSuperToken,
+    account: treasuryAddress
+  })
+
+  const secondsPerYear = 365 * 24 * 60 * 60
+  return BigInt(netFlow) * BigInt(secondsPerYear) / BigInt(1e18)
+}`
+      },
+      {
+        type: 'heading',
+        content: 'Business Benefits',
+        icon: TrendingUp,
+        iconColor: 'green'
+      },
+      {
+        type: 'list',
+        items: [
+          'Zero Payment Failures: No cards to expire, no insufficient funds—stream continues until explicitly cancelled',
+          'Real-Time Revenue: Recognize revenue as it\'s earned, not on arbitrary billing dates',
+          'Reduced Churn: No renewal events means no renewal friction—customers stay by default',
+          'Usage Alignment: Easily implement usage-based pricing with dynamic flow rates',
+          'Global Simplicity: One system for all countries—no payment method localization'
+        ]
+      },
+      {
+        type: 'callout',
+        title: 'Customer Experience',
+        content: 'From the customer perspective, streaming payments are simpler: deposit once, service continues until you cancel. No annual renewal decisions, no invoice processing, no payment failures disrupting service. The subscription just works—indefinitely.',
+        color: 'blue'
+      }
+    ]
+  },
+
+  'conditional-payments-escrow': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'Trust is expensive. When parties don\'t trust each other, they pay for intermediaries: escrow agents, letters of credit, payment processors who hold and release funds. Smart contract escrow eliminates the intermediary while providing stronger guarantees than traditional arrangements. Funds are held by immutable code, released automatically when conditions verify, and returned if conditions fail. This guide explores conditional payment patterns for enterprise transactions.'
+      },
+      {
+        type: 'heading',
+        content: 'The Escrow Problem',
+        icon: Lock,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'Traditional escrow requires a trusted third party: a bank, lawyer, or escrow company who holds funds and releases them per agreement terms. This introduces costs (1-5% fees are common), delays (manual verification takes time), and counterparty risk (the escrow agent could fail or act improperly). Smart contract escrow replaces the trusted party with verifiable code.'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '1-5%', label: 'Traditional Escrow Fees', color: 'red' },
+          { value: '5-30 days', label: 'Traditional Release Time', color: 'amber' },
+          { value: '<0.1%', label: 'Smart Contract Escrow Cost', color: 'green' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Smart Contract Escrow Patterns',
+        icon: Code,
+        iconColor: 'purple'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// Conditional Escrow Patterns
+
+// Pattern 1: Milestone Escrow
+const milestoneEscrow = await treasury.createEscrow({
+  depositor: buyer,
+  beneficiary: contractor,
+  amount: 100_000,
+  currency: 'GRAIN',
+  releaseConditions: {
+    type: 'milestones',
+    milestones: [
+      { id: 'design', amount: 20_000, verifiers: [buyer, projectManager] },
+      { id: 'development', amount: 50_000, verifiers: [buyer, techLead] },
+      { id: 'delivery', amount: 30_000, verifiers: [buyer] }
+    ],
+    disputeResolution: arbitrationContract
+  }
+})
+
+// Pattern 2: Time-Locked Escrow (vesting)
+const vestingEscrow = await treasury.createEscrow({
+  depositor: company,
+  beneficiary: employee,
+  amount: 50_000,
+  currency: 'GRAIN',
+  releaseConditions: {
+    type: 'vesting',
+    cliff: '1 year',
+    duration: '4 years',
+    schedule: 'linear',
+    terminationClause: { returnUnvested: true }
+  }
+})
+
+// Pattern 3: Oracle-Based Escrow
+const deliveryEscrow = await treasury.createEscrow({
+  depositor: importer,
+  beneficiary: exporter,
+  amount: 500_000,
+  currency: 'GRAIN',
+  releaseConditions: {
+    type: 'oracle',
+    oracle: chainlinkBillOfLading,
+    condition: 'shipment_delivered',
+    timeout: { days: 60, action: 'refund' }
+  }
+})`
+      },
+      {
+        type: 'heading',
+        content: 'Dispute Resolution',
+        icon: Scale,
+        iconColor: 'amber'
+      },
+      {
+        type: 'paragraph',
+        content: 'Even with clear conditions, disputes arise. Smart contract escrow should include dispute resolution mechanisms: arbitration clauses that invoke human judgment when parties disagree, timeout conditions that prevent funds from being locked forever, and multi-sig overrides for exceptional circumstances. The goal is automated happy-path execution with graceful handling of exceptions.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Arbitration Integration: Connect to decentralized arbitration (Kleros) or designated arbitrators',
+          'Timeout Handling: Define what happens if conditions never verify (refund, partial release, arbitration)',
+          'Evidence Submission: Allow parties to submit on-chain evidence for dispute resolution',
+          'Appeal Processes: Multi-round dispute resolution for high-value transactions',
+          'Enforcement: Automatic execution of arbitration decisions—no collection needed'
+        ]
+      },
+      {
+        type: 'callout',
+        title: 'Use Case Example',
+        content: 'An international trade transaction: importer deposits payment in escrow, exporter ships goods. Oracle confirms delivery via bill of lading data. Payment releases automatically. If delivery fails or goods are defective, dispute goes to arbitration. The entire process requires no trusted intermediary—just code and consensus.',
+        color: 'green'
+      }
+    ]
+  },
+
+  // ============================================================================
+  // MARKET ANALYSIS (3 articles)
+  // ============================================================================
+
+  'stablecoin-market-2025': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'The stablecoin market has matured from a crypto-native novelty to a $200+ billion asset class processing trillions in annual volume. 2025 marks an inflection point: regulatory frameworks are solidifying, institutional adoption is accelerating, and use cases are expanding beyond trading into real-world payments and treasury operations. This analysis examines the current state of the stablecoin market and emerging trends shaping its future.'
+      },
+      {
+        type: 'heading',
+        content: 'Market Overview',
+        icon: PieChart,
+        iconColor: 'blue'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '$200B+', label: 'Total Stablecoin Market Cap', color: 'green' },
+          { value: '$10T+', label: 'Annual Transaction Volume', color: 'green' },
+          { value: '45%', label: 'YoY Growth Rate', color: 'blue' }
+        ]
+      },
+      {
+        type: 'paragraph',
+        content: 'USDT and USDC remain dominant, together comprising over 85% of market capitalization. But the market is diversifying: yield-bearing stablecoins (sDAI, GRAIN), euro-denominated stablecoins (EURC), and emerging market local currency stablecoins are capturing growing niches. Each serves different use cases with distinct risk profiles.'
+      },
+      {
+        type: 'heading',
+        content: 'Regulatory Crystallization',
+        icon: Landmark,
+        iconColor: 'purple'
+      },
+      {
+        type: 'paragraph',
+        content: 'The regulatory fog is lifting. MiCA provides comprehensive EU framework. US Congressional action is advancing bipartisan stablecoin legislation. Singapore, Japan, and UK have published clear guidelines. This regulatory clarity is accelerating institutional adoption—compliance teams can now assess stablecoin risk within established frameworks rather than regulatory uncertainty.'
+      },
+      {
+        type: 'list',
+        items: [
+          'EU MiCA: Full framework effective, requiring authorization and reserve standards',
+          'US: Multiple bills advancing with bipartisan support for reserve requirements',
+          'Singapore: MAS framework for single-currency stablecoins',
+          'Japan: Revised Payment Services Act accommodating stablecoins',
+          'UK: FCA consultation on stablecoin regulation progressing'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Emerging Trends',
+        icon: TrendingUp,
+        iconColor: 'green'
+      },
+      {
+        type: 'paragraph',
+        content: 'Several trends are reshaping the stablecoin landscape: yield-bearing designs that share reserve income with holders; chain-agnostic stablecoins that work seamlessly across networks; institutional-focused products with enhanced compliance features; and central bank digital currencies that may compete with or complement private stablecoins.'
+      },
+      {
+        type: 'callout',
+        title: 'Market Outlook',
+        content: 'We project the stablecoin market to exceed $500 billion by 2027, driven by enterprise treasury adoption, cross-border payment growth, and emerging market demand for dollar-denominated digital assets. The regulatory tailwind accelerates this growth by removing barriers to institutional participation.',
+        color: 'green'
+      }
+    ]
+  },
+
+  'institutional-adoption-trends': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'Institutional adoption of digital asset treasury has shifted from theoretical to operational. Major corporations hold Bitcoin on balance sheets. Asset managers custody billions in digital assets. And increasingly, enterprise treasury teams are deploying stablecoins for operational payments. This analysis examines institutional adoption patterns, barriers to entry, and the trajectory of enterprise digital asset integration.'
+      },
+      {
+        type: 'heading',
+        content: 'Adoption Metrics',
+        icon: BarChart3,
+        iconColor: 'green'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '80%', label: 'of Top 100 Banks Exploring Digital Assets', color: 'blue' },
+          { value: '$50B+', label: 'Institutional Digital Asset AUM', color: 'green' },
+          { value: '3x', label: 'YoY Growth in Enterprise Stablecoin Usage', color: 'green' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Adoption Curve Segmentation',
+        icon: Users,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'Institutional adoption follows a predictable curve. Innovators (crypto-native companies, fintech) adopted years ago. Early adopters (tech companies, progressive corporates) are in production now. The early majority (mainstream enterprises) are in pilot phases. Understanding where your organization sits on this curve informs strategy and urgency.'
+      },
+      {
+        type: 'list',
+        items: [
+          'Innovators (2019-2021): Crypto-native treasury, DeFi protocols, trading firms',
+          'Early Adopters (2022-2024): Tech companies, fintech, global payment processors',
+          'Early Majority (2024-2026): Fortune 500 pilots, multinational treasury operations',
+          'Late Majority (2026-2028): Mainstream corporate adoption, regional banks',
+          'Laggards (2028+): Most conservative institutions, full market maturity'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Barriers to Adoption',
+        icon: AlertTriangle,
+        iconColor: 'amber'
+      },
+      {
+        type: 'paragraph',
+        content: 'Despite accelerating adoption, barriers remain. Regulatory uncertainty (diminishing but not eliminated), custody concerns (being addressed by institutional-grade solutions), accounting complexity (FASB guidance improving), and organizational inertia (change is hard). Each barrier is falling, but at different rates across jurisdictions and industries.'
+      },
+      {
+        type: 'heading',
+        content: 'Industry-Specific Patterns',
+        icon: Building2,
+        iconColor: 'purple'
+      },
+      {
+        type: 'paragraph',
+        content: 'Adoption patterns vary by industry. Fintech leads—it\'s existential for them. Tech follows—they understand the technology. Manufacturing sees supply chain payment value. Retail sees cross-border opportunity. Financial services are cautious but moving. Healthcare and utilities lag, constrained by regulatory conservatism.'
+      },
+      {
+        type: 'callout',
+        title: 'Competitive Dynamics',
+        content: 'Early movers are establishing competitive advantages: lower payment costs, faster settlement, better vendor relationships, and yield on treasury holdings. As adoption crosses into the mainstream, these advantages become table stakes—latecomers face disadvantage rather than early movers gaining advantage.',
+        color: 'blue'
+      }
+    ]
+  },
+
+  'regulatory-landscape-global': {
+    sections: [
+      {
+        type: 'intro',
+        content: 'Navigating the global regulatory landscape for digital asset treasury requires understanding a patchwork of frameworks that vary by jurisdiction, asset type, and use case. Some regions embrace innovation with clear rules; others remain uncertain or hostile. Enterprise treasury teams must understand this landscape to select appropriate infrastructure, structure operations compliantly, and anticipate regulatory evolution. This analysis maps the global regulatory terrain.'
+      },
+      {
+        type: 'heading',
+        content: 'Regulatory Maturity Spectrum',
+        icon: Globe,
+        iconColor: 'blue'
+      },
+      {
+        type: 'paragraph',
+        content: 'Jurisdictions fall along a maturity spectrum from comprehensive frameworks to outright bans. The most advanced (EU, Singapore, Japan) provide clear rules enabling compliant operation. Emerging frameworks (US, UK) are progressing but not finalized. Uncertain jurisdictions lack specific rules. Restrictive jurisdictions limit or prohibit digital asset activities.'
+      },
+      {
+        type: 'stats',
+        stats: [
+          { value: '60+', label: 'Countries with Digital Asset Frameworks', color: 'blue' },
+          { value: '35%', label: 'of Global GDP under Clear Stablecoin Rules', color: 'green' },
+          { value: '<5%', label: 'of Countries with Outright Bans', color: 'green' }
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Major Jurisdictions',
+        icon: Landmark,
+        iconColor: 'purple'
+      },
+      {
+        type: 'list',
+        items: [
+          'European Union: MiCA provides comprehensive framework—authorization, reserves, consumer protection',
+          'United States: Multiple agencies (SEC, CFTC, OCC) with pending Congressional action',
+          'Singapore: MAS licensing regime for digital payment token services',
+          'Japan: Revised Payment Services Act, stablecoin-specific rules',
+          'United Kingdom: FCA regulation progressing, Treasury consultations ongoing',
+          'UAE: VARA in Dubai, FSRA in ADGM—competing to attract digital asset businesses',
+          'Hong Kong: New licensing regime encouraging institutional participation'
+        ]
+      },
+      {
+        type: 'heading',
+        content: 'Compliance Framework',
+        icon: CheckCircle,
+        iconColor: 'green'
+      },
+      {
+        type: 'paragraph',
+        content: 'Despite jurisdictional variation, common compliance themes emerge: anti-money laundering (AML) requirements are universal; know-your-customer (KYC) is expected; transaction reporting thresholds exist; and licensing or registration is increasingly required. Building compliance infrastructure that addresses these common themes enables multi-jurisdictional operation.'
+      },
+      {
+        type: 'code',
+        language: 'typescript',
+        content: `// Jurisdiction-Aware Compliance Framework
+interface JurisdictionCompliance {
+  region: string
+  framework: string
+  requirements: {
+    aml: boolean
+    kyc: 'basic' | 'enhanced' | 'institutional'
+    licensing: 'none' | 'registration' | 'full-license'
+    reserves: 'unregulated' | 'attestation' | 'segregated'
+    reporting: string[]
+  }
+  status: 'active' | 'pending' | 'uncertain'
+}
+
+const complianceMap: JurisdictionCompliance[] = [
+  {
+    region: 'EU',
+    framework: 'MiCA',
+    requirements: {
+      aml: true,
+      kyc: 'enhanced',
+      licensing: 'full-license',
+      reserves: 'segregated',
+      reporting: ['transaction', 'suspicious-activity', 'large-holdings']
+    },
+    status: 'active'
+  },
+  {
+    region: 'US',
+    framework: 'State MTL + Federal (pending)',
+    requirements: {
+      aml: true,
+      kyc: 'enhanced',
+      licensing: 'registration',  // State-by-state
+      reserves: 'attestation',
+      reporting: ['CTR', 'SAR', '8300']
+    },
+    status: 'pending'  // Federal framework evolving
+  }
+  // Additional jurisdictions...
+]`
+      },
+      {
+        type: 'callout',
+        title: 'Strategic Implications',
+        content: 'Regulatory fragmentation creates complexity but also opportunity. Building on regulated infrastructure (USDC, licensed custodians) provides a compliant foundation regardless of local framework evolution. As regulations converge globally, early compliance investment becomes a durable competitive advantage.',
+        color: 'blue'
+      }
+    ]
   }
 }

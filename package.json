@@ -63,6 +63,7 @@
     "@vercel/postgres": "^0.5.1",
     "airwallex-payment-elements": "^1.142.1",
     "chart.js": "^4.5.1",
+    "cheerio": "^1.1.2",
     "date-fns": "^3.0.0",
     "framer-motion": "^12.23.24",
     "googleapis": "^144.0.0",
