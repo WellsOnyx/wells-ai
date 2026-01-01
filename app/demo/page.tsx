@@ -23,11 +23,48 @@ import {
   User,
   TrendingUp,
   FastForward,
-  Loader2
+  Loader2,
+  ArrowLeftRight,
+  Shield,
+  Lock
 } from 'lucide-react'
 
+type DemoMode = 'intro' | 'ai-to-ai' | 'journeys' | 'result'
 type Journey = 'founder' | 'buyer' | 'seller' | 'jobs' | null
 type Step = 'intro' | 'select' | 'demo' | 'result'
+
+// ============================================================================
+// AI-TO-AI NEGOTIATION DEMO - THE MAGIC
+// ============================================================================
+
+interface NegotiationMessage {
+  speaker: 'buyer-wells' | 'seller-wells' | 'system'
+  message: string
+  thinking?: string
+  round?: number
+}
+
+const AI_TO_AI_DEMO: NegotiationMessage[] = [
+  { speaker: 'system', message: 'New RFQ: 50,000 aluminum enclosures for IoT devices', round: 0 },
+
+  // Round 1: Opening positions
+  { speaker: 'buyer-wells', thinking: 'Analyzing market rates... Similar parts run $8-12/unit. Buyer needs quality but has budget pressure.', message: "I'm sourcing 50,000 aluminum enclosures. Looking for $8.50/unit with 30-day terms. Quality is critical—we need aerospace-grade finishing.", round: 1 },
+  { speaker: 'seller-wells', thinking: 'Checking capacity... Can handle this. Standard rate $11/unit but volume justifies discount. Counter at $10.', message: "We can deliver aerospace-grade quality. Our standard is $11/unit, but for this volume I can offer $10/unit with 14-day terms.", round: 1 },
+
+  // Round 2: Finding middle ground
+  { speaker: 'buyer-wells', thinking: 'Seller is motivated. $10 is high but they have capacity. Try $9 with longer terms as sweetener.', message: "Quality looks good. I can stretch to $9/unit if we can do 45-day terms. That helps our cash flow significantly.", round: 2 },
+  { speaker: 'seller-wells', thinking: 'Extended terms cost us ~2% carrying. Can accept at $9.25 to offset. Worth it for the relationship.', message: "45-day terms add carrying costs. Meet me at $9.25/unit with 45-day terms and we have a deal. I can also guarantee priority production.", round: 2 },
+
+  // Round 3: Closing
+  { speaker: 'buyer-wells', thinking: 'Priority production is valuable—reduces risk. $9.25 is within budget. Close it.', message: "Priority production seals it. $9.25/unit, 45-day terms, priority slot confirmed. Deal.", round: 3 },
+  { speaker: 'seller-wells', thinking: '$462,500 order locked. Good margin, good customer. Win-win achieved.', message: "Confirmed. Total: $462,500 with 45-day terms and priority production. Sending contract now.", round: 3 },
+
+  { speaker: 'system', message: 'Deal closed: $37,500 saved vs. market rate. 3 rounds. 47 seconds.', round: 4 },
+]
+
+// ============================================================================
+// JOURNEY DEMOS (existing)
+// ============================================================================
 
 const JOURNEYS = {
   founder: {
@@ -109,6 +146,16 @@ const JOURNEYS = {
 }
 
 export default function WellsDemo() {
+  // Main demo mode: starts with AI-to-AI showcase
+  const [demoMode, setDemoMode] = useState<DemoMode>('intro')
+
+  // AI-to-AI state
+  const [aiMessages, setAiMessages] = useState<NegotiationMessage[]>([])
+  const [aiMessageIndex, setAiMessageIndex] = useState(0)
+  const [showThinking, setShowThinking] = useState<'buyer-wells' | 'seller-wells' | null>(null)
+  const [currentRound, setCurrentRound] = useState(0)
+
+  // Journey demo state (legacy)
   const [step, setStep] = useState<Step>('intro')
   const [selectedJourney, setSelectedJourney] = useState<Journey>(null)
   const [currentMessage, setCurrentMessage] = useState(0)
@@ -118,6 +165,47 @@ export default function WellsDemo() {
   const [showSkipButton, setShowSkipButton] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const aiChatRef = useRef<HTMLDivElement>(null)
+
+  // AI-to-AI auto-advance effect
+  useEffect(() => {
+    if (demoMode === 'ai-to-ai' && aiMessageIndex < AI_TO_AI_DEMO.length) {
+      const msg = AI_TO_AI_DEMO[aiMessageIndex]
+
+      // Show thinking first if it exists
+      if (msg.thinking && msg.speaker !== 'system') {
+        setShowThinking(msg.speaker)
+        const thinkTimer = setTimeout(() => {
+          setShowThinking(null)
+          // Then show message
+          setTimeout(() => {
+            setAiMessages(prev => [...prev, msg])
+            setCurrentRound(msg.round || 0)
+            setAiMessageIndex(prev => prev + 1)
+          }, 300)
+        }, 2000)
+        return () => clearTimeout(thinkTimer)
+      } else {
+        // No thinking, just show message
+        const msgTimer = setTimeout(() => {
+          setAiMessages(prev => [...prev, msg])
+          setCurrentRound(msg.round || 0)
+          setAiMessageIndex(prev => prev + 1)
+        }, msg.speaker === 'system' ? 1500 : 2500)
+        return () => clearTimeout(msgTimer)
+      }
+    } else if (demoMode === 'ai-to-ai' && aiMessageIndex >= AI_TO_AI_DEMO.length) {
+      // Done - show result after delay
+      setTimeout(() => setDemoMode('result'), 2000)
+    }
+  }, [demoMode, aiMessageIndex])
+
+  // Scroll to latest AI message
+  useEffect(() => {
+    if (aiChatRef.current) {
+      aiChatRef.current.scrollTop = aiChatRef.current.scrollHeight
+    }
+  }, [aiMessages, showThinking])
 
   // Smooth scroll to latest message
   useEffect(() => {
@@ -208,12 +296,17 @@ export default function WellsDemo() {
   }
 
   const handleReset = () => {
+    setDemoMode('intro')
     setStep('intro')
     setSelectedJourney(null)
     setCurrentMessage(0)
     setDisplayedMessages([])
     setStatusText('')
     setShowSkipButton(false)
+    setAiMessages([])
+    setAiMessageIndex(0)
+    setCurrentRound(0)
+    setShowThinking(null)
   }
 
   const getColorClasses = (color: string) => {
@@ -317,8 +410,268 @@ export default function WellsDemo() {
       <main className="pt-20 pb-12 px-6">
         <div className="max-w-4xl mx-auto">
 
-          {/* Intro Step */}
-          {step === 'intro' && (
+          {/* NEW: AI-to-AI Intro */}
+          {demoMode === 'intro' && (
+            <div className="min-h-[80vh] flex flex-col items-center justify-center text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500/10 border border-gold-500/20 rounded-full text-gold-400 text-sm mb-8">
+                <ArrowLeftRight className="w-4 h-4" />
+                AI-to-AI Negotiation
+              </div>
+
+              <h1 className="text-4xl md:text-6xl font-bold mb-6">
+                Watch <span className="text-gold-500">Wells</span> Negotiate <span className="text-gold-500">Wells</span>
+              </h1>
+
+              <p className="text-xl text-gray-400 max-w-2xl mb-8">
+                Every buyer has a Wells. Every seller has a Wells.
+                They negotiate in seconds what takes humans days.
+              </p>
+
+              {/* The Shield Promise */}
+              <div className="flex items-center gap-6 mb-12 text-sm text-gray-500">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-green-500" />
+                  <span>Humans never talk to each other</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-blue-500" />
+                  <span>Your position stays protected</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setDemoMode('ai-to-ai')}
+                className="group inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-gold-400 to-gold-600 text-black font-semibold rounded-xl hover:from-gold-300 hover:to-gold-500 transition-all hover:scale-105"
+              >
+                Watch the Magic
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              <button
+                onClick={() => {
+                  setDemoMode('journeys')
+                  setStep('select')
+                }}
+                className="mt-4 text-gray-400 hover:text-white text-sm transition-colors"
+              >
+                Or explore individual journeys →
+              </button>
+            </div>
+          )}
+
+          {/* AI-to-AI Negotiation Demo */}
+          {demoMode === 'ai-to-ai' && (
+            <div className="min-h-[80vh] flex flex-col">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500/10 border border-gold-500/20 rounded-full text-gold-400 text-sm mb-4">
+                  <ArrowLeftRight className="w-4 h-4" />
+                  Live Negotiation • Round {currentRound}
+                </div>
+                <h2 className="text-2xl font-bold">AI-to-AI Negotiation</h2>
+                <p className="text-gray-400 text-sm mt-2">Watch two Wells instances find the optimal deal</p>
+              </div>
+
+              {/* Two-Column Layout */}
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                {/* Buyer's Wells */}
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                      <Bot className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-blue-400">Buyer&apos;s Wells</div>
+                      <div className="text-xs text-gray-500">Representing: TechCorp Inc.</div>
+                    </div>
+                  </div>
+                  {showThinking === 'buyer-wells' && (
+                    <div className="bg-blue-500/10 rounded-xl p-3 text-sm text-blue-300 italic animate-pulse">
+                      💭 {AI_TO_AI_DEMO[aiMessageIndex]?.thinking}
+                    </div>
+                  )}
+                </div>
+
+                {/* Seller's Wells */}
+                <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                      <Bot className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-green-400">Seller&apos;s Wells</div>
+                      <div className="text-xs text-gray-500">Representing: MetalWorks LLC</div>
+                    </div>
+                  </div>
+                  {showThinking === 'seller-wells' && (
+                    <div className="bg-green-500/10 rounded-xl p-3 text-sm text-green-300 italic animate-pulse">
+                      💭 {AI_TO_AI_DEMO[aiMessageIndex]?.thinking}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Negotiation Chat */}
+              <div
+                ref={aiChatRef}
+                className="flex-1 bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4 max-h-[400px] overflow-y-auto"
+              >
+                {aiMessages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-start gap-3 ${
+                      msg.speaker === 'system'
+                        ? 'justify-center'
+                        : msg.speaker === 'buyer-wells'
+                        ? 'justify-start'
+                        : 'justify-end'
+                    } animate-fadeInUp`}
+                  >
+                    {msg.speaker === 'system' ? (
+                      <div className="bg-gold-500/20 border border-gold-500/30 text-gold-400 px-4 py-2 rounded-full text-sm">
+                        {msg.message}
+                      </div>
+                    ) : (
+                      <>
+                        {msg.speaker === 'buyer-wells' && (
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
+                            <Bot className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                        <div className={`max-w-[75%] p-4 rounded-2xl ${
+                          msg.speaker === 'buyer-wells'
+                            ? 'bg-blue-500/20 text-blue-100'
+                            : 'bg-green-500/20 text-green-100'
+                        }`}>
+                          <p className="text-sm leading-relaxed">{msg.message}</p>
+                        </div>
+                        {msg.speaker === 'seller-wells' && (
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center flex-shrink-0">
+                            <Bot className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Round Indicators */}
+              <div className="mt-6 flex items-center justify-center gap-2">
+                {[1, 2, 3].map((round) => (
+                  <div
+                    key={round}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                      currentRound >= round
+                        ? 'bg-gold-500 text-black'
+                        : 'bg-white/10 text-gray-500'
+                    }`}
+                  >
+                    Round {round}
+                  </div>
+                ))}
+                {currentRound >= 4 && (
+                  <div className="px-3 py-1 rounded-full text-xs font-medium bg-green-500 text-white animate-pulse">
+                    Deal Closed!
+                  </div>
+                )}
+              </div>
+
+              {/* Skip button */}
+              {aiMessageIndex > 0 && aiMessageIndex < AI_TO_AI_DEMO.length && (
+                <button
+                  onClick={() => {
+                    setAiMessages(AI_TO_AI_DEMO)
+                    setAiMessageIndex(AI_TO_AI_DEMO.length)
+                    setCurrentRound(4)
+                    setTimeout(() => setDemoMode('result'), 500)
+                  }}
+                  className="mt-4 self-center flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all text-sm"
+                >
+                  <FastForward className="w-4 h-4" />
+                  Skip to Result
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* AI-to-AI Result */}
+          {demoMode === 'result' && (
+            <div className="min-h-[80vh] flex flex-col items-center justify-center text-center">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mb-8 animate-scaleIn">
+                <Handshake className="w-10 h-10 text-white" />
+              </div>
+
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Deal Closed in <span className="text-gold-500">47 seconds</span>
+              </h2>
+              <p className="text-gray-400 mb-12 max-w-xl">
+                Two AI agents negotiated a $462,500 deal with optimized terms for both parties.
+                No phone calls. No emails. No back-and-forth.
+              </p>
+
+              {/* Results Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-2xl mb-12">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all">
+                  <div className="text-2xl font-bold text-gold-500 mb-1">$37,500</div>
+                  <div className="text-xs text-gray-400">Saved vs Market</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all">
+                  <div className="text-2xl font-bold text-gold-500 mb-1">47 sec</div>
+                  <div className="text-xs text-gray-400">Total Time</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all">
+                  <div className="text-2xl font-bold text-gold-500 mb-1">3 rounds</div>
+                  <div className="text-xs text-gray-400">Negotiation</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all">
+                  <div className="text-2xl font-bold text-green-500 mb-1">Win-Win</div>
+                  <div className="text-xs text-gray-400">Both Optimized</div>
+                </div>
+              </div>
+
+              {/* Key insight */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-6 max-w-xl mb-12">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-gold-500/20 flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-5 h-5 text-gold-400" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold mb-1">The Communication Guard</div>
+                    <p className="text-sm text-gray-400">
+                      Neither party ever spoke directly. No emails exchanged. No phone calls.
+                      Wells protected both sides&apos; positions while finding the optimal deal.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <Link
+                  href="/join"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-gold-400 to-gold-600 text-black font-semibold rounded-xl hover:from-gold-300 hover:to-gold-500 transition-all hover:scale-105"
+                >
+                  Get Your Own Wells
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                <button
+                  onClick={() => {
+                    setDemoMode('intro')
+                    setAiMessages([])
+                    setAiMessageIndex(0)
+                    setCurrentRound(0)
+                  }}
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+                >
+                  Watch Again
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Legacy: Intro Step (now under journeys mode) */}
+          {demoMode === 'journeys' && step === 'intro' && (
             <div className="min-h-[80vh] flex flex-col items-center justify-center text-center">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500/10 border border-gold-500/20 rounded-full text-gold-400 text-sm mb-8">
                 <Zap className="w-4 h-4" />
@@ -345,14 +698,14 @@ export default function WellsDemo() {
           )}
 
           {/* Select Journey Step */}
-          {step === 'select' && (
+          {demoMode === 'journeys' && step === 'select' && (
             <div className="min-h-[80vh] flex flex-col items-center justify-center">
               <button
-                onClick={() => setStep('intro')}
+                onClick={() => setDemoMode('intro')}
                 className="self-start flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back
+                Back to AI-to-AI Demo
               </button>
 
               <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
@@ -390,7 +743,7 @@ export default function WellsDemo() {
           )}
 
           {/* Demo Step - Chat Interface */}
-          {step === 'demo' && selectedJourney && (
+          {demoMode === 'journeys' && step === 'demo' && selectedJourney && (
             <div className="min-h-[80vh] flex flex-col">
               <div className="flex items-center justify-between mb-8">
                 <button
@@ -518,8 +871,8 @@ export default function WellsDemo() {
             </div>
           )}
 
-          {/* Result Step */}
-          {step === 'result' && selectedJourney && (
+          {/* Result Step (Journey mode) */}
+          {demoMode === 'journeys' && step === 'result' && selectedJourney && (
             <div className="min-h-[80vh] flex flex-col items-center justify-center text-center">
               {/* Celebration Effect */}
               <div className="absolute inset-0 pointer-events-none overflow-hidden">
