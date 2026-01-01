@@ -32,10 +32,11 @@ import {
   CreditCard,
   MoreHorizontal,
   ExternalLink,
+  Handshake,
 } from 'lucide-react'
 
 // Types
-type JourneyType = 'treasury' | 'sourcing' | 'sales' | 'hiring'
+type JourneyType = 'treasury' | 'deals' | 'sourcing' | 'sales' | 'hiring'
 
 interface Message {
   id: string
@@ -65,6 +66,16 @@ const JOURNEYS: Record<JourneyType, {
       { label: 'Check balance', prompt: "What's my GRAIN balance?" },
       { label: 'Send payment', prompt: 'Send GRAIN to...' },
       { label: 'View activity', prompt: 'Show recent transactions' },
+    ]
+  },
+  deals: {
+    label: 'Deals',
+    icon: Handshake,
+    color: '#8B5CF6',
+    actions: [
+      { label: 'New deal', prompt: 'I want to create a deal...' },
+      { label: 'My deals', prompt: 'Show my active deals' },
+      { label: 'Trusted partners', prompt: 'Who are my trusted partners?' },
     ]
   },
   sourcing: {
@@ -334,6 +345,7 @@ export default function Dashboard() {
             </h1>
             <p className={`text-lg ${isTreasury ? 'text-gray-400' : 'text-gray-500'}`}>
               {activeJourney === 'treasury' && "Your treasury is ready. What do you need?"}
+              {activeJourney === 'deals' && "Frictionless B2B. Say 'yes, proceed' and it's done."}
               {activeJourney === 'sourcing' && "Ready to source. What are you looking for?"}
               {activeJourney === 'sales' && "Let's find you customers. Where should we start?"}
               {activeJourney === 'hiring' && "Ready to build your team. Who do you need?"}
