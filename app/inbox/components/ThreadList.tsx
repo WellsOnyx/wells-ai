@@ -211,36 +211,39 @@ export default function ThreadList({
 
             {/* Quick Actions (show on hover) */}
             {isHovered && !isSelected && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-black/90 backdrop-blur-sm rounded-lg border border-white/10 p-1">
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-black/90 backdrop-blur-sm rounded-lg border border-white/10 p-1 animate-in fade-in zoom-in-95 duration-150">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     onStar(thread.id)
                   }}
-                  className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                  className="p-1.5 rounded transition-all duration-150 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                   title="Star"
+                  aria-label={thread.is_starred ? 'Unstar thread' : 'Star thread'}
                 >
-                  <Star className={`w-4 h-4 ${thread.is_starred ? 'text-amber-400 fill-amber-400' : 'text-gray-400'}`} />
+                  <Star className={`w-4 h-4 transition-colors duration-150 ${thread.is_starred ? 'text-amber-400 fill-amber-400' : 'text-gray-400 hover:text-amber-400'}`} aria-hidden="true" />
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     onSnooze(thread.id)
                   }}
-                  className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                  className="p-1.5 rounded transition-all duration-150 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                   title="Snooze"
+                  aria-label="Snooze thread"
                 >
-                  <Clock className="w-4 h-4 text-gray-400" />
+                  <Clock className="w-4 h-4 text-gray-400 transition-colors duration-150 hover:text-blue-400" aria-hidden="true" />
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     onArchive(thread.id)
                   }}
-                  className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                  className="p-1.5 rounded transition-all duration-150 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
                   title="Archive"
+                  aria-label="Archive thread"
                 >
-                  <AtSign className="w-4 h-4 text-gray-400" />
+                  <AtSign className="w-4 h-4 text-gray-400 transition-colors duration-150 hover:text-gray-300" aria-hidden="true" />
                 </button>
               </div>
             )}

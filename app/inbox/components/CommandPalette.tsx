@@ -257,14 +257,20 @@ export default function CommandPalette({
         >
           {/* Search Input */}
           <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10">
-            <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <Search className="w-5 h-5 text-gray-400 flex-shrink-0" aria-hidden="true" />
+            <label htmlFor="command-search" className="sr-only">Search commands</label>
             <input
+              id="command-search"
               ref={inputRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type a command or search..."
+              aria-label="Command palette search"
+              aria-autocomplete="list"
+              role="combobox"
+              aria-expanded="true"
               className="flex-1 bg-transparent text-white placeholder:text-gray-500 outline-none text-lg"
             />
             <kbd className="px-2 py-1 text-xs text-gray-500 bg-white/5 border border-white/10 rounded">
@@ -300,17 +306,19 @@ export default function CommandPalette({
                           onClose()
                         }}
                         onMouseEnter={() => setSelectedIndex(globalIndex)}
-                        className={`w-full px-6 py-3 flex items-center gap-3 transition-colors ${
+                        role="option"
+                        aria-selected={isSelected}
+                        className={`w-full px-6 py-3 flex items-center gap-3 transition-all duration-150 focus:outline-none ${
                           isSelected
                             ? 'bg-amber-500/20 border-l-2 border-l-amber-500'
                             : 'hover:bg-white/5 border-l-2 border-l-transparent'
                         }`}
                       >
-                        <Icon className={`w-5 h-5 flex-shrink-0 ${
+                        <Icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-150 ${
                           isSelected ? 'text-amber-400' : 'text-gray-400'
-                        }`} />
+                        }`} aria-hidden="true" />
                         <div className="flex-1 text-left min-w-0">
-                          <div className={`font-medium truncate ${
+                          <div className={`font-medium truncate transition-colors duration-150 ${
                             isSelected ? 'text-white' : 'text-gray-200'
                           }`}>
                             {command.label}

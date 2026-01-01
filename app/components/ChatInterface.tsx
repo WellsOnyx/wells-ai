@@ -167,28 +167,30 @@ export default function ChatInterface({
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Header */}
-      <header className="border-b border-gray-800 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
+      <header className="border-b border-gray-800 bg-black/60 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
                 href="/"
-                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                className="flex items-center gap-2 text-gray-400 hover:text-white transition-all duration-200 rounded-lg px-2 py-1 -ml-2 hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-5 h-5" aria-hidden="true" />
                 <span className="hidden sm:inline">Back</span>
               </Link>
-              <div className="h-6 w-px bg-gray-700" />
-              <div className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${colors.gradient}`} />
+              <div className="h-6 w-px bg-gray-700" aria-hidden="true" />
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colors.gradient} flex items-center justify-center shadow-lg`}>
+                  <span className="text-black font-bold text-sm">W</span>
+                </div>
                 <div>
-                  <span className="text-lg font-bold">{title}</span>
+                  <h1 className="text-lg font-bold">{title}</h1>
                   <p className="text-xs text-gray-400 hidden sm:block">{subtitle}</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${colors.accent} animate-pulse`} />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full">
+              <div className={`w-2 h-2 rounded-full ${colors.accent} animate-pulse`} aria-hidden="true" />
               <span className="text-sm text-gray-400">Wells is online</span>
             </div>
           </div>
@@ -259,25 +261,25 @@ export default function ChatInterface({
             <div className="border-t border-gray-800 pt-4">
               <div className="flex gap-2">
                 <label htmlFor="chat-input" className="sr-only">Type your message</label>
-              <input
-                id="chat-input"
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyPress}
-                placeholder={placeholder}
-                disabled={isLoading}
-                aria-label="Chat message input"
-                className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 disabled:opacity-50"
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!input.trim() || isLoading}
-                aria-label="Send message"
-                className={`${colors.accent} ${colors.accentHover} text-black px-4 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                <Send className="w-5 h-5" aria-hidden="true" />
-              </button>
+                <input
+                  id="chat-input"
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder={placeholder}
+                  disabled={isLoading}
+                  aria-label="Chat message input"
+                  className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 transition-all duration-200 focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!input.trim() || isLoading}
+                  aria-label="Send message"
+                  className={`${colors.accent} ${colors.accentHover} text-black px-4 py-3 rounded-xl font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none active:scale-[0.98]`}
+                >
+                  <Send className="w-5 h-5" aria-hidden="true" />
+                </button>
               </div>
               <p className="text-center text-xs text-gray-500 mt-2">
                 Your AI negotiates with their AI. You just approve. 1% on closed deals.

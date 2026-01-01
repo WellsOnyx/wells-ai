@@ -6,21 +6,29 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { notify, NotificationData } from '@/lib/notifications/service';
+
+// Admin user IDs that can send notifications manually
+const ADMIN_USER_IDS = process.env.ADMIN_USER_IDS?.split(',') || [];
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Add admin authentication
-    // const { user } = await auth(request);
-    // if (!user || !user.isAdmin) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is an admin
+    if (ADMIN_USER_IDS.length > 0 && !ADMIN_USER_IDS.includes(userId)) {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
 
     const body = await request.json();
 
     const {
       type,
-      userId,
+      userId: targetUserId,
       email,
       phone,
       channel = 'all',
@@ -53,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Send notification
     const notificationData: NotificationData = {
       type,
-      userId,
+      userId: targetUserId,
       email,
       phone,
       channel,

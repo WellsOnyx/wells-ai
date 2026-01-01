@@ -247,11 +247,13 @@ export default function NegotiationChat({
           {/* AI Protection Badge */}
           <button
             onClick={() => setShowAIExplanation(!showAIExplanation)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-full text-blue-400 text-xs hover:bg-blue-500/20 transition-colors"
+            aria-expanded={showAIExplanation}
+            aria-label="Learn about AI protection"
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-full text-blue-400 text-xs transition-all duration-200 hover:bg-blue-500/20 hover:border-blue-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            <Shield className="w-3 h-3" />
+            <Shield className="w-3 h-3" aria-hidden="true" />
             AI Protected
-            <Info className="w-3 h-3" />
+            <Info className="w-3 h-3" aria-hidden="true" />
           </button>
         </div>
 
@@ -386,36 +388,40 @@ export default function NegotiationChat({
       <div className="flex-shrink-0 p-4 border-t border-gray-800 bg-gray-900/50">
         {/* Reminder that user is talking to their AI */}
         <div className="flex items-center gap-2 mb-3 text-xs text-gray-500">
-          <MessageCircle className="w-3 h-3" />
+          <MessageCircle className="w-3 h-3" aria-hidden="true" />
           <span>You&apos;re instructing your AI - not messaging {counterpartyName} directly</span>
         </div>
 
         <div className="flex gap-3">
+          <label htmlFor="negotiation-input" className="sr-only">Tell your AI what you want</label>
           <textarea
+            id="negotiation-input"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={`Tell your AI what you want (e.g., "Push back on price" or "My max is $5000")`}
-            className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 resize-none"
+            className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
             rows={2}
             disabled={isLoading || negotiationState.status === 'completed'}
+            aria-label="Negotiation instruction input"
           />
           <button
             onClick={handleSendInstruction}
             disabled={!inputValue.trim() || isLoading || negotiationState.status === 'completed'}
-            className="px-6 py-3 bg-gradient-to-r from-gold-400 to-gold-600 text-black rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            aria-label="Send instruction to AI"
+            className="px-6 py-3 bg-gradient-to-r from-gold-400 to-gold-600 text-black rounded-xl font-medium transition-all duration-200 hover:from-gold-300 hover:to-gold-500 hover:shadow-lg hover:shadow-gold-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none active:scale-[0.98] flex items-center gap-2"
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         {/* Quick Actions */}
-        <div className="flex flex-wrap gap-2 mt-3">
+        <div className="flex flex-wrap gap-2 mt-3" role="group" aria-label="Quick action suggestions">
           {['Push back on price', 'Accept current offer', 'What\'s the status?', 'Set my max budget'].map((action) => (
             <button
               key={action}
               onClick={() => setInputValue(action)}
-              className="px-3 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-full text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+              className="px-3 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-full text-gray-400 transition-all duration-200 hover:text-white hover:border-gray-600 hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
             >
               {action}
             </button>

@@ -166,10 +166,65 @@ export default function RFQListPage() {
 
   if (!isLoaded || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-amber-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading your RFQs...</p>
+      <div className="min-h-screen text-white">
+        {/* Ambient background */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-amber-500/3 rounded-full blur-3xl" />
+        </div>
+
+        <div className="container mx-auto px-4 py-8 relative z-10">
+          {/* Skeleton Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="h-8 w-48 bg-white/10 rounded-lg animate-pulse mb-2" />
+              <div className="h-4 w-72 bg-white/5 rounded animate-pulse" />
+            </div>
+            <div className="h-10 w-28 bg-white/10 rounded-xl animate-pulse" />
+          </div>
+
+          {/* Skeleton Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white/5 rounded-xl border border-white/10 p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-white/10 animate-pulse" />
+                  <div>
+                    <div className="h-3 w-20 bg-white/10 rounded animate-pulse mb-2" />
+                    <div className="h-6 w-12 bg-white/10 rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Skeleton Filters */}
+          <div className="flex items-center gap-2 mb-6">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-10 w-20 bg-white/5 rounded-lg animate-pulse" />
+            ))}
+          </div>
+
+          {/* Skeleton RFQ Cards */}
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-6 bg-white/5 rounded-xl border border-white/10">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-5 w-32 bg-white/10 rounded animate-pulse" />
+                      <div className="h-5 w-16 bg-white/5 rounded-full animate-pulse" />
+                    </div>
+                    <div className="h-4 w-3/4 bg-white/5 rounded animate-pulse mb-3" />
+                    <div className="flex items-center gap-4">
+                      <div className="h-3 w-20 bg-white/5 rounded animate-pulse" />
+                      <div className="h-3 w-24 bg-white/5 rounded animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )

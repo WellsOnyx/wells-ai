@@ -8,10 +8,25 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { TransactionEngine, proposeDeal, type Party, type DealTerms } from '@/lib/transactions'
 import { calculateTrustScore, type TrustMetrics } from '@/lib/trust'
 import { sql } from '@vercel/postgres'
+
+// Helper to get user profile from Clerk
+async function getUserProfile(userId: string): Promise<{ name: string; email: string }> {
+  try {
+    const client = await clerkClient()
+    const user = await client.users.getUser(userId)
+    const name = user.firstName && user.lastName
+      ? `${user.firstName} ${user.lastName}`.trim()
+      : user.username || 'Unknown User'
+    const email = user.emailAddresses?.[0]?.emailAddress || ''
+    return { name, email }
+  } catch {
+    return { name: 'Unknown User', email: '' }
+  }
+}
 
 // Temporary in-memory store (replace with database)
 const deals = new Map<string, ReturnType<typeof proposeDeal>>()
@@ -106,12 +121,15 @@ export async function POST(request: NextRequest) {
     const buyerTrust = calculateTrustScore(buyerData.metrics)
     const sellerTrust = calculateTrustScore(sellerData.metrics)
 
+    // Get user profile from Clerk
+    const userProfile = await getUserProfile(userId)
+
     // Create parties
     const buyer: Party = {
       id: userId,
       type: 'buyer',
-      name: 'Current User', // TODO: Get from Clerk user profile
-      email: 'user@example.com', // TODO: Get from Clerk user profile
+      name: userProfile.name,
+      email: userProfile.email,
       trustScore: buyerTrust,
     }
 

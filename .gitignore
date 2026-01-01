@@ -10,9 +10,13 @@ out/
 
 # Environment
 .env
+.env*
 .env*.local
 .env.vercel
 .env.vercel-check
+.env.vercel-prod
+.env.production
+.env.staging
 
 # IDE
 .idea/

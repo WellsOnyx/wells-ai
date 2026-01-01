@@ -15,7 +15,9 @@ export default function FounderChatPage() {
     <WellsConversationalChat
       journey="founder"
       onDataExtracted={(data) => {
-        console.log('Founder data extracted:', data)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Founder data extracted:', data)
+        }
         // Handle extracted founder needs (hiring, sourcing, fundraising)
       }}
     />

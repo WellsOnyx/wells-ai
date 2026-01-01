@@ -220,26 +220,26 @@ export default function TreasuryChat({
           </div>
 
           {/* Quick Actions */}
-          <div className="flex gap-2 p-3 border-b border-white/10 overflow-x-auto">
+          <div className="flex gap-2 p-3 border-b border-white/10 overflow-x-auto" role="group" aria-label="Quick actions">
             <button
               onClick={() => setInput('What\'s my GRAIN balance?')}
-              className="flex items-center gap-1 px-3 py-1.5 bg-white/5 rounded-full text-xs text-gray-300 hover:bg-white/10 whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300 whitespace-nowrap transition-all duration-200 hover:bg-white/10 hover:border-white/20 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
             >
-              <Wallet className="w-3 h-3" />
+              <Wallet className="w-3 h-3" aria-hidden="true" />
               Balance
             </button>
             <button
               onClick={() => setInput('I want to send a payment')}
-              className="flex items-center gap-1 px-3 py-1.5 bg-white/5 rounded-full text-xs text-gray-300 hover:bg-white/10 whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300 whitespace-nowrap transition-all duration-200 hover:bg-white/10 hover:border-white/20 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
             >
-              <Zap className="w-3 h-3" />
+              <Zap className="w-3 h-3" aria-hidden="true" />
               Send Payment
             </button>
             <button
               onClick={() => setInput('How do I integrate the SDK?')}
-              className="flex items-center gap-1 px-3 py-1.5 bg-white/5 rounded-full text-xs text-gray-300 hover:bg-white/10 whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300 whitespace-nowrap transition-all duration-200 hover:bg-white/10 hover:border-white/20 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
             >
-              <CreditCard className="w-3 h-3" />
+              <CreditCard className="w-3 h-3" aria-hidden="true" />
               SDK Help
             </button>
           </div>
@@ -296,13 +296,14 @@ export default function TreasuryChat({
                     <button
                       onClick={authorizeAction}
                       disabled={isLoading}
-                      className="w-full py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg text-white font-semibold text-sm hover:from-green-600 hover:to-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      aria-label="Authorize transaction"
+                      className="w-full py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg text-white font-semibold text-sm transition-all duration-200 hover:from-green-400 hover:to-emerald-500 hover:shadow-lg hover:shadow-green-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none active:scale-[0.98] flex items-center justify-center gap-2"
                     >
                       {isLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                       ) : (
                         <>
-                          <Check className="w-4 h-4" />
+                          <Check className="w-4 h-4" aria-hidden="true" />
                           Authorize
                         </>
                       )}
@@ -350,13 +351,13 @@ export default function TreasuryChat({
                 placeholder="Ask Wells anything..."
                 disabled={isLoading}
                 aria-label="Treasury chat message input"
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 text-sm disabled:opacity-50"
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 text-sm transition-all duration-200 focus:outline-none focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || isLoading}
                 aria-label="Send message"
-                className="px-4 py-2.5 bg-green-500 hover:bg-green-600 text-black rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2.5 bg-green-500 text-black rounded-xl transition-all duration-200 hover:bg-green-400 hover:shadow-lg hover:shadow-green-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none active:scale-[0.98]"
               >
                 <Send className="w-4 h-4" aria-hidden="true" />
               </button>

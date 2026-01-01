@@ -199,11 +199,13 @@ export default function WellsConversationalChat({
       setMessages(prev => [...prev, {
         id: `msg-${Date.now()}`,
         role: 'assistant',
-        content: "I'd love to help with that. Could you tell me a bit more?",
+        content: "I'm having a bit of trouble connecting right now. Could you try again in a moment? In the meantime, tell me more about what you're looking for.",
         timestamp: new Date()
       }])
     } finally {
       setIsLoading(false)
+      // Refocus input after response
+      setTimeout(() => inputRef.current?.focus(), 100)
     }
   }
 
@@ -299,16 +301,19 @@ export default function WellsConversationalChat({
             </div>
           ))}
 
-          {/* Loading indicator */}
+          {/* Loading indicator with thinking message */}
           {isLoading && (
             <div className="mb-6 flex gap-4 animate-in fade-in duration-200">
               <div className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${config.accentColor} flex items-center justify-center shadow-lg`}>
                 <span className="text-white font-bold">W</span>
               </div>
-              <div className="flex items-center gap-2 px-5 py-4 bg-white/[0.03] border border-white/[0.06] rounded-2xl rounded-bl-md backdrop-blur-sm">
-                <span className="w-2 h-2 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 px-5 py-4 bg-white/[0.03] border border-white/[0.06] rounded-2xl rounded-bl-md backdrop-blur-sm">
+                  <span className="w-2 h-2 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <p className="text-[11px] text-white/30 ml-1">Wells is thinking...</p>
               </div>
             </div>
           )}

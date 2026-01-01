@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import {
   getPreferences,
   updatePreferences,
@@ -17,19 +18,9 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get userId from auth
-    // const { user } = await auth(request);
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
-
-    const userId = request.nextUrl.searchParams.get('userId');
-
+    const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const preferences = await getPreferences(userId);
@@ -52,25 +43,16 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    // TODO: Get userId from auth
-    // const { user } = await auth(request);
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const body = await request.json();
-    const { userId, ...updates } = body;
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
-      );
-    }
 
     const preferences = await updatePreferences(
       userId,
-      updates as UpdatePreferencesInput
+      body as UpdatePreferencesInput
     );
 
     return NextResponse.json({

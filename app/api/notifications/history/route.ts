@@ -1,10 +1,11 @@
 /**
  * GET /api/notifications/history
  *
- * Get notification history for a user
+ * Get notification history for the authenticated user
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import {
   getNotificationHistory,
   getNotificationStats,
@@ -15,23 +16,14 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get userId from auth
-    // const { user } = await auth(request);
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const userId = request.nextUrl.searchParams.get('userId');
     const limit = parseInt(request.nextUrl.searchParams.get('limit') || '50');
     const offset = parseInt(request.nextUrl.searchParams.get('offset') || '0');
     const includeStats = request.nextUrl.searchParams.get('stats') === 'true';
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
-      );
-    }
 
     const { notifications, total } = await getNotificationHistory(
       userId,

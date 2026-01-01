@@ -638,6 +638,208 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
 }
 
 // ============================================
+// SKELETON - Loading placeholder
+// ============================================
+interface SkeletonProps {
+  variant?: 'text' | 'circular' | 'rectangular' | 'rounded'
+  width?: string | number
+  height?: string | number
+  className?: string
+  count?: number
+}
+
+export function Skeleton({
+  variant = 'text',
+  width,
+  height,
+  className = '',
+  count = 1
+}: SkeletonProps) {
+  const baseClasses = 'animate-pulse bg-white/10'
+
+  const variantClasses = {
+    text: 'h-4 rounded',
+    circular: 'rounded-full',
+    rectangular: '',
+    rounded: 'rounded-xl'
+  }
+
+  const style: CSSProperties = {
+    width: width ? (typeof width === 'number' ? `${width}px` : width) : undefined,
+    height: height ? (typeof height === 'number' ? `${height}px` : height) : variant === 'circular' ? width : undefined
+  }
+
+  if (count > 1) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: count }).map((_, i) => (
+          <div
+            key={i}
+            className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+            style={style}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+      style={style}
+    />
+  )
+}
+
+// ============================================
+// SKELETON CARD - Loading card placeholder
+// ============================================
+interface SkeletonCardProps {
+  hasIcon?: boolean
+  hasTitle?: boolean
+  hasDescription?: boolean
+  lines?: number
+  className?: string
+}
+
+export function SkeletonCard({
+  hasIcon = true,
+  hasTitle = true,
+  hasDescription = true,
+  lines = 2,
+  className = ''
+}: SkeletonCardProps) {
+  return (
+    <GlassCard hover={false} className={className}>
+      <div className="flex items-start gap-4">
+        {hasIcon && <Skeleton variant="rounded" width={48} height={48} />}
+        <div className="flex-1">
+          {hasTitle && <Skeleton width="60%" height={20} className="mb-2" />}
+          {hasDescription && <Skeleton count={lines} width="100%" className="mb-1" />}
+        </div>
+      </div>
+    </GlassCard>
+  )
+}
+
+// ============================================
+// TOAST - Notification component
+// ============================================
+interface ToastProps {
+  message: string
+  type?: 'success' | 'error' | 'warning' | 'info'
+  onClose?: () => void
+}
+
+export function Toast({ message, type = 'info', onClose }: ToastProps) {
+  const colors = {
+    success: 'bg-green-500/20 border-green-500/30 text-green-400',
+    error: 'bg-red-500/20 border-red-500/30 text-red-400',
+    warning: 'bg-amber-500/20 border-amber-500/30 text-amber-400',
+    info: 'bg-blue-500/20 border-blue-500/30 text-blue-400'
+  }
+
+  const icons = {
+    success: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      </svg>
+    ),
+    error: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    ),
+    warning: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    ),
+    info: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    )
+  }
+
+  return (
+    <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-xl shadow-xl ${colors[type]} animate-in slide-in-from-right-5 duration-300`}>
+      {icons[type]}
+      <span className="font-medium">{message}</span>
+      {onClose && (
+        <button onClick={onClose} className="ml-2 opacity-60 hover:opacity-100 transition-opacity">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// CONFIRMATION MODAL - Action confirmation
+// ============================================
+interface ConfirmModalProps {
+  isOpen: boolean
+  title: string
+  description: string
+  confirmLabel?: string
+  cancelLabel?: string
+  variant?: 'default' | 'danger'
+  onConfirm: () => void
+  onCancel: () => void
+}
+
+export function ConfirmModal({
+  isOpen,
+  title,
+  description,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  variant = 'default',
+  onConfirm,
+  onCancel
+}: ConfirmModalProps) {
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onCancel}
+      />
+
+      {/* Modal */}
+      <div className="relative bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200">
+        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+        <p className="text-gray-400 mb-6">{description}</p>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl font-medium hover:bg-white/10 transition-all"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all ${
+              variant === 'danger'
+                ? 'bg-red-500 hover:bg-red-600 text-white'
+                : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black'
+            }`}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
 // CSS KEYFRAMES (add to globals.css)
 // ============================================
 export const modernCSS = `

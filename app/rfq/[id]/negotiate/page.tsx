@@ -234,14 +234,21 @@ export default function NegotiatePage() {
   }
 
   const handleAccept = () => {
-    if (activeNegotiation && confirm('Accept the current offer? This will end the negotiation.')) {
-      handleAction('accept', activeNegotiation.id)
+    if (activeNegotiation) {
+      const currentTerms = activeNegotiation.currentSupplierPosition || activeNegotiation.initialSupplierPosition
+      const confirmMsg = `Accept this offer?\n\nUnit Price: ${formatCurrency(currentTerms.unitPrice)}\nTotal: ${formatCurrency(currentTerms.totalPrice)}\nLead Time: ${currentTerms.leadTimeDays} days\n\nThis will finalize the deal.`
+      if (confirm(confirmMsg)) {
+        handleAction('accept', activeNegotiation.id)
+      }
     }
   }
 
   const handleReject = () => {
-    if (activeNegotiation && confirm('Reject and walk away? This will end the negotiation without a deal.')) {
-      handleAction('reject', activeNegotiation.id)
+    if (activeNegotiation) {
+      const confirmMsg = 'Walk away from this negotiation?\n\nYou can still negotiate with other suppliers for this RFQ.'
+      if (confirm(confirmMsg)) {
+        handleAction('reject', activeNegotiation.id)
+      }
     }
   }
 

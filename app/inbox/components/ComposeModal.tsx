@@ -331,48 +331,53 @@ export default function ComposeModal({
               <button
                 onClick={handleAIWrite}
                 disabled={isGeneratingAI}
-                className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border border-purple-500/30 hover:border-purple-500/50 transition-all disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
+                aria-label="Generate text with AI"
+                className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 transition-all duration-200 hover:bg-purple-500/30 hover:border-purple-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] flex items-center gap-2 text-sm font-medium"
               >
                 {isGeneratingAI ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" aria-hidden="true" />
                 )}
                 AI Write
               </button>
 
               <button
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                 title="Attach files"
+                aria-label="Attach files"
               >
-                <Paperclip className="w-4 h-4 text-gray-400" />
+                <Paperclip className="w-4 h-4 text-gray-400" aria-hidden="true" />
               </button>
 
               <button
                 onClick={() => setIsScheduling(!isScheduling)}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                 title="Schedule send"
+                aria-label="Schedule send"
+                aria-expanded={isScheduling}
               >
-                <Clock className="w-4 h-4 text-gray-400" />
+                <Clock className="w-4 h-4 text-gray-400" aria-hidden="true" />
               </button>
             </div>
 
             <div className="flex items-center gap-3">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
+                className="px-4 py-2 text-gray-400 transition-all duration-200 hover:text-white hover:bg-white/5 rounded-lg text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSend}
                 disabled={!to.trim() || !subject.trim() || isSending}
-                className="px-6 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                aria-label="Send email"
+                className="px-6 py-2 rounded-lg bg-amber-500 text-black font-semibold transition-all duration-200 hover:bg-amber-400 hover:shadow-lg hover:shadow-amber-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none active:scale-[0.98] flex items-center gap-2"
               >
                 {isSending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4" aria-hidden="true" />
                 )}
                 Send
               </button>
@@ -381,9 +386,9 @@ export default function ComposeModal({
 
           {/* Schedule Picker */}
           {isScheduling && (
-            <div className="px-6 py-4 border-t border-white/10 bg-white/5">
+            <div className="px-6 py-4 border-t border-white/10 bg-white/5 animate-in slide-in-from-top-2 duration-200">
               <div className="text-sm text-gray-400 mb-3">Schedule send for:</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Schedule options">
                 {[
                   { label: 'Later today (6pm)', value: 'today_6pm' },
                   { label: 'Tomorrow (9am)', value: 'tomorrow_9am' },
@@ -391,7 +396,7 @@ export default function ComposeModal({
                 ].map((option) => (
                   <button
                     key={option.value}
-                    className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-500/50 transition-all text-sm text-white"
+                    className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white transition-all duration-200 hover:bg-white/10 hover:border-amber-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 active:scale-[0.98]"
                   >
                     {option.label}
                   </button>

@@ -14,7 +14,9 @@ export default function SellerChatPage() {
     <WellsConversationalChat
       journey="seller"
       onDataExtracted={(data) => {
-        console.log('Seller data extracted:', data)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Seller data extracted:', data)
+        }
         // Handle extracted seller data (products, categories, capabilities)
       }}
     />

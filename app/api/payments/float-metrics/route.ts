@@ -5,12 +5,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import PaymentService from '@/lib/payments/service';
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get userId from session/auth
-    const userId = 'demo-user'; // Replace with actual auth
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
     const metrics = await PaymentService.getUserFloatMetrics(userId);
 

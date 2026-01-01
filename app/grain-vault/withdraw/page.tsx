@@ -708,21 +708,28 @@ function WithdrawPageContent() {
               <button
                 onClick={handleWithdraw}
                 disabled={submitting || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > protectedDeposit}
-                className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
               >
                 {submitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Processing...
+                    Processing Withdrawal...
                   </>
                 ) : (
                   <>
                     <Banknote className="w-5 h-5" />
                     Withdraw {amount ? formatUSD(parseFloat(amount)) : 'Funds'}
-                    <ArrowRight className="w-5 h-5" />
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </button>
+
+              {/* Confirmation hint */}
+              {parseFloat(amount) > 0 && (
+                <p className="text-center text-sm text-gray-400 mt-3">
+                  Funds will be sent to your linked bank account
+                </p>
+              )}
             </div>
 
             {/* Timing Info */}

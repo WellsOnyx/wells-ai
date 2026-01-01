@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { UserProfile } from '@/lib/onboarding/types'
 
 interface ProfileBasicStepProps {
@@ -11,6 +11,13 @@ interface ProfileBasicStepProps {
 
 export function ProfileBasicStep({ profile, onUpdate, onContinue }: ProfileBasicStepProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const firstInputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-focus first input on mount
+  useEffect(() => {
+    setTimeout(() => firstInputRef.current?.focus(), 100)
+  }, [])
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
@@ -77,15 +84,18 @@ export function ProfileBasicStep({ profile, onUpdate, onContinue }: ProfileBasic
               First Name
             </label>
             <input
+              ref={firstInputRef}
               type="text"
               value={profile.firstName || ''}
               onChange={(e) => onUpdate({ firstName: e.target.value })}
+              onBlur={() => setTouched(prev => ({ ...prev, firstName: true }))}
               className={`
                 w-full px-4 py-3 rounded-xl bg-gray-900 border text-white placeholder-gray-500
                 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all
-                ${errors.firstName ? 'border-red-500' : 'border-gray-700 focus:border-amber-500'}
+                ${errors.firstName && touched.firstName ? 'border-red-500' : 'border-gray-700 focus:border-amber-500'}
               `}
               placeholder="John"
+              autoComplete="given-name"
             />
             {errors.firstName && (
               <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>
@@ -100,12 +110,14 @@ export function ProfileBasicStep({ profile, onUpdate, onContinue }: ProfileBasic
               type="text"
               value={profile.lastName || ''}
               onChange={(e) => onUpdate({ lastName: e.target.value })}
+              onBlur={() => setTouched(prev => ({ ...prev, lastName: true }))}
               className={`
                 w-full px-4 py-3 rounded-xl bg-gray-900 border text-white placeholder-gray-500
                 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all
-                ${errors.lastName ? 'border-red-500' : 'border-gray-700 focus:border-amber-500'}
+                ${errors.lastName && touched.lastName ? 'border-red-500' : 'border-gray-700 focus:border-amber-500'}
               `}
               placeholder="Smith"
+              autoComplete="family-name"
             />
             {errors.lastName && (
               <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>
@@ -122,14 +134,16 @@ export function ProfileBasicStep({ profile, onUpdate, onContinue }: ProfileBasic
             type="email"
             value={profile.email || ''}
             onChange={(e) => onUpdate({ email: e.target.value })}
+            onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
             className={`
               w-full px-4 py-3 rounded-xl bg-gray-900 border text-white placeholder-gray-500
               focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all
-              ${errors.email ? 'border-red-500' : 'border-gray-700 focus:border-amber-500'}
+              ${errors.email && touched.email ? 'border-red-500' : 'border-gray-700 focus:border-amber-500'}
             `}
             placeholder="john@company.com"
+            autoComplete="email"
           />
-          {errors.email && (
+          {errors.email && touched.email && (
             <p className="mt-1 text-sm text-red-500">{errors.email}</p>
           )}
         </div>
@@ -145,6 +159,7 @@ export function ProfileBasicStep({ profile, onUpdate, onContinue }: ProfileBasic
             onChange={(e) => onUpdate({ phone: e.target.value })}
             className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
             placeholder="+1 (555) 123-4567"
+            autoComplete="tel"
           />
           <p className="mt-1 text-xs text-gray-500">
             Get instant notifications when Wells finds matches
@@ -154,10 +169,15 @@ export function ProfileBasicStep({ profile, onUpdate, onContinue }: ProfileBasic
         {/* Continue Button */}
         <button
           type="submit"
-          className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl text-white font-semibold text-lg transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-500/25"
+          className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl text-white font-semibold text-lg transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
           Continue
         </button>
+
+        {/* Keyboard hint */}
+        <p className="text-center text-xs text-gray-500 mt-3">
+          Press <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-400 font-mono text-[10px]">Enter</kbd> to continue
+        </p>
       </form>
     </div>
   )

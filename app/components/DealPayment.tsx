@@ -204,10 +204,11 @@ export default function DealPayment({
               onClick={() => {
                 navigator.clipboard.writeText(escrowWalletAddress)
               }}
-              className="text-amber-500 hover:text-amber-400 transition-colors"
+              className="text-amber-500 transition-all duration-200 hover:text-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded p-1"
               title="Copy address"
+              aria-label="Copy escrow wallet address"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </button>
@@ -222,11 +223,12 @@ export default function DealPayment({
           <button
             onClick={handlePayNow}
             disabled={loading}
-            className="btn-premium-primary w-full py-3 font-bold"
+            aria-label={`Pay ${totalAmount.toLocaleString()} ${currency} to Escrow`}
+            className="btn-premium-primary w-full py-3 font-bold transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.98]"
           >
             {loading ? (
               <div className="flex items-center justify-center gap-3">
-                <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" aria-hidden="true" />
                 <span>Processing...</span>
               </div>
             ) : (
@@ -240,7 +242,8 @@ export default function DealPayment({
           <button
             onClick={handleRelease}
             disabled={loading}
-            className="btn-premium-primary w-full py-3 font-bold"
+            aria-label="Release payment to seller"
+            className="btn-premium-primary w-full py-3 font-bold transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.98]"
           >
             {loading ? 'Releasing...' : 'Release Payment to Seller'}
           </button>
