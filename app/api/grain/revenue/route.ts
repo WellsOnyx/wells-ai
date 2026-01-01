@@ -10,15 +10,38 @@
  * GRAIN appreciation is backed by REAL LIQUID ASSETS:
  * - 30% of WellsAI fees → liquidity
  * - 30% of float yield → treasury equity
+ *
+ * SECURITY: Admin-only endpoint for revenue management.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { RevenueAllocation } from '@/lib/grain/revenue-allocation'
 import { FounderLedgers } from '@/lib/grain/founder-ledgers'
+
+// Founders/admins who can manage revenue
+const TREASURY_ADMINS = ['user_2vQlKmAB8sOCkwxw0T0cSWQxqhT'] // Add admin user IDs
 
 // GET /api/grain/revenue
 export async function GET(request: NextRequest) {
   try {
+    // SECURITY: Require authentication and admin access
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // Only admins can view revenue data
+    if (!TREASURY_ADMINS.includes(userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      )
+    }
+
     const view = request.nextUrl.searchParams.get('view') || 'summary'
     const founderId = request.nextUrl.searchParams.get('founderId') as
       | 'jonah'
@@ -212,6 +235,23 @@ async function getProjection(volume: number) {
 // POST /api/grain/revenue
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Require authentication and admin access
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // Only admins can perform revenue operations
+    if (!TREASURY_ADMINS.includes(userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const { action } = body
 

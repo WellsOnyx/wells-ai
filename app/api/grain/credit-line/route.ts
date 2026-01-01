@@ -12,19 +12,22 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { CreditLineEngine } from '@/lib/grain/credit-line-engine'
 
-// GET /api/grain/credit-line?userId=xxx
+// GET /api/grain/credit-line
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
-
+    // SECURITY: Require authentication
+    const { userId } = await auth()
     if (!userId) {
       return NextResponse.json(
-        { success: false, error: 'userId is required' },
-        { status: 400 }
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
       )
     }
+
+    // User can only access their own credit line position
 
     const position = await CreditLineEngine.getPosition(userId)
 
@@ -74,16 +77,19 @@ export async function GET(request: NextRequest) {
 // POST /api/grain/credit-line
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { action, userId, amount, grainAmount, counterpartyId, description } =
-      body
-
+    // SECURITY: Require authentication
+    const { userId } = await auth()
     if (!userId) {
       return NextResponse.json(
-        { success: false, error: 'userId is required' },
-        { status: 400 }
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
       )
     }
+
+    const body = await request.json()
+    const { action, amount, grainAmount, counterpartyId, description } = body
+
+    // User can only perform actions on their own account
 
     let result: any
 

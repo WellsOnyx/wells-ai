@@ -9,14 +9,37 @@
  *
  * All tracked on Vault's chain for transparency.
  * Asset income flows through standard revenue allocation.
+ *
+ * SECURITY: Admin-only endpoint for managing treasury assets.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { RealAssets } from '@/lib/grain/real-assets'
+
+// Founders/admins who can manage treasury assets
+const TREASURY_ADMINS = ['user_2vQlKmAB8sOCkwxw0T0cSWQxqhT'] // Add admin user IDs
 
 // GET /api/grain/assets
 export async function GET(request: NextRequest) {
   try {
+    // SECURITY: Require authentication and admin access
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // Only admins can view treasury assets
+    if (!TREASURY_ADMINS.includes(userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      )
+    }
+
     const view = request.nextUrl.searchParams.get('view') || 'summary'
     const assetId = request.nextUrl.searchParams.get('assetId')
 
@@ -232,6 +255,23 @@ async function getDocuments(assetId: string) {
 // POST /api/grain/assets
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Require authentication and admin access
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // Only admins can manage treasury assets
+    if (!TREASURY_ADMINS.includes(userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const { action } = body
 

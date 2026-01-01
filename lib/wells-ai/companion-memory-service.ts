@@ -174,13 +174,16 @@ export async function getRecentEmotionalSignals(
   userId: string,
   minutesBack: number = 30
 ): Promise<EmotionalState['signals']> {
+  // SECURITY: Validate minutesBack is a safe integer to prevent SQL injection
+  const safeMinutes = Math.max(1, Math.min(1440, Math.floor(Number(minutesBack) || 30)))
+
   const result = await sqlQuery(`
     SELECT signal_type, detected_from, detected_at
     FROM emotional_signals
     WHERE user_id = $1
-      AND detected_at > NOW() - INTERVAL '${minutesBack} minutes'
+      AND detected_at > NOW() - INTERVAL '1 minute' * $2
     ORDER BY detected_at DESC
-  `, [userId])
+  `, [userId, safeMinutes])
 
   return result.rows.map(row => ({
     type: row.signal_type,
