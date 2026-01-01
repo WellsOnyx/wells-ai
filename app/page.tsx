@@ -12,6 +12,8 @@ import { MessageSquare, Zap, Shield, TrendingUp, Globe, ChevronDown } from 'luci
 import HeroChat from '@/components/HeroChat'
 import EcosystemVisualization from '@/components/EcosystemVisualization'
 import ThemeToggle from '@/components/ThemeToggle'
+import Testimonials from '@/app/components/Testimonials'
+import FAQ from '@/app/components/FAQ'
 
 export default function UnifiedLanding() {
   const [activeConnections, setActiveConnections] = useState(847)
@@ -500,6 +502,9 @@ export default function UnifiedLanding() {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <Testimonials />
+
       {/* Comparison Section */}
       <section className="py-28 bg-white dark:bg-[#0a0f1a]">
         <div className="max-w-[1200px] mx-auto px-6">
@@ -571,6 +576,9 @@ export default function UnifiedLanding() {
           </div>
         </div>
       </section>
+
+      {/* FAQ Section */}
+      <FAQ />
 
       {/* CTA */}
       <section className="py-28 bg-gradient-to-br from-emerald-600 to-blue-600">

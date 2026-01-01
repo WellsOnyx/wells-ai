@@ -1,157 +1,314 @@
 'use client'
 
 /**
- * HeroChat - Interactive Wells AI Chat for Landing Page
- * Real AI conversation directly on the homepage
+ * HeroChat - Embeddable Mini Wells Chat Widget for Homepage Hero
+ *
+ * Features:
+ * - Compact glassmorphic design (dark bg, gold accents)
+ * - Pre-written demo messages showing Wells in action
+ * - Animated typing indicators
+ * - Wells avatar with gold gradient
+ * - Text input redirects to /join when focused/typed into
  */
 
-import { useState, useRef, useEffect } from 'react'
-import { Send, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, Sparkles } from 'lucide-react'
 
-interface Message {
-  role: 'user' | 'assistant'
+interface DemoMessage {
+  role: 'user' | 'wells'
   content: string
+  delay: number // ms before showing this message
 }
 
-// Initial greeting from Wells
-const INITIAL_MESSAGE: Message = {
-  role: 'assistant',
-  content: "Hi, I'm Wells. Tell me what you need — hiring, sourcing, finding customers, or closing deals. I'll handle the rest."
+// Demo conversation showcasing Wells capabilities
+const DEMO_CONVERSATION: DemoMessage[] = [
+  {
+    role: 'user',
+    content: 'I need to hire a Head of Engineering in Miami, under $250k',
+    delay: 0
+  },
+  {
+    role: 'wells',
+    content: 'Found 847 candidates matching your criteria. I\'ve already reached out to the top 12 with >15 years experience. 3 have responded - scheduling interviews for this week.',
+    delay: 1500
+  },
+  {
+    role: 'user',
+    content: 'Also need industrial pumps for our manufacturing plant',
+    delay: 4500
+  },
+  {
+    role: 'wells',
+    content: 'RFQ sent to 23 verified suppliers. Best quote so far: $127k (18% below market). Deadline in 48hrs. Want me to negotiate further?',
+    delay: 6000
+  }
+]
+
+// Typing indicator component
+function TypingIndicator() {
+  return (
+    <div className="flex items-center gap-1 px-4 py-3">
+      <div className="flex gap-1">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="w-2 h-2 bg-amber-500/60 rounded-full"
+            style={{
+              animation: 'typing-bounce 1.4s ease-in-out infinite',
+              animationDelay: `${i * 0.15}s`
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
 }
 
-export default function HeroChat() {
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE])
-  const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const chatContainerRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  // Auto-scroll chat container to bottom (without affecting page scroll)
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
-    }
-  }, [messages, isLoading])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
-
-    const userMessage = input.trim()
-    setInput('')
-
-    // Add user message
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }])
-    setIsLoading(true)
-
-    try {
-      const response = await fetch('/api/wells-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...messages, { role: 'user', content: userMessage }],
-          isHeroChat: true
-        })
-      })
-
-      if (!response.ok) throw new Error('Failed to get response')
-
-      const data = await response.json()
-
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: data.message || "I'm here to help. Can you tell me more about what you need?"
-      }])
-    } catch (error) {
-      console.error('Chat error:', error)
-      // Fallback response if API fails
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "I'd love to help with that. To get started, would you like to hire talent, source suppliers, find customers, or close a deal?"
-      }])
-    } finally {
-      setIsLoading(false)
-    }
+// Wells Avatar with gold gradient
+function WellsAvatar({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClasses = {
+    sm: 'w-7 h-7 text-xs',
+    md: 'w-9 h-9 text-sm',
+    lg: 'w-11 h-11 text-base'
   }
 
   return (
-    <div className="relative bg-white border border-gray-200 rounded-[20px] overflow-hidden shadow-[0_0_0_1px_rgba(0,0,0,0.03),0_2px_4px_rgba(0,0,0,0.02),0_12px_24px_rgba(0,0,0,0.06),0_24px_48px_rgba(0,0,0,0.04)]">
-      {/* Chat Header */}
-      <div className="px-5 py-4 bg-gray-900 flex items-center gap-3">
-        <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-violet-500 rounded-[10px] flex items-center justify-center text-white font-semibold text-sm">
-          W
-        </div>
-        <div>
-          <h4 className="text-white text-sm font-semibold">Wells</h4>
-          <span className="text-white/50 text-xs flex items-center gap-1.5">
+    <div className={`${sizeClasses[size]} relative flex-shrink-0`}>
+      {/* Glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl blur-md opacity-40" />
+      {/* Avatar */}
+      <div className="relative w-full h-full bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+        <span className="font-bold text-black/80">W</span>
+      </div>
+      {/* Online indicator */}
+      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-gray-900">
+        <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-50" />
+      </div>
+    </div>
+  )
+}
+
+export default function HeroChat() {
+  const router = useRouter()
+  const [visibleMessages, setVisibleMessages] = useState<DemoMessage[]>([])
+  const [isTyping, setIsTyping] = useState(false)
+  const [inputFocused, setInputFocused] = useState(false)
+  const [inputValue, setInputValue] = useState('')
+  const chatRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Animate demo messages appearing
+  useEffect(() => {
+    let currentIndex = 0
+    const timers: NodeJS.Timeout[] = []
+
+    const showNextMessage = () => {
+      if (currentIndex >= DEMO_CONVERSATION.length) {
+        // Loop the demo after a pause
+        const resetTimer = setTimeout(() => {
+          setVisibleMessages([])
+          setIsTyping(false)
+          currentIndex = 0
+          showNextMessage()
+        }, 8000)
+        timers.push(resetTimer)
+        return
+      }
+
+      const message = DEMO_CONVERSATION[currentIndex]
+
+      // If it's Wells' turn, show typing first
+      if (message.role === 'wells') {
+        setIsTyping(true)
+        const typingTimer = setTimeout(() => {
+          setIsTyping(false)
+          setVisibleMessages(prev => [...prev, message])
+          currentIndex++
+          showNextMessage()
+        }, 1200)
+        timers.push(typingTimer)
+      } else {
+        setVisibleMessages(prev => [...prev, message])
+        currentIndex++
+        const nextTimer = setTimeout(showNextMessage, DEMO_CONVERSATION[currentIndex]?.delay || 1500)
+        timers.push(nextTimer)
+      }
+    }
+
+    // Start after initial delay
+    const startTimer = setTimeout(showNextMessage, 500)
+    timers.push(startTimer)
+
+    return () => timers.forEach(t => clearTimeout(t))
+  }, [])
+
+  // Auto-scroll chat
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight
+    }
+  }, [visibleMessages, isTyping])
+
+  // Handle input interaction - redirect to /join
+  const handleInputFocus = () => {
+    setInputFocused(true)
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value)
+    // Redirect after a brief moment of typing
+    if (e.target.value.length >= 2) {
+      router.push('/join')
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    router.push('/join')
+  }
+
+  return (
+    <div className="relative w-full max-w-md mx-auto">
+      {/* Ambient glow */}
+      <div className="absolute -inset-4 bg-gradient-to-r from-amber-500/20 via-amber-600/10 to-violet-500/20 rounded-3xl blur-2xl opacity-60 pointer-events-none" />
+
+      {/* Main chat container - glassmorphic */}
+      <div className="relative bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/40">
+
+        {/* Header */}
+        <div className="px-4 py-3 bg-gradient-to-r from-gray-900 to-gray-800 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <WellsAvatar size="md" />
+            <div>
+              <h4 className="text-white text-sm font-semibold flex items-center gap-1.5">
+                Wells
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              </h4>
+              <span className="text-gray-400 text-xs">
+                Enterprise AI that executes
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-emerald-400">
             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-            Online now
-          </span>
+            Live Demo
+          </div>
         </div>
-      </div>
 
-      {/* Chat Body */}
-      <div
-        ref={chatContainerRef}
-        className="p-4 h-[320px] overflow-y-auto flex flex-col gap-3 bg-gray-50 scroll-smooth"
-      >
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed animate-fade-in ${
-              msg.role === 'user'
-                ? 'bg-white text-gray-900 self-end border border-gray-200 rounded-br-md shadow-sm'
-                : 'bg-gray-900 text-white self-start rounded-bl-md shadow-md'
-            }`}
-          >
-            {msg.content}
-          </div>
-        ))}
-
-        {isLoading && (
-          <div className="flex gap-1.5 px-4 py-3.5 bg-gray-900 rounded-2xl rounded-bl-md self-start w-16">
-            <span className="w-2 h-2 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-2 h-2 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-2 h-2 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
-        )}
-      </div>
-
-      {/* Chat Input */}
-      <form onSubmit={handleSubmit} className="px-4 py-4 bg-white border-t border-gray-200 flex gap-3">
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Tell Wells what you need..."
-          disabled={isLoading}
-          className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-[10px] text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-50"
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !input.trim()}
-          className="px-5 py-3 bg-gray-900 text-white text-sm font-medium rounded-[10px] hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        {/* Chat messages */}
+        <div
+          ref={chatRef}
+          className="h-[240px] overflow-y-auto p-4 flex flex-col gap-3 scroll-smooth"
+          style={{
+            background: 'linear-gradient(180deg, rgba(17,24,39,0.95) 0%, rgba(10,15,26,0.98) 100%)'
+          }}
         >
-          {isLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <>
-              Send
-              <Send className="w-4 h-4" />
-            </>
+          {/* Initial Wells greeting */}
+          <div className="flex gap-2.5 items-start chat-message-animate">
+            <WellsAvatar size="sm" />
+            <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-md px-4 py-3 max-w-[85%]">
+              <p className="text-white/90 text-sm leading-relaxed">
+                Hi, I'm Wells. Tell me what you need - hiring, sourcing, sales, or deals. I'll execute immediately.
+              </p>
+            </div>
+          </div>
+
+          {/* Demo messages */}
+          {visibleMessages.map((msg, i) => (
+            <div
+              key={i}
+              className={`flex gap-2.5 items-start chat-message-animate ${
+                msg.role === 'user' ? 'flex-row-reverse' : ''
+              }`}
+              style={{ animationDelay: `${i * 0.1}s` }}
+            >
+              {msg.role === 'wells' && <WellsAvatar size="sm" />}
+
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                  msg.role === 'user'
+                    ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 rounded-tr-md text-white'
+                    : 'bg-white/5 border border-white/10 rounded-tl-md'
+                }`}
+              >
+                <p className={`text-sm leading-relaxed ${
+                  msg.role === 'user' ? 'text-amber-100' : 'text-white/90'
+                }`}>
+                  {msg.content}
+                </p>
+              </div>
+            </div>
+          ))}
+
+          {/* Typing indicator */}
+          {isTyping && (
+            <div className="flex gap-2.5 items-start chat-message-animate">
+              <WellsAvatar size="sm" />
+              <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-md">
+                <TypingIndicator />
+              </div>
+            </div>
           )}
-        </button>
-      </form>
+        </div>
+
+        {/* Input area */}
+        <form
+          onSubmit={handleSubmit}
+          className="px-4 py-3 bg-gray-900/80 border-t border-white/10"
+        >
+          <div className={`relative flex items-center gap-2 bg-white/5 border rounded-xl px-3 py-2.5 transition-all duration-300 ${
+            inputFocused
+              ? 'border-amber-500/50 ring-2 ring-amber-500/20 bg-white/10'
+              : 'border-white/10 hover:border-white/20'
+          }`}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={handleInputChange}
+              onFocus={handleInputFocus}
+              placeholder="Tell Wells what you need..."
+              className="flex-1 bg-transparent text-white text-sm placeholder:text-gray-500 focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-black text-xs font-semibold rounded-lg hover:from-amber-400 hover:to-amber-500 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-amber-500/20"
+            >
+              Try Wells
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Subtle hint */}
+          <p className="text-center text-gray-500 text-[11px] mt-2">
+            Click to start a real conversation with Wells
+          </p>
+        </form>
+      </div>
 
       {/* Animation styles */}
-      <style jsx>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
+      <style jsx global>{`
+        @keyframes typing-bounce {
+          0%, 60%, 100% {
+            transform: translateY(0);
+          }
+          30% {
+            transform: translateY(-4px);
+          }
         }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out forwards;
+
+        .chat-message-animate {
+          opacity: 0;
+          transform: translateY(10px);
+          animation: chat-appear 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes chat-appear {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
       `}</style>
     </div>
