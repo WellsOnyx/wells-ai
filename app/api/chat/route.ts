@@ -59,6 +59,10 @@ import {
   type ProductType,
 } from '@/lib/wells-memory'
 
+// Ghost: The emotional companion architecture
+// "I am Wells. I am Ghost."
+import { processMessageWithGhost } from '@/lib/wells-ai/companion-memory-service'
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 })
@@ -3297,6 +3301,61 @@ export async function POST(request: NextRequest) {
       enhancedSystemPrompt += `\n\nMEMORY: You remember past conversations with this user. Reference relevant history naturally when appropriate, but don't force it.`
     }
 
+    // ========================================================================
+    // GHOST: EMOTIONAL COMPANION ARCHITECTURE
+    // "I am Wells. I am Ghost."
+    // ========================================================================
+    let ghostContext: {
+      emotionalOpener?: string
+      emotionalState?: { stress: string; urgency: string; confidence: string; energy: string }
+    } | null = null
+
+    if (userId && messages.length > 0) {
+      try {
+        const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
+        if (lastUserMessage) {
+          const ghostResult = await processMessageWithGhost(
+            userId,
+            lastUserMessage.content,
+            {
+              firstName: profile?.firstName,
+              lastName: profile?.lastName,
+              company: profile?.company || profile?.founderProfile?.companyName || profile?.buyerProfile?.companyName || profile?.sellerProfile?.companyName,
+              role: profile?.role || profile?.jobsProfile?.currentTitle,
+            }
+          )
+
+          // Add Ghost's emotional system prompt
+          enhancedSystemPrompt += `\n\n${ghostResult.ghostSystemPrompt}`
+
+          // Store context for the response
+          ghostContext = {
+            emotionalOpener: ghostResult.emotionalOpener,
+            emotionalState: {
+              stress: ghostResult.emotionalState.stress,
+              urgency: ghostResult.emotionalState.urgency,
+              confidence: ghostResult.emotionalState.confidence,
+              energy: ghostResult.emotionalState.energy,
+            },
+          }
+
+          // Add emotional guidance
+          if (ghostResult.emotionalState.stress === 'high' || ghostResult.emotionalState.stress === 'critical') {
+            enhancedSystemPrompt += `\n\nEMOTIONAL STATE: User seems stressed. Acknowledge their feelings first before diving into solutions.`
+          }
+          if (ghostResult.emotionalState.urgency === 'urgent') {
+            enhancedSystemPrompt += `\n\nURGENCY: User is in a hurry. Be concise and action-oriented.`
+          }
+          if (ghostResult.emotionalState.confidence === 'uncertain') {
+            enhancedSystemPrompt += `\n\nCONFIDENCE: User seems uncertain. Provide clear guidance and reassurance.`
+          }
+        }
+      } catch (error) {
+        console.error('[Ghost] Error processing emotional context:', error)
+        // Continue without Ghost - better than failing
+      }
+    }
+
     enhancedSystemPrompt += `
 
 CRITICAL APPROVAL FLOW:
@@ -5752,6 +5811,11 @@ Reply "Yes, go ahead" to approve, or let me know what to change.`,
     return NextResponse.json({
       message: assistantMessage,
       negotiation: null,
+      // Ghost: Emotional companion context
+      ghost: ghostContext ? {
+        emotionalState: ghostContext.emotionalState,
+        emotionalOpener: ghostContext.emotionalOpener,
+      } : undefined,
     })
   } catch (error) {
     console.error('Chat error:', error)
