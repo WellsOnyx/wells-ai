@@ -9,6 +9,9 @@
  * their Wells AIs negotiate for them. More efficient AND more human.
  */
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60 // Allow up to 60 seconds for complex AI operations
+
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { auth, clerkClient } from '@clerk/nextjs/server'
