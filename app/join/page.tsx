@@ -3,9 +3,12 @@
 /**
  * Unified Join/Signup Page - Dynamic Branding
  *
- * Automatically adapts branding based on journey:
- * - Treasury (Grain & Vault): Black/green theme, treasury messaging
- * - Default (WellsAI): Light/blue theme, sourcing messaging
+ * THE SINGLE ENTRY POINT for both wellsonyx.io and grainandvault.com
+ *
+ * Automatically adapts branding based on:
+ * 1. Domain (grainandvault.com → treasury theme)
+ * 2. URL param (journey=treasury → treasury theme)
+ * 3. Default (WellsAI theme)
  *
  * Includes interactive GRAIN demo for treasury users
  */
@@ -215,8 +218,25 @@ export default function JoinPage() {
   const referralCode = searchParams.get('ref') || searchParams.get('invite')
   const journeyFromUrl = searchParams.get('journey') as JourneyType
 
-  // Determine which theme to use
-  const isTreasury = journeyFromUrl === 'treasury'
+  // Detect domain for auto-theming
+  const [detectedDomain, setDetectedDomain] = useState<'grain' | 'wells' | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname
+      if (host.includes('grainandvault') || host.includes('grain')) {
+        setDetectedDomain('grain')
+      } else {
+        setDetectedDomain('wells')
+      }
+    }
+  }, [])
+
+  // Determine which theme to use:
+  // 1. URL param journey=treasury takes precedence
+  // 2. Domain detection (grainandvault.com → treasury)
+  // 3. Default to WellsAI
+  const isTreasury = journeyFromUrl === 'treasury' || (detectedDomain === 'grain' && journeyFromUrl !== 'sourcing')
   const theme = isTreasury ? TREASURY_THEME : WELLS_THEME
 
   // Pre-select treasury need if coming from Grain & Vault

@@ -65,13 +65,13 @@ export default function EnterprisePage() {
               </Link>
               <div className="flex items-center gap-3 ml-4">
                 <Link
-                  href="/signin"
+                  href="/sign-in"
                   className="text-sm text-gray-400 hover:text-white transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/join?journey=treasury"
                   className="px-4 py-2 bg-green-500 hover:bg-green-600 text-black text-sm font-medium rounded-lg transition-all"
                 >
                   Open Account

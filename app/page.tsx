@@ -199,7 +199,7 @@ export default function UnifiedLanding() {
             </Link>
             <ThemeToggle variant="minimal" />
             <Link
-              href="/grain-vault/waitlist"
+              href="/join"
               className="ml-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-medium rounded-[10px] hover:from-emerald-600 hover:to-emerald-700 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/25"
             >
               Get Started
@@ -232,7 +232,7 @@ export default function UnifiedLanding() {
 
               <div className="flex gap-3 flex-wrap">
                 <Link
-                  href="/grain-vault/waitlist"
+                  href="/join"
                   className="px-7 py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[15px] font-medium rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/25"
                 >
                   Join Waitlist
@@ -601,7 +601,7 @@ export default function UnifiedLanding() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/grain-vault/waitlist"
+              href="/join"
               className="px-8 py-4 bg-white text-gray-900 text-[15px] font-semibold rounded-xl hover:bg-gray-100 transition-all hover:-translate-y-0.5 hover:shadow-xl"
             >
               Join the Waitlist

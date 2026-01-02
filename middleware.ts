@@ -148,7 +148,9 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   }
 
   // ========================================
-  // UNIFIED AUTH FLOW - Redirect separate auth pages to /join
+  // UNIFIED AUTH FLOW - All signup goes to /join
+  // Both wellsonyx.io and grainandvault.com use the same /join page
+  // The page auto-detects domain and applies correct theming
   // ========================================
 
   // Redirect grain-vault auth to unified flow
@@ -160,11 +162,23 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
     return NextResponse.redirect(url)
   }
 
-  // Redirect legacy signup paths to unified /join
-  if (pathname === '/signup' || pathname === '/sign-up') {
+  // Redirect ALL legacy signup paths to unified /join
+  // Domain detection happens client-side in the /join page
+  if (pathname === '/signup' || pathname === '/sign-up' || pathname.startsWith('/sign-up/')) {
     const url = request.nextUrl.clone()
     url.pathname = '/join'
+    // If from Grain & Vault domain, add treasury journey
+    if (isGrainVaultDomain(host)) {
+      url.searchParams.set('journey', 'treasury')
+    }
     return NextResponse.redirect(url)
+  }
+
+  // Redirect /onboarding to /join if not authenticated
+  // (The join flow is now the complete onboarding)
+  if (pathname === '/onboarding' && !isGrainVaultDomain(host)) {
+    // Let middleware auth handle this - only redirect if needed
+    // The /join page handles the full onboarding flow now
   }
 
   // ========================================

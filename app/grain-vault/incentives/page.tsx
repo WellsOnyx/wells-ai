@@ -60,13 +60,13 @@ export default function IncentivesPage() {
               </Link>
               <div className="flex items-center gap-3 ml-4">
                 <Link
-                  href="/signin"
+                  href="/sign-in"
                   className="text-sm text-gray-400 hover:text-white transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/join?journey=treasury"
                   className="px-4 py-2 bg-green-500 hover:bg-green-600 text-black text-sm font-medium rounded-lg transition-all"
                 >
                   Open Account
@@ -110,7 +110,7 @@ export default function IncentivesPage() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
               <Link
-                href="/signup"
+                href="/join?journey=treasury"
                 className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black rounded-xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/50 flex items-center gap-2"
               >
                 Start Earning
@@ -433,7 +433,7 @@ export default function IncentivesPage() {
               </div>
 
               <Link
-                href="/signup"
+                href="/join?journey=treasury"
                 className="group inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black rounded-xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/50"
               >
                 Claim Your Bonus
@@ -526,7 +526,7 @@ export default function IncentivesPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/signup"
+              href="/join?journey=treasury"
               className="group px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black rounded-xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/50 flex items-center gap-2"
             >
               Open Free Account
