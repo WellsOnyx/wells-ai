@@ -15,6 +15,9 @@
  * - Tracks user preferences and autonomy levels
  */
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60 // Allow up to 60 seconds for complex AI operations
+
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import Anthropic from '@anthropic-ai/sdk'
