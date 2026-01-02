@@ -15,10 +15,10 @@
  * - Benefits management
  *
  * Circle Payment Network Corridors (Active 2025):
- * - Brazil, Mexico, Nigeria, Hong Kong
- * - EEMEA (via Mastercard partnership)
- * - LATAM (Nubank integration)
- * - Africa (Lipaworld integration)
+ * - Brazil, Mexico, Nigeria, Hong Kong (CPN direct)
+ * - LATAM (Nubank integration - Brazil, Mexico, Colombia)
+ * - Africa (Lipaworld integration - Nigeria, Kenya, Ghana)
+ * - EEMEA, Europe, APAC (Direct USDC settlement)
  */
 
 import { grainRail } from '@/lib/payments/grain-rail'
@@ -132,12 +132,12 @@ export const SUPPORTED_COUNTRIES: Record<string, CountryConfig> = {
     notes: 'No payroll tax withholding required',
   },
 
-  // ===== TIER 2: EEMEA via Mastercard Partnership =====
+  // ===== TIER 2: EEMEA (Direct USDC) =====
   AE: {
     code: 'AE',
     name: 'United Arab Emirates',
     currency: 'AED',
-    corridor: 'cpn',
+    corridor: 'crypto_native',
     supportedRails: ['grain', 'usdc', 'local_bank'],
     taxWithholdingRequired: false,
     defaultWithholdingRate: 0,
@@ -153,7 +153,7 @@ export const SUPPORTED_COUNTRIES: Record<string, CountryConfig> = {
     code: 'SA',
     name: 'Saudi Arabia',
     currency: 'SAR',
-    corridor: 'cpn',
+    corridor: 'crypto_native',
     supportedRails: ['grain', 'usdc', 'local_bank'],
     taxWithholdingRequired: false,
     defaultWithholdingRate: 0,
@@ -168,7 +168,7 @@ export const SUPPORTED_COUNTRIES: Record<string, CountryConfig> = {
     code: 'ZA',
     name: 'South Africa',
     currency: 'ZAR',
-    corridor: 'cpn',
+    corridor: 'crypto_native',
     supportedRails: ['grain', 'usdc', 'local_bank'],
     taxWithholdingRequired: true,
     defaultWithholdingRate: 0.25,
