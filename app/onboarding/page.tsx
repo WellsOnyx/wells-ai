@@ -49,14 +49,14 @@ interface UserData {
 // ============================================================================
 
 const PHASE_DELAYS = {
-  'cinematic-intro': 3500,
+  'cinematic-intro': 2500,  // Reduced from 3500
   'wells-awakens': 0,
   'the-hook': 0,
   'journey-detection': 0,
   'context-gathering': 0,
   'the-promise': 0,
   'first-action': 0,
-  'complete': 2000,
+  'complete': 1500,  // Reduced from 2000
 }
 
 const JOURNEY_KEYWORDS: Record<UserJourney & string, string[]> = {
@@ -162,30 +162,30 @@ export default function CinematicOnboardingPage() {
     return () => timers.forEach(clearTimeout)
   }, [phase, router])
 
-  // Wells awakening sequence
+  // Wells awakening sequence - faster version
   useEffect(() => {
     if (phase !== 'wells-awakens') return
 
     const timers: NodeJS.Timeout[] = []
 
     // Step 0: "Initializing..."
-    timers.push(setTimeout(() => setAwakeningStep(1), 800))
+    timers.push(setTimeout(() => setAwakeningStep(1), 600))
 
     // Step 1: "I'm Wells."
-    timers.push(setTimeout(() => setAwakeningStep(2), 3000))
+    timers.push(setTimeout(() => setAwakeningStep(2), 2000))
 
     // Step 2: "I've been waiting for you."
-    timers.push(setTimeout(() => setAwakeningStep(3), 5500))
+    timers.push(setTimeout(() => setAwakeningStep(3), 4000))
 
     // Transition to the hook
     timers.push(setTimeout(() => {
       setPhase('the-hook')
-    }, 8000))
+    }, 5500))
 
     return () => timers.forEach(clearTimeout)
   }, [phase])
 
-  // The hook sequence
+  // The hook sequence - faster version
   useEffect(() => {
     if (phase !== 'the-hook') return
 
@@ -195,19 +195,19 @@ export default function CinematicOnboardingPage() {
       "Just tell me what you need. I'll handle the rest."
     ]
 
-    let delay = 500
+    let delay = 400
 
     hookMessages.forEach((msg, idx) => {
       setTimeout(() => {
         addWellsMessage(msg, idx === hookMessages.length - 1)
       }, delay)
-      delay += 2500
+      delay += 1800  // Reduced from 2500
     })
 
     // Transition to journey detection
     setTimeout(() => {
       setPhase('journey-detection')
-    }, delay + 1000)
+    }, delay + 600)
   }, [phase])
 
   // Journey detection
@@ -447,22 +447,24 @@ export default function CinematicOnboardingPage() {
         }}
       />
 
-      {/* Skip button (subtle) */}
+      {/* Skip button - works during intro and awakening */}
       <AnimatePresence>
-        {!cinematicComplete && showParticles && (
+        {((!cinematicComplete && showParticles) || phase === 'wells-awakens' || phase === 'the-hook') && (
           <motion.button
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.4 }}
+            animate={{ opacity: 0.5 }}
             exit={{ opacity: 0 }}
-            whileHover={{ opacity: 0.8 }}
+            whileHover={{ opacity: 1 }}
             onClick={() => {
               setCinematicComplete(true)
               setShowLogo(true)
-              setPhase('wells-awakens')
+              setMessages([])
+              // Skip directly to journey detection
+              setPhase('journey-detection')
             }}
-            className="fixed bottom-6 right-6 text-xs text-gray-500 hover:text-gray-300 z-50 transition-colors"
+            className="fixed bottom-6 right-6 text-sm text-gray-400 hover:text-amber-400 z-50 transition-colors px-4 py-2 rounded-full border border-white/10 hover:border-amber-500/30 bg-black/50 backdrop-blur"
           >
-            Skip intro
+            Skip to chat →
           </motion.button>
         )}
       </AnimatePresence>
