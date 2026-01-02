@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server'
-import { query } from '@/lib/db'
-import Anthropic from '@anthropic-ai/sdk'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30
+
+// Helper to add timeout to promises
+function withTimeout<T>(promise: Promise<T>, ms: number, name: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${name} timed out after ${ms}ms`)), ms)
+    ),
+  ])
+}
 
 // GET /api/health - Health check endpoint with real tests
 export async function GET() {
@@ -11,10 +20,16 @@ export async function GET() {
     checks: {}
   }
 
-  // Check 1: Database
+  // Check 1: Database (with timeout)
   try {
     const start = Date.now()
-    const dbResult = await query('SELECT 1 as test')
+    // Dynamic import to avoid initialization issues
+    const { query } = await import('@/lib/db')
+    const dbResult = await withTimeout(
+      query('SELECT 1 as test'),
+      5000,
+      'Database query'
+    )
     results.checks.database = {
       status: 'ok',
       latency: Date.now() - start
@@ -26,18 +41,23 @@ export async function GET() {
     }
   }
 
-  // Check 2: Anthropic API
+  // Check 2: Anthropic API (with timeout)
   try {
     const start = Date.now()
+    const Anthropic = (await import('@anthropic-ai/sdk')).default
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY || '',
     })
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 10,
-      messages: [{ role: 'user', content: 'Say ok' }]
-    })
+    const response = await withTimeout(
+      anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Say ok' }]
+      }),
+      10000,
+      'Anthropic API'
+    )
 
     results.checks.anthropic = {
       status: 'ok',
@@ -53,8 +73,8 @@ export async function GET() {
 
   // Check 3: Environment variables
   results.checks.env = {
-    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? `set (${process.env.ANTHROPIC_API_KEY.slice(0,10)}...)` : 'missing',
-    POSTGRES_URL: process.env.POSTGRES_URL ? 'set' : 'missing',
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? `set (${process.env.ANTHROPIC_API_KEY.length} chars)` : 'missing',
+    POSTGRES_URL: process.env.POSTGRES_URL ? `set (${process.env.POSTGRES_URL.length} chars)` : 'missing',
   }
 
   // Overall status
