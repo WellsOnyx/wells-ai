@@ -234,6 +234,7 @@ export default function CinematicOnboardingPage() {
       setTimeout(() => {
         addWellsMessage("I'm excited to help. What should I call you?", true)
         setInputPlaceholder("Your name...")
+        setShowInput(true)  // THIS WAS MISSING - show the input field!
       }, 500)
     }
   }, [phase, userData.name])
