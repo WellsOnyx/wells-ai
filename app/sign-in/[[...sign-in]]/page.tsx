@@ -147,7 +147,6 @@ export default function SignInPage() {
                     main: 'px-8 py-8',
                   }
                 }}
-                forceRedirectUrl="/dashboard"
                 signUpUrl="/sign-up"
               />
             </div>
