@@ -531,6 +531,7 @@ export async function createCampaign(campaign: Partial<OutreachCampaign>): Promi
       tag_filter,
       relationship_filter,
       channels,
+      icp_config,
       status,
       rate_limit,
       scheduled_start
@@ -541,6 +542,7 @@ export async function createCampaign(campaign: Partial<OutreachCampaign>): Promi
       ${formatPgArray(campaign.tagFilter)},
       ${formatPgArray(campaign.relationshipFilter)},
       ${JSON.stringify(campaign.channels || ['email'])},
+      ${JSON.stringify({})},
       'draft',
       ${campaign.rateLimit || 100},
       ${campaign.scheduledStart || null}
