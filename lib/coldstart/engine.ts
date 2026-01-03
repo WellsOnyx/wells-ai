@@ -334,7 +334,7 @@ export async function addContact(contact: Contact): Promise<{ id: string; isDupl
         first_name = COALESCE(${contact.firstName}, first_name),
         last_name = COALESCE(${contact.lastName}, last_name),
         full_name = COALESCE(${contact.fullName}, full_name),
-        company = COALESCE(${contact.company}, company),
+        company_name = COALESCE(${contact.company}, company_name),
         title = COALESCE(${contact.title}, title),
         linkedin_url = COALESCE(${contact.linkedinUrl}, linkedin_url),
         twitter_handle = COALESCE(${contact.twitterHandle}, twitter_handle),
@@ -352,7 +352,7 @@ export async function addContact(contact: Contact): Promise<{ id: string; isDupl
       first_name,
       last_name,
       full_name,
-      company,
+      company_name,
       title,
       linkedin_url,
       twitter_handle,
@@ -737,7 +737,7 @@ export async function processOutreachQueue(options: {
   let result
   if (options.channel) {
     result = await sql`
-      SELECT o.*, c.email, c.phone, c.first_name, c.full_name, c.company,
+      SELECT o.*, c.email, c.phone, c.first_name, c.full_name, c.company_name as company,
              v.email_subject, v.email_body, v.sms_body
       FROM coldstart_outreach o
       JOIN coldstart_contacts c ON o.contact_id = c.id
@@ -748,7 +748,7 @@ export async function processOutreachQueue(options: {
     `
   } else {
     result = await sql`
-      SELECT o.*, c.email, c.phone, c.first_name, c.full_name, c.company,
+      SELECT o.*, c.email, c.phone, c.first_name, c.full_name, c.company_name as company,
              v.email_subject, v.email_body, v.sms_body
       FROM coldstart_outreach o
       JOIN coldstart_contacts c ON o.contact_id = c.id
@@ -1024,7 +1024,7 @@ function mapContactRow(row: any): Contact {
     firstName: row.first_name,
     lastName: row.last_name,
     fullName: row.full_name,
-    company: row.company,
+    company: row.company_name,
     title: row.title,
     linkedinUrl: row.linkedin_url,
     twitterHandle: row.twitter_handle,
