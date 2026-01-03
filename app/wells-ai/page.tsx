@@ -197,7 +197,7 @@ export default function WellsAILanding() {
               Blog
             </Link>
             <Link
-              href="/founder/chat"
+              href="/join"
               className="ml-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-[10px] hover:bg-gray-800 transition-all hover:-translate-y-0.5 hover:shadow-lg"
             >
               Get Started
@@ -229,10 +229,10 @@ export default function WellsAILanding() {
 
               <div className="flex gap-3 flex-wrap">
                 <Link
-                  href="/founder/chat"
+                  href="/join"
                   className="px-7 py-3.5 bg-gray-900 text-white text-[15px] font-medium rounded-xl hover:bg-gray-800 transition-all hover:-translate-y-0.5 hover:shadow-xl"
                 >
-                  Talk to Wells →
+                  Get Started →
                 </Link>
                 <Link
                   href="#how"
@@ -346,7 +346,7 @@ export default function WellsAILanding() {
                 title: 'Founder',
                 example: '"I need to hire a CTO"',
                 desc: 'Get matched with talent, suppliers, customers, and investors.',
-                href: '/founder/chat',
+                href: '/join?journey=founder',
                 color: 'blue',
                 bgColor: 'bg-blue-50'
               },
@@ -355,7 +355,7 @@ export default function WellsAILanding() {
                 title: 'Buyer',
                 example: '"I need industrial equipment"',
                 desc: 'Wells writes the RFQ, finds suppliers, handles escrow.',
-                href: '/buyer/chat',
+                href: '/join?journey=buyer',
                 color: 'violet',
                 bgColor: 'bg-violet-50'
               },
@@ -364,7 +364,7 @@ export default function WellsAILanding() {
                 title: 'Seller',
                 example: '"Send me qualified leads"',
                 desc: 'Register your catalog. Wells matches you with buyers.',
-                href: '/suppliers/join',
+                href: '/join?journey=seller',
                 color: 'emerald',
                 bgColor: 'bg-emerald-50'
               },
@@ -373,7 +373,7 @@ export default function WellsAILanding() {
                 title: 'Jobs',
                 example: '"I\'m looking for VP roles"',
                 desc: 'Get matched with companies actually hiring.',
-                href: '/jobs/chat',
+                href: '/join?journey=jobs',
                 color: 'amber',
                 bgColor: 'bg-amber-50'
               }
@@ -625,7 +625,7 @@ export default function WellsAILanding() {
             </ul>
 
             <Link
-              href="/founder/chat"
+              href="/join"
               className="block w-full py-4 bg-white text-gray-900 text-base font-medium rounded-xl hover:bg-gray-100 transition-all hover:-translate-y-0.5"
             >
               Start for Free
@@ -643,10 +643,10 @@ export default function WellsAILanding() {
           </h2>
           <p className="text-lg text-gray-500 mb-8">Tell Wells what you need. Get it done.</p>
           <Link
-            href="/founder/chat"
+            href="/join"
             className="inline-flex px-7 py-3.5 bg-gray-900 text-white text-[15px] font-medium rounded-xl hover:bg-gray-800 transition-all hover:-translate-y-0.5 hover:shadow-xl"
           >
-            Talk to Wells Now →
+            Get Started →
           </Link>
         </div>
       </section>
@@ -668,10 +668,10 @@ export default function WellsAILanding() {
             <div>
               <h4 className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-4">Journeys</h4>
               <div className="space-y-2">
-                <Link href="/founder/chat" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Founder</Link>
-                <Link href="/buyer/chat" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Buyer</Link>
-                <Link href="/suppliers/join" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Seller</Link>
-                <Link href="/jobs/chat" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Jobs</Link>
+                <Link href="/join?journey=founder" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Founder</Link>
+                <Link href="/join?journey=buyer" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Buyer</Link>
+                <Link href="/join?journey=seller" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Seller</Link>
+                <Link href="/join?journey=jobs" className="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Jobs</Link>
               </div>
             </div>
 
@@ -729,7 +729,7 @@ export default function WellsAILanding() {
       <div className="fixed bottom-6 right-6 z-50">
         <div className="absolute inset-0 border-2 border-blue-500 rounded-2xl animate-ping opacity-20" />
         <Link
-          href="/founder/chat"
+          href="/join"
           className="relative w-14 h-14 bg-gray-900 rounded-2xl flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.15),0_8px_24px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(0,0,0,0.2),0_12px_32px_rgba(0,0,0,0.15)] transition-all"
         >
           <MessageSquare className="w-6 h-6 text-white" />
