@@ -540,7 +540,7 @@ export async function createCampaign(campaign: Partial<OutreachCampaign>): Promi
       ${formatPgArray(campaign.sourceFilter)},
       ${formatPgArray(campaign.tagFilter)},
       ${formatPgArray(campaign.relationshipFilter)},
-      ${formatPgArray(campaign.channels || ['email'])},
+      ${JSON.stringify(campaign.channels || ['email'])},
       'draft',
       ${campaign.rateLimit || 100},
       ${campaign.scheduledStart || null}
