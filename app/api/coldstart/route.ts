@@ -6,18 +6,90 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  importContactsFromCSV,
-  addContact,
-  getContacts,
-  getContactStats,
-  createCampaign,
-  addCampaignVariant,
-  queueCampaignOutreach,
-  processOutreachQueue,
-  EMAIL_TEMPLATES,
-  SMS_TEMPLATES
-} from '@/lib/coldstart/engine'
+
+// Predefined templates (inline to avoid module loading issues)
+const EMAIL_TEMPLATES = {
+  founder_personal: {
+    subject: "{{firstName}}, quick question",
+    body: `
+      <p>Hey {{firstName}},</p>
+
+      <p>I'm building something I think you'll find interesting - an AI that actually executes B2B deals, not just recommends them.</p>
+
+      <p>Think: "I need 1000 custom widgets" → AI finds suppliers, negotiates, handles contracts, manages payment. Done.</p>
+
+      <p>We're opening up early access. Given your background at {{company}}, I'd love your take.</p>
+
+      <p>Worth a quick look?</p>
+
+      <p>- Jonah</p>
+
+      <p style="font-size: 12px; color: #666;">
+        <a href="[LINK]">Check it out</a> | <a href="%unsubscribe%">Unsubscribe</a>
+      </p>
+    `
+  },
+
+  supplier_invite: {
+    subject: "New sales channel for {{company}}",
+    body: `
+      <p>Hi {{firstName}},</p>
+
+      <p>I'm reaching out because {{company}} came up as a potential fit for Wells AI - a new platform where enterprise buyers are actively sourcing suppliers.</p>
+
+      <p>Here's what's different:</p>
+      <ul>
+        <li>Buyers come to you (no cold outreach needed)</li>
+        <li>AI handles initial qualification</li>
+        <li>Built-in payments and contracts</li>
+        <li>Zero cost until you close a deal</li>
+      </ul>
+
+      <p>We're onboarding select suppliers this month. Interested?</p>
+
+      <p><a href="[LINK]">Join the waitlist →</a></p>
+
+      <p>Best,<br>Wells Team</p>
+    `
+  },
+
+  buyer_value: {
+    subject: "Cut your sourcing time by 80%",
+    body: `
+      <p>{{firstName}},</p>
+
+      <p>What if you could go from "we need X" to "contract signed" in 48 hours instead of 6 weeks?</p>
+
+      <p>Wells AI is an autonomous agent that:</p>
+      <ul>
+        <li>Finds qualified suppliers for any requirement</li>
+        <li>Negotiates pricing and terms on your behalf</li>
+        <li>Handles contracts and compliance</li>
+        <li>Manages payments with built-in escrow</li>
+      </ul>
+
+      <p>Early users are seeing 73% faster sourcing and 18% cost savings.</p>
+
+      <p><a href="[LINK]">See it in action →</a></p>
+
+      <p>- Wells Team</p>
+    `
+  }
+}
+
+const SMS_TEMPLATES = {
+  short_personal: {
+    body: "Hey {{firstName}}, built something you might like - AI that closes B2B deals autonomously. Worth 2 mins? [LINK]"
+  },
+
+  supplier_invite: {
+    body: "{{firstName}} - new buyers are looking for suppliers like {{company}} on Wells AI. Free to join, pay only when you win deals. [LINK]"
+  },
+
+  urgency: {
+    body: "{{firstName}}, we're opening Wells AI to 100 early users this week. Given your background, thought you should know. [LINK]"
+  }
+}
 
 // Master key for cold start operations (set in env)
 const MASTER_KEY = process.env.COLD_START_MASTER_KEY || 'wells-master-2024-coldstart'
@@ -28,6 +100,9 @@ function validateAuth(request: NextRequest): boolean {
   return key === MASTER_KEY
 }
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+
 export async function GET(request: NextRequest) {
   if (!validateAuth(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -37,13 +112,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
 
-    // Get contact stats
-    if (action === 'stats') {
-      const stats = await getContactStats()
-      return NextResponse.json({ stats })
-    }
-
-    // Get templates
+    // Get templates - no database needed
     if (action === 'templates') {
       return NextResponse.json({
         email: EMAIL_TEMPLATES,
@@ -51,7 +120,15 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Get contact stats - uses database
+    if (action === 'stats') {
+      const { getContactStats } = await import('@/lib/coldstart/engine')
+      const stats = await getContactStats()
+      return NextResponse.json({ stats })
+    }
+
     // Get contacts
+    const { getContacts } = await import('@/lib/coldstart/engine')
     const filters = {
       sources: searchParams.get('sources')?.split(',').filter(Boolean) as any,
       tags: searchParams.get('tags')?.split(',').filter(Boolean),
@@ -86,6 +163,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action } = body
 
+    // Dynamic import for database operations
+    const engine = await import('@/lib/coldstart/engine')
+
     // ========================================
     // IMPORT CONTACTS
     // ========================================
@@ -97,7 +177,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'csvData is required' }, { status: 400 })
       }
 
-      const result = await importContactsFromCSV(csvData, source || 'email_export', {
+      const result = await engine.importContactsFromCSV(csvData, source || 'email_export', {
         hasHeader,
         columnMap
       })
@@ -112,7 +192,7 @@ export async function POST(request: NextRequest) {
       // LinkedIn exports CSV with specific columns
       const { csvData } = body
 
-      const result = await importContactsFromCSV(csvData, 'linkedin', {
+      const result = await engine.importContactsFromCSV(csvData, 'linkedin', {
         hasHeader: true,
         columnMap: {
           'first name': 'firstName',
@@ -140,7 +220,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const result = await addContact({
+      const result = await engine.addContact({
         ...contact,
         source: contact.source || 'manual'
       })
@@ -172,7 +252,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'name is required' }, { status: 400 })
       }
 
-      const campaign = await createCampaign({
+      const campaign = await engine.createCampaign({
         name,
         description,
         sourceFilter,
@@ -185,7 +265,7 @@ export async function POST(request: NextRequest) {
       // Add variants
       if (variants && Array.isArray(variants)) {
         for (const variant of variants) {
-          await addCampaignVariant(campaign.id, variant)
+          await engine.addCampaignVariant(campaign.id, variant)
         }
       }
 
@@ -205,7 +285,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const result = await addCampaignVariant(campaignId, variant)
+      const result = await engine.addCampaignVariant(campaignId, variant)
 
       return NextResponse.json({
         message: 'Variant added',
@@ -227,7 +307,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const result = await queueCampaignOutreach(campaignId, {
+      const result = await engine.queueCampaignOutreach(campaignId, {
         limit,
         channels
       })
@@ -241,7 +321,7 @@ export async function POST(request: NextRequest) {
     if (action === 'process_queue') {
       const { batchSize, channel } = body
 
-      const result = await processOutreachQueue({
+      const result = await engine.processOutreachQueue({
         batchSize: batchSize || 50,
         channel
       })
@@ -270,13 +350,13 @@ export async function POST(request: NextRequest) {
       // Step 1: Import contacts
       let importResult = { imported: 0, duplicates: 0, errors: [] as string[] }
       if (csvData) {
-        importResult = await importContactsFromCSV(csvData, source || 'email_export', {
+        importResult = await engine.importContactsFromCSV(csvData, source || 'email_export', {
           hasHeader: true
         })
       }
 
       // Step 2: Create campaign
-      const campaign = await createCampaign({
+      const campaign = await engine.createCampaign({
         name: campaignName || `Nuclear Launch ${new Date().toISOString()}`,
         channels: channels || ['email', 'sms'],
         sourceFilter: source ? [source] : undefined,
@@ -292,7 +372,7 @@ export async function POST(request: NextRequest) {
         ? SMS_TEMPLATES[smsTemplate as keyof typeof SMS_TEMPLATES]
         : SMS_TEMPLATES.short_personal
 
-      await addCampaignVariant(campaign.id, {
+      await engine.addCampaignVariant(campaign.id, {
         name: 'Nuclear',
         weight: 100,
         emailSubject: template?.subject,
@@ -301,7 +381,7 @@ export async function POST(request: NextRequest) {
       })
 
       // Step 4: Queue outreach
-      const queueResult = await queueCampaignOutreach(campaign.id, {
+      const queueResult = await engine.queueCampaignOutreach(campaign.id, {
         limit: limit || 10000,
         channels: channels || ['email']
       })
