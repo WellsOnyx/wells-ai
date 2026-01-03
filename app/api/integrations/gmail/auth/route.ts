@@ -86,9 +86,12 @@ export async function GET(request: NextRequest) {
  */
 async function initiateAuth(request: NextRequest, baseUrl: string) {
   try {
+    console.log('[Gmail OAuth] Step 1: Starting initiateAuth');
     const userId = getUserId(request);
     const searchParams = request.nextUrl.searchParams;
     const returnUrl = searchParams.get('return_url') || searchParams.get('returnUrl');
+
+    console.log('[Gmail OAuth] Step 2: userId=', userId);
 
     if (!userId) {
       return NextResponse.json(
@@ -101,6 +104,7 @@ async function initiateAuth(request: NextRequest, baseUrl: string) {
     }
 
     // Check if Google OAuth is configured
+    console.log('[Gmail OAuth] Step 3: Checking env vars');
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       return NextResponse.json(
         {
@@ -112,13 +116,16 @@ async function initiateAuth(request: NextRequest, baseUrl: string) {
     }
 
     const redirectUri = `${baseUrl}/api/integrations/gmail/auth`;
+    console.log('[Gmail OAuth] Step 4: redirectUri=', redirectUri);
 
     // Generate authorization URL
+    console.log('[Gmail OAuth] Step 5: Calling getGmailAuthUrl...');
     const { url, state } = await getGmailAuthUrl({
       userId,
       redirectUri,
       returnUrl: returnUrl || undefined,
     });
+    console.log('[Gmail OAuth] Step 6: Got auth URL');
 
     // For API calls, return the URL. For browser navigation, redirect.
     const acceptHeader = request.headers.get('accept') || '';

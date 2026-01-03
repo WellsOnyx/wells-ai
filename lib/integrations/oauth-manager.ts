@@ -142,9 +142,13 @@ let tablesInitialized = false;
  * Ensure OAuth tables exist with proper schema
  */
 export async function ensureOAuthTables(): Promise<void> {
-  if (tablesInitialized) return;
+  if (tablesInitialized) {
+    console.log('[OAuth] ensureOAuthTables: Already initialized');
+    return;
+  }
 
   try {
+    console.log('[OAuth] ensureOAuthTables: Checking if table exists...');
     // Check if table exists
     const check = await sql`
       SELECT EXISTS (
@@ -153,6 +157,7 @@ export async function ensureOAuthTables(): Promise<void> {
         AND table_name = 'email_connections'
       ) as exists
     `;
+    console.log('[OAuth] ensureOAuthTables: Check complete, exists=', check.rows[0]?.exists);
 
     if (check.rows[0].exists) {
       tablesInitialized = true;
@@ -253,10 +258,14 @@ export async function createOAuthState(params: {
   redirectUri: string;
   returnUrl?: string;
 }): Promise<string> {
+  console.log('[OAuth] createOAuthState: Step 1 - calling ensureOAuthTables');
   await ensureOAuthTables();
+  console.log('[OAuth] createOAuthState: Step 2 - tables ensured');
 
   const state = crypto.randomBytes(32).toString('hex');
+  console.log('[OAuth] createOAuthState: Step 3 - generated state');
 
+  console.log('[OAuth] createOAuthState: Step 4 - inserting to DB');
   await sql`
     INSERT INTO oauth_states (
       state, user_id, provider, code_verifier, redirect_uri, return_url
@@ -266,6 +275,7 @@ export async function createOAuthState(params: {
       ${params.returnUrl || null}
     )
   `;
+  console.log('[OAuth] createOAuthState: Step 5 - insert complete');
 
   return state;
 }
