@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useUser } from '@clerk/nextjs'
 import {
   ArrowLeft,
   Send,
@@ -111,6 +112,7 @@ const CHANNEL_COLORS: Record<string, string> = {
 }
 
 export default function InboxPage() {
+  const { user, isLoaded: isUserLoaded } = useUser()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -243,7 +245,7 @@ export default function InboxPage() {
         body: JSON.stringify({
           action: 'approve',
           messageId: pendingAIMessage.messageId,
-          userId: 'user-1', // TODO: Use actual user ID
+          userId: user?.id || 'anonymous',
           editedContent
         })
       })

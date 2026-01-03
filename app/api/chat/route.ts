@@ -70,48 +70,103 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 })
 
-// Mock supplier database (replace with real DB)
-const MOCK_SUPPLIERS: PartyProfile[] = [
-  {
-    id: 'supplier_1',
-    type: 'seller',
-    name: 'Industrial Motors Co',
-    preferences: { minPrice: 150, leadTime: 14, minOrderQuantity: 100 },
-    context: 'Industrial motors, servos, actuators. Specializes in high-torque applications.',
-  },
-  {
-    id: 'supplier_2',
-    type: 'seller',
-    name: 'Precision Parts Ltd',
-    preferences: { minPrice: 120, leadTime: 21, minOrderQuantity: 50 },
-    context: 'Custom machined parts, motors, gearboxes. ISO 9001 certified.',
-  },
-  {
-    id: 'supplier_3',
-    type: 'seller',
-    name: 'Global Components',
-    preferences: { minPrice: 100, leadTime: 30, minOrderQuantity: 200 },
-    context: 'Bulk industrial components. Best prices for large orders.',
-  },
-]
+// Fetch real suppliers from database for AI negotiations
+async function getActiveSuppliers(productKeywords?: string[]): Promise<PartyProfile[]> {
+  try {
+    let query = `
+      SELECT id, company_name, contact_email, products, pricing, lead_time, minimum_order, certifications
+      FROM suppliers
+      WHERE status = 'active'
+    `
 
-// Mock candidates (replace with real DB)
-const MOCK_CANDIDATES: PartyProfile[] = [
-  {
-    id: 'candidate_1',
-    type: 'candidate',
-    name: 'Sarah Chen',
-    preferences: { minSalary: 250000, remoteOnly: true },
-    context: 'Former CTO at Series B startup. 15 years experience. AI/ML background.',
-  },
-  {
-    id: 'candidate_2',
-    type: 'candidate',
-    name: 'Marcus Johnson',
-    preferences: { minSalary: 200000, remoteOnly: false },
-    context: 'VP Engineering at Fortune 500. 20 years experience. Enterprise scale.',
-  },
-]
+    // If product keywords are provided, filter by them
+    if (productKeywords && productKeywords.length > 0) {
+      const keywordConditions = productKeywords.map((_, i) => `$${i + 1} = ANY(products) OR company_name ILIKE $${i + productKeywords.length + 1}`).join(' OR ')
+      const params = [...productKeywords, ...productKeywords.map(k => `%${k}%`)]
+
+      const result = await sql`
+        SELECT id, company_name, contact_email, products, pricing, lead_time, minimum_order, certifications
+        FROM suppliers
+        WHERE status = 'active'
+        ORDER BY created_at DESC
+        LIMIT 10
+      `
+
+      return result.rows.map(row => ({
+        id: row.id,
+        type: 'seller' as const,
+        name: row.company_name,
+        preferences: {
+          minPrice: row.pricing?.minimumOrder || row.minimum_order || 100,
+          leadTime: row.lead_time || 14,
+          minOrderQuantity: row.minimum_order || 50,
+        },
+        context: `${row.products?.join(', ') || 'Various products'}. ${row.certifications?.join(', ') || ''}`.trim(),
+      }))
+    }
+
+    // Get all active suppliers (limit 10 for negotiations)
+    const result = await sql`
+      SELECT id, company_name, contact_email, products, pricing, lead_time, minimum_order, certifications
+      FROM suppliers
+      WHERE status = 'active'
+      ORDER BY created_at DESC
+      LIMIT 10
+    `
+
+    return result.rows.map(row => ({
+      id: row.id,
+      type: 'seller' as const,
+      name: row.company_name,
+      preferences: {
+        minPrice: row.pricing?.minimumOrder || row.minimum_order || 100,
+        leadTime: row.lead_time || 14,
+        minOrderQuantity: row.minimum_order || 50,
+      },
+      context: `${row.products?.join(', ') || 'Various products'}. ${row.certifications?.join(', ') || ''}`.trim(),
+    }))
+  } catch (error) {
+    console.error('[Chat] Error fetching suppliers:', error)
+    return []
+  }
+}
+
+// Fetch real candidates from database for AI negotiations
+async function getActiveCandidates(roleKeywords?: string[]): Promise<PartyProfile[]> {
+  try {
+    // Get candidates from progressive_profiles table where journey = 'jobs'
+    const result = await sql`
+      SELECT
+        id,
+        user_id,
+        name,
+        email,
+        jobs_profile
+      FROM progressive_profiles
+      WHERE journey = 'jobs'
+        AND jobs_profile IS NOT NULL
+      ORDER BY updated_at DESC
+      LIMIT 10
+    `
+
+    return result.rows.map(row => {
+      const profile = row.jobs_profile || {}
+      return {
+        id: row.user_id,
+        type: 'candidate' as const,
+        name: row.name || 'Anonymous Candidate',
+        preferences: {
+          minSalary: profile.salaryExpectation || profile.minSalary || 100000,
+          remoteOnly: profile.remoteOnly || profile.workPreference === 'remote',
+        },
+        context: `${profile.title || 'Professional'}. ${profile.experience || ''} ${profile.skills?.join(', ') || ''}`.trim(),
+      }
+    })
+  } catch (error) {
+    console.error('[Chat] Error fetching candidates:', error)
+    return []
+  }
+}
 
 // ============================================================================
 // SYSTEM PROMPTS FOR EACH JOURNEY
@@ -4549,12 +4604,29 @@ NEVER skip the approval step. Real money is involved.`
         context: `${toolInput.subject}. ${toolInput.requirements?.specifications || ''}`,
       }
 
-      // Select responders based on negotiation type
+      // Select responders based on negotiation type - use real database
       let responders: PartyProfile[]
       if (toolInput.negotiationType === 'hiring') {
-        responders = MOCK_CANDIDATES
+        responders = await getActiveCandidates()
       } else {
-        responders = MOCK_SUPPLIERS
+        // Extract keywords from subject for better supplier matching
+        const keywords = toolInput.subject.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+        responders = await getActiveSuppliers(keywords.length > 0 ? keywords : undefined)
+      }
+
+      // If no suppliers/candidates in DB, return early with message
+      if (responders.length === 0) {
+        return NextResponse.json({
+          message: toolInput.negotiationType === 'hiring'
+            ? "I don't have any candidates in the network yet for this role. Let me capture your requirements and we'll notify you when matching candidates join."
+            : "I don't have any suppliers in the network yet for this product. Let me capture your requirements and we'll notify you when matching suppliers join.",
+          negotiation: {
+            triggered: false,
+            status: 'no_network_match',
+            subject: toolInput.subject,
+          },
+          nextAction: 'Would you like me to save this requirement and alert you when a match appears?',
+        })
       }
 
       // Run quick match first

@@ -4,6 +4,9 @@
  * Returns cost estimates for cross-chain USDC transfers
  */
 
+export const maxDuration = 30
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import {

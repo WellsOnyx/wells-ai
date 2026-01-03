@@ -4,6 +4,9 @@
  * Returns list of supported blockchains for cross-chain transfers
  */
 
+export const maxDuration = 30
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import {
   getSupportedChains,

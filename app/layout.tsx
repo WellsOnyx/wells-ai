@@ -88,14 +88,14 @@ export default async function RootLayout({
     return <RootLayoutContent>{children}</RootLayoutContent>
   }
 
-  // Configure ClerkProvider with domain-specific paths
-  // Clerk is configured to work directly on both domains
+  // Configure ClerkProvider with unified auth flow
+  // Both domains use same auth pages, journey parameter differentiates
   return (
     <ClerkProvider
-      signInUrl={isGrainVault ? '/grain-vault/signin' : '/sign-in'}
-      signUpUrl={isGrainVault ? '/grain-vault/signup' : '/sign-up'}
-      afterSignInUrl={isGrainVault ? '/grain-vault/dashboard' : '/dashboard'}
-      afterSignUpUrl={isGrainVault ? '/grain-vault/onboard' : '/onboarding'}
+      signInUrl="/sign-in"
+      signUpUrl={isGrainVault ? '/join?journey=treasury' : '/join'}
+      afterSignInUrl={isGrainVault ? '/dashboard?journey=treasury' : '/dashboard'}
+      afterSignUpUrl={isGrainVault ? '/dashboard?journey=treasury' : '/dashboard'}
     >
       <RootLayoutContent>{children}</RootLayoutContent>
     </ClerkProvider>
