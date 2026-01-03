@@ -7,8 +7,16 @@
  * Designed for delight - seamless like Superhuman's setup flow.
  */
 
-import { sql } from '@vercel/postgres';
+import { query } from '@/lib/db';
 import * as crypto from 'crypto';
+
+// Helper to run SQL with template literals converted to parameterized query
+async function sql(strings: TemplateStringsArray, ...values: any[]) {
+  const queryText = strings.reduce((acc, str, i) => {
+    return acc + str + (i < values.length ? `$${i + 1}` : '');
+  }, '');
+  return query(queryText, values);
+}
 
 // ============================================================================
 // TYPES
