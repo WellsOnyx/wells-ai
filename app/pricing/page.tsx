@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * WellsAI Pricing Page
- * Three-tier pricing with glassmorphic cards and gold accents
+ * Grain & Vault Pricing Page
+ * Three-tier pricing with glassmorphic cards and emerald accents
  * Free, Pro ($99/mo), Enterprise (Custom)
  * Monthly/Annual toggle with 20% annual discount
  * 1% success fee model highlighted
@@ -30,7 +30,9 @@ import {
   Headphones,
   Code,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Coins,
+  Brain,
 } from 'lucide-react'
 
 // Pricing tiers data
@@ -183,24 +185,27 @@ export default function PricingPage() {
       `}</style>
 
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-[#0a0f1a]/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/10">
+      <nav className="sticky top-0 z-50 bg-[#030712]/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-[1200px] mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 text-gray-900 dark:text-white font-semibold text-[17px]">
-            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center text-white text-[14px] font-bold shadow-lg shadow-amber-500/20">
-              W
+          <Link href="/" className="flex items-center gap-3 text-white font-semibold text-[17px] group">
+            <div className="relative">
+              <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all">
+                <Coins className="w-5 h-5 text-black" />
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-amber-500 rounded-sm" />
             </div>
-            WellsAI
+            Grain & Vault
           </Link>
           <div className="flex items-center gap-4">
-            <Link href="/how-it-works" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+            <Link href="/how-it-works" className="text-sm text-gray-400 hover:text-white transition-colors">
               How It Works
             </Link>
-            <Link href="/" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+            <Link href="/" className="text-sm text-gray-400 hover:text-white transition-colors">
               Home
             </Link>
             <Link
               href="/join"
-              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-medium rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg shadow-amber-500/20"
+              className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-black text-sm font-medium rounded-xl hover:from-emerald-400 hover:to-teal-500 transition-all shadow-lg shadow-emerald-500/20"
             >
               Get Started
             </Link>
@@ -553,23 +558,32 @@ export default function PricingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-gray-200 dark:border-white/10">
+      <footer className="py-12 border-t border-white/10 bg-[#030712]">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <Link href="/" className="flex items-center gap-2.5 text-gray-900 dark:text-white font-semibold text-[17px]">
-              <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center text-white text-[14px] font-bold shadow-lg shadow-amber-500/20">
-                W
+            <Link href="/" className="flex items-center gap-3 text-white font-semibold text-[17px]">
+              <div className="relative">
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
+                  <Coins className="w-4 h-4 text-black" />
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-sm" />
               </div>
-              WellsAI
+              Grain & Vault
             </Link>
-            <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
-              <Link href="/terms" className="hover:text-gray-900 dark:hover:text-white transition-colors">Terms</Link>
-              <Link href="/privacy" className="hover:text-gray-900 dark:hover:text-white transition-colors">Privacy</Link>
-              <Link href="/contact" className="hover:text-gray-900 dark:hover:text-white transition-colors">Contact</Link>
+            <div className="flex items-center gap-6 text-sm text-gray-400">
+              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              2025 WellsAI. All rights reserved.
-            </p>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-white/40 text-xs">
+                <Brain className="w-3 h-3" />
+                <span>Powered by WellsAI</span>
+              </div>
+              <p className="text-sm text-gray-500">
+                © 2025 Grain & Vault
+              </p>
+            </div>
           </div>
         </div>
       </footer>

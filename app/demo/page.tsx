@@ -26,7 +26,8 @@ import {
   Loader2,
   ArrowLeftRight,
   Shield,
-  Lock
+  Lock,
+  Coins,
 } from 'lucide-react'
 
 type DemoMode = 'intro' | 'ai-to-ai' | 'journeys' | 'result'
@@ -390,13 +391,16 @@ export default function WellsDemo() {
       `}</style>
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-navy-900/80 backdrop-blur-xl border-b border-white/10">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#030712]/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-navy-900" />
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="relative">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <Coins className="w-5 h-5 text-black" />
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-amber-500 rounded-sm" />
             </div>
-            <span className="font-bold text-xl">WellsAI</span>
+            <span className="font-bold text-xl text-white">Grain & Vault</span>
           </Link>
           <button
             onClick={handleReset}
