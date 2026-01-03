@@ -1,14 +1,14 @@
 'use client'
 
 /**
- * Unified Dashboard - Premium Minimal Design with Dynamic Branding
+ * Unified Dashboard - Grain & Vault Branding
  *
  * Design principles:
  * - Dead simple: One input, AI handles everything
- * - High-end: Lots of whitespace, subtle shadows, refined typography
+ * - Premium: Dark theme with emerald accents, glassmorphism
  * - Crisp: Sharp edges where needed, smooth animations
  * - Unified: All journeys accessible from one place
- * - Brand-aware: Treasury journey shows Grain & Vault branding
+ * - Brand: Always Grain & Vault with "Powered by WellsAI" attribution
  */
 
 import { useUser } from '@clerk/nextjs'
@@ -33,6 +33,8 @@ import {
   MoreHorizontal,
   ExternalLink,
   Handshake,
+  Brain,
+  Coins,
 } from 'lucide-react'
 
 // Types
@@ -51,17 +53,19 @@ interface QuickAction {
   icon?: React.ElementType
 }
 
-// Journey configuration - minimal
+// Journey configuration
 const JOURNEYS: Record<JourneyType, {
   label: string
   icon: React.ElementType
   color: string
   actions: QuickAction[]
+  tagline: string
 }> = {
   treasury: {
     label: 'Treasury',
     icon: Wallet,
     color: '#10B981',
+    tagline: "Your treasury is ready. What do you need?",
     actions: [
       { label: 'Check balance', prompt: "What's my GRAIN balance?" },
       { label: 'Send payment', prompt: 'Send GRAIN to...' },
@@ -72,6 +76,7 @@ const JOURNEYS: Record<JourneyType, {
     label: 'Deals',
     icon: Handshake,
     color: '#8B5CF6',
+    tagline: "Frictionless B2B. Say 'yes, proceed' and it's done.",
     actions: [
       { label: 'New deal', prompt: 'I want to create a deal...' },
       { label: 'My deals', prompt: 'Show my active deals' },
@@ -82,6 +87,7 @@ const JOURNEYS: Record<JourneyType, {
     label: 'Sourcing',
     icon: ShoppingCart,
     color: '#3B82F6',
+    tagline: "Ready to source. What are you looking for?",
     actions: [
       { label: 'Get quotes', prompt: 'I need quotes for...' },
       { label: 'Find suppliers', prompt: 'Find suppliers for...' },
@@ -92,6 +98,7 @@ const JOURNEYS: Record<JourneyType, {
     label: 'Sales',
     icon: TrendingUp,
     color: '#8B5CF6',
+    tagline: "Let's find you customers. Where should we start?",
     actions: [
       { label: 'Find leads', prompt: 'Find me qualified buyers' },
       { label: 'View RFQs', prompt: 'Show incoming RFQs' },
@@ -102,6 +109,7 @@ const JOURNEYS: Record<JourneyType, {
     label: 'Hiring',
     icon: Users,
     color: '#F59E0B',
+    tagline: "Ready to build your team. Who do you need?",
     actions: [
       { label: 'Post job', prompt: 'I need to hire a...' },
       { label: 'Find talent', prompt: 'Find candidates for...' },
@@ -138,9 +146,6 @@ export default function Dashboard() {
       setActiveJourney(journey)
     }
   }, [searchParams])
-
-  // Determine if treasury branding should be used
-  const isTreasury = activeJourney === 'treasury'
 
   // Fetch treasury data
   useEffect(() => {
@@ -232,57 +237,48 @@ export default function Dashboard() {
 
   if (!isLoaded) {
     return (
-      <div className={`min-h-screen ${isTreasury ? 'bg-black' : 'bg-[#FAFAFA]'} flex items-center justify-center`}>
-        <Loader2 className={`w-6 h-6 animate-spin ${isTreasury ? 'text-emerald-500' : 'text-gray-400'}`} />
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
       </div>
     )
   }
 
   return (
-    <div className={`min-h-screen ${isTreasury ? 'bg-black' : 'bg-[#FAFAFA]'}`}>
-      {/* Header - Dynamic branding */}
-      <header className={`h-16 border-b ${isTreasury ? 'border-white/10 bg-black/80' : 'border-gray-100 bg-white/80'} backdrop-blur-xl sticky top-0 z-50`}>
+    <div className="min-h-screen bg-[#030712]">
+      {/* Background effects */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-teal-500/5 rounded-full blur-[100px]" />
+      </div>
+
+      {/* Header - Always Grain & Vault */}
+      <header className="h-16 border-b border-white/10 bg-black/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto h-full px-6 flex items-center justify-between">
-          {/* Logo - Dynamic */}
-          <Link href={isTreasury ? '/grain-vault' : '/'} className="flex items-center gap-3">
-            {isTreasury ? (
-              <>
-                <div className="relative">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-                    <div className="w-3.5 h-3.5 bg-black rounded-sm" />
-                  </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-sm" />
-                </div>
-                <span className="font-semibold text-white">Grain & Vault</span>
-              </>
-            ) : (
-              <>
-                <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">W</span>
-                </div>
-                <span className="font-semibold text-gray-900">Wells</span>
-              </>
-            )}
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                <Coins className="w-4 h-4 text-black" />
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-sm" />
+            </div>
+            <span className="font-semibold text-white">Grain & Vault</span>
           </Link>
 
           {/* Journey Picker */}
           <div className="relative">
             <button
               onClick={() => setShowJourneyPicker(!showJourneyPicker)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border ${
-                isTreasury
-                  ? 'border-white/20 hover:border-white/30 bg-white/5'
-                  : 'border-gray-200 hover:border-gray-300 bg-white'
-              } transition-all`}
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 hover:border-white/30 bg-white/5 transition-all"
             >
               <div
                 className="w-2 h-2 rounded-full"
                 style={{ backgroundColor: currentJourney.color }}
               />
-              <span className={`text-sm font-medium ${isTreasury ? 'text-white' : 'text-gray-700'}`}>
+              <span className="text-sm font-medium text-white">
                 {currentJourney.label}
               </span>
-              <ChevronDown className={`w-4 h-4 ${isTreasury ? 'text-gray-400' : 'text-gray-400'}`} />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </button>
 
             {showJourneyPicker && (
@@ -291,9 +287,7 @@ export default function Dashboard() {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowJourneyPicker(false)}
                 />
-                <div className={`absolute top-full mt-2 right-0 w-48 ${
-                  isTreasury ? 'bg-gray-900 border-white/10' : 'bg-white border-gray-100'
-                } rounded-xl shadow-lg border py-2 z-20`}>
+                <div className="absolute top-full mt-2 right-0 w-48 bg-gray-900 border-white/10 rounded-xl shadow-lg border py-2 z-20">
                   {Object.entries(JOURNEYS).map(([key, journey]) => {
                     const Icon = journey.icon
                     return (
@@ -304,18 +298,16 @@ export default function Dashboard() {
                           setShowJourneyPicker(false)
                           router.push(`/dashboard?journey=${key}`)
                         }}
-                        className={`w-full px-4 py-2.5 flex items-center gap-3 ${
-                          isTreasury ? 'hover:bg-white/5' : 'hover:bg-gray-50'
-                        } transition-all ${
-                          activeJourney === key ? (isTreasury ? 'bg-white/5' : 'bg-gray-50') : ''
+                        className={`w-full px-4 py-2.5 flex items-center gap-3 hover:bg-white/5 transition-all ${
+                          activeJourney === key ? 'bg-white/5' : ''
                         }`}
                       >
                         <Icon className="w-4 h-4" style={{ color: journey.color }} />
-                        <span className={`text-sm ${isTreasury ? 'text-white' : 'text-gray-700'}`}>
+                        <span className="text-sm text-white">
                           {journey.label}
                         </span>
                         {activeJourney === key && (
-                          <CheckCircle2 className={`w-4 h-4 ml-auto ${isTreasury ? 'text-emerald-500' : 'text-gray-400'}`} />
+                          <CheckCircle2 className="w-4 h-4 ml-auto text-emerald-500" />
                         )}
                       </button>
                     )
@@ -326,29 +318,31 @@ export default function Dashboard() {
           </div>
 
           {/* User */}
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: "w-8 h-8",
-              }
-            }}
-          />
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2 text-white/40 text-xs">
+              <Brain className="w-3 h-3" />
+              <span>Powered by WellsAI</span>
+            </div>
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "w-8 h-8",
+                }
+              }}
+            />
+          </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        {/* Hero Section - Context aware */}
+      <main className="max-w-6xl mx-auto px-6 py-8 relative z-10">
+        {/* Hero Section */}
         {messages.length === 0 && (
           <div className="mb-12">
-            <h1 className={`text-4xl font-semibold ${isTreasury ? 'text-white' : 'text-gray-900'} mb-2`}>
+            <h1 className="text-4xl font-semibold text-white mb-2">
               Hey {firstName}
             </h1>
-            <p className={`text-lg ${isTreasury ? 'text-gray-400' : 'text-gray-500'}`}>
-              {activeJourney === 'treasury' && "Your treasury is ready. What do you need?"}
-              {activeJourney === 'deals' && "Frictionless B2B. Say 'yes, proceed' and it's done."}
-              {activeJourney === 'sourcing' && "Ready to source. What are you looking for?"}
-              {activeJourney === 'sales' && "Let's find you customers. Where should we start?"}
-              {activeJourney === 'hiring' && "Ready to build your team. Who do you need?"}
+            <p className="text-lg text-gray-400">
+              {currentJourney.tagline}
             </p>
           </div>
         )}
@@ -367,18 +361,12 @@ export default function Dashboard() {
                     <div
                       className={`max-w-[85%] ${
                         msg.role === 'user'
-                          ? isTreasury
-                            ? 'bg-emerald-600 text-white rounded-3xl rounded-br-lg px-5 py-3'
-                            : 'bg-gray-900 text-white rounded-3xl rounded-br-lg px-5 py-3'
-                          : isTreasury
-                            ? 'bg-white/5 border border-white/10 rounded-3xl rounded-bl-lg px-5 py-3'
-                            : 'bg-white border border-gray-100 rounded-3xl rounded-bl-lg px-5 py-3 shadow-sm'
+                          ? 'bg-emerald-600 text-white rounded-3xl rounded-br-lg px-5 py-3'
+                          : 'bg-white/5 border border-white/10 rounded-3xl rounded-bl-lg px-5 py-3'
                       }`}
                     >
                       <p className={`text-[15px] leading-relaxed whitespace-pre-wrap ${
-                        msg.role === 'user'
-                          ? 'text-white'
-                          : isTreasury ? 'text-gray-200' : 'text-gray-700'
+                        msg.role === 'user' ? 'text-white' : 'text-gray-200'
                       }`}>
                         {msg.content}
                       </p>
@@ -388,16 +376,12 @@ export default function Dashboard() {
 
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className={`${
-                      isTreasury
-                        ? 'bg-white/5 border-white/10'
-                        : 'bg-white border-gray-100 shadow-sm'
-                    } border rounded-3xl rounded-bl-lg px-5 py-3`}>
+                    <div className="bg-white/5 border-white/10 border rounded-3xl rounded-bl-lg px-5 py-3">
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1">
-                          <div className={`w-2 h-2 ${isTreasury ? 'bg-emerald-500' : 'bg-gray-300'} rounded-full animate-bounce`} style={{ animationDelay: '0ms' }} />
-                          <div className={`w-2 h-2 ${isTreasury ? 'bg-emerald-500' : 'bg-gray-300'} rounded-full animate-bounce`} style={{ animationDelay: '150ms' }} />
-                          <div className={`w-2 h-2 ${isTreasury ? 'bg-emerald-500' : 'bg-gray-300'} rounded-full animate-bounce`} style={{ animationDelay: '300ms' }} />
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
                       </div>
                     </div>
@@ -408,12 +392,8 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Input - The main interaction */}
-            <div className={`${
-              isTreasury
-                ? 'bg-white/5 border-white/10'
-                : 'bg-white border-gray-200 shadow-sm'
-            } rounded-2xl border overflow-hidden`}>
+            {/* Input */}
+            <div className="bg-white/5 border-white/10 rounded-2xl border overflow-hidden">
               <div className="flex items-center">
                 <input
                   ref={inputRef}
@@ -421,28 +401,20 @@ export default function Dashboard() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={isTreasury ? "Ask about your treasury..." : "Ask Wells anything..."}
-                  className={`flex-1 px-5 py-4 text-[15px] ${
-                    isTreasury
-                      ? 'bg-transparent text-white placeholder-gray-500'
-                      : 'text-gray-900 placeholder-gray-400'
-                  } focus:outline-none`}
+                  placeholder="Ask anything..."
+                  className="flex-1 px-5 py-4 text-[15px] bg-transparent text-white placeholder-gray-500 focus:outline-none"
                 />
                 <button
                   onClick={() => sendMessage()}
                   disabled={!input.trim() || isLoading}
-                  className={`m-2 p-3 ${
-                    isTreasury
-                      ? 'bg-emerald-600 hover:bg-emerald-500'
-                      : 'bg-gray-900 hover:bg-gray-800'
-                  } text-white rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all`}
+                  className="m-2 p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
                   <Send className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Quick Actions - Show when no messages */}
+            {/* Quick Actions */}
             {messages.length === 0 && (
               <div className="mt-6">
                 <div className="flex flex-wrap gap-2">
@@ -450,11 +422,7 @@ export default function Dashboard() {
                     <button
                       key={i}
                       onClick={() => sendMessage(action.prompt)}
-                      className={`px-4 py-2 ${
-                        isTreasury
-                          ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20 hover:text-white'
-                          : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-900'
-                      } border rounded-full text-sm transition-all`}
+                      className="px-4 py-2 bg-white/5 border-white/10 text-gray-300 hover:border-white/20 hover:text-white border rounded-full text-sm transition-all"
                     >
                       {action.label}
                     </button>
@@ -464,30 +432,26 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Sidebar - Context Cards */}
+          {/* Sidebar */}
           <div className="space-y-4">
-            {/* Treasury Card - Always visible */}
-            <div className={`${
-              isTreasury
-                ? 'bg-gradient-to-br from-emerald-900/50 to-green-900/30 border-emerald-500/20'
-                : 'bg-white border-gray-100'
-            } rounded-2xl border p-5`}>
+            {/* Treasury Card */}
+            <div className="bg-gradient-to-br from-emerald-900/50 to-teal-900/30 border-emerald-500/20 rounded-2xl border p-5">
               <div className="flex items-center justify-between mb-4">
-                <span className={`text-sm font-medium ${isTreasury ? 'text-emerald-400' : 'text-gray-500'}`}>
+                <span className="text-sm font-medium text-emerald-400">
                   GRAIN Balance
                 </span>
-                <button className={`p-1 ${isTreasury ? 'hover:bg-white/5' : 'hover:bg-gray-100'} rounded-lg transition-all`}>
-                  <MoreHorizontal className={`w-4 h-4 ${isTreasury ? 'text-gray-500' : 'text-gray-400'}`} />
+                <button className="p-1 hover:bg-white/5 rounded-lg transition-all">
+                  <MoreHorizontal className="w-4 h-4 text-gray-500" />
                 </button>
               </div>
               <div className="mb-1">
-                <span className={`text-3xl font-semibold ${isTreasury ? 'text-white' : 'text-gray-900'}`}>
+                <span className="text-3xl font-semibold text-white">
                   {grainBalance.toLocaleString()}
                 </span>
-                <span className={`text-lg ml-1 ${isTreasury ? 'text-gray-400' : 'text-gray-400'}`}>GRAIN</span>
+                <span className="text-lg ml-1 text-gray-400">GRAIN</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className={isTreasury ? 'text-gray-400' : 'text-gray-500'}>
+                <span className="text-gray-400">
                   ${(grainBalance * grainPrice).toLocaleString()}
                 </span>
                 <span className="text-emerald-500 flex items-center gap-0.5">
@@ -496,25 +460,17 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              <div className={`mt-4 pt-4 border-t ${isTreasury ? 'border-white/10' : 'border-gray-100'}`}>
+              <div className="mt-4 pt-4 border-t border-white/10">
                 <div className="flex gap-2">
                   <button
                     onClick={() => sendMessage("Send GRAIN to...")}
-                    className={`flex-1 py-2 px-3 ${
-                      isTreasury
-                        ? 'bg-emerald-600 hover:bg-emerald-500'
-                        : 'bg-gray-900 hover:bg-gray-800'
-                    } text-white text-sm font-medium rounded-lg transition-all`}
+                    className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-all"
                   >
                     Send
                   </button>
                   <button
                     onClick={() => sendMessage("I need to deposit funds")}
-                    className={`flex-1 py-2 px-3 ${
-                      isTreasury
-                        ? 'bg-white/10 hover:bg-white/15 text-white'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    } text-sm font-medium rounded-lg transition-all`}
+                    className="flex-1 py-2 px-3 bg-white/10 hover:bg-white/15 text-white text-sm font-medium rounded-lg transition-all"
                   >
                     Deposit
                   </button>
@@ -523,49 +479,41 @@ export default function Dashboard() {
             </div>
 
             {/* Recent Activity */}
-            <div className={`${
-              isTreasury
-                ? 'bg-white/5 border-white/10'
-                : 'bg-white border-gray-100'
-            } rounded-2xl border p-5`}>
+            <div className="bg-white/5 border-white/10 rounded-2xl border p-5">
               <div className="flex items-center justify-between mb-4">
-                <span className={`text-sm font-medium ${isTreasury ? 'text-gray-400' : 'text-gray-500'}`}>
+                <span className="text-sm font-medium text-gray-400">
                   Recent Activity
                 </span>
               </div>
 
               {recentTx.length === 0 ? (
                 <div className="text-center py-6">
-                  <Clock className={`w-8 h-8 ${isTreasury ? 'text-gray-600' : 'text-gray-200'} mx-auto mb-2`} />
-                  <p className={`text-sm ${isTreasury ? 'text-gray-500' : 'text-gray-400'}`}>No activity yet</p>
+                  <Clock className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No activity yet</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {recentTx.slice(0, 3).map((tx, i) => (
                     <div key={i} className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        tx.direction === 'received'
-                          ? isTreasury ? 'bg-emerald-500/20' : 'bg-emerald-50'
-                          : isTreasury ? 'bg-white/10' : 'bg-gray-100'
+                        tx.direction === 'received' ? 'bg-emerald-500/20' : 'bg-white/10'
                       }`}>
                         {tx.direction === 'received' ? (
-                          <ArrowDownLeft className={`w-4 h-4 ${isTreasury ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                          <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
                         ) : (
-                          <ArrowUpRight className={`w-4 h-4 ${isTreasury ? 'text-gray-400' : 'text-gray-600'}`} />
+                          <ArrowUpRight className="w-4 h-4 text-gray-400" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${isTreasury ? 'text-white' : 'text-gray-900'} truncate`}>
+                        <p className="text-sm font-medium text-white truncate">
                           {tx.type || 'Transfer'}
                         </p>
-                        <p className={`text-xs ${isTreasury ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <p className="text-xs text-gray-500">
                           {tx.counterparty || 'System'}
                         </p>
                       </div>
                       <span className={`text-sm font-medium ${
-                        tx.direction === 'received'
-                          ? isTreasury ? 'text-emerald-400' : 'text-emerald-600'
-                          : isTreasury ? 'text-white' : 'text-gray-900'
+                        tx.direction === 'received' ? 'text-emerald-400' : 'text-white'
                       }`}>
                         {tx.direction === 'received' ? '+' : '-'}{tx.amount}
                       </span>
@@ -575,77 +523,97 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Credit Line - If available */}
-            <div className={`${
-              isTreasury
-                ? 'bg-white/5 border-white/10'
-                : 'bg-white border-gray-100'
-            } rounded-2xl border p-5`}>
+            {/* Credit Line */}
+            <div className="bg-white/5 border-white/10 rounded-2xl border p-5">
               <div className="flex items-center gap-2 mb-3">
-                <CreditCard className={`w-4 h-4 ${isTreasury ? 'text-blue-400' : 'text-gray-400'}`} />
-                <span className={`text-sm font-medium ${isTreasury ? 'text-gray-400' : 'text-gray-500'}`}>
+                <CreditCard className="w-4 h-4 text-amber-400" />
+                <span className="text-sm font-medium text-gray-400">
                   Credit Line
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className={`text-2xl font-semibold ${isTreasury ? 'text-white' : 'text-gray-900'}`}>
+                <span className="text-2xl font-semibold text-white">
                   $50,000
                 </span>
-                <span className={`text-sm ${isTreasury ? 'text-gray-500' : 'text-gray-400'}`}>available</span>
+                <span className="text-sm text-gray-500">available</span>
               </div>
-              <div className={`mt-3 h-2 ${isTreasury ? 'bg-white/10' : 'bg-gray-100'} rounded-full overflow-hidden`}>
-                <div className={`h-full w-1/4 ${isTreasury ? 'bg-blue-500' : 'bg-emerald-500'} rounded-full`} />
+              <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full w-1/4 bg-amber-500 rounded-full" />
               </div>
-              <p className={`text-xs ${isTreasury ? 'text-gray-500' : 'text-gray-400'} mt-2`}>
-                $12,500 used of $62,500 limit
+              <p className="text-xs text-gray-500 mt-2">
+                $12,500 used of $62,500 limit • 0% interest
               </p>
             </div>
 
             {/* Journey specific cards */}
             {activeJourney === 'sourcing' && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className="bg-white/5 border-white/10 rounded-2xl border p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <ShoppingCart className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-medium text-gray-500">Active RFQs</span>
+                  <ShoppingCart className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm font-medium text-gray-400">Active RFQs</span>
                 </div>
                 <div className="text-center py-4">
-                  <p className="text-2xl font-semibold text-gray-900">0</p>
-                  <p className="text-sm text-gray-400 mt-1">Start sourcing to see RFQs</p>
+                  <p className="text-2xl font-semibold text-white">0</p>
+                  <p className="text-sm text-gray-500 mt-1">Start sourcing to see RFQs</p>
                 </div>
               </div>
             )}
 
             {activeJourney === 'hiring' && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className="bg-white/5 border-white/10 rounded-2xl border p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <Users className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm font-medium text-gray-500">Open Roles</span>
+                  <Users className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-medium text-gray-400">Open Roles</span>
                 </div>
                 <div className="text-center py-4">
-                  <p className="text-2xl font-semibold text-gray-900">0</p>
-                  <p className="text-sm text-gray-400 mt-1">Post a job to get started</p>
+                  <p className="text-2xl font-semibold text-white">0</p>
+                  <p className="text-sm text-gray-500 mt-1">Post a job to get started</p>
                 </div>
               </div>
             )}
 
-            {/* Grain & Vault specific - Learn more */}
-            {isTreasury && (
-              <div className="bg-gradient-to-br from-blue-900/30 to-indigo-900/20 rounded-2xl border border-blue-500/20 p-5">
+            {activeJourney === 'sales' && (
+              <div className="bg-white/5 border-white/10 rounded-2xl border p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm font-medium text-blue-400">Learn GRAIN</span>
+                  <TrendingUp className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm font-medium text-gray-400">Pipeline</span>
                 </div>
-                <p className="text-sm text-gray-400 mb-4">
-                  GRAIN is the anti-inflationary stablecoin. Your money grows while you hold.
-                </p>
-                <Link
-                  href="/grain-vault"
-                  className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                >
-                  Learn more <ExternalLink className="w-3 h-3" />
-                </Link>
+                <div className="text-center py-4">
+                  <p className="text-2xl font-semibold text-white">$0</p>
+                  <p className="text-sm text-gray-500 mt-1">Find leads to build pipeline</p>
+                </div>
               </div>
             )}
+
+            {activeJourney === 'deals' && (
+              <div className="bg-white/5 border-white/10 rounded-2xl border p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Handshake className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm font-medium text-gray-400">Active Deals</span>
+                </div>
+                <div className="text-center py-4">
+                  <p className="text-2xl font-semibold text-white">0</p>
+                  <p className="text-sm text-gray-500 mt-1">Create a deal to get started</p>
+                </div>
+              </div>
+            )}
+
+            {/* Learn more card */}
+            <div className="bg-gradient-to-br from-violet-900/30 to-purple-900/20 rounded-2xl border border-violet-500/20 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-violet-400" />
+                <span className="text-sm font-medium text-violet-400">Powered by WellsAI</span>
+              </div>
+              <p className="text-sm text-gray-400 mb-4">
+                AI-to-AI negotiation. Instant settlement. 1% success fee only when deals close.
+              </p>
+              <Link
+                href="/grain-vault"
+                className="flex items-center gap-1 text-sm text-violet-400 hover:text-violet-300 transition-colors"
+              >
+                Learn more <ExternalLink className="w-3 h-3" />
+              </Link>
+            </div>
           </div>
         </div>
       </main>
