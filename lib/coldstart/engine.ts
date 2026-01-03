@@ -372,7 +372,7 @@ export async function addContact(contact: Contact): Promise<{ id: string; isDupl
       ${contact.twitterHandle || null},
       ${contact.source},
       ${contact.sourceId || null},
-      ${JSON.stringify(contact.tags || [])},
+      ${contact.tags && contact.tags.length > 0 ? `{${contact.tags.join(',')}}` : '{}'},
       ${contact.relationship || 'unknown'}
     )
     RETURNING id
