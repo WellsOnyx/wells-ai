@@ -14,6 +14,7 @@
 import { useUser } from '@clerk/nextjs'
 import { UserButton } from '@clerk/nextjs'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { userButtonAppearance } from '@/lib/clerk-theme'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
@@ -323,13 +324,7 @@ export default function Dashboard() {
               <Brain className="w-3 h-3" />
               <span>Powered by WellsAI</span>
             </div>
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: "w-8 h-8",
-                }
-              }}
-            />
+            <UserButton appearance={userButtonAppearance} />
           </div>
         </div>
       </header>

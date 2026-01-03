@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { Inter } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { grainVaultClerkAppearance } from '@/lib/clerk-theme'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -90,12 +91,14 @@ export default async function RootLayout({
 
   // Configure ClerkProvider with unified auth flow
   // Both domains use same auth pages, journey parameter differentiates
+  // Clerk Pro: Full white-label branding, optimized for thousands of concurrent users
   return (
     <ClerkProvider
       signInUrl="/sign-in"
       signUpUrl={isGrainVault ? '/join?journey=treasury' : '/join'}
       afterSignInUrl={isGrainVault ? '/dashboard?journey=treasury' : '/dashboard'}
       afterSignUpUrl={isGrainVault ? '/dashboard?journey=treasury' : '/dashboard'}
+      appearance={grainVaultClerkAppearance}
     >
       <RootLayoutContent>{children}</RootLayoutContent>
     </ClerkProvider>
