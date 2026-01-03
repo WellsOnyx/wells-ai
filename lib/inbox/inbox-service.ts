@@ -1,5 +1,6 @@
 // Unified Inbox Service
 // Core service for managing messages across all channels
+// Includes campaign reply detection for cold start campaigns
 
 import { sql } from '@vercel/postgres';
 import Anthropic from '@anthropic-ai/sdk';
@@ -32,6 +33,14 @@ import {
   AISentiment,
   AIExtractedEntity,
 } from './types';
+import {
+  detectCampaignReply,
+  linkMessageToCampaign,
+  getCampaignContext,
+  getCampaignReplies,
+  CampaignMatch,
+  CampaignContext,
+} from './campaign-linker';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -450,7 +459,7 @@ export class InboxService {
     const messages: InboxMessage[] = result.rows.map(this.mapRowToMessage);
 
     // Get unique thread IDs and fetch those threads
-    const threadIds = [...new Set(messages.map(m => m.threadId))];
+    const threadIds = Array.from(new Set(messages.map(m => m.threadId)));
     const threadsResult = await sql.query(
       `SELECT * FROM inbox_threads WHERE id = ANY($1)`,
       [threadIds]
@@ -614,9 +623,399 @@ Provide 3 alternative replies in JSON format:
     };
   }
 
+  // ============================================================================
+  // CAMPAIGN LINKING METHODS
+  // ============================================================================
+
+  /**
+   * Ingest a new message into the inbox with campaign reply detection
+   * This is the main entry point for receiving messages from providers (Gmail, SMS, etc.)
+   */
+  async ingestMessage(message: {
+    userId: string;
+    accountId: string;
+    provider: InboxProvider;
+    externalMessageId?: string;
+    threadId?: string;
+    externalThreadId?: string;
+    direction: 'inbound' | 'outbound';
+    fromAddress?: string;
+    fromName?: string;
+    fromPhone?: string;
+    toAddresses?: string[];
+    ccAddresses?: string[];
+    subject?: string;
+    bodyText?: string;
+    bodyHtml?: string;
+    attachments?: any[];
+    headers?: Record<string, string>;
+    sentAt?: Date;
+    receivedAt?: Date;
+  }): Promise<{
+    messageId: string;
+    threadId: string;
+    isCampaignReply: boolean;
+    campaignMatch?: CampaignMatch;
+  }> {
+    const messageId = this.generateId();
+    const threadId = message.threadId || this.generateId();
+    const now = new Date();
+
+    // Check if this is a campaign reply (only for inbound messages)
+    let campaignMatch: CampaignMatch | null = null;
+    if (message.direction === 'inbound') {
+      try {
+        campaignMatch = await detectCampaignReply({
+          fromAddress: message.fromAddress,
+          fromPhone: message.fromPhone,
+          subject: message.subject,
+          bodyText: message.bodyText,
+          bodyHtml: message.bodyHtml,
+          headers: message.headers,
+          provider: message.provider,
+          userId: message.userId,
+        });
+      } catch (error) {
+        console.error('Error detecting campaign reply:', error);
+        // Continue without campaign linking
+      }
+    }
+
+    // Create or update thread
+    if (!message.threadId) {
+      // Create new thread
+      await sql.query(
+        `INSERT INTO inbox_threads (
+          id, user_id, account_id, provider, external_thread_id,
+          subject, snippet, participants, labels,
+          is_read, message_count, last_message_at, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+        )`,
+        [
+          threadId,
+          message.userId,
+          message.accountId,
+          message.provider,
+          message.externalThreadId || null,
+          message.subject || null,
+          (message.bodyText || '').substring(0, 150),
+          JSON.stringify([{ email: message.fromAddress, name: message.fromName }]),
+          ['inbox'],
+          false,
+          1,
+          message.receivedAt || message.sentAt || now,
+          now,
+          now,
+        ]
+      );
+    } else {
+      // Update existing thread
+      await sql.query(
+        `UPDATE inbox_threads SET
+          message_count = message_count + 1,
+          last_message_at = $1,
+          snippet = $2,
+          is_read = false,
+          updated_at = NOW()
+        WHERE id = $3`,
+        [
+          message.receivedAt || message.sentAt || now,
+          (message.bodyText || '').substring(0, 150),
+          threadId,
+        ]
+      );
+    }
+
+    // Insert the message
+    await sql.query(
+      `INSERT INTO inbox_messages_v2 (
+        id, thread_id, account_id, user_id, provider,
+        external_message_id, direction, from_address, from_name,
+        to_addresses, cc_addresses, subject, body_text, body_html,
+        attachments, is_read, sent_at, received_at, created_at,
+        campaign_id, campaign_outreach_id, is_campaign_reply
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
+      )`,
+      [
+        messageId,
+        threadId,
+        message.accountId,
+        message.userId,
+        message.provider,
+        message.externalMessageId || null,
+        message.direction,
+        message.fromAddress || null,
+        message.fromName || null,
+        JSON.stringify(message.toAddresses || []),
+        JSON.stringify(message.ccAddresses || []),
+        message.subject || null,
+        message.bodyText || null,
+        message.bodyHtml || null,
+        JSON.stringify(message.attachments || []),
+        false,
+        message.sentAt || null,
+        message.receivedAt || null,
+        now,
+        campaignMatch?.campaignId || null,
+        campaignMatch?.outreachId || null,
+        !!campaignMatch,
+      ]
+    );
+
+    // If campaign reply detected, link the thread and update stats
+    if (campaignMatch) {
+      try {
+        await linkMessageToCampaign(messageId, threadId, campaignMatch, message.userId);
+        console.log(`Linked message ${messageId} to campaign ${campaignMatch.campaignName}`);
+      } catch (error) {
+        console.error('Error linking message to campaign:', error);
+      }
+    }
+
+    return {
+      messageId,
+      threadId,
+      isCampaignReply: !!campaignMatch,
+      campaignMatch: campaignMatch || undefined,
+    };
+  }
+
+  /**
+   * Get campaign context for a thread
+   * Returns campaign info if this thread is a reply to a cold start campaign
+   */
+  async getThreadCampaignContext(threadId: string, userId: string): Promise<CampaignContext | null> {
+    return getCampaignContext(threadId, userId);
+  }
+
+  /**
+   * Get a single thread with campaign context included
+   */
+  async getThreadWithCampaign(request: GetThreadRequest): Promise<GetThreadResponse & { campaignContext?: CampaignContext }> {
+    const baseResponse = await this.getThread(request);
+
+    // Check if thread has campaign context
+    const campaignContext = await this.getThreadCampaignContext(request.threadId, request.userId);
+
+    return {
+      ...baseResponse,
+      campaignContext: campaignContext || undefined,
+    };
+  }
+
+  /**
+   * Get all campaign reply threads
+   */
+  async getCampaignReplyThreads(request: {
+    userId: string;
+    campaignId?: string;
+    sentiment?: 'positive' | 'negative' | 'neutral';
+    limit?: number;
+    offset?: number;
+  }): Promise<GetThreadsResponse> {
+    const { userId, campaignId, sentiment, limit = 50, offset = 0 } = request;
+
+    let query = `
+      SELECT * FROM inbox_threads
+      WHERE user_id = $1
+        AND campaign_id IS NOT NULL
+    `;
+    const params: any[] = [userId];
+    let paramIndex = 2;
+
+    if (campaignId) {
+      query += ` AND campaign_id = $${paramIndex}`;
+      params.push(campaignId);
+      paramIndex++;
+    }
+
+    if (sentiment) {
+      query += ` AND ai_sentiment = $${paramIndex}`;
+      params.push(sentiment);
+      paramIndex++;
+    }
+
+    // Get total count
+    const countResult = await sql.query(`SELECT COUNT(*) FROM (${query}) AS count_query`, params);
+    const total = parseInt(countResult.rows[0].count);
+
+    // Add sorting and pagination
+    query += ` ORDER BY last_message_at DESC NULLS LAST`;
+    query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(limit, offset);
+
+    const result = await sql.query(query, params);
+    const threads: InboxThread[] = result.rows.map(this.mapRowToThread);
+
+    return {
+      threads,
+      total,
+      hasMore: offset + limit < total,
+    };
+  }
+
+  /**
+   * Get campaign reply statistics for dashboard
+   */
+  async getCampaignReplyStats(campaignId: string): Promise<{
+    totalReplies: number;
+    positiveReplies: number;
+    negativeReplies: number;
+    neutralReplies: number;
+    replyRate: number;
+    avgResponseTime?: number;
+    hotLeads: number;
+  }> {
+    const result = await sql.query(
+      `SELECT
+        COUNT(*) as total_replies,
+        COUNT(*) FILTER (WHERE ai_sentiment = 'positive') as positive_replies,
+        COUNT(*) FILTER (WHERE ai_sentiment = 'negative') as negative_replies,
+        COUNT(*) FILTER (WHERE ai_sentiment = 'neutral') as neutral_replies
+      FROM inbox_threads
+      WHERE campaign_id = $1`,
+      [campaignId]
+    );
+
+    // Get campaign stats for reply rate calculation
+    const campaignResult = await sql.query(
+      `SELECT total_sent, total_replied FROM coldstart_campaigns WHERE id = $1`,
+      [campaignId]
+    );
+
+    const stats = result.rows[0];
+    const campaign = campaignResult.rows[0] || { total_sent: 0, total_replied: 0 };
+
+    const replyRate = campaign.total_sent > 0
+      ? (campaign.total_replied / campaign.total_sent) * 100
+      : 0;
+
+    // Count hot leads (positive sentiment + high priority)
+    const hotLeadsResult = await sql.query(
+      `SELECT COUNT(*) as hot_leads
+      FROM inbox_threads
+      WHERE campaign_id = $1
+        AND ai_sentiment = 'positive'
+        AND ai_priority IN ('urgent', 'important')`,
+      [campaignId]
+    );
+
+    return {
+      totalReplies: parseInt(stats.total_replies) || 0,
+      positiveReplies: parseInt(stats.positive_replies) || 0,
+      negativeReplies: parseInt(stats.negative_replies) || 0,
+      neutralReplies: parseInt(stats.neutral_replies) || 0,
+      replyRate: Math.round(replyRate * 100) / 100,
+      hotLeads: parseInt(hotLeadsResult.rows[0]?.hot_leads) || 0,
+    };
+  }
+
+  /**
+   * Manually link a thread to a campaign
+   * Use this if auto-detection missed a reply
+   */
+  async manuallyLinkToCampaign(
+    threadId: string,
+    campaignId: string,
+    userId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get campaign details
+      const campaignResult = await sql.query(
+        `SELECT id, name FROM coldstart_campaigns WHERE id = $1`,
+        [campaignId]
+      );
+
+      if (campaignResult.rows.length === 0) {
+        return { success: false, error: 'Campaign not found' };
+      }
+
+      const campaign = campaignResult.rows[0];
+
+      // Update thread
+      await sql.query(
+        `UPDATE inbox_threads
+        SET
+          campaign_id = $1,
+          campaign_match_method = 'manual',
+          campaign_match_confidence = 1.0,
+          ai_category = 'campaign_reply',
+          labels = array_append(array_remove(labels, 'campaign_reply'), 'campaign_reply'),
+          updated_at = NOW()
+        WHERE id = $2 AND user_id = $3`,
+        [campaignId, threadId, userId]
+      );
+
+      // Update campaign reply count
+      await sql.query(
+        `UPDATE coldstart_campaigns
+        SET total_replied = total_replied + 1, updated_at = NOW()
+        WHERE id = $1`,
+        [campaignId]
+      );
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error manually linking to campaign:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Unlink a thread from a campaign
+   */
+  async unlinkFromCampaign(threadId: string, userId: string): Promise<{ success: boolean }> {
+    try {
+      // Get current campaign ID before unlinking
+      const threadResult = await sql.query(
+        `SELECT campaign_id FROM inbox_threads WHERE id = $1 AND user_id = $2`,
+        [threadId, userId]
+      );
+
+      const campaignId = threadResult.rows[0]?.campaign_id;
+
+      // Update thread to remove campaign link
+      await sql.query(
+        `UPDATE inbox_threads
+        SET
+          campaign_id = NULL,
+          campaign_outreach_id = NULL,
+          campaign_contact_id = NULL,
+          campaign_match_method = NULL,
+          campaign_match_confidence = NULL,
+          labels = array_remove(labels, 'campaign_reply'),
+          updated_at = NOW()
+        WHERE id = $1 AND user_id = $2`,
+        [threadId, userId]
+      );
+
+      // Decrement campaign reply count if was linked
+      if (campaignId) {
+        await sql.query(
+          `UPDATE coldstart_campaigns
+          SET total_replied = GREATEST(0, total_replied - 1), updated_at = NOW()
+          WHERE id = $1`,
+          [campaignId]
+        );
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error unlinking from campaign:', error);
+      return { success: false };
+    }
+  }
+
   // Utility methods
 
-  private mapRowToThread(row: any): InboxThread {
+  private mapRowToThread(row: any): InboxThread & {
+    campaignId?: string;
+    campaignOutreachId?: string;
+    campaignMatchMethod?: string;
+    campaignMatchConfidence?: number;
+  } {
     return {
       id: row.id,
       userId: row.user_id,
@@ -640,10 +1039,19 @@ Provide 3 alternative replies in JSON format:
       lastMessageAt: row.last_message_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      // Campaign linking fields
+      campaignId: row.campaign_id || undefined,
+      campaignOutreachId: row.campaign_outreach_id || undefined,
+      campaignMatchMethod: row.campaign_match_method || undefined,
+      campaignMatchConfidence: row.campaign_match_confidence ? parseFloat(row.campaign_match_confidence) : undefined,
     };
   }
 
-  private mapRowToMessage(row: any): InboxMessage {
+  private mapRowToMessage(row: any): InboxMessage & {
+    campaignId?: string;
+    campaignOutreachId?: string;
+    isCampaignReply?: boolean;
+  } {
     return {
       id: row.id,
       threadId: row.thread_id,
@@ -670,6 +1078,10 @@ Provide 3 alternative replies in JSON format:
       sentAt: row.sent_at,
       receivedAt: row.received_at,
       createdAt: row.created_at,
+      // Campaign linking fields
+      campaignId: row.campaign_id || undefined,
+      campaignOutreachId: row.campaign_outreach_id || undefined,
+      isCampaignReply: row.is_campaign_reply || false,
     };
   }
 

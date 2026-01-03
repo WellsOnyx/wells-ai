@@ -2,8 +2,14 @@
 /**
  * Reply Detection Cron Job
  *
- * Checks LinkedIn inbox for replies and sends notifications.
+ * Checks LinkedIn, Gmail, and Outlook inboxes for replies to cold outreach.
+ * Sends notifications via SMS, Slack, or email when replies are detected.
  * Called by Vercel Cron every 5 minutes.
+ *
+ * Supports:
+ * - LinkedIn inbox monitoring
+ * - Gmail inbox monitoring (via Gmail API)
+ * - Outlook inbox monitoring (via Microsoft Graph API)
  *
  * Can also be triggered manually with master key.
  */
@@ -13,7 +19,11 @@ import {
   checkAndNotify,
   getReplyStats,
   getDetectedReplies,
+  checkEmailReplies,
+  emailReplyToDetectedReply,
   type NotificationPreferences,
+  type DetectedReply,
+  type EmailReply,
 } from '@/lib/cold-start/reply-detection'
 import { getCredential } from '@/lib/cold-start/credential-helper'
 
@@ -57,16 +67,79 @@ export async function GET(request: NextRequest) {
       emailAddress: await getCredential('OWNER_EMAIL') || process.env.OWNER_EMAIL,
     }
 
-    // Check for replies and send notifications
-    const result = await checkAndNotify(preferences)
+    // Check LinkedIn for replies and send notifications
+    const linkedinResult = await checkAndNotify(preferences)
+
+    // Check email (Gmail/Outlook) for replies
+    const emailReplies = await checkEmailReplies()
+
+    // Convert email replies to DetectedReply format and send notifications
+    let emailNotificationsSent = 0
+    const emailDetectedReplies: DetectedReply[] = []
+
+    for (const emailReply of emailReplies) {
+      const detectedReply = emailReplyToDetectedReply(emailReply)
+      emailDetectedReplies.push(detectedReply)
+
+      // Send notifications for email replies
+      let notified = false
+
+      // Import notification functions dynamically to send for email replies
+      const {
+        sendSmsNotification,
+        sendSlackNotification,
+        sendEmailNotification,
+      } = await import('@/lib/cold-start/reply-detection')
+
+      if (preferences.sms && preferences.phoneNumber) {
+        const sent = await sendSmsNotification(detectedReply, preferences.phoneNumber)
+        if (sent) notified = true
+      }
+
+      if (preferences.slack && preferences.slackWebhook) {
+        const sent = await sendSlackNotification(detectedReply, preferences.slackWebhook)
+        if (sent) notified = true
+      }
+
+      if (preferences.email && preferences.emailAddress) {
+        const sent = await sendEmailNotification(detectedReply, preferences.emailAddress)
+        if (sent) notified = true
+      }
+
+      if (notified) {
+        emailNotificationsSent++
+      }
+    }
+
     const stats = getReplyStats()
+
+    // Combine results from LinkedIn and Email
+    const allReplies = [
+      ...linkedinResult.newReplies,
+      ...emailDetectedReplies,
+    ]
 
     return NextResponse.json({
       success: true,
-      newReplies: result.newReplies.length,
-      notificationsSent: result.notificationsSent,
+      newReplies: allReplies.length,
+      notificationsSent: linkedinResult.notificationsSent + emailNotificationsSent,
       stats,
-      replies: result.newReplies.map(r => ({
+      breakdown: {
+        linkedin: {
+          replies: linkedinResult.newReplies.length,
+          notifications: linkedinResult.notificationsSent,
+        },
+        email: {
+          replies: emailReplies.length,
+          notifications: emailNotificationsSent,
+          byPlatform: {
+            gmail: emailReplies.filter(r => r.platform === 'gmail').length,
+            outlook: emailReplies.filter(r => r.platform === 'outlook').length,
+          },
+        },
+      },
+      replies: allReplies.map(r => ({
+        platform: r.platform,
         from: r.fromName,
         title: r.fromTitle,
         preview: r.messagePreview.slice(0, 100),

@@ -46,6 +46,10 @@ CREATE TABLE IF NOT EXISTS coldstart_campaigns (
   name TEXT NOT NULL,
   description TEXT,
 
+  -- User ownership and send-as configuration
+  user_id TEXT, -- Owner of the campaign
+  send_as_user BOOLEAN DEFAULT FALSE, -- If true, send from user's connected email instead of wells@wellsonyx.com
+
   -- Targeting filters
   source_filter TEXT[] DEFAULT '{}',
   tag_filter TEXT[] DEFAULT '{}',
@@ -243,3 +247,35 @@ COMMENT ON TABLE coldstart_outreach IS 'Individual outreach records with full tr
 
 COMMENT ON COLUMN coldstart_contacts.relationship IS 'Relationship strength: strong (direct connection), medium (2nd degree), weak (3rd degree), unknown';
 COMMENT ON COLUMN coldstart_outreach.tracking_id IS 'Unique ID for tracking opens/clicks via pixel and link rewriting';
+COMMENT ON COLUMN coldstart_campaigns.user_id IS 'User who owns the campaign - required for send_as_user functionality';
+COMMENT ON COLUMN coldstart_campaigns.send_as_user IS 'If true, emails will be sent from user connected email (Gmail/Outlook) instead of wells@wellsonyx.com';
+
+-- ============================================================================
+-- MIGRATION: Add send-as-user columns (run if tables already exist)
+-- ============================================================================
+
+-- Add user_id column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'coldstart_campaigns' AND column_name = 'user_id'
+  ) THEN
+    ALTER TABLE coldstart_campaigns ADD COLUMN user_id TEXT;
+  END IF;
+END $$;
+
+-- Add send_as_user column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'coldstart_campaigns' AND column_name = 'send_as_user'
+  ) THEN
+    ALTER TABLE coldstart_campaigns ADD COLUMN send_as_user BOOLEAN DEFAULT FALSE;
+  END IF;
+END $$;
+
+-- Index for faster user lookups
+CREATE INDEX IF NOT EXISTS idx_campaigns_user_id ON coldstart_campaigns(user_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_send_as_user ON coldstart_campaigns(send_as_user) WHERE send_as_user = TRUE;

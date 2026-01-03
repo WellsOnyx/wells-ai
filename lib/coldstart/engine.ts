@@ -28,6 +28,20 @@
 import { neon, NeonQueryFunction } from '@neondatabase/serverless'
 import * as crypto from 'crypto'
 
+// Email provider imports for send-as-user functionality
+import { sendMessage as sendGmailMessage, getUserGmailAccounts, type GmailAccount } from '@/lib/inbox/providers/gmail'
+import { sendOutlookEmail } from '@/lib/integrations/outlook-oauth'
+import { getUserConnections, type EmailConnection } from '@/lib/integrations/oauth-manager'
+
+// Unified email connection type for send-as-user
+type UnifiedEmailConnection = {
+  id: string
+  provider: 'gmail' | 'outlook'
+  email: string
+  status: string
+  displayName?: string
+}
+
 // Lazy initialization for serverless compatibility
 let _sql: NeonQueryFunction<false, false> | null = null
 
@@ -80,6 +94,10 @@ export interface OutreachCampaign {
   id: string
   name: string
   description?: string
+
+  // User ownership and send-as configuration
+  userId?: string
+  sendAsUser?: boolean // If true, send from user's connected email instead of wells@wellsonyx.com
 
   // Targeting
   sourceFilter?: ContactSource[]
@@ -527,6 +545,8 @@ export async function createCampaign(campaign: Partial<OutreachCampaign>): Promi
     INSERT INTO coldstart_campaigns (
       name,
       description,
+      user_id,
+      send_as_user,
       source_filter,
       tag_filter,
       relationship_filter,
@@ -538,6 +558,8 @@ export async function createCampaign(campaign: Partial<OutreachCampaign>): Promi
     ) VALUES (
       ${campaign.name || 'Untitled Campaign'},
       ${campaign.description || null},
+      ${campaign.userId || null},
+      ${campaign.sendAsUser || false},
       ${formatPgArray(campaign.sourceFilter)},
       ${formatPgArray(campaign.tagFilter)},
       ${formatPgArray(campaign.relationshipFilter)},
@@ -807,9 +829,208 @@ export async function processOutreachQueue(options: {
 }
 
 /**
- * Send email via Resend
+ * Send email - routes to user's connected account or Resend based on campaign settings
  */
 async function sendEmail(record: any): Promise<void> {
+  const sql = getDb()
+
+  // Check if campaign has send_as_user enabled
+  const campaignResult = await sql`
+    SELECT user_id, send_as_user FROM coldstart_campaigns WHERE id = ${record.campaign_id}
+  `
+
+  const campaign = campaignResult[0]
+
+  // Route to appropriate sender
+  if (campaign?.send_as_user && campaign?.user_id) {
+    await sendEmailAsUser(record, campaign.user_id)
+  } else {
+    await sendEmailViaResend(record)
+  }
+}
+
+/**
+ * Get all user email connections (both Gmail and Outlook)
+ * Combines gmail_accounts and email_connections tables
+ */
+async function getAllUserEmailConnections(userId: string): Promise<UnifiedEmailConnection[]> {
+  const connections: UnifiedEmailConnection[] = []
+
+  // Get Gmail accounts from gmail_accounts table
+  try {
+    const gmailAccounts = await getUserGmailAccounts(userId)
+    for (const account of gmailAccounts) {
+      connections.push({
+        id: account.id,
+        provider: 'gmail',
+        email: account.email,
+        status: account.sync_status === 'active' ? 'connected' : account.sync_status,
+        displayName: account.account_name,
+      })
+    }
+  } catch (error) {
+    console.warn('[ColdStart] Could not fetch Gmail accounts:', error)
+  }
+
+  // Get Outlook accounts from email_connections table
+  try {
+    const outlookConnections = await getUserConnections(userId)
+    for (const conn of outlookConnections) {
+      if (conn.provider === 'outlook') {
+        connections.push({
+          id: conn.id,
+          provider: 'outlook',
+          email: conn.email,
+          status: conn.status,
+          displayName: conn.display_name,
+        })
+      }
+    }
+  } catch (error) {
+    console.warn('[ColdStart] Could not fetch Outlook connections:', error)
+  }
+
+  return connections
+}
+
+/**
+ * Send email via user's connected Gmail or Outlook account
+ * Gmail uses gmail_accounts table, Outlook uses email_connections table
+ */
+async function sendEmailAsUser(record: any, userId: string): Promise<void> {
+  const sql = getDb()
+
+  // Get all user's connected email accounts (both Gmail and Outlook)
+  const connections = await getAllUserEmailConnections(userId)
+
+  if (!connections || connections.length === 0) {
+    throw new Error(`No email connections found for user ${userId}. Please connect Gmail or Outlook first.`)
+  }
+
+  // Prefer Gmail, then Outlook, or use first available connected account
+  let connection: UnifiedEmailConnection | null = null
+
+  // First try to find a Gmail account
+  connection = connections.find(c => c.provider === 'gmail' && c.status === 'connected') || null
+
+  // If no Gmail, try Outlook
+  if (!connection) {
+    connection = connections.find(c => c.provider === 'outlook' && c.status === 'connected') || null
+  }
+
+  // If still no connection, use any connected account
+  if (!connection) {
+    connection = connections.find(c => c.status === 'connected') || null
+  }
+
+  if (!connection) {
+    throw new Error(`No active email connections for user ${userId}. All connections may be expired or disconnected.`)
+  }
+
+  // Personalize content
+  const firstName = record.first_name || record.full_name?.split(' ')[0] || 'there'
+  const subject = personalizeContent(record.email_subject, { firstName, company: record.company })
+  const body = personalizeContent(record.email_body, { firstName, company: record.company })
+
+  // Add tracking pixel and link tracking
+  const trackingPixel = `<img src="${process.env.NEXT_PUBLIC_BASE_URL}/api/coldstart/track?t=${record.tracking_id}&e=open" width="1" height="1" style="display:none" />`
+  const trackedBodyHtml = addLinkTracking(body, record.tracking_id) + trackingPixel
+
+  // Get the user's email for reply-to (replies go directly to user's inbox)
+  const userEmail = connection.email
+
+  try {
+    if (connection.provider === 'gmail') {
+      // Send via Gmail API using gmail_accounts table
+      await sendGmailMessage(connection.id, {
+        to: record.email,
+        subject,
+        body: body, // Plain text version
+        bodyHtml: trackedBodyHtml,
+      })
+
+      console.log(`[ColdStart] Email sent via Gmail (${userEmail}) to ${record.email}`)
+
+    } else if (connection.provider === 'outlook') {
+      // Send via Microsoft Graph API using email_connections table
+      const result = await sendOutlookEmail(connection.id, {
+        to: record.email,
+        subject,
+        body: trackedBodyHtml,
+        isHtml: true,
+        replyTo: userEmail, // Replies go to user's inbox
+        saveToSentItems: true,
+      })
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send via Outlook')
+      }
+
+      console.log(`[ColdStart] Email sent via Outlook (${userEmail}) to ${record.email}`)
+
+    } else {
+      throw new Error(`Unsupported email provider: ${connection.provider}`)
+    }
+
+    // Update outreach record
+    await sql`
+      UPDATE coldstart_outreach SET
+        status = 'sent',
+        sent_at = NOW(),
+        subject = ${subject},
+        body = ${body}
+      WHERE id = ${record.id}
+    `
+
+    // Update campaign stats
+    await sql`
+      UPDATE coldstart_campaigns SET
+        total_sent = total_sent + 1,
+        updated_at = NOW()
+      WHERE id = ${record.campaign_id}
+    `
+
+    // Update variant stats
+    await sql`
+      UPDATE coldstart_campaign_variants SET
+        sent = sent + 1
+      WHERE id = ${record.variant_id}
+    `
+
+  } catch (error: any) {
+    console.error(`[ColdStart] Failed to send email as user (${userEmail}):`, error)
+
+    // Check if it's a token expiration issue and update the appropriate table
+    if (error.message?.includes('token') || error.message?.includes('auth') || error.message?.includes('401')) {
+      if (connection.provider === 'gmail') {
+        // Update gmail_accounts table
+        await sql`
+          UPDATE gmail_accounts SET
+            sync_status = 'error',
+            error_message = ${error.message},
+            updated_at = NOW()
+          WHERE id = ${connection.id}
+        `
+      } else {
+        // Update email_connections table for Outlook
+        await sql`
+          UPDATE email_connections SET
+            status = 'expired',
+            error_message = ${error.message},
+            updated_at = NOW()
+          WHERE id = ${connection.id}
+        `
+      }
+    }
+
+    throw error
+  }
+}
+
+/**
+ * Send email via Resend (default Wells sender)
+ */
+async function sendEmailViaResend(record: any): Promise<void> {
   const sql = getDb()
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) {
@@ -1052,6 +1273,8 @@ function mapCampaignRow(row: any): OutreachCampaign {
     id: row.id,
     name: row.name,
     description: row.description,
+    userId: row.user_id,
+    sendAsUser: row.send_as_user || false,
     sourceFilter: row.source_filter,
     tagFilter: row.tag_filter,
     relationshipFilter: row.relationship_filter,
@@ -1172,5 +1395,145 @@ export const SMS_TEMPLATES = {
 
   urgency: {
     body: "{{firstName}}, we're opening Wells AI to 100 early users this week. Given your background, thought you should know. [LINK]"
+  }
+}
+
+// ============================================================================
+// SEND-AS-USER UTILITIES
+// ============================================================================
+
+/**
+ * Check if a user has valid email connections for send-as-user campaigns
+ * Call this before enabling sendAsUser on a campaign
+ * Checks both Gmail (gmail_accounts) and Outlook (email_connections) tables
+ */
+export async function checkUserEmailConnections(userId: string): Promise<{
+  hasConnections: boolean
+  connections: Array<{
+    id: string
+    provider: 'gmail' | 'outlook'
+    email: string
+    status: string
+    canSend: boolean
+  }>
+  recommendedConnection?: {
+    id: string
+    provider: 'gmail' | 'outlook'
+    email: string
+  }
+}> {
+  // Use the unified function to get connections from both tables
+  const connections = await getAllUserEmailConnections(userId)
+
+  if (!connections || connections.length === 0) {
+    return {
+      hasConnections: false,
+      connections: [],
+    }
+  }
+
+  const connectionDetails = connections.map(c => ({
+    id: c.id,
+    provider: c.provider,
+    email: c.email,
+    status: c.status,
+    canSend: c.status === 'connected',
+  }))
+
+  // Find recommended connection (prefer Gmail, then Outlook)
+  const recommended = connections.find(c => c.provider === 'gmail' && c.status === 'connected')
+    || connections.find(c => c.provider === 'outlook' && c.status === 'connected')
+    || connections.find(c => c.status === 'connected')
+
+  return {
+    hasConnections: true,
+    connections: connectionDetails,
+    recommendedConnection: recommended ? {
+      id: recommended.id,
+      provider: recommended.provider,
+      email: recommended.email,
+    } : undefined,
+  }
+}
+
+/**
+ * Update campaign to enable/disable send-as-user
+ */
+export async function updateCampaignSendAsUser(
+  campaignId: string,
+  options: {
+    userId: string
+    sendAsUser: boolean
+  }
+): Promise<OutreachCampaign> {
+  const sql = getDb()
+
+  // If enabling send-as-user, verify user has connections
+  if (options.sendAsUser) {
+    const connectionCheck = await checkUserEmailConnections(options.userId)
+    if (!connectionCheck.recommendedConnection) {
+      throw new Error('Cannot enable send-as-user: No active email connections found. Please connect Gmail or Outlook first.')
+    }
+  }
+
+  const result = await sql`
+    UPDATE coldstart_campaigns SET
+      user_id = ${options.userId},
+      send_as_user = ${options.sendAsUser},
+      updated_at = NOW()
+    WHERE id = ${campaignId}
+    RETURNING *
+  `
+
+  if (result.length === 0) {
+    throw new Error('Campaign not found')
+  }
+
+  return mapCampaignRow(result[0])
+}
+
+/**
+ * Get campaign send configuration for display
+ * Returns details about how emails will be sent (user's account vs Resend)
+ */
+export async function getCampaignSendConfig(campaignId: string): Promise<{
+  sendAsUser: boolean
+  senderEmail: string
+  senderName: string
+  provider?: 'gmail' | 'outlook' | 'resend'
+}> {
+  const sql = getDb()
+
+  const result = await sql`
+    SELECT user_id, send_as_user FROM coldstart_campaigns WHERE id = ${campaignId}
+  `
+
+  if (result.length === 0) {
+    throw new Error('Campaign not found')
+  }
+
+  const campaign = result[0]
+
+  if (campaign.send_as_user && campaign.user_id) {
+    // Use unified function to check both Gmail and Outlook
+    const connections = await getAllUserEmailConnections(campaign.user_id)
+    const activeConnection = connections.find(c => c.status === 'connected')
+
+    if (activeConnection) {
+      return {
+        sendAsUser: true,
+        senderEmail: activeConnection.email,
+        senderName: activeConnection.displayName || activeConnection.email.split('@')[0],
+        provider: activeConnection.provider,
+      }
+    }
+  }
+
+  // Default to Resend
+  return {
+    sendAsUser: false,
+    senderEmail: process.env.RESEND_FROM_EMAIL || 'wells@wellsonyx.com',
+    senderName: 'Wells',
+    provider: 'resend',
   }
 }

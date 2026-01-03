@@ -117,6 +117,12 @@ export interface InboxThread {
   lastMessageAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+  // Campaign linking fields
+  campaignId?: string;
+  campaignOutreachId?: string;
+  campaignContactId?: string;
+  campaignMatchMethod?: 'email' | 'phone' | 'subject' | 'tracking_id' | 'thread_reference' | 'manual';
+  campaignMatchConfidence?: number;
 }
 
 // Thread participant
@@ -155,6 +161,10 @@ export interface InboxMessage {
   sentAt?: Date;
   receivedAt?: Date;
   createdAt: Date;
+  // Campaign linking fields
+  campaignId?: string;
+  campaignOutreachId?: string;
+  isCampaignReply?: boolean;
 }
 
 // Message attachment
