@@ -372,13 +372,21 @@ export async function addContact(contact: Contact): Promise<{ id: string; isDupl
       ${contact.twitterHandle || null},
       ${contact.source},
       ${contact.sourceId || null},
-      ${contact.tags && contact.tags.length > 0 ? `{${contact.tags.join(',')}}` : '{}'},
+      ${formatPgArray(contact.tags)},
       ${contact.relationship || 'unknown'}
     )
     RETURNING id
   `
 
   return { id: result[0].id, isDuplicate: false }
+}
+
+/**
+ * Format array for Postgres text[] column
+ */
+function formatPgArray(arr: string[] | undefined): string {
+  if (!arr || arr.length === 0) return '{}'
+  return `{${arr.join(',')}}`
 }
 
 /**
@@ -529,10 +537,10 @@ export async function createCampaign(campaign: Partial<OutreachCampaign>): Promi
     ) VALUES (
       ${campaign.name || 'Untitled Campaign'},
       ${campaign.description || null},
-      ${JSON.stringify(campaign.sourceFilter || [])},
-      ${JSON.stringify(campaign.tagFilter || [])},
-      ${JSON.stringify(campaign.relationshipFilter || [])},
-      ${JSON.stringify(campaign.channels || ['email'])},
+      ${formatPgArray(campaign.sourceFilter)},
+      ${formatPgArray(campaign.tagFilter)},
+      ${formatPgArray(campaign.relationshipFilter)},
+      ${formatPgArray(campaign.channels || ['email'])},
       'draft',
       ${campaign.rateLimit || 100},
       ${campaign.scheduledStart || null}
