@@ -122,15 +122,9 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
       return NextResponse.redirect(url)
     }
 
-    // Routes that should be rewritten to /grain-vault/* on grainandvault.com
-    const grainVaultRoutes = ['/', '/demo', '/signup', '/signin', '/onboarding']
-
-    // Check if this is a route that needs rewriting
-    if (grainVaultRoutes.includes(pathname)) {
-      const url = request.nextUrl.clone()
-      url.pathname = pathname === '/' ? '/grain-vault' : `/grain-vault${pathname}`
-      return NextResponse.rewrite(url)
-    }
+    // UNIFIED EXPERIENCE: Both domains serve the same content
+    // No longer rewrite root to /grain-vault - both domains use /app/page.tsx
+    // The /grain-vault route still exists for direct navigation
 
     // Also rewrite /api/health for grainandvault.com
     if (pathname === '/api/health') {

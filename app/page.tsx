@@ -1,10 +1,13 @@
 'use client'
 
 /**
- * Wells Onyx - 2025 Homepage Redesign
- * A premium, cutting-edge fintech landing page
- * Dark mode first with sophisticated animations
- * Bento grid layout, glassmorphism, mesh gradients
+ * Grain & Vault - Unified Homepage
+ *
+ * The single source of truth for both wellsonyx.io and grainandvault.com
+ * Grain & Vault is the leading brand with "Powered by WellsAI" attribution
+ *
+ * Design: Premium glassmorphism, emerald/green theme
+ * Business Model: Protected deposit + 1:1 credit line + 0% fees
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -26,10 +29,21 @@ import {
   ArrowUpRight,
   MessageSquare,
   Boxes,
-  Wallet
+  Wallet,
+  Coins,
+  Vault,
+  BarChart3,
+  Code,
+  Layers,
+  BadgeCheck,
+  Clock,
+  DollarSign
 } from 'lucide-react'
 
-// Animated counter hook
+// ============================================================================
+// ANIMATED COMPONENTS
+// ============================================================================
+
 function useCounter(end: number, duration: number = 2000, start: number = 0) {
   const [count, setCount] = useState(start)
   const [hasStarted, setHasStarted] = useState(false)
@@ -66,17 +80,95 @@ function useCounter(end: number, duration: number = 2000, start: number = 0) {
   return { count, ref }
 }
 
-// Animated gradient orb component
-function GradientOrb({ className }: { className?: string }) {
+// ============================================================================
+// GLASS CARD COMPONENT
+// ============================================================================
+
+function GlassCard({
+  children,
+  className = '',
+  hover = true
+}: {
+  children: React.ReactNode
+  className?: string
+  hover?: boolean
+}) {
   return (
-    <div className={`absolute rounded-full blur-3xl opacity-30 animate-pulse-slow ${className}`} />
+    <div className={`
+      relative overflow-hidden rounded-3xl
+      bg-gradient-to-br from-white/[0.08] to-white/[0.02]
+      border border-white/10
+      backdrop-blur-xl
+      ${hover ? 'hover:border-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500' : ''}
+      ${className}
+    `}>
+      {children}
+    </div>
   )
 }
 
-// Navigation component
+// ============================================================================
+// SHIMMER BUTTON COMPONENT
+// ============================================================================
+
+function ShimmerButton({
+  children,
+  href,
+  variant = 'primary',
+  className = ''
+}: {
+  children: React.ReactNode
+  href: string
+  variant?: 'primary' | 'secondary'
+  className?: string
+}) {
+  if (variant === 'secondary') {
+    return (
+      <Link
+        href={href}
+        className={`
+          group relative px-8 py-4
+          bg-white/5 border border-white/10
+          text-white font-semibold rounded-2xl
+          hover:bg-white/10 hover:border-white/20
+          transition-all duration-300 backdrop-blur-sm
+          ${className}
+        `}
+      >
+        {children}
+      </Link>
+    )
+  }
+
+  return (
+    <Link
+      href={href}
+      className={`
+        group relative px-8 py-4 overflow-hidden
+        bg-gradient-to-r from-emerald-500 to-teal-500
+        text-black font-semibold rounded-2xl
+        shadow-xl shadow-emerald-500/25
+        hover:shadow-emerald-500/40 hover:scale-[1.02]
+        transition-all duration-300
+        ${className}
+      `}
+    >
+      {/* Shimmer effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+      <span className="relative z-10 flex items-center justify-center gap-2">
+        {children}
+      </span>
+    </Link>
+  )
+}
+
+// ============================================================================
+// NAVIGATION
+// ============================================================================
+
 function Navigation() {
   const [scrolled, setScrolled] = useState(false)
-  const [productsOpen, setProductsOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -95,66 +187,27 @@ function Navigation() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-all duration-300 group-hover:scale-105">
-                <span className="text-black font-bold text-lg">W</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all duration-300 group-hover:scale-105">
+                <Coins className="w-5 h-5 text-black" />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-md" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-br from-amber-400 to-amber-500 rounded-md" />
             </div>
             <div className="flex flex-col">
-              <span className="text-white font-semibold text-lg tracking-tight">Wells Onyx</span>
-              <span className="text-white/40 text-[10px] font-medium -mt-0.5 tracking-wider uppercase">Platform</span>
+              <span className="text-white font-semibold text-lg tracking-tight">Grain & Vault</span>
+              <span className="text-white/40 text-[10px] font-medium -mt-0.5 tracking-wider uppercase">Treasury</span>
             </div>
           </Link>
 
-          {/* Center Nav */}
+          {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
-            {/* Products Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setProductsOpen(!productsOpen)}
-                onBlur={() => setTimeout(() => setProductsOpen(false), 150)}
-                className="flex items-center gap-1.5 px-4 py-2 text-white/70 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-all"
-              >
-                Products
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${productsOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {productsOpen && (
-                <div className="absolute top-full left-0 mt-2 w-80 bg-black/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 p-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <Link href="/wells-ai" className="group flex items-start gap-4 p-4 rounded-xl hover:bg-white/5 transition-all">
-                    <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/20 group-hover:shadow-violet-500/40 transition-all group-hover:scale-105">
-                      <Brain className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-semibold">WellsAI</span>
-                        <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 text-[10px] font-semibold rounded-full uppercase tracking-wider">AI Engine</span>
-                      </div>
-                      <p className="text-white/50 text-sm mt-1">Enterprise AI that actually executes. Sourcing, hiring, sales, deals.</p>
-                    </div>
-                  </Link>
-
-                  <Link href="/grain-vault" className="group flex items-start gap-4 p-4 rounded-xl hover:bg-white/5 transition-all">
-                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all group-hover:scale-105">
-                      <Wallet className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-semibold">Grain & Vault</span>
-                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-semibold rounded-full uppercase tracking-wider">Treasury</span>
-                      </div>
-                      <p className="text-white/50 text-sm mt-1">Zero-friction payments. Protected reserves. Modern treasury infrastructure.</p>
-                    </div>
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            <Link href="/wells-ai" className="px-4 py-2 text-white/70 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-all">
-              WellsAI
+            <Link href="#how-it-works" className="px-4 py-2 text-white/70 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-all">
+              How It Works
             </Link>
-            <Link href="/grain-vault" className="px-4 py-2 text-white/70 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-all">
-              Grain & Vault
+            <Link href="#products" className="px-4 py-2 text-white/70 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-all">
+              Products
+            </Link>
+            <Link href="#treasury" className="px-4 py-2 text-white/70 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-all">
+              Treasury SDK
             </Link>
             <Link href="/grain-vault/blog" className="px-4 py-2 text-white/70 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-all">
               Blog
@@ -167,8 +220,8 @@ function Navigation() {
               Sign In
             </Link>
             <Link
-              href="/join"
-              className="group relative px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-sm font-semibold rounded-xl hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105"
+              href="/join?journey=treasury"
+              className="group relative px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-black text-sm font-semibold rounded-xl hover:from-emerald-400 hover:to-teal-400 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-105"
             >
               <span className="relative z-10 flex items-center gap-2">
                 Get Started
@@ -182,90 +235,85 @@ function Navigation() {
   )
 }
 
-// Hero Section
+// ============================================================================
+// HERO SECTION
+// ============================================================================
+
 function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Animated mesh gradient background */}
       <div className="absolute inset-0 bg-[#030712]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_80%_60%,rgba(251,146,60,0.15),transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_20%_80%,rgba(16,185,129,0.1),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.25),rgba(255,255,255,0))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_80%_60%,rgba(20,184,166,0.15),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_20%_80%,rgba(251,191,36,0.08),transparent)]" />
       </div>
 
       {/* Animated grid pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,black,transparent)]" />
 
       {/* Floating orbs */}
-      <GradientOrb className="w-[600px] h-[600px] bg-gradient-to-br from-violet-600 to-purple-800 -top-32 -left-32 animate-float" />
-      <GradientOrb className="w-[500px] h-[500px] bg-gradient-to-br from-amber-500 to-orange-600 -bottom-40 -right-20 animate-float-delayed" />
-      <GradientOrb className="w-[300px] h-[300px] bg-gradient-to-br from-emerald-500 to-teal-600 top-1/2 right-1/4 animate-float-slow" />
+      <div className="absolute w-[600px] h-[600px] bg-gradient-to-br from-emerald-600/30 to-teal-800/20 rounded-full blur-3xl -top-32 -left-32 animate-pulse opacity-50" />
+      <div className="absolute w-[500px] h-[500px] bg-gradient-to-br from-teal-500/20 to-emerald-600/10 rounded-full blur-3xl -bottom-40 -right-20 animate-pulse opacity-50" style={{ animationDelay: '1s' }} />
+      <div className="absolute w-[300px] h-[300px] bg-gradient-to-br from-amber-500/10 to-orange-600/5 rounded-full blur-3xl top-1/2 right-1/4 animate-pulse opacity-40" style={{ animationDelay: '2s' }} />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-20">
         <div className="text-center max-w-4xl mx-auto">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full backdrop-blur-sm mb-8 animate-fade-in-up">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full backdrop-blur-sm mb-8 animate-fade-in-up">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <span className="text-white/70 text-sm font-medium">Introducing Wells Onyx Platform</span>
+            <span className="text-emerald-400 text-sm font-medium">Enterprise Treasury Infrastructure</span>
           </div>
 
           {/* Headline */}
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight leading-[0.9] mb-8 animate-fade-in-up animation-delay-100">
-            Enterprise AI
+            Protected Treasury.
             <br />
-            <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 bg-clip-text text-transparent animate-gradient-shift bg-[length:200%_auto]">
-              That Executes
+            <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 bg-clip-text text-transparent animate-gradient-shift bg-[length:200%_auto]">
+              Zero Friction.
             </span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-in-up animation-delay-200">
-            Stop chatting with AI. Start using AI that does the work. WellsAI handles sourcing,
-            sales, hiring, and deals. Grain & Vault manages your treasury. One platform.
+            Deposit your predictable spend. 100% protected reserves.
+            0% interest credit line. 0% transaction fees. 1% success fee only when you close deals.
           </p>
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in-up animation-delay-300">
-            <Link
-              href="/join"
-              className="group w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-base font-semibold rounded-2xl hover:from-amber-400 hover:to-orange-400 transition-all shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02]"
-            >
-              <span className="flex items-center justify-center gap-2">
-                Start Free
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Link>
-            <Link
-              href="/demo"
-              className="group w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-white/5 border border-white/10 text-white text-base font-semibold rounded-2xl hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-sm"
-            >
-              <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition-all">
+            <ShimmerButton href="/join?journey=treasury" className="w-full sm:w-auto">
+              Open Your Vault
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </ShimmerButton>
+            <ShimmerButton href="#how-it-works" variant="secondary" className="w-full sm:w-auto">
+              <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition-all mr-2">
                 <Play className="w-3.5 h-3.5 text-white ml-0.5" />
               </div>
-              Watch Demo
-            </Link>
+              See How It Works
+            </ShimmerButton>
           </div>
 
-          {/* Trust indicators - Early Access focused */}
+          {/* Trust indicators */}
           <div className="flex flex-wrap items-center justify-center gap-8 text-white/40 text-sm animate-fade-in-up animation-delay-400">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span className="text-amber-400/80">Early Access</span>
+              <Shield className="w-4 h-4 text-emerald-400" />
+              <span className="text-emerald-400/80">100% Collateralized</span>
             </div>
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
+              <Clock className="w-4 h-4" />
+              <span>&lt;1s Settlement</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4" />
               <span>Bank-Grade Security</span>
             </div>
             <div className="flex items-center gap-2">
               <Globe className="w-4 h-4" />
               <span>Global Infrastructure</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4" />
-              <span>Enterprise Ready</span>
             </div>
           </div>
         </div>
@@ -281,242 +329,354 @@ function HeroSection() {
   )
 }
 
-// Bento Grid Products Section
-function ProductsSection() {
+// ============================================================================
+// THREE LAYER SECTION - The Core Value Prop
+// ============================================================================
+
+function ThreeLayerSection() {
   return (
-    <section className="relative py-32 overflow-hidden">
-      {/* Background */}
+    <section id="how-it-works" className="relative py-32 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-[#030712] via-[#0a0f1a] to-[#030712]" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         {/* Section header */}
         <div className="text-center mb-20">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full mb-6">
-            <Boxes className="w-4 h-4 text-amber-400" />
-            <span className="text-white/70 text-sm font-medium">The Platform</span>
+            <Layers className="w-4 h-4 text-emerald-400" />
+            <span className="text-white/70 text-sm font-medium">The Three Layers</span>
           </div>
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight mb-6">
-            Two Products.
+            How Your Money
             <br />
-            <span className="text-white/40">One Vision.</span>
+            <span className="text-white/40">Actually Works</span>
           </h2>
           <p className="text-lg text-white/50 max-w-2xl mx-auto">
-            Wells Onyx combines intelligent automation with modern treasury infrastructure.
-            Everything your enterprise needs, nothing it doesn't.
+            One deposit creates three layers of value. Your cash is always protected,
+            but it works harder for you.
           </p>
         </div>
 
-        {/* Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* WellsAI Card - Large */}
-          <Link href="/wells-ai" className="group relative col-span-1 row-span-2 bg-gradient-to-br from-violet-500/10 to-purple-900/20 border border-violet-500/20 rounded-3xl p-8 lg:p-10 overflow-hidden hover:border-violet-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-violet-500/10">
-            {/* Glow effect */}
-            <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-violet-500/30 to-transparent rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-            <div className="relative z-10">
-              {/* Icon */}
-              <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center mb-8 shadow-xl shadow-violet-500/30 group-hover:scale-110 transition-transform duration-300">
-                <Brain className="w-8 h-8 text-white" />
-              </div>
-
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-500/20 border border-violet-500/30 rounded-full mb-6">
-                <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-                <span className="text-violet-300 text-xs font-semibold uppercase tracking-wider">AI Engine</span>
-              </div>
-
-              {/* Title */}
-              <h3 className="text-3xl lg:text-4xl font-bold text-white mb-4">WellsAI</h3>
-
-              {/* Description */}
-              <p className="text-white/60 text-lg leading-relaxed mb-8">
-                Enterprise AI that doesn't just chat - it executes. Tell Wells what you need:
-                hiring, sourcing, sales, or deals. Watch it work.
-              </p>
-
-              {/* Features list */}
-              <ul className="space-y-4 mb-10">
-                {[
-                  'Indirect Sourcing & RFQ Automation',
-                  'Enterprise Sales & Outreach',
-                  'Executive Search & Hiring',
-                  'Partnership Development'
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3 text-white/70">
-                    <CheckCircle2 className="w-5 h-5 text-violet-400 flex-shrink-0" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA */}
-              <div className="flex items-center gap-2 text-violet-400 font-semibold group-hover:gap-4 transition-all">
-                <span>Explore WellsAI</span>
-                <ArrowRight className="w-5 h-5" />
-              </div>
+        {/* Three Layer Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Layer 1: Protected Deposit */}
+          <GlassCard className="p-8">
+            <div className="w-14 h-14 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/30">
+              <Vault className="w-7 h-7 text-white" />
             </div>
-          </Link>
+            <div className="text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3">Layer 1</div>
+            <h3 className="text-2xl font-bold text-white mb-3">Protected Deposit</h3>
+            <p className="text-white/50 leading-relaxed mb-6">
+              Your USD deposit is 100% protected and always withdrawable.
+              It backs your credit line 1:1 and earns yield for the treasury.
+            </p>
+            <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium">
+              <BadgeCheck className="w-4 h-4" />
+              <span>Always 100% yours</span>
+            </div>
+          </GlassCard>
 
-          {/* Grain & Vault Card */}
-          <Link href="/grain-vault" className="group relative bg-gradient-to-br from-emerald-500/10 to-teal-900/20 border border-emerald-500/20 rounded-3xl p-8 lg:p-10 overflow-hidden hover:border-emerald-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10">
-            {/* Glow effect */}
-            <div className="absolute top-0 right-0 w-60 h-60 bg-gradient-to-br from-emerald-500/30 to-transparent rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          {/* Layer 2: Credit Line */}
+          <GlassCard className="p-8">
+            <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-amber-500/30">
+              <Coins className="w-7 h-7 text-white" />
+            </div>
+            <div className="text-amber-400 text-xs font-semibold uppercase tracking-wider mb-3">Layer 2</div>
+            <h3 className="text-2xl font-bold text-white mb-3">GRAIN Credit Line</h3>
+            <p className="text-white/50 leading-relaxed mb-6">
+              Get 1:1 GRAIN credit at deposit price. 0% interest.
+              0% transaction fees. Spend with suppliers in the network.
+            </p>
+            <div className="flex items-center gap-2 text-amber-400 text-sm font-medium">
+              <DollarSign className="w-4 h-4" />
+              <span>0% interest forever</span>
+            </div>
+          </GlassCard>
 
-            <div className="relative z-10">
-              <div className="flex items-start justify-between mb-6">
-                <div className="w-14 h-14 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
-                  <Wallet className="w-7 h-7 text-white" />
+          {/* Layer 3: Appreciation */}
+          <GlassCard className="p-8">
+            <div className="w-14 h-14 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-violet-500/30">
+              <TrendingUp className="w-7 h-7 text-white" />
+            </div>
+            <div className="text-violet-400 text-xs font-semibold uppercase tracking-wider mb-3">Layer 3</div>
+            <h3 className="text-2xl font-bold text-white mb-3">Appreciation</h3>
+            <p className="text-white/50 leading-relaxed mb-6">
+              Bonus GRAIN from ecosystem growth. Funded by transaction fees
+              and treasury yield. Your purchasing power grows.
+            </p>
+            <div className="flex items-center gap-2 text-violet-400 text-sm font-medium">
+              <TrendingUp className="w-4 h-4" />
+              <span>Grows with the network</span>
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* Example Flow */}
+        <div className="mt-16">
+          <GlassCard className="p-8 md:p-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-6">Example: $1M Deposit</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                    <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                      <Vault className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-white font-semibold">Protected: $1,000,000</div>
+                      <div className="text-white/50 text-sm">Your deposit, always available</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                      <Coins className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <div>
+                      <div className="text-white font-semibold">Credit Line: 100,000 GRAIN</div>
+                      <div className="text-white/50 text-sm">At $10/GRAIN (your lock-in price)</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl">
+                    <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-violet-400" />
+                    </div>
+                    <div>
+                      <div className="text-white font-semibold">Appreciation: Grows</div>
+                      <div className="text-white/50 text-sm">Bonus GRAIN as network scales</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-full">
-                  <span className="text-emerald-300 text-xs font-semibold uppercase tracking-wider">Treasury</span>
+              </div>
+              <div className="text-center lg:text-left">
+                <div className="text-5xl font-bold text-white mb-4">
+                  0%
+                </div>
+                <div className="text-emerald-400 text-lg font-medium mb-2">Interest on Credit</div>
+                <p className="text-white/50 mb-6">
+                  Unlike traditional credit lines, GRAIN has no interest charges.
+                  Use your credit line to pay suppliers, then replenish when convenient.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/join?journey=treasury"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-semibold rounded-xl hover:from-emerald-400 hover:to-teal-400 transition-all"
+                  >
+                    Start Your Deposit
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </div>
               </div>
-
-              <h3 className="text-2xl lg:text-3xl font-bold text-white mb-3">Grain & Vault</h3>
-              <p className="text-white/60 leading-relaxed mb-6">
-                Modern treasury infrastructure. Zero-friction payments with GRAIN.
-                Protected reserves with VAULT.
-              </p>
-
-              <div className="flex items-center gap-2 text-emerald-400 font-semibold group-hover:gap-4 transition-all">
-                <span>Learn More</span>
-                <ArrowRight className="w-5 h-5" />
-              </div>
             </div>
-          </Link>
-
-          {/* Platform Benefits Card */}
-          <div className="group relative bg-gradient-to-br from-amber-500/10 to-orange-900/20 border border-amber-500/20 rounded-3xl p-8 lg:p-10 overflow-hidden">
-            <div className="absolute top-0 right-0 w-60 h-60 bg-gradient-to-br from-amber-500/20 to-transparent rounded-full blur-3xl" />
-
-            <div className="relative z-10">
-              <div className="grid grid-cols-2 gap-6">
-                <StatCard value="<1" label="Settlement" suffix="s" />
-                <StatCard value="100" label="Collateralized" suffix="%" />
-                <StatCard value="0" label="Chargebacks" suffix="%" />
-                <StatCard value="1" label="Simple Fee" suffix="%" />
-              </div>
-            </div>
-          </div>
+          </GlassCard>
         </div>
       </div>
     </section>
   )
 }
 
-// Stat Card Component
-function StatCard({ value, label, suffix = '' }: { value: string, label: string, suffix?: string }) {
-  return (
-    <div className="text-center">
-      <div className="text-3xl lg:text-4xl font-bold text-white mb-1">
-        {value}<span className="text-amber-400">{suffix}</span>
-      </div>
-      <div className="text-white/50 text-sm">{label}</div>
-    </div>
-  )
-}
+// ============================================================================
+// PRODUCTS SECTION
+// ============================================================================
 
-// How It Works Section
-function HowItWorksSection() {
-  const steps = [
-    {
-      number: '01',
-      title: 'Tell Wells What You Need',
-      description: 'Natural language. No forms. Just describe your sourcing, hiring, or sales goals.',
-      icon: MessageSquare,
-      gradient: 'from-violet-500 to-purple-600'
-    },
-    {
-      number: '02',
-      title: 'AI Executes Automatically',
-      description: 'Wells finds suppliers, candidates, or leads. Sends RFQs. Schedules meetings. Does the work.',
-      icon: Zap,
-      gradient: 'from-amber-500 to-orange-500'
-    },
-    {
-      number: '03',
-      title: 'You Approve & Close',
-      description: 'Review proposals, approve deals, make decisions. AI handles execution, you keep control.',
-      icon: CheckCircle2,
-      gradient: 'from-emerald-400 to-teal-500'
-    }
-  ]
-
+function ProductsSection() {
   return (
-    <section className="relative py-32 overflow-hidden">
+    <section id="products" className="relative py-32 overflow-hidden">
       <div className="absolute inset-0 bg-[#030712]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_50%,rgba(139,92,246,0.08),transparent)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_50%,rgba(16,185,129,0.08),transparent)]" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
+        {/* Section header */}
         <div className="text-center mb-20">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full mb-6">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span className="text-white/70 text-sm font-medium">How It Works</span>
+            <Boxes className="w-4 h-4 text-emerald-400" />
+            <span className="text-white/70 text-sm font-medium">The Products</span>
           </div>
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight mb-6">
-            Simple. Powerful.
+            Three Products.
             <br />
-            <span className="text-white/40">Automated.</span>
+            <span className="text-white/40">One Platform.</span>
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {steps.map((step, i) => (
-            <div
-              key={i}
-              className="group relative bg-white/[0.02] border border-white/10 rounded-3xl p-8 hover:bg-white/[0.04] hover:border-white/20 transition-all duration-300"
-            >
-              {/* Connection line */}
-              {i < steps.length - 1 && (
-                <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5 bg-gradient-to-r from-white/20 to-transparent" />
-              )}
-
-              <div className={`w-14 h-14 bg-gradient-to-br ${step.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                <step.icon className="w-7 h-7 text-white" />
-              </div>
-
-              <div className="text-white/30 text-sm font-mono mb-3">{step.number}</div>
-              <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
-              <p className="text-white/50 leading-relaxed">{step.description}</p>
+        {/* Product Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* GRAIN */}
+          <GlassCard className="p-8 lg:p-10">
+            <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-amber-500/30">
+              <Coins className="w-8 h-8 text-white" />
             </div>
-          ))}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 border border-amber-500/30 rounded-full mb-4">
+              <span className="text-amber-300 text-xs font-semibold uppercase tracking-wider">Currency</span>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-3">GRAIN</h3>
+            <p className="text-white/50 leading-relaxed mb-6">
+              The settlement currency. Backed 100% by treasury assets.
+              Appreciates as the network grows. Zero transaction fees.
+            </p>
+            <ul className="space-y-3 text-white/60 text-sm">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                100% asset-backed
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                &lt;1 second settlement
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                Zero chargebacks
+              </li>
+            </ul>
+          </GlassCard>
+
+          {/* VAULT */}
+          <GlassCard className="p-8 lg:p-10">
+            <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/30">
+              <Vault className="w-8 h-8 text-white" />
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-full mb-4">
+              <span className="text-emerald-300 text-xs font-semibold uppercase tracking-wider">Treasury</span>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-3">VAULT</h3>
+            <p className="text-white/50 leading-relaxed mb-6">
+              Protected reserve infrastructure. Your deposits are always 100%
+              collateralized and withdrawable. Full transparency.
+            </p>
+            <ul className="space-y-3 text-white/60 text-sm">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                100% protected reserves
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                Real-time transparency
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                Instant withdrawals
+              </li>
+            </ul>
+          </GlassCard>
+
+          {/* WellsAI */}
+          <GlassCard className="p-8 lg:p-10">
+            <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-violet-500/30">
+              <Brain className="w-8 h-8 text-white" />
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-500/20 border border-violet-500/30 rounded-full mb-4">
+              <span className="text-violet-300 text-xs font-semibold uppercase tracking-wider">AI Engine</span>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-3">WellsAI</h3>
+            <p className="text-white/50 leading-relaxed mb-6">
+              The intelligence layer. AI-to-AI negotiation. Automated sourcing,
+              hiring, and sales. You approve, Wells executes.
+            </p>
+            <ul className="space-y-3 text-white/60 text-sm">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-violet-400" />
+                AI-to-AI negotiation
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-violet-400" />
+                Human-in-the-loop approval
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-violet-400" />
+                1% success fee only
+              </li>
+            </ul>
+          </GlassCard>
         </div>
       </div>
     </section>
   )
 }
 
-// Metrics Section with animated counters
-function MetricsSection() {
-  const metric1 = useCounter(847, 2000)
-  const metric2 = useCounter(23, 1500)
-  const metric3 = useCounter(180, 2000)
-  const metric4 = useCounter(99, 1800)
+// ============================================================================
+// TREASURY SDK SECTION
+// ============================================================================
 
+function TreasurySDKSection() {
   return (
-    <section className="relative py-32 overflow-hidden">
+    <section id="treasury" className="relative py-32 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-[#030712] to-[#0a0f1a]" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-          <div ref={metric1.ref} className="text-center p-8 bg-white/[0.02] border border-white/10 rounded-3xl hover:bg-white/[0.04] transition-all">
-            <div className="text-5xl md:text-6xl font-bold text-white mb-2">{metric1.count}</div>
-            <div className="text-white/50 text-sm">Active Connections</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full mb-6">
+              <Code className="w-4 h-4 text-emerald-400" />
+              <span className="text-white/70 text-sm font-medium">Treasury SDK</span>
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-6">
+              Integrate Treasury
+              <br />
+              <span className="text-white/40">In Minutes</span>
+            </h2>
+            <p className="text-lg text-white/50 mb-8 leading-relaxed">
+              Connect your ERP. Push your payables. Let GRAIN handle settlement.
+              Full visibility into treasury health, credit usage, and appreciation.
+            </p>
+
+            <div className="space-y-4 mb-8">
+              <div className="flex items-center gap-3 text-white/70">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>REST API with TypeScript SDK</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/70">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>NetSuite, SAP, Oracle connectors</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/70">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>Webhook events for all transactions</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/70">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>Sandbox environment included</span>
+              </div>
+            </div>
+
+            <Link
+              href="/join?journey=treasury"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-black font-semibold rounded-xl hover:from-emerald-400 hover:to-teal-400 transition-all"
+            >
+              Get API Access
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
 
-          <div ref={metric2.ref} className="text-center p-8 bg-white/[0.02] border border-white/10 rounded-3xl hover:bg-white/[0.04] transition-all">
-            <div className="text-5xl md:text-6xl font-bold text-white mb-2">{metric2.count}</div>
-            <div className="text-white/50 text-sm">Deals Today</div>
-          </div>
+          {/* Code Example */}
+          <div>
+            <GlassCard className="p-6 overflow-hidden" hover={false}>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                <div className="w-3 h-3 rounded-full bg-green-500/80" />
+                <span className="text-white/30 text-xs ml-2 font-mono">treasury-sdk.ts</span>
+              </div>
+              <pre className="text-sm overflow-x-auto">
+                <code className="text-white/80 font-mono">
+{`import { GrainVault } from '@grainvault/sdk'
 
-          <div ref={metric3.ref} className="text-center p-8 bg-white/[0.02] border border-white/10 rounded-3xl hover:bg-white/[0.04] transition-all">
-            <div className="text-5xl md:text-6xl font-bold text-amber-400 mb-2">{metric3.count}+</div>
-            <div className="text-white/50 text-sm">Countries</div>
-          </div>
+const vault = new GrainVault({
+  apiKey: process.env.VAULT_API_KEY
+})
 
-          <div ref={metric4.ref} className="text-center p-8 bg-white/[0.02] border border-white/10 rounded-3xl hover:bg-white/[0.04] transition-all">
-            <div className="text-5xl md:text-6xl font-bold text-white mb-2">{metric4.count}%</div>
-            <div className="text-white/50 text-sm">Uptime SLA</div>
+// Push payable from ERP
+const payment = await vault.payments.create({
+  supplier_id: 'sup_123',
+  amount_grain: 10000,
+  invoice_ref: 'INV-2025-001',
+  due_date: '2025-02-15'
+})
+
+// Check treasury health
+const health = await vault.treasury.health()
+console.log(health.credit_available)
+// => 90000 GRAIN`}
+                </code>
+              </pre>
+            </GlassCard>
           </div>
         </div>
       </div>
@@ -524,124 +684,98 @@ function MetricsSection() {
   )
 }
 
-// Early Access Section (replaces fake testimonials)
-function EarlyAccessSection() {
-  const benefits = [
-    {
-      title: "First Mover Advantage",
-      description: "Join the network before your competitors. Early members shape the platform and get priority matching.",
-      icon: Sparkles
-    },
-    {
-      title: "Direct Founder Access",
-      description: "Work directly with our team. Your feedback shapes the product. We're building this together.",
-      icon: Users
-    },
-    {
-      title: "Lock In Founding Rates",
-      description: "Early Access members keep the 1% fee rate locked in. No bait-and-switch pricing.",
-      icon: Lock
-    }
-  ]
+// ============================================================================
+// STATS SECTION
+// ============================================================================
 
+function StatsSection() {
   return (
-    <section className="relative py-32 overflow-hidden">
+    <section className="relative py-20 overflow-hidden">
       <div className="absolute inset-0 bg-[#030712]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_60%,rgba(251,146,60,0.08),transparent)]" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full mb-6">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span className="text-amber-400 text-sm font-medium">Early Access Open</span>
-          </div>
-          <h2 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-6">
-            Join the Founding Network
-          </h2>
-          <p className="text-lg text-white/50 max-w-2xl mx-auto">
-            We're building the future of enterprise AI. Join Early Access and help shape what comes next.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {benefits.map((b, i) => (
-            <div
-              key={i}
-              className="group relative bg-white/[0.02] border border-white/10 rounded-3xl p-8 hover:bg-white/[0.04] hover:border-amber-500/30 transition-all duration-300"
-            >
-              <div className="w-14 h-14 bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center mb-6">
-                <b.icon className="w-7 h-7 text-amber-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">{b.title}</h3>
-              <p className="text-white/50 leading-relaxed">{b.description}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <GlassCard className="p-8 text-center">
+            <div className="text-4xl md:text-5xl font-bold text-white mb-2">
+              100<span className="text-emerald-400">%</span>
             </div>
-          ))}
+            <div className="text-white/50 text-sm">Collateralized</div>
+          </GlassCard>
+          <GlassCard className="p-8 text-center">
+            <div className="text-4xl md:text-5xl font-bold text-white mb-2">
+              0<span className="text-emerald-400">%</span>
+            </div>
+            <div className="text-white/50 text-sm">Interest Rate</div>
+          </GlassCard>
+          <GlassCard className="p-8 text-center">
+            <div className="text-4xl md:text-5xl font-bold text-white mb-2">
+              &lt;1<span className="text-emerald-400">s</span>
+            </div>
+            <div className="text-white/50 text-sm">Settlement</div>
+          </GlassCard>
+          <GlassCard className="p-8 text-center">
+            <div className="text-4xl md:text-5xl font-bold text-white mb-2">
+              1<span className="text-emerald-400">%</span>
+            </div>
+            <div className="text-white/50 text-sm">Success Fee</div>
+          </GlassCard>
         </div>
       </div>
     </section>
   )
 }
 
-// CTA Section
+// ============================================================================
+// CTA SECTION
+// ============================================================================
+
 function CTASection() {
   return (
     <section className="relative py-32 overflow-hidden">
-      {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1a] to-[#030712]" />
-
-      {/* Animated gradient background */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_50%,rgba(251,146,60,0.15),transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_30%_70%,rgba(139,92,246,0.1),transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_30%_at_70%_30%,rgba(16,185,129,0.1),transparent)]" />
-      </div>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_50%,rgba(16,185,129,0.15),transparent)]" />
 
       <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
         {/* Logo mark */}
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 rounded-3xl mb-10 shadow-2xl shadow-amber-500/30">
-          <span className="text-black font-bold text-3xl">W</span>
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-500 rounded-3xl mb-10 shadow-2xl shadow-emerald-500/30">
+          <Coins className="w-10 h-10 text-black" />
         </div>
 
         <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight mb-6">
-          Ready to Transform
+          Ready to Modernize
           <br />
-          <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
-            Your Enterprise?
+          <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+            Your Treasury?
           </span>
         </h2>
 
         <p className="text-xl text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed">
-          Join hundreds of businesses using Wells Onyx to automate operations,
-          modernize treasury, and close deals faster.
+          Join enterprises using Grain & Vault for protected reserves,
+          zero-interest credit, and instant settlement.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link
-            href="/join"
-            className="group w-full sm:w-auto px-10 py-5 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-lg font-semibold rounded-2xl hover:from-amber-400 hover:to-orange-400 transition-all shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02]"
-          >
-            <span className="flex items-center justify-center gap-3">
-              Get Started Free
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </span>
-          </Link>
-          <Link
-            href="/demo"
-            className="w-full sm:w-auto px-10 py-5 bg-white/5 border border-white/20 text-white text-lg font-semibold rounded-2xl hover:bg-white/10 hover:border-white/30 transition-all backdrop-blur-sm"
-          >
+          <ShimmerButton href="/join?journey=treasury" className="w-full sm:w-auto text-lg">
+            Open Your Vault
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </ShimmerButton>
+          <ShimmerButton href="/grain-vault/demo" variant="secondary" className="w-full sm:w-auto text-lg">
             Book a Demo
-          </Link>
+          </ShimmerButton>
         </div>
 
         <p className="mt-8 text-white/40 text-sm">
-          No credit card required. Start in 60 seconds.
+          No minimum deposit. Start protecting your treasury today.
         </p>
       </div>
     </section>
   )
 }
 
-// Footer
+// ============================================================================
+// FOOTER
+// ============================================================================
+
 function Footer() {
   return (
     <footer className="relative border-t border-white/10 bg-[#030712]">
@@ -651,26 +785,32 @@ function Footer() {
           <div className="col-span-2 md:col-span-4 lg:col-span-1">
             <Link href="/" className="flex items-center gap-3 mb-4">
               <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 rounded-xl flex items-center justify-center">
-                  <span className="text-black font-bold text-lg">W</span>
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
+                  <Coins className="w-5 h-5 text-black" />
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-md" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-br from-amber-400 to-amber-500 rounded-md" />
               </div>
-              <span className="text-white font-semibold text-lg">Wells Onyx</span>
+              <span className="text-white font-semibold text-lg">Grain & Vault</span>
             </Link>
-            <p className="text-white/40 text-sm leading-relaxed">
-              Enterprise AI that executes. Modern treasury infrastructure. One platform.
+            <p className="text-white/40 text-sm leading-relaxed mb-4">
+              Protected treasury infrastructure.
+              Zero friction payments.
             </p>
+            {/* Powered by WellsAI */}
+            <div className="flex items-center gap-2 text-white/30 text-xs">
+              <Brain className="w-3 h-3" />
+              <span>Powered by WellsAI</span>
+            </div>
           </div>
 
           {/* Products */}
           <div>
             <h4 className="text-white font-semibold mb-4">Products</h4>
             <ul className="space-y-3">
-              <li><Link href="/wells-ai" className="text-white/50 hover:text-amber-400 text-sm transition-colors">WellsAI</Link></li>
-              <li><Link href="/grain-vault" className="text-white/50 hover:text-amber-400 text-sm transition-colors">Grain & Vault</Link></li>
-              <li><Link href="/wells-ai/source" className="text-white/50 hover:text-amber-400 text-sm transition-colors">Sourcing</Link></li>
-              <li><Link href="/wells-ai/sell" className="text-white/50 hover:text-amber-400 text-sm transition-colors">Sales</Link></li>
+              <li><Link href="/grain-vault" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">GRAIN</Link></li>
+              <li><Link href="/grain-vault" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">VAULT</Link></li>
+              <li><Link href="/wells-ai" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">WellsAI</Link></li>
+              <li><Link href="/grain-vault/treasury" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">Treasury SDK</Link></li>
             </ul>
           </div>
 
@@ -678,8 +818,8 @@ function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Company</h4>
             <ul className="space-y-3">
-              <li><Link href="/grain-vault/blog" className="text-white/50 hover:text-amber-400 text-sm transition-colors">Blog</Link></li>
-              <li><a href="mailto:hello@wellsonyx.com" className="text-white/50 hover:text-amber-400 text-sm transition-colors">Contact</a></li>
+              <li><Link href="/grain-vault/blog" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">Blog</Link></li>
+              <li><a href="mailto:hello@grainandvault.com" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">Contact</a></li>
             </ul>
           </div>
 
@@ -687,8 +827,8 @@ function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Resources</h4>
             <ul className="space-y-3">
-              <li><Link href="/how-it-works" className="text-white/50 hover:text-amber-400 text-sm transition-colors">How It Works</Link></li>
-              <li><Link href="/grain-vault/faq" className="text-white/50 hover:text-amber-400 text-sm transition-colors">FAQ</Link></li>
+              <li><Link href="#how-it-works" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">How It Works</Link></li>
+              <li><Link href="/grain-vault/faq" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">FAQ</Link></li>
             </ul>
           </div>
 
@@ -696,8 +836,8 @@ function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Legal</h4>
             <ul className="space-y-3">
-              <li><Link href="/privacy" className="text-white/50 hover:text-amber-400 text-sm transition-colors">Privacy</Link></li>
-              <li><Link href="/terms" className="text-white/50 hover:text-amber-400 text-sm transition-colors">Terms</Link></li>
+              <li><Link href="/privacy" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">Privacy</Link></li>
+              <li><Link href="/terms" className="text-white/50 hover:text-emerald-400 text-sm transition-colors">Terms</Link></li>
             </ul>
           </div>
         </div>
@@ -705,7 +845,7 @@ function Footer() {
         {/* Bottom bar */}
         <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-white/10">
           <p className="text-white/30 text-sm mb-4 md:mb-0">
-            2025 Wells Onyx. All rights reserved.
+            © 2025 Grain & Vault. A Wells Onyx company. All rights reserved.
           </p>
           <div className="flex items-center gap-4 text-white/30 text-sm">
             <span className="flex items-center gap-2">
@@ -722,8 +862,11 @@ function Footer() {
   )
 }
 
-// Main Page Component
-export default function WellsOnyxHomepage() {
+// ============================================================================
+// MAIN PAGE
+// ============================================================================
+
+export default function GrainVaultHomepage() {
   return (
     <div className="min-h-screen bg-[#030712] text-white antialiased overflow-x-hidden">
       {/* Custom styles for animations */}
@@ -744,33 +887,9 @@ export default function WellsOnyxHomepage() {
           50% { background-position: 100% 50%; }
         }
 
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) translateX(0px); }
-          25% { transform: translateY(-20px) translateX(10px); }
-          50% { transform: translateY(-10px) translateX(-5px); }
-          75% { transform: translateY(-30px) translateX(5px); }
-        }
-
-        @keyframes float-delayed {
-          0%, 100% { transform: translateY(0px) translateX(0px); }
-          25% { transform: translateY(-15px) translateX(-10px); }
-          50% { transform: translateY(-25px) translateX(5px); }
-          75% { transform: translateY(-10px) translateX(-5px); }
-        }
-
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-15px); }
-        }
-
         @keyframes scroll-indicator {
           0%, 100% { transform: translateY(0); opacity: 1; }
           50% { transform: translateY(8px); opacity: 0.5; }
-        }
-
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 0.5; }
         }
 
         .animate-fade-in-up {
@@ -797,24 +916,8 @@ export default function WellsOnyxHomepage() {
           animation: gradient-shift 4s ease infinite;
         }
 
-        .animate-float {
-          animation: float 15s ease-in-out infinite;
-        }
-
-        .animate-float-delayed {
-          animation: float-delayed 18s ease-in-out infinite;
-        }
-
-        .animate-float-slow {
-          animation: float-slow 10s ease-in-out infinite;
-        }
-
         .animate-scroll-indicator {
           animation: scroll-indicator 2s ease-in-out infinite;
-        }
-
-        .animate-pulse-slow {
-          animation: pulse-slow 4s ease-in-out infinite;
         }
 
         /* Smooth scrolling */
@@ -822,7 +925,7 @@ export default function WellsOnyxHomepage() {
           scroll-behavior: smooth;
         }
 
-        /* Custom scrollbar */
+        /* Custom scrollbar - emerald theme */
         ::-webkit-scrollbar {
           width: 8px;
         }
@@ -832,27 +935,27 @@ export default function WellsOnyxHomepage() {
         }
 
         ::-webkit-scrollbar-thumb {
-          background: rgba(251, 146, 60, 0.3);
+          background: rgba(16, 185, 129, 0.3);
           border-radius: 4px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-          background: rgba(251, 146, 60, 0.5);
+          background: rgba(16, 185, 129, 0.5);
         }
 
-        /* Selection */
+        /* Selection - emerald */
         ::selection {
-          background: rgba(251, 146, 60, 0.3);
+          background: rgba(16, 185, 129, 0.3);
           color: white;
         }
       `}</style>
 
       <Navigation />
       <HeroSection />
+      <ThreeLayerSection />
       <ProductsSection />
-      <HowItWorksSection />
-      <MetricsSection />
-      <EarlyAccessSection />
+      <TreasurySDKSection />
+      <StatsSection />
       <CTASection />
       <Footer />
 
@@ -861,12 +964,12 @@ export default function WellsOnyxHomepage() {
         href="/founder/chat"
         className="fixed bottom-6 right-6 z-50 group"
       >
-        <div className="absolute inset-0 bg-amber-500/30 rounded-2xl blur-xl group-hover:bg-amber-500/50 transition-all" />
-        <div className="relative w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-110 transition-all">
+        <div className="absolute inset-0 bg-emerald-500/30 rounded-2xl blur-xl group-hover:bg-emerald-500/50 transition-all" />
+        <div className="relative w-14 h-14 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-110 transition-all">
           <MessageSquare className="w-6 h-6 text-black" />
         </div>
-        <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#030712]">
-          <span className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-50" />
+        <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-[#030712]">
+          <span className="absolute inset-0 bg-amber-500 rounded-full animate-ping opacity-50" />
         </div>
       </Link>
     </div>

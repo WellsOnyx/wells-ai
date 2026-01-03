@@ -1,16 +1,18 @@
 'use client'
 
 /**
- * Unified Join/Signup Page - Dynamic Branding
+ * Unified Join/Signup Page - Grain & Vault Branding
  *
  * THE SINGLE ENTRY POINT for both wellsonyx.io and grainandvault.com
  *
- * Automatically adapts branding based on:
- * 1. Domain (grainandvault.com → treasury theme)
- * 2. URL param (journey=treasury → treasury theme)
- * 3. Default (WellsAI theme)
+ * Always uses Grain & Vault branding (emerald/green theme)
+ * Journey determines dashboard routing:
+ * - treasury: CFO, Finance, Procurement roles
+ * - sourcing: Buyer, Procurement roles
+ * - sales: Seller roles
+ * - hiring: HR/Recruiter roles
  *
- * Includes interactive GRAIN demo for treasury users
+ * Powered by WellsAI attribution included
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -71,18 +73,18 @@ interface FormData {
 }
 
 // ============================================================================
-// BRAND THEMES
+// UNIFIED BRAND THEME - Grain & Vault
 // ============================================================================
 
-const TREASURY_THEME = {
+const UNIFIED_THEME = {
   name: 'Grain & Vault',
   logo: 'grain-vault',
   bgGradient: 'from-black via-gray-900 to-black',
   panelBg: 'from-emerald-900 via-green-900 to-black',
   accent: 'emerald',
   accentGradient: 'from-emerald-500 to-green-600',
-  buttonGradient: 'from-amber-500 to-orange-600',
-  buttonShadow: 'shadow-amber-500/25 hover:shadow-amber-500/40',
+  buttonGradient: 'from-emerald-500 to-teal-600',
+  buttonShadow: 'shadow-emerald-500/25 hover:shadow-emerald-500/40',
   textPrimary: 'text-white',
   textSecondary: 'text-gray-400',
   inputBg: 'bg-white/5',
@@ -91,30 +93,13 @@ const TREASURY_THEME = {
   cardBg: 'bg-white/5 border-white/10',
   selectedBorder: 'border-emerald-500 bg-emerald-500/10',
   selectedBg: 'bg-emerald-500',
-  progressBar: 'from-emerald-500 to-green-600',
-  href: '/grain-vault',
-}
-
-const WELLS_THEME = {
-  name: 'WellsAI',
-  logo: 'wells',
-  bgGradient: 'from-white to-gray-50',
-  panelBg: 'from-blue-600 via-blue-700 to-indigo-800',
-  accent: 'blue',
-  accentGradient: 'from-blue-500 to-blue-600',
-  buttonGradient: 'from-blue-600 to-blue-700',
-  buttonShadow: 'shadow-blue-500/25 hover:shadow-blue-500/40',
-  textPrimary: 'text-gray-900',
-  textSecondary: 'text-gray-600',
-  inputBg: 'bg-white',
-  inputBorder: 'border-gray-200',
-  inputFocus: 'focus:border-blue-500 focus:ring-blue-500/20',
-  cardBg: 'bg-white border-gray-200',
-  selectedBorder: 'border-blue-500 bg-blue-50',
-  selectedBg: 'bg-blue-500',
-  progressBar: 'from-blue-500 to-blue-600',
+  progressBar: 'from-emerald-500 to-teal-600',
   href: '/',
 }
+
+// Keep for backward compatibility but use unified theme
+const TREASURY_THEME = UNIFIED_THEME
+const WELLS_THEME = UNIFIED_THEME
 
 // ============================================================================
 // ERP OPTIONS
@@ -132,47 +117,47 @@ const ERP_SYSTEMS = [
 ]
 
 // ============================================================================
-// ROLE OPTIONS
+// ROLE OPTIONS - Unified for all journeys
 // ============================================================================
 
 const ROLE_OPTIONS: { id: UserRole; name: string; description: string; icon: React.ElementType }[] = [
-  { id: 'cfo', name: 'CFO', description: 'Chief Financial Officer', icon: Wallet },
-  { id: 'controller', name: 'Controller', description: 'Finance & Accounting', icon: Briefcase },
-  { id: 'procurement', name: 'Procurement', description: 'Purchasing & Sourcing', icon: ShoppingCart },
-  { id: 'founder', name: 'Founder / CEO', description: 'Building a company', icon: Rocket },
-  { id: 'hr', name: 'HR / People', description: 'Human Resources', icon: Users },
-  { id: 'sales', name: 'Sales', description: 'Revenue & Growth', icon: TrendingUp },
+  { id: 'cfo', name: 'CFO / Finance Leader', description: 'Treasury, AP/AR, financial strategy', icon: Wallet },
+  { id: 'controller', name: 'Controller / Treasurer', description: 'Accounting, cash management', icon: Briefcase },
+  { id: 'procurement', name: 'Procurement Leader', description: 'Sourcing, vendor management', icon: ShoppingCart },
+  { id: 'founder', name: 'Founder / CEO', description: 'Building or running a company', icon: Rocket },
+  { id: 'hr', name: 'HR / People Leader', description: 'Recruiting, talent, culture', icon: Users },
+  { id: 'sales', name: 'Sales / Revenue Leader', description: 'Growth, partnerships, deals', icon: TrendingUp },
   { id: 'other', name: 'Other', description: 'Something else', icon: Building2 },
 ]
 
-// Treasury-focused roles shown first for treasury journey
+// Treasury-focused roles (CFO, Finance, Procurement first)
 const TREASURY_ROLE_OPTIONS: { id: UserRole; name: string; description: string; icon: React.ElementType }[] = [
-  { id: 'cfo', name: 'CFO', description: 'Chief Financial Officer', icon: Wallet },
-  { id: 'controller', name: 'Controller / Treasurer', description: 'Treasury & Finance', icon: Briefcase },
-  { id: 'founder', name: 'Founder / CEO', description: 'Building a company', icon: Rocket },
-  { id: 'procurement', name: 'Finance Ops', description: 'Payments & Operations', icon: DollarSign },
+  { id: 'cfo', name: 'CFO / Finance Leader', description: 'Treasury, AP/AR, financial strategy', icon: Wallet },
+  { id: 'controller', name: 'Controller / Treasurer', description: 'Cash management, accounting', icon: Briefcase },
+  { id: 'procurement', name: 'Procurement Leader', description: 'Sourcing, vendor payments', icon: ShoppingCart },
+  { id: 'founder', name: 'Founder / CEO', description: 'Building or running a company', icon: Rocket },
   { id: 'other', name: 'Other', description: 'Something else', icon: Building2 },
 ]
 
 // ============================================================================
-// NEED OPTIONS
+// NEED OPTIONS - Unified across all journeys
 // ============================================================================
 
 const NEED_OPTIONS: { id: UserNeed; name: string; description: string; icon: React.ElementType }[] = [
-  { id: 'treasury', name: 'Treasury', description: 'Cash management & GRAIN', icon: Wallet },
-  { id: 'payments', name: 'Payments', description: 'AP/AR & invoicing', icon: Zap },
-  { id: 'sourcing', name: 'Sourcing', description: 'Find suppliers & RFQs', icon: ShoppingCart },
-  { id: 'hiring', name: 'Hiring', description: 'Recruit talent', icon: Users },
-  { id: 'selling', name: 'Selling', description: 'Find customers', icon: TrendingUp },
-  { id: 'all', name: 'All of the Above', description: 'I need everything', icon: Sparkles },
+  { id: 'treasury', name: 'Treasury & Reserves', description: 'Protected deposits, 0% credit line', icon: Wallet },
+  { id: 'payments', name: 'Payments & Settlement', description: 'Instant settlement, zero fees', icon: Zap },
+  { id: 'sourcing', name: 'Sourcing & Procurement', description: 'Find suppliers, send RFQs', icon: ShoppingCart },
+  { id: 'hiring', name: 'Hiring & Recruiting', description: 'Find and hire talent', icon: Users },
+  { id: 'selling', name: 'Sales & Growth', description: 'Find customers, close deals', icon: TrendingUp },
+  { id: 'all', name: 'Full Platform', description: 'I need everything', icon: Sparkles },
 ]
 
-// Treasury-focused needs
+// Treasury-focused needs (shown for treasury journey)
 const TREASURY_NEED_OPTIONS: { id: UserNeed; name: string; description: string; icon: React.ElementType }[] = [
-  { id: 'treasury', name: 'Treasury & GRAIN', description: 'Hold appreciating stablecoin', icon: Wallet },
-  { id: 'payments', name: 'Zero-Friction Payments', description: 'Instant settlement, no fees', icon: Zap },
-  { id: 'sourcing', name: 'Vendor Payments', description: 'Pay suppliers in GRAIN', icon: Globe },
-  { id: 'all', name: 'Full Treasury Suite', description: 'Everything above', icon: Sparkles },
+  { id: 'treasury', name: 'Protected Treasury', description: '100% collateralized deposits + 0% credit line', icon: Wallet },
+  { id: 'payments', name: 'Zero-Friction Payments', description: 'Instant settlement, no transaction fees', icon: Zap },
+  { id: 'sourcing', name: 'Vendor Management', description: 'Pay suppliers in GRAIN, track payables', icon: Globe },
+  { id: 'all', name: 'Full Treasury Suite', description: 'All treasury features', icon: Sparkles },
 ]
 
 // ============================================================================
@@ -232,12 +217,10 @@ export default function JoinPage() {
     }
   }, [])
 
-  // Determine which theme to use:
-  // 1. URL param journey=treasury takes precedence
-  // 2. Domain detection (grainandvault.com → treasury)
-  // 3. Default to WellsAI
-  const isTreasury = journeyFromUrl === 'treasury' || (detectedDomain === 'grain' && journeyFromUrl !== 'sourcing')
-  const theme = isTreasury ? TREASURY_THEME : WELLS_THEME
+  // UNIFIED BRANDING: Always use Grain & Vault theme
+  // Journey just determines role ordering and default needs
+  const isTreasury = journeyFromUrl === 'treasury' || detectedDomain === 'grain' || !journeyFromUrl
+  const theme = UNIFIED_THEME // Always use unified theme
 
   // Pre-select treasury need if coming from Grain & Vault
   useEffect(() => {
@@ -467,27 +450,16 @@ export default function JoinPage() {
     <div className={`min-h-screen bg-gradient-to-b ${theme.bgGradient} flex`}>
       {/* Left Panel - Form */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
+        {/* Header - Always Grain & Vault branding */}
         <header className="p-6">
-          <Link href={theme.href} className={`inline-flex items-center gap-2.5 ${theme.textPrimary} font-semibold text-lg hover:opacity-80 transition-opacity`}>
-            {isTreasury ? (
-              <>
-                <div className="relative">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-                    <div className="w-4 h-4 bg-black rounded-sm" />
-                  </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-sm" />
-                </div>
-                <span>Grain & Vault</span>
-              </>
-            ) : (
-              <>
-                <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <span>WellsAI</span>
-              </>
-            )}
+          <Link href="/" className="inline-flex items-center gap-2.5 text-white font-semibold text-lg hover:opacity-80 transition-opacity">
+            <div className="relative">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-black" />
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-amber-500 rounded-sm" />
+            </div>
+            <span>Grain & Vault</span>
           </Link>
         </header>
 
@@ -526,20 +498,16 @@ export default function JoinPage() {
         </footer>
       </div>
 
-      {/* Right Panel - Branding (Desktop Only) */}
-      <div className={`hidden lg:flex w-[520px] bg-gradient-to-br ${theme.panelBg} p-12 items-center justify-center relative overflow-hidden`}>
+      {/* Right Panel - Treasury Demo (Desktop Only) */}
+      <div className="hidden lg:flex w-[520px] bg-gradient-to-br from-emerald-900 via-green-900 to-black p-12 items-center justify-center relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className={`absolute top-1/4 -right-20 w-80 h-80 ${isTreasury ? 'bg-emerald-500/10' : 'bg-white/5'} rounded-full blur-3xl`} />
-          <div className={`absolute bottom-1/4 -left-20 w-80 h-80 ${isTreasury ? 'bg-green-500/10' : 'bg-blue-400/10'} rounded-full blur-3xl`} />
+          <div className="absolute top-1/4 -right-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 -left-20 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl" />
         </div>
 
         <div className="relative z-10 text-center">
-          {isTreasury ? (
-            <TreasuryPanel />
-          ) : (
-            <WellsPanel />
-          )}
+          <TreasuryPanel />
         </div>
       </div>
     </div>
@@ -551,7 +519,6 @@ export default function JoinPage() {
 // ============================================================================
 
 function TreasuryPanel() {
-  const [demoStep, setDemoStep] = useState(0)
   const [grainPrice, setGrainPrice] = useState(1.00)
   const [depositAmount, setDepositAmount] = useState(1000)
   const [grainReceived, setGrainReceived] = useState(1000)
@@ -576,21 +543,23 @@ function TreasuryPanel() {
       {/* Logo */}
       <div className="flex items-center justify-center gap-3 mb-2">
         <div className="relative">
-          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <div className="w-6 h-6 bg-black rounded-md" />
+          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+            <Wallet className="w-7 h-7 text-black" />
           </div>
-          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-md" />
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 rounded-md flex items-center justify-center">
+            <Sparkles className="w-3 h-3 text-black" />
+          </div>
         </div>
       </div>
 
       <div>
         <h2 className="text-3xl font-bold text-white mb-3">
-          Treasury that <span className="text-emerald-400">appreciates</span>
+          Treasury that <span className="text-emerald-400">works</span>
         </h2>
         <p className="text-white/70 text-lg">
-          GRAIN is the anti-inflationary stablecoin.
+          Protected deposits. 0% interest credit line.
           <br />
-          Your money grows while you hold.
+          Zero transaction fees.
         </p>
       </div>
 
@@ -654,10 +623,16 @@ function TreasuryPanel() {
 
       {/* Features */}
       <div className="space-y-3">
-        <TreasuryFeature icon={TrendingUp} text="GRAIN only goes up - $1.00 floor guaranteed" />
+        <TreasuryFeature icon={Shield} text="100% collateralized - always protected" />
         <TreasuryFeature icon={Zap} text="Instant settlement, under 1 second" />
-        <TreasuryFeature icon={Shield} text="100% collateralized, real-time audits" />
-        <TreasuryFeature icon={Globe} text="Available in 180+ countries" />
+        <TreasuryFeature icon={DollarSign} text="0% interest, 0% transaction fees" />
+        <TreasuryFeature icon={Globe} text="Available globally" />
+      </div>
+
+      {/* Powered by */}
+      <div className="flex items-center justify-center gap-2 text-white/40 text-sm pt-4 border-t border-white/10">
+        <Sparkles className="w-4 h-4" />
+        <span>Powered by WellsAI</span>
       </div>
     </div>
   )
@@ -723,62 +698,36 @@ interface StepProps {
 function WelcomeStep({ onContinue, theme, isTreasury }: { onContinue: () => void } & StepProps) {
   return (
     <div className="text-center">
-      {isTreasury ? (
-        <>
-          <div className="relative w-20 h-20 mx-auto mb-6">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-xl shadow-emerald-500/20">
-              <div className="w-8 h-8 bg-black rounded-lg" />
-            </div>
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-lg" />
-          </div>
+      {/* Always show Grain & Vault branding */}
+      <div className="relative w-20 h-20 mx-auto mb-6">
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-xl shadow-emerald-500/20">
+          <Wallet className="w-10 h-10 text-black" />
+        </div>
+        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-amber-500 rounded-lg flex items-center justify-center">
+          <Sparkles className="w-3 h-3 text-black" />
+        </div>
+      </div>
 
-          <h1 className="text-3xl font-bold text-white mb-3">
-            Welcome to Grain & Vault
-          </h1>
+      <h1 className="text-3xl font-bold text-white mb-3">
+        Welcome to Grain & Vault
+      </h1>
 
-          <p className="text-lg text-gray-400 mb-8 max-w-md mx-auto">
-            Treasury infrastructure for modern finance. Set up your GRAIN wallet in under 2 minutes.
-          </p>
+      <p className="text-lg text-gray-400 mb-8 max-w-md mx-auto">
+        Protected treasury. Zero-friction payments.
+        Set up your account in under 2 minutes.
+      </p>
 
-          <button
-            onClick={onContinue}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
-          >
-            Get Started
-            <ArrowRight className="w-5 h-5" />
-          </button>
+      <button
+        onClick={onContinue}
+        className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-black font-semibold rounded-xl shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
+      >
+        Get Started
+        <ArrowRight className="w-5 h-5" />
+      </button>
 
-          <p className="mt-6 text-sm text-gray-500">
-            No credit card required
-          </p>
-        </>
-      ) : (
-        <>
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/20">
-            <Sparkles className="w-10 h-10 text-white" />
-          </div>
-
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            Welcome to WellsAI
-          </h1>
-
-          <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
-            Your AI-powered business operations platform. Let's get you set up in under 2 minutes.
-          </p>
-
-          <button
-            onClick={onContinue}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
-          >
-            Get Started
-            <ArrowRight className="w-5 h-5" />
-          </button>
-
-          <p className="mt-6 text-sm text-gray-500">
-            No credit card required
-          </p>
-        </>
-      )}
+      <p className="mt-6 text-sm text-gray-500">
+        No credit card required • Powered by WellsAI
+      </p>
     </div>
   )
 }
@@ -1272,50 +1221,47 @@ function CompleteStep({
 } & StepProps) {
   return (
     <div className="text-center">
-      <div className={`w-20 h-20 bg-gradient-to-br ${isTreasury ? 'from-emerald-500 to-green-600 shadow-emerald-500/20' : 'from-green-500 to-emerald-600 shadow-green-500/20'} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl`}>
-        <Check className="w-10 h-10 text-white" />
+      <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/20">
+        <Check className="w-10 h-10 text-black" />
       </div>
 
-      <h1 className={`text-3xl font-bold ${theme.textPrimary} mb-3`}>
+      <h1 className="text-3xl font-bold text-white mb-3">
         You're all set!
       </h1>
 
-      <p className={`text-lg ${theme.textSecondary} mb-8 max-w-md mx-auto`}>
-        {isTreasury
-          ? `Welcome to Grain & Vault, ${formData.companyName || 'there'}. Your treasury is ready.`
-          : `Welcome to WellsAI, ${formData.companyName || 'there'}. Your AI assistant is ready to help.`
-        }
+      <p className="text-lg text-gray-400 mb-8 max-w-md mx-auto">
+        Welcome to Grain & Vault, {formData.companyName || 'there'}. Your treasury is ready.
       </p>
 
       {/* Summary */}
-      <div className={`${isTreasury ? 'bg-white/5 border-white/10' : 'bg-gray-50'} rounded-2xl p-6 mb-8 text-left border`}>
-        <h3 className={`font-semibold ${theme.textPrimary} mb-4`}>Your setup:</h3>
+      <div className="bg-white/5 border-white/10 rounded-2xl p-6 mb-8 text-left border">
+        <h3 className="font-semibold text-white mb-4">Your setup:</h3>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 ${isTreasury ? 'bg-emerald-500/20' : 'bg-blue-100'} rounded-lg flex items-center justify-center`}>
-              <Building2 className={`w-4 h-4 ${isTreasury ? 'text-emerald-400' : 'text-blue-600'}`} />
+            <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+              <Building2 className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <p className={`text-sm ${theme.textSecondary}`}>Company</p>
-              <p className={`font-medium ${theme.textPrimary}`}>{formData.companyName || 'Not set'}</p>
+              <p className="text-sm text-gray-500">Company</p>
+              <p className="font-medium text-white">{formData.companyName || 'Not set'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 ${isTreasury ? 'bg-purple-500/20' : 'bg-purple-100'} rounded-lg flex items-center justify-center`}>
-              <Briefcase className={`w-4 h-4 ${isTreasury ? 'text-purple-400' : 'text-purple-600'}`} />
+            <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+              <Briefcase className="w-4 h-4 text-purple-400" />
             </div>
             <div>
-              <p className={`text-sm ${theme.textSecondary}`}>Role</p>
-              <p className={`font-medium ${theme.textPrimary}`}>{formData.role ? getRoleDisplayName(formData.role) : 'Not set'}</p>
+              <p className="text-sm text-gray-500">Role</p>
+              <p className="font-medium text-white">{formData.role ? getRoleDisplayName(formData.role) : 'Not set'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 ${isTreasury ? 'bg-green-500/20' : 'bg-emerald-100'} rounded-lg flex items-center justify-center`}>
-              <Sparkles className={`w-4 h-4 ${isTreasury ? 'text-green-400' : 'text-emerald-600'}`} />
+            <div className="w-8 h-8 bg-teal-500/20 rounded-lg flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-teal-400" />
             </div>
             <div>
-              <p className={`text-sm ${theme.textSecondary}`}>Focus Areas</p>
-              <p className={`font-medium ${theme.textPrimary}`}>
+              <p className="text-sm text-gray-500">Focus Areas</p>
+              <p className="font-medium text-white">
                 {formData.needs.length > 0
                   ? formData.needs.map(n => getNeedDisplayName(n)).join(', ')
                   : 'Not set'}
@@ -1324,12 +1270,12 @@ function CompleteStep({
           </div>
           {formData.erpSystem && formData.erpSystem !== 'none' && (
             <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 ${isTreasury ? 'bg-amber-500/20' : 'bg-orange-100'} rounded-lg flex items-center justify-center`}>
-                <Database className={`w-4 h-4 ${isTreasury ? 'text-amber-400' : 'text-orange-600'}`} />
+              <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                <Database className="w-4 h-4 text-amber-400" />
               </div>
               <div>
-                <p className={`text-sm ${theme.textSecondary}`}>Integration</p>
-                <p className={`font-medium ${theme.textPrimary}`}>
+                <p className="text-sm text-gray-500">Integration</p>
+                <p className="font-medium text-white">
                   {ERP_SYSTEMS.find(e => e.id === formData.erpSystem)?.name || formData.erpSystem}
                 </p>
               </div>
@@ -1340,9 +1286,9 @@ function CompleteStep({
 
       <button
         onClick={onGoToDashboard}
-        className={`inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r ${theme.buttonGradient} text-white font-semibold rounded-xl shadow-lg ${theme.buttonShadow} hover:scale-[1.02] active:scale-[0.98] transition-all`}
+        className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-black font-semibold rounded-xl shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
       >
-        {isTreasury ? 'Go to Treasury' : 'Go to Dashboard'}
+        Go to Dashboard
         <ArrowRight className="w-5 h-5" />
       </button>
     </div>
