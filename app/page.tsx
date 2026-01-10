@@ -223,7 +223,7 @@ function Navigation() {
             </div>
             <div className="flex flex-col">
               <span className="text-gray-900 dark:text-white font-semibold text-lg tracking-tight">Grain & Vault</span>
-              <span className="text-gray-500 dark:text-white/40 text-[10px] font-medium -mt-0.5 tracking-wider uppercase">Treasury</span>
+              <span className="text-gray-500 dark:text-white/60 text-[10px] font-medium -mt-0.5 tracking-wider uppercase">Treasury</span>
             </div>
           </Link>
 
@@ -312,7 +312,7 @@ function HeroSection() {
           </h1>
 
           {/* Subheadline */}
-          <p className="text-lg sm:text-xl text-gray-600 dark:text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-in-up animation-delay-200">
+          <p className="text-lg sm:text-xl text-gray-600 dark:text-white/70 max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-in-up animation-delay-200">
             Deposit your predictable spend. 100% protected reserves.
             0% interest credit line. 0% transaction fees.
           </p>
@@ -332,7 +332,7 @@ function HeroSection() {
           </div>
 
           {/* Trust indicators */}
-          <div className="flex flex-wrap items-center justify-center gap-8 text-gray-500 dark:text-white/40 text-sm animate-fade-in-up animation-delay-400">
+          <div className="flex flex-wrap items-center justify-center gap-8 text-gray-500 dark:text-white/60 text-sm animate-fade-in-up animation-delay-400">
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
               <span className="text-emerald-600 dark:text-emerald-400/80">100% Collateralized</span>
@@ -356,7 +356,7 @@ function HeroSection() {
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
         <div className="w-6 h-10 border-2 border-gray-300 dark:border-white/20 rounded-full flex items-start justify-center p-2">
-          <div className="w-1 h-2 bg-gray-400 dark:bg-white/40 rounded-full animate-scroll-indicator" />
+          <div className="w-1 h-2 bg-gray-400 dark:bg-white/60 rounded-full animate-scroll-indicator" />
         </div>
       </div>
     </section>
@@ -382,9 +382,9 @@ function ThreeLayerSection() {
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight mb-6">
             How Your Money
             <br />
-            <span className="text-gray-400 dark:text-white/40">Actually Works</span>
+            <span className="text-gray-400 dark:text-white/50">Actually Works</span>
           </h2>
-          <p className="text-lg text-gray-600 dark:text-white/50 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 dark:text-white/70 max-w-2xl mx-auto">
             One deposit creates three layers of value. Your cash is always protected,
             but it works harder for you.
           </p>
@@ -399,7 +399,7 @@ function ThreeLayerSection() {
             </div>
             <div className="text-emerald-500 dark:text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3">Layer 1</div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Protected Deposit</h3>
-            <p className="text-gray-600 dark:text-white/50 leading-relaxed mb-6">
+            <p className="text-gray-600 dark:text-white/70 leading-relaxed mb-6">
               Your USD deposit is 100% protected and always withdrawable.
               It backs your credit line 1:1 and earns yield for the treasury.
             </p>
@@ -416,7 +416,7 @@ function ThreeLayerSection() {
             </div>
             <div className="text-amber-500 dark:text-amber-400 text-xs font-semibold uppercase tracking-wider mb-3">Layer 2</div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">GRAIN Credit Line</h3>
-            <p className="text-gray-600 dark:text-white/50 leading-relaxed mb-6">
+            <p className="text-gray-600 dark:text-white/70 leading-relaxed mb-6">
               Get 1:1 GRAIN credit at deposit price. 0% interest.
               0% transaction fees. Spend with suppliers in the network.
             </p>
@@ -433,7 +433,7 @@ function ThreeLayerSection() {
             </div>
             <div className="text-violet-500 dark:text-violet-400 text-xs font-semibold uppercase tracking-wider mb-3">Layer 3</div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Appreciation</h3>
-            <p className="text-gray-600 dark:text-white/50 leading-relaxed mb-6">
+            <p className="text-gray-600 dark:text-white/70 leading-relaxed mb-6">
               Bonus GRAIN from ecosystem growth. Funded by transaction fees
               and treasury yield. Your purchasing power grows.
             </p>
@@ -457,7 +457,7 @@ function ThreeLayerSection() {
                     </div>
                     <div>
                       <div className="text-gray-900 dark:text-white font-semibold">Protected: $1,000,000</div>
-                      <div className="text-gray-500 dark:text-white/50 text-sm">Your deposit, always available</div>
+                      <div className="text-gray-500 dark:text-white/60 text-sm">Your deposit, always available</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
@@ -466,7 +466,7 @@ function ThreeLayerSection() {
                     </div>
                     <div>
                       <div className="text-gray-900 dark:text-white font-semibold">Credit Line: 100,000 GRAIN</div>
-                      <div className="text-gray-500 dark:text-white/50 text-sm">At $10/GRAIN (your lock-in price)</div>
+                      <div className="text-gray-500 dark:text-white/60 text-sm">At $10/GRAIN (your lock-in price)</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl">
@@ -475,7 +475,7 @@ function ThreeLayerSection() {
                     </div>
                     <div>
                       <div className="text-gray-900 dark:text-white font-semibold">Appreciation: Grows</div>
-                      <div className="text-gray-500 dark:text-white/50 text-sm">Bonus GRAIN as network scales</div>
+                      <div className="text-gray-500 dark:text-white/60 text-sm">Bonus GRAIN as network scales</div>
                     </div>
                   </div>
                 </div>
@@ -485,7 +485,7 @@ function ThreeLayerSection() {
                   0%
                 </div>
                 <div className="text-emerald-500 dark:text-emerald-400 text-lg font-medium mb-2">Interest on Credit</div>
-                <p className="text-gray-600 dark:text-white/50 mb-6">
+                <p className="text-gray-600 dark:text-white/70 mb-6">
                   Unlike traditional credit lines, GRAIN has no interest charges.
                   Use your credit line to pay suppliers, then replenish when convenient.
                 </p>
@@ -527,7 +527,7 @@ function ProductsSection() {
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight mb-6">
             Three Products.
             <br />
-            <span className="text-gray-400 dark:text-white/40">One Platform.</span>
+            <span className="text-gray-400 dark:text-white/50">One Platform.</span>
           </h2>
         </div>
 
@@ -542,11 +542,11 @@ function ProductsSection() {
               <span className="text-amber-300 text-xs font-semibold uppercase tracking-wider">Currency</span>
             </div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">GRAIN</h3>
-            <p className="text-gray-600 dark:text-white/50 leading-relaxed mb-6">
+            <p className="text-gray-600 dark:text-white/70 leading-relaxed mb-6">
               The settlement currency. Backed 100% by treasury assets.
               Appreciates as the network grows. Zero transaction fees.
             </p>
-            <ul className="space-y-3 text-gray-600 dark:text-white/60 text-sm">
+            <ul className="space-y-3 text-gray-600 dark:text-white/70 text-sm">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-amber-400" />
                 100% asset-backed
@@ -571,11 +571,11 @@ function ProductsSection() {
               <span className="text-emerald-600 dark:text-emerald-300 text-xs font-semibold uppercase tracking-wider">Treasury</span>
             </div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">VAULT</h3>
-            <p className="text-gray-600 dark:text-white/50 leading-relaxed mb-6">
+            <p className="text-gray-600 dark:text-white/70 leading-relaxed mb-6">
               Protected reserve infrastructure. Your deposits are always 100%
               collateralized and withdrawable. Full transparency.
             </p>
-            <ul className="space-y-3 text-gray-600 dark:text-white/60 text-sm">
+            <ul className="space-y-3 text-gray-600 dark:text-white/70 text-sm">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 100% protected reserves
@@ -600,11 +600,11 @@ function ProductsSection() {
               <span className="text-violet-600 dark:text-violet-300 text-xs font-semibold uppercase tracking-wider">AI Engine</span>
             </div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">WellsAI</h3>
-            <p className="text-gray-600 dark:text-white/50 leading-relaxed mb-6">
+            <p className="text-gray-600 dark:text-white/70 leading-relaxed mb-6">
               The intelligence layer. AI-to-AI negotiation. Automated sourcing,
               hiring, and sales. You approve, Wells executes.
             </p>
-            <ul className="space-y-3 text-gray-600 dark:text-white/60 text-sm">
+            <ul className="space-y-3 text-gray-600 dark:text-white/70 text-sm">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-violet-400" />
                 AI-to-AI negotiation
@@ -648,9 +648,9 @@ function TreasurySDKSection() {
             <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight mb-6">
               Integrate Treasury
               <br />
-              <span className="text-gray-400 dark:text-white/40">In Minutes</span>
+              <span className="text-gray-400 dark:text-white/50">In Minutes</span>
             </h2>
-            <p className="text-lg text-gray-600 dark:text-white/50 mb-8 leading-relaxed">
+            <p className="text-lg text-gray-600 dark:text-white/70 mb-8 leading-relaxed">
               Connect your ERP. Push your payables. Let GRAIN handle settlement.
               Full visibility into treasury health, credit usage, and appreciation.
             </p>
@@ -690,7 +690,7 @@ function TreasurySDKSection() {
                 <div className="w-3 h-3 rounded-full bg-red-500/80" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
                 <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                <span className="text-white/30 text-xs ml-2 font-mono">treasury-sdk.ts</span>
+                <span className="text-gray-500 dark:text-white/50 text-xs ml-2 font-mono">treasury-sdk.ts</span>
               </div>
               <pre className="text-sm overflow-x-auto">
                 <code className="text-white/80 font-mono">
@@ -749,7 +749,7 @@ function WellsAISection() {
               </span>
             </h2>
 
-            <p className="text-lg text-gray-600 dark:text-white/50 mb-8 leading-relaxed">
+            <p className="text-lg text-gray-600 dark:text-white/70 mb-8 leading-relaxed">
               WellsAI is the intelligence layer. Tell it what you need - sourcing, hiring, sales, negotiations.
               AI-to-AI execution with human approval. You stay in control.
             </p>
@@ -762,7 +762,7 @@ function WellsAISection() {
                 </div>
                 <div>
                   <div className="text-gray-900 dark:text-white font-semibold mb-1">AI-to-AI Negotiation</div>
-                  <div className="text-gray-600 dark:text-white/50 text-sm">Your AI negotiates with supplier AIs. Deals close faster.</div>
+                  <div className="text-gray-600 dark:text-white/60 text-sm">Your AI negotiates with supplier AIs. Deals close faster.</div>
                 </div>
               </div>
 
@@ -772,7 +772,7 @@ function WellsAISection() {
                 </div>
                 <div>
                   <div className="text-gray-900 dark:text-white font-semibold mb-1">Automated Sourcing</div>
-                  <div className="text-gray-600 dark:text-white/50 text-sm">Find suppliers, get quotes, compare options - all automated.</div>
+                  <div className="text-gray-600 dark:text-white/60 text-sm">Find suppliers, get quotes, compare options - all automated.</div>
                 </div>
               </div>
 
@@ -782,7 +782,7 @@ function WellsAISection() {
                 </div>
                 <div>
                   <div className="text-gray-900 dark:text-white font-semibold mb-1">Human-in-the-Loop</div>
-                  <div className="text-gray-600 dark:text-white/50 text-sm">Every deal requires your approval. AI executes, you decide.</div>
+                  <div className="text-gray-600 dark:text-white/60 text-sm">Every deal requires your approval. AI executes, you decide.</div>
                 </div>
               </div>
             </div>
@@ -814,11 +814,11 @@ function WellsAISection() {
                 <div className="text-6xl font-bold text-gray-900 dark:text-white mb-2">
                   1<span className="text-violet-500 dark:text-violet-400">%</span>
                 </div>
-                <div className="text-gray-500 dark:text-white/50 text-lg">Success Fee</div>
+                <div className="text-gray-500 dark:text-white/60 text-lg">Success Fee</div>
               </div>
 
               <div className="border-t border-gray-200 dark:border-white/10 pt-8 mb-8">
-                <p className="text-gray-600 dark:text-white/60 text-center mb-6">
+                <p className="text-gray-600 dark:text-white/70 text-center mb-6">
                   Only pay when WellsAI closes deals for you.
                   <br />
                   No monthly fees. No setup costs.
@@ -841,7 +841,7 @@ function WellsAISection() {
               </div>
 
               <div className="text-center">
-                <p className="text-gray-400 dark:text-white/40 text-xs">
+                <p className="text-gray-400 dark:text-white/50 text-xs">
                   The 1% fee is part of your Cost of Goods Sold (COGS),
                   <br />
                   not a transaction fee. Pay when value is delivered.
@@ -875,19 +875,19 @@ function StatsSection() {
             <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2">
               100<span className="text-emerald-500 dark:text-emerald-400">%</span>
             </div>
-            <div className="text-gray-500 dark:text-white/50 text-sm">Collateralized</div>
+            <div className="text-gray-500 dark:text-white/60 text-sm">Collateralized</div>
           </GlassCard>
           <GlassCard className="p-8 text-center">
             <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2">
               0<span className="text-emerald-500 dark:text-emerald-400">%</span>
             </div>
-            <div className="text-gray-500 dark:text-white/50 text-sm">Interest & Transaction Fees</div>
+            <div className="text-gray-500 dark:text-white/60 text-sm">Interest & Transaction Fees</div>
           </GlassCard>
           <GlassCard className="p-8 text-center col-span-2 lg:col-span-1">
             <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2">
               &lt;1<span className="text-emerald-500 dark:text-emerald-400">s</span>
             </div>
-            <div className="text-gray-500 dark:text-white/50 text-sm">Settlement</div>
+            <div className="text-gray-500 dark:text-white/60 text-sm">Settlement</div>
           </GlassCard>
         </div>
       </div>
@@ -919,7 +919,7 @@ function CTASection() {
           </span>
         </h2>
 
-        <p className="text-xl text-gray-600 dark:text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed">
+        <p className="text-xl text-gray-600 dark:text-white/70 max-w-2xl mx-auto mb-12 leading-relaxed">
           Join enterprises using Grain & Vault for protected reserves,
           zero-interest credit, and instant settlement.
         </p>
@@ -934,7 +934,7 @@ function CTASection() {
           </ShimmerButton>
         </div>
 
-        <p className="mt-8 text-gray-400 dark:text-white/40 text-sm">
+        <p className="mt-8 text-gray-400 dark:text-white/50 text-sm">
           No minimum deposit. Start protecting your treasury today.
         </p>
       </div>
@@ -962,12 +962,12 @@ function Footer() {
               </div>
               <span className="text-gray-900 dark:text-white font-semibold text-lg">Grain & Vault</span>
             </Link>
-            <p className="text-gray-500 dark:text-white/40 text-sm leading-relaxed mb-4">
+            <p className="text-gray-500 dark:text-white/60 text-sm leading-relaxed mb-4">
               Protected treasury infrastructure.
               Zero friction payments.
             </p>
             {/* Powered by WellsAI */}
-            <div className="flex items-center gap-2 text-gray-400 dark:text-white/30 text-xs">
+            <div className="flex items-center gap-2 text-gray-400 dark:text-white/50 text-xs">
               <Brain className="w-3 h-3" />
               <span>Powered by WellsAI</span>
             </div>
@@ -977,10 +977,10 @@ function Footer() {
           <div>
             <h4 className="text-gray-900 dark:text-white font-semibold mb-4">Products</h4>
             <ul className="space-y-3">
-              <li><Link href="/grain-vault" className="text-gray-500 dark:text-white/50 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">GRAIN</Link></li>
-              <li><Link href="/grain-vault" className="text-gray-500 dark:text-white/50 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">VAULT</Link></li>
-              <li><Link href="/wells-ai" className="text-gray-500 dark:text-white/50 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">WellsAI</Link></li>
-              <li><Link href="/grain-vault/treasury" className="text-gray-500 dark:text-white/50 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Treasury SDK</Link></li>
+              <li><Link href="/grain-vault" className="text-gray-500 dark:text-white/60 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">GRAIN</Link></li>
+              <li><Link href="/grain-vault" className="text-gray-500 dark:text-white/60 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">VAULT</Link></li>
+              <li><Link href="/wells-ai" className="text-gray-500 dark:text-white/60 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">WellsAI</Link></li>
+              <li><Link href="/grain-vault/treasury" className="text-gray-500 dark:text-white/60 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Treasury SDK</Link></li>
             </ul>
           </div>
 
@@ -988,8 +988,8 @@ function Footer() {
           <div>
             <h4 className="text-gray-900 dark:text-white font-semibold mb-4">Company</h4>
             <ul className="space-y-3">
-              <li><Link href="/grain-vault/blog" className="text-gray-500 dark:text-white/50 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Blog</Link></li>
-              <li><a href="mailto:hello@grainandvault.com" className="text-gray-500 dark:text-white/50 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Contact</a></li>
+              <li><Link href="/grain-vault/blog" className="text-gray-500 dark:text-white/60 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Blog</Link></li>
+              <li><a href="mailto:hello@grainandvault.com" className="text-gray-500 dark:text-white/60 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Contact</a></li>
             </ul>
           </div>
 
@@ -997,8 +997,8 @@ function Footer() {
           <div>
             <h4 className="text-gray-900 dark:text-white font-semibold mb-4">Resources</h4>
             <ul className="space-y-3">
-              <li><Link href="#how-it-works" className="text-gray-500 dark:text-white/50 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">How It Works</Link></li>
-              <li><Link href="/grain-vault/faq" className="text-gray-500 dark:text-white/50 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">FAQ</Link></li>
+              <li><Link href="#how-it-works" className="text-gray-500 dark:text-white/60 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">How It Works</Link></li>
+              <li><Link href="/grain-vault/faq" className="text-gray-500 dark:text-white/60 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">FAQ</Link></li>
             </ul>
           </div>
 
@@ -1006,18 +1006,18 @@ function Footer() {
           <div>
             <h4 className="text-gray-900 dark:text-white font-semibold mb-4">Legal</h4>
             <ul className="space-y-3">
-              <li><Link href="/privacy" className="text-gray-500 dark:text-white/50 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Privacy</Link></li>
-              <li><Link href="/terms" className="text-gray-500 dark:text-white/50 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Terms</Link></li>
+              <li><Link href="/privacy" className="text-gray-500 dark:text-white/60 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Privacy</Link></li>
+              <li><Link href="/terms" className="text-gray-500 dark:text-white/60 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Terms</Link></li>
             </ul>
           </div>
         </div>
 
         {/* Bottom bar */}
         <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-gray-200 dark:border-white/10">
-          <p className="text-gray-400 dark:text-white/30 text-sm mb-4 md:mb-0">
+          <p className="text-gray-400 dark:text-white/50 text-sm mb-4 md:mb-0">
             © 2025 Grain & Vault. A Wells Onyx company. All rights reserved.
           </p>
-          <div className="flex items-center gap-4 text-gray-400 dark:text-white/30 text-sm">
+          <div className="flex items-center gap-4 text-gray-400 dark:text-white/50 text-sm">
             <span className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
