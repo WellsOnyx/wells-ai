@@ -99,7 +99,7 @@ function GlassCard({
   return (
     <div className={`
       relative overflow-hidden rounded-3xl
-      bg-white dark:bg-gradient-to-br dark:from-white/[0.08] dark:to-white/[0.02]
+      bg-white dark:bg-gray-900/80
       border border-gray-200 dark:border-white/10
       backdrop-blur-xl shadow-lg dark:shadow-none
       ${hover ? 'hover:border-emerald-300 dark:hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10 transition-all duration-500' : ''}
@@ -223,7 +223,7 @@ function Navigation() {
             </div>
             <div className="flex flex-col">
               <span className="text-gray-900 dark:text-white font-semibold text-lg tracking-tight">Grain & Vault</span>
-              <span className="text-gray-500 dark:text-gray-400 text-[10px] font-medium -mt-0.5 tracking-wider uppercase">Treasury</span>
+              <span className="text-gray-500 dark:text-gray-300 text-[10px] font-medium -mt-0.5 tracking-wider uppercase">Treasury</span>
             </div>
           </Link>
 
@@ -277,7 +277,7 @@ function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Animated mesh gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-gray-50 to-white dark:bg-[#030712]">
+      <div className="absolute inset-0 bg-gradient-to-b from-gray-50 to-white dark:bg-black">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.15),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.25),rgba(255,255,255,0))]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_80%_60%,rgba(20,184,166,0.08),transparent)] dark:bg-[radial-gradient(ellipse_60%_50%_at_80%_60%,rgba(20,184,166,0.15),transparent)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_20%_80%,rgba(251,191,36,0.05),transparent)] dark:bg-[radial-gradient(ellipse_50%_40%_at_20%_80%,rgba(251,191,36,0.08),transparent)]" />
@@ -332,7 +332,7 @@ function HeroSection() {
           </div>
 
           {/* Trust indicators */}
-          <div className="flex flex-wrap items-center justify-center gap-8 text-gray-500 dark:text-gray-400 text-sm animate-fade-in-up animation-delay-400">
+          <div className="flex flex-wrap items-center justify-center gap-8 text-gray-500 dark:text-gray-300 text-sm animate-fade-in-up animation-delay-400">
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
               <span className="text-emerald-600 dark:text-emerald-400/80">100% Collateralized</span>
@@ -382,7 +382,7 @@ function ThreeLayerSection() {
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight mb-6">
             How Your Money
             <br />
-            <span className="text-gray-400 dark:text-gray-400">Actually Works</span>
+            <span className="text-gray-400 dark:text-gray-300">Actually Works</span>
           </h2>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
             One deposit creates three layers of value. Your cash is always protected,
@@ -457,7 +457,7 @@ function ThreeLayerSection() {
                     </div>
                     <div>
                       <div className="text-gray-900 dark:text-white font-semibold">Protected: $1,000,000</div>
-                      <div className="text-gray-500 dark:text-gray-400 text-sm">Your deposit, always available</div>
+                      <div className="text-gray-500 dark:text-gray-300 text-sm">Your deposit, always available</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
@@ -466,7 +466,7 @@ function ThreeLayerSection() {
                     </div>
                     <div>
                       <div className="text-gray-900 dark:text-white font-semibold">Credit Line: 100,000 GRAIN</div>
-                      <div className="text-gray-500 dark:text-gray-400 text-sm">At $10/GRAIN (your lock-in price)</div>
+                      <div className="text-gray-500 dark:text-gray-300 text-sm">At $10/GRAIN (your lock-in price)</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl">
@@ -475,7 +475,7 @@ function ThreeLayerSection() {
                     </div>
                     <div>
                       <div className="text-gray-900 dark:text-white font-semibold">Appreciation: Grows</div>
-                      <div className="text-gray-500 dark:text-gray-400 text-sm">Bonus GRAIN as network scales</div>
+                      <div className="text-gray-500 dark:text-gray-300 text-sm">Bonus GRAIN as network scales</div>
                     </div>
                   </div>
                 </div>
@@ -514,7 +514,7 @@ function ThreeLayerSection() {
 function ProductsSection() {
   return (
     <section id="products" className="relative py-32 overflow-hidden">
-      <div className="absolute inset-0 bg-white dark:bg-[#030712]" />
+      <div className="absolute inset-0 bg-white dark:bg-black" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_50%,rgba(16,185,129,0.05),transparent)] dark:bg-[radial-gradient(ellipse_80%_50%_at_50%_50%,rgba(16,185,129,0.08),transparent)]" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
@@ -527,7 +527,7 @@ function ProductsSection() {
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight mb-6">
             Three Products.
             <br />
-            <span className="text-gray-400 dark:text-gray-400">One Platform.</span>
+            <span className="text-gray-400 dark:text-gray-300">One Platform.</span>
           </h2>
         </div>
 
@@ -648,7 +648,7 @@ function TreasurySDKSection() {
             <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight mb-6">
               Integrate Treasury
               <br />
-              <span className="text-gray-400 dark:text-gray-400">In Minutes</span>
+              <span className="text-gray-400 dark:text-gray-300">In Minutes</span>
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
               Connect your ERP. Push your payables. Let GRAIN handle settlement.
@@ -690,7 +690,7 @@ function TreasurySDKSection() {
                 <div className="w-3 h-3 rounded-full bg-red-500/80" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
                 <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                <span className="text-gray-500 dark:text-gray-400 text-xs ml-2 font-mono">treasury-sdk.ts</span>
+                <span className="text-gray-500 dark:text-gray-300 text-xs ml-2 font-mono">treasury-sdk.ts</span>
               </div>
               <pre className="text-sm overflow-x-auto">
                 <code className="text-gray-100 font-mono">
@@ -762,7 +762,7 @@ function WellsAISection() {
                 </div>
                 <div>
                   <div className="text-gray-900 dark:text-white font-semibold mb-1">AI-to-AI Negotiation</div>
-                  <div className="text-gray-600 dark:text-gray-400 text-sm">Your AI negotiates with supplier AIs. Deals close faster.</div>
+                  <div className="text-gray-600 dark:text-gray-300 text-sm">Your AI negotiates with supplier AIs. Deals close faster.</div>
                 </div>
               </div>
 
@@ -772,7 +772,7 @@ function WellsAISection() {
                 </div>
                 <div>
                   <div className="text-gray-900 dark:text-white font-semibold mb-1">Automated Sourcing</div>
-                  <div className="text-gray-600 dark:text-gray-400 text-sm">Find suppliers, get quotes, compare options - all automated.</div>
+                  <div className="text-gray-600 dark:text-gray-300 text-sm">Find suppliers, get quotes, compare options - all automated.</div>
                 </div>
               </div>
 
@@ -782,7 +782,7 @@ function WellsAISection() {
                 </div>
                 <div>
                   <div className="text-gray-900 dark:text-white font-semibold mb-1">Human-in-the-Loop</div>
-                  <div className="text-gray-600 dark:text-gray-400 text-sm">Every deal requires your approval. AI executes, you decide.</div>
+                  <div className="text-gray-600 dark:text-gray-300 text-sm">Every deal requires your approval. AI executes, you decide.</div>
                 </div>
               </div>
             </div>
@@ -814,7 +814,7 @@ function WellsAISection() {
                 <div className="text-6xl font-bold text-gray-900 dark:text-white mb-2">
                   1<span className="text-violet-500 dark:text-violet-400">%</span>
                 </div>
-                <div className="text-gray-500 dark:text-gray-400 text-lg">Success Fee</div>
+                <div className="text-gray-500 dark:text-gray-300 text-lg">Success Fee</div>
               </div>
 
               <div className="border-t border-gray-200 dark:border-white/10 pt-8 mb-8">
@@ -841,7 +841,7 @@ function WellsAISection() {
               </div>
 
               <div className="text-center">
-                <p className="text-gray-400 dark:text-gray-400 text-xs">
+                <p className="text-gray-400 dark:text-gray-300 text-xs">
                   The 1% fee is part of your Cost of Goods Sold (COGS),
                   <br />
                   not a transaction fee. Pay when value is delivered.
@@ -862,7 +862,7 @@ function WellsAISection() {
 function StatsSection() {
   return (
     <section className="relative py-20 overflow-hidden">
-      <div className="absolute inset-0 bg-gray-50 dark:bg-[#030712]" />
+      <div className="absolute inset-0 bg-gray-50 dark:bg-black" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         {/* Section Label */}
@@ -875,19 +875,19 @@ function StatsSection() {
             <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2">
               100<span className="text-emerald-500 dark:text-emerald-400">%</span>
             </div>
-            <div className="text-gray-500 dark:text-gray-400 text-sm">Collateralized</div>
+            <div className="text-gray-500 dark:text-gray-300 text-sm">Collateralized</div>
           </GlassCard>
           <GlassCard className="p-8 text-center">
             <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2">
               0<span className="text-emerald-500 dark:text-emerald-400">%</span>
             </div>
-            <div className="text-gray-500 dark:text-gray-400 text-sm">Interest & Transaction Fees</div>
+            <div className="text-gray-500 dark:text-gray-300 text-sm">Interest & Transaction Fees</div>
           </GlassCard>
           <GlassCard className="p-8 text-center col-span-2 lg:col-span-1">
             <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2">
               &lt;1<span className="text-emerald-500 dark:text-emerald-400">s</span>
             </div>
-            <div className="text-gray-500 dark:text-gray-400 text-sm">Settlement</div>
+            <div className="text-gray-500 dark:text-gray-300 text-sm">Settlement</div>
           </GlassCard>
         </div>
       </div>
@@ -934,7 +934,7 @@ function CTASection() {
           </ShimmerButton>
         </div>
 
-        <p className="mt-8 text-gray-400 dark:text-gray-400 text-sm">
+        <p className="mt-8 text-gray-400 dark:text-gray-300 text-sm">
           No minimum deposit. Start protecting your treasury today.
         </p>
       </div>
@@ -948,7 +948,7 @@ function CTASection() {
 
 function Footer() {
   return (
-    <footer className="relative border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#030712]">
+    <footer className="relative border-t border-gray-200 dark:border-white/10 bg-white dark:bg-black">
       <div className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 mb-16">
           {/* Brand */}
@@ -962,12 +962,12 @@ function Footer() {
               </div>
               <span className="text-gray-900 dark:text-white font-semibold text-lg">Grain & Vault</span>
             </Link>
-            <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4">
+            <p className="text-gray-500 dark:text-gray-300 text-sm leading-relaxed mb-4">
               Protected treasury infrastructure.
               Zero friction payments.
             </p>
             {/* Powered by WellsAI */}
-            <div className="flex items-center gap-2 text-gray-400 dark:text-gray-400 text-xs">
+            <div className="flex items-center gap-2 text-gray-400 dark:text-gray-300 text-xs">
               <Brain className="w-3 h-3" />
               <span>Powered by WellsAI</span>
             </div>
@@ -977,10 +977,10 @@ function Footer() {
           <div>
             <h4 className="text-gray-900 dark:text-white font-semibold mb-4">Products</h4>
             <ul className="space-y-3">
-              <li><Link href="/grain-vault" className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">GRAIN</Link></li>
-              <li><Link href="/grain-vault" className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">VAULT</Link></li>
-              <li><Link href="/wells-ai" className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">WellsAI</Link></li>
-              <li><Link href="/grain-vault/treasury" className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Treasury SDK</Link></li>
+              <li><Link href="/grain-vault" className="text-gray-500 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">GRAIN</Link></li>
+              <li><Link href="/grain-vault" className="text-gray-500 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">VAULT</Link></li>
+              <li><Link href="/wells-ai" className="text-gray-500 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">WellsAI</Link></li>
+              <li><Link href="/grain-vault/treasury" className="text-gray-500 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Treasury SDK</Link></li>
             </ul>
           </div>
 
@@ -988,8 +988,8 @@ function Footer() {
           <div>
             <h4 className="text-gray-900 dark:text-white font-semibold mb-4">Company</h4>
             <ul className="space-y-3">
-              <li><Link href="/grain-vault/blog" className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Blog</Link></li>
-              <li><a href="mailto:hello@grainandvault.com" className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Contact</a></li>
+              <li><Link href="/grain-vault/blog" className="text-gray-500 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Blog</Link></li>
+              <li><a href="mailto:hello@grainandvault.com" className="text-gray-500 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Contact</a></li>
             </ul>
           </div>
 
@@ -997,8 +997,8 @@ function Footer() {
           <div>
             <h4 className="text-gray-900 dark:text-white font-semibold mb-4">Resources</h4>
             <ul className="space-y-3">
-              <li><Link href="#how-it-works" className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">How It Works</Link></li>
-              <li><Link href="/grain-vault/faq" className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">FAQ</Link></li>
+              <li><Link href="#how-it-works" className="text-gray-500 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">How It Works</Link></li>
+              <li><Link href="/grain-vault/faq" className="text-gray-500 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">FAQ</Link></li>
             </ul>
           </div>
 
@@ -1006,18 +1006,18 @@ function Footer() {
           <div>
             <h4 className="text-gray-900 dark:text-white font-semibold mb-4">Legal</h4>
             <ul className="space-y-3">
-              <li><Link href="/privacy" className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Privacy</Link></li>
-              <li><Link href="/terms" className="text-gray-500 dark:text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Terms</Link></li>
+              <li><Link href="/privacy" className="text-gray-500 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Privacy</Link></li>
+              <li><Link href="/terms" className="text-gray-500 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400 text-sm transition-colors">Terms</Link></li>
             </ul>
           </div>
         </div>
 
         {/* Bottom bar */}
         <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-gray-200 dark:border-white/10">
-          <p className="text-gray-400 dark:text-gray-400 text-sm mb-4 md:mb-0">
+          <p className="text-gray-400 dark:text-gray-300 text-sm mb-4 md:mb-0">
             © 2025 Grain & Vault. A Wells Onyx company. All rights reserved.
           </p>
-          <div className="flex items-center gap-4 text-gray-400 dark:text-gray-400 text-sm">
+          <div className="flex items-center gap-4 text-gray-400 dark:text-gray-300 text-sm">
             <span className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -1038,7 +1038,7 @@ function Footer() {
 
 export default function GrainVaultHomepage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#030712] text-gray-900 dark:text-white antialiased overflow-x-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-black text-gray-900 dark:text-white antialiased overflow-x-hidden transition-colors duration-300">
       {/* Custom styles for animations */}
       <style jsx global>{`
         @keyframes fade-in-up {
