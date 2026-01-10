@@ -209,6 +209,10 @@ function Navigation() {
             <Link href="#treasury" className="px-4 py-2 text-white/70 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-all">
               Treasury SDK
             </Link>
+            <Link href="#wellsai" className="px-4 py-2 text-violet-400 hover:text-violet-300 text-sm font-medium rounded-lg hover:bg-violet-500/10 transition-all flex items-center gap-1.5">
+              <Brain className="w-3.5 h-3.5" />
+              WellsAI
+            </Link>
             <Link href="/grain-vault/blog" className="px-4 py-2 text-white/70 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-all">
               Blog
             </Link>
@@ -280,7 +284,7 @@ function HeroSection() {
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-white/60 max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-in-up animation-delay-200">
             Deposit your predictable spend. 100% protected reserves.
-            0% interest credit line. 0% transaction fees. 1% success fee only when you close deals.
+            0% interest credit line. 0% transaction fees.
           </p>
 
           {/* CTAs */}
@@ -558,7 +562,7 @@ function ProductsSection() {
           </GlassCard>
 
           {/* WellsAI */}
-          <GlassCard className="p-8 lg:p-10">
+          <GlassCard className="p-8 lg:p-10 border-violet-500/20">
             <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-violet-500/30">
               <Brain className="w-8 h-8 text-white" />
             </div>
@@ -581,9 +585,13 @@ function ProductsSection() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-violet-400" />
-                1% success fee only
+                1% fee on AI-closed deals
               </li>
             </ul>
+            <Link href="/wells-ai" className="mt-6 inline-flex items-center gap-2 text-violet-400 hover:text-violet-300 text-sm font-medium transition-colors">
+              Learn more about WellsAI
+              <ArrowUpRight className="w-4 h-4" />
+            </Link>
           </GlassCard>
         </div>
       </div>
@@ -685,7 +693,140 @@ console.log(health.credit_available)
 }
 
 // ============================================================================
-// STATS SECTION
+// WELLSAI SECTION - Prominent AI Feature Section
+// ============================================================================
+
+function WellsAISection() {
+  return (
+    <section id="wellsai" className="relative py-32 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1a] via-[#0f0a1a] to-[#030712]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_50%,rgba(139,92,246,0.15),transparent)]" />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          {/* Left: Content */}
+          <div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-violet-500/10 border border-violet-500/20 rounded-full mb-6">
+              <Brain className="w-4 h-4 text-violet-400" />
+              <span className="text-violet-300 text-sm font-medium">WellsAI - AI Execution Layer</span>
+            </div>
+
+            <h2 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-6">
+              AI That Actually
+              <br />
+              <span className="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                Does Things
+              </span>
+            </h2>
+
+            <p className="text-lg text-white/50 mb-8 leading-relaxed">
+              WellsAI is the intelligence layer. Tell it what you need - sourcing, hiring, sales, negotiations.
+              AI-to-AI execution with human approval. You stay in control.
+            </p>
+
+            {/* Feature List */}
+            <div className="space-y-4 mb-8">
+              <div className="flex items-start gap-4 p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl">
+                <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-violet-400" />
+                </div>
+                <div>
+                  <div className="text-white font-semibold mb-1">AI-to-AI Negotiation</div>
+                  <div className="text-white/50 text-sm">Your AI negotiates with supplier AIs. Deals close faster.</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl">
+                <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Zap className="w-5 h-5 text-violet-400" />
+                </div>
+                <div>
+                  <div className="text-white font-semibold mb-1">Automated Sourcing</div>
+                  <div className="text-white/50 text-sm">Find suppliers, get quotes, compare options - all automated.</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl">
+                <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <BadgeCheck className="w-5 h-5 text-violet-400" />
+                </div>
+                <div>
+                  <div className="text-white font-semibold mb-1">Human-in-the-Loop</div>
+                  <div className="text-white/50 text-sm">Every deal requires your approval. AI executes, you decide.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link
+                href="/wells-ai"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white font-semibold rounded-xl hover:from-violet-400 hover:to-purple-500 transition-all shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
+              >
+                Explore WellsAI
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/demo"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-semibold rounded-xl hover:bg-white/10 transition-all"
+              >
+                See Demo
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: Pricing Card */}
+          <div>
+            <GlassCard className="p-8 lg:p-10 border-violet-500/20" hover={false}>
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-500/20 border border-violet-500/30 rounded-full mb-4">
+                  <span className="text-violet-300 text-xs font-semibold uppercase tracking-wider">WellsAI Pricing</span>
+                </div>
+                <div className="text-6xl font-bold text-white mb-2">
+                  1<span className="text-violet-400">%</span>
+                </div>
+                <div className="text-white/50 text-lg">Success Fee</div>
+              </div>
+
+              <div className="border-t border-white/10 pt-8 mb-8">
+                <p className="text-white/60 text-center mb-6">
+                  Only pay when WellsAI closes deals for you.
+                  <br />
+                  No monthly fees. No setup costs.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                    <span className="text-white/70 text-sm">Treasury (Grain & Vault)</span>
+                    <span className="text-emerald-400 font-semibold">0% fees</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                    <span className="text-white/70 text-sm">Payments (GRAIN)</span>
+                    <span className="text-emerald-400 font-semibold">0% fees</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-violet-500/10 rounded-lg border border-violet-500/20">
+                    <span className="text-white/70 text-sm">AI Sourcing & Deals (WellsAI)</span>
+                    <span className="text-violet-400 font-semibold">1% on close</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <p className="text-white/40 text-xs">
+                  The 1% fee is part of your Cost of Goods Sold (COGS),
+                  <br />
+                  not a transaction fee. Pay when value is delivered.
+                </p>
+              </div>
+            </GlassCard>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ============================================================================
+// STATS SECTION - Treasury Metrics (separated from WellsAI)
 // ============================================================================
 
 function StatsSection() {
@@ -694,7 +835,12 @@ function StatsSection() {
       <div className="absolute inset-0 bg-[#030712]" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Section Label */}
+        <div className="text-center mb-8">
+          <span className="text-emerald-400/60 text-sm font-medium uppercase tracking-wider">Grain & Vault Treasury</span>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
           <GlassCard className="p-8 text-center">
             <div className="text-4xl md:text-5xl font-bold text-white mb-2">
               100<span className="text-emerald-400">%</span>
@@ -705,19 +851,13 @@ function StatsSection() {
             <div className="text-4xl md:text-5xl font-bold text-white mb-2">
               0<span className="text-emerald-400">%</span>
             </div>
-            <div className="text-white/50 text-sm">Interest Rate</div>
+            <div className="text-white/50 text-sm">Interest & Transaction Fees</div>
           </GlassCard>
-          <GlassCard className="p-8 text-center">
+          <GlassCard className="p-8 text-center col-span-2 lg:col-span-1">
             <div className="text-4xl md:text-5xl font-bold text-white mb-2">
               &lt;1<span className="text-emerald-400">s</span>
             </div>
             <div className="text-white/50 text-sm">Settlement</div>
-          </GlassCard>
-          <GlassCard className="p-8 text-center">
-            <div className="text-4xl md:text-5xl font-bold text-white mb-2">
-              1<span className="text-emerald-400">%</span>
-            </div>
-            <div className="text-white/50 text-sm">Success Fee</div>
           </GlassCard>
         </div>
       </div>
@@ -955,6 +1095,7 @@ export default function GrainVaultHomepage() {
       <ThreeLayerSection />
       <ProductsSection />
       <TreasurySDKSection />
+      <WellsAISection />
       <StatsSection />
       <CTASection />
       <Footer />
