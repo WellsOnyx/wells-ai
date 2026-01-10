@@ -418,7 +418,7 @@ export default function EnterprisePage() {
                   </li>
                 </ul>
                 <Link
-                  href="/signup?plan=growth"
+                  href="/join?journey=treasury&plan=growth"
                   className="block w-full py-3 text-center bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl font-medium transition-all"
                 >
                   Get Started
