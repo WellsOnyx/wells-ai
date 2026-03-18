@@ -8,12 +8,42 @@
  * 4. GRAIN value = (USDC + Asset Value) / Supply
  * 5. GRAIN can only go UP in value, never down
  *
+ * RESERVE ALLOCATION MODEL:
+ *   1%  → Foundation
+ *   33% → Cash / Liquidity + TIPS
+ *   33% → Precious Metals
+ *   33% → US Treasuries
+ *   Target: 7% ROI after fees on the float
+ *
+ * FLOAT MECHANICS:
+ *   48-hour settlement window on all transactions
+ *   Float = (Annual Volume / 365) × 2
+ *   At 3-7% of $33T global payments = $5.4B - $12.7B float
+ *
  * This creates a deflationary stablecoin backed by:
  * - 100% USDC (floor)
  * - Plus accumulated assets (upside)
+ * - Reserve allocation generates yield on the float
  */
 
 import { sql } from '@vercel/postgres'
+import {
+  calculateFloat,
+  calculateTargetAllocation,
+  getAllocationState,
+  projectYield,
+  analyzeLiquidity,
+  allocateDeposit,
+  calculateWithdrawalWaterfall,
+  calculateRebalanceActions,
+  RESERVE_ALLOCATION,
+  TARGET_ROI,
+  SETTLEMENT_HOURS,
+  type FloatSnapshot,
+  type AllocationState,
+  type YieldProjection,
+  type LiquidityAnalysis,
+} from './float-allocation'
 
 // ============================================================================
 // CONSTANTS (IMMUTABLE)
@@ -506,6 +536,131 @@ export async function updateDailySnapshot(): Promise<void> {
       transaction_volume_24h = EXCLUDED.transaction_volume_24h,
       unique_users_24h = EXCLUDED.unique_users_24h
   `
+}
+
+// ============================================================================
+// FLOAT-AWARE TREASURY STATE
+// ============================================================================
+
+/**
+ * Get the full treasury state including float allocation, yield projections,
+ * and liquidity analysis.
+ *
+ * This is the comprehensive view used for dashboards and reporting.
+ */
+export async function getFloatTreasuryState(annualVolume: number): Promise<{
+  treasury: TreasuryState
+  float: FloatSnapshot
+  allocation: AllocationState
+  yield: YieldProjection
+  liquidity: LiquidityAnalysis
+}> {
+  const treasury = await getTreasuryState()
+  const float = calculateFloat(annualVolume)
+  const targets = calculateTargetAllocation(float.totalFloat)
+
+  // Get actual allocation from database (or default to target for now)
+  // In production, this would read from grain_float_allocations table
+  const actualAllocation = {
+    foundation: targets.foundation,
+    cashAndTips: targets.cashAndTips,
+    preciousMetals: targets.preciousMetals,
+    treasuries: targets.treasuries,
+  }
+
+  const allocation = getAllocationState(float.totalFloat, actualAllocation)
+  const yieldProjection = projectYield(float.totalFloat)
+  const liquidity = analyzeLiquidity(
+    float.totalFloat,
+    float.dailyVolume,
+    actualAllocation.cashAndTips
+  )
+
+  return {
+    treasury,
+    float,
+    allocation,
+    yield: yieldProjection,
+    liquidity,
+  }
+}
+
+/**
+ * Process an incoming deposit through the float allocation engine.
+ * Splits the deposit according to 1/33/33/33 and routes to appropriate tranches.
+ */
+export async function processFloatDeposit(
+  amount: number,
+  circleTransferId: string
+): Promise<{
+  allocation: ReturnType<typeof allocateDeposit>
+  treasuryEvent: string
+}> {
+  // Record the USDC deposit
+  await recordUsdcDeposit(amount, circleTransferId)
+
+  // Allocate according to reserve model
+  const allocation = allocateDeposit(amount)
+
+  // Record allocation event
+  await sql`
+    INSERT INTO grain_treasury_events (
+      type, amount, circle_transfer_id, notes, created_at
+    ) VALUES (
+      'float_allocation', ${amount}, ${circleTransferId},
+      ${'Allocated: Foundation=' + allocation.foundation.toFixed(2) +
+        ' Cash/TIPS=' + allocation.cashAndTips.toFixed(2) +
+        ' Metals=' + allocation.preciousMetals.toFixed(2) +
+        ' Treasuries=' + allocation.treasuries.toFixed(2)},
+      NOW()
+    )
+  `
+
+  return {
+    allocation,
+    treasuryEvent: 'float_allocation',
+  }
+}
+
+/**
+ * Process a settlement withdrawal through the liquidity waterfall.
+ * Draws from the lowest-yield tranches first to maximize overall yield.
+ */
+export async function processFloatWithdrawal(
+  amount: number,
+  circleTransferId: string,
+  currentHoldings: {
+    instantCash: number
+    overnightRepo: number
+    shortTips: number
+    treasuries: number
+    preciousMetals: number
+  }
+): Promise<{
+  allowed: boolean
+  reason?: string
+  waterfall?: ReturnType<typeof calculateWithdrawalWaterfall>
+}> {
+  // First check 1:1 backing rule
+  const backingCheck = await recordUsdcWithdrawal(amount, circleTransferId)
+  if (!backingCheck.allowed) {
+    return backingCheck
+  }
+
+  // Calculate optimal withdrawal waterfall
+  const waterfall = calculateWithdrawalWaterfall(amount, currentHoldings)
+
+  if (waterfall.remainingDeficit > 0) {
+    return {
+      allowed: false,
+      reason: `Insufficient liquid assets. Deficit: $${waterfall.remainingDeficit.toFixed(2)}`,
+    }
+  }
+
+  return {
+    allowed: true,
+    waterfall,
+  }
 }
 
 // ============================================================================
