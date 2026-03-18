@@ -1,14 +1,13 @@
 /**
- * TROPICAL FORCE — Aggressive Float Growth Engine
+ * TROPICAL FORCE — Float Growth Engine
  *
  * ═══════════════════════════════════════════════════════════════════════════
- * TWO MODES
+ * THREE MODES
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * ORGANIC MODE (conservative):
  *   Revenue = 33bps fees + 7% float yield
  *   Deduct 10% tithe + OpEx, reinvest remainder
- *   ~75.9% reinvestment ratio
  *   50% capture in ~14.5 years
  *
  * BLITZ MODE (aggressive):
@@ -17,6 +16,15 @@
  *   - Eligible volume % ramps as market share grows (30% → 95%)
  *   - Variable OpEx drops with scale (1.8bps → 0.5bps)
  *   50% capture in ~3.75 years
+ *
+ * SIEGE MODE (maximum velocity):
+ *   Everything in Blitz, PLUS:
+ *   - External stablecoin staking (USDC/USDT/DAI lock into GRAIN treasury)
+ *     Stakers earn 4.5% yield, we keep 2.5% spread on 7% ROI
+ *     No dilution — pure float expansion from other people's capital
+ *   - Buyer/seller incentives (15bps cost → +20% eligible volume boost)
+ *     Cashback to buyers (10bps), rebates to sellers (5bps)
+ *   50% capture in 3 years, 100% capture in 4 years 1 month
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * BLITZ CAPITAL STRATEGY
@@ -29,15 +37,44 @@
  *                  ────────
  * Total:   $37B   raised → injected into float
  *
- * After that, the flywheel generates enough organic revenue to
- * compound to 100% without additional capital.
- *
  * ═══════════════════════════════════════════════════════════════════════════
- * ELIGIBLE VOLUME RAMP
+ * STAKING MODEL (Siege only)
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * As market share grows, more transaction volume becomes eligible for
- * the 33bps processing fee (network effects, deeper integrations):
+ * Other stablecoins lock into GRAIN treasury. They get yield, we get float.
+ * No dilution, no fundraising. Pure float from other people's capital.
+ *
+ *   Stablecoin market: ~$150B today, growing ~30%/yr
+ *   GRAIN staker yield: 4.5% APY (funded from our 7% ROI)
+ *   Our spread: 2.5% on all staked capital
+ *   Adoption curve (S-curve):
+ *     Year 1: 2% of stablecoin market stakes on GRAIN
+ *     Year 2: 5%
+ *     Year 3: 10%
+ *     Year 4: 15%
+ *     Year 5+: 20%
+ *
+ * Why they stake: GRAIN only goes UP. Backing ratio ≥ 1.0 is immutable.
+ * 4.5% yield on a coin that appreciates > USDC/USDT sitting flat.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * INCENTIVE MODEL (Siege only)
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Pull volume through the system faster by paying participants:
+ *
+ *   Buyer cashback:  10bps (0.10%) on eligible transactions
+ *   Seller rebate:    5bps (0.05%) on eligible transactions
+ *   Total cost:      15bps of incentivized volume
+ *   Effect:          +20% boost to eligible volume share
+ *
+ * This is CAC spent on flow, not users. Every dollar of flow compounds
+ * in the float forever. The incentive cost is front-loaded, the revenue
+ * is permanent.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ELIGIBLE VOLUME RAMP (Blitz + Siege)
+ * ═══════════════════════════════════════════════════════════════════════════
  *
  *   <5% share   → 30% eligible  (early adopters)
  *   5-10%       → 45% eligible  (growing network)
@@ -45,11 +82,11 @@
  *   25-50%      → 80% eligible  (dominant)
  *   50%+        → 95% eligible  (near-monopoly)
  *
- * ═══════════════════════════════════════════════════════════════════════════
- * OPEX EFFICIENCY AT SCALE
- * ═══════════════════════════════════════════════════════════════════════════
+ * In Siege mode, incentives add +20% on top (capped at 98%).
  *
- * Variable costs (bps of volume) drop as scale brings efficiency:
+ * ═══════════════════════════════════════════════════════════════════════════
+ * OPEX EFFICIENCY AT SCALE (Blitz + Siege)
+ * ═══════════════════════════════════════════════════════════════════════════
  *
  *   <5% share   → 1.8bps  (startup costs)
  *   5-10%       → 1.4bps  (economies kick in)
@@ -164,26 +201,80 @@ export function getVariableBpsAtScale(marketShare: number): number {
 }
 
 // ============================================================================
+// SIEGE MODE CONFIGURATION — STAKING + INCENTIVES
+// ============================================================================
+
+/** Global stablecoin market capitalization baseline */
+export const STABLECOIN_MARKET_BASE = 150_000_000_000 // $150B
+
+/** Stablecoin market annual growth rate */
+export const STABLECOIN_GROWTH_RATE = 0.30 // 30%/yr
+
+/** Yield paid to external stakers (they lock stablecoins into GRAIN treasury) */
+export const STAKER_YIELD = 0.045 // 4.5% APY
+
+/** Spread we keep on staked capital (TARGET_ROI - STAKER_YIELD) */
+export const STAKING_SPREAD = TARGET_ROI - STAKER_YIELD // 2.5%
+
+/**
+ * S-curve adoption: what % of the stablecoin market stakes on GRAIN.
+ * Driven by GRAIN's unique property: it only goes UP + 4.5% yield.
+ */
+export function getStakingAdoption(day: number): number {
+  const year = day / 365
+  if (year < 1) return 0.02       // 2% — early believers
+  if (year < 2) return 0.05       // 5% — traction proof
+  if (year < 3) return 0.10       // 10% — established
+  if (year < 4) return 0.15       // 15% — dominant
+  return 0.20                      // 20% — category standard
+}
+
+/** Staked capital flows in at 1% of the gap per day (smooth inflow) */
+export const STAKING_INFLOW_RATE = 0.01
+
+/** Buyer cashback: 10bps */
+export const BUYER_INCENTIVE_BPS = 10
+
+/** Seller rebate: 5bps */
+export const SELLER_INCENTIVE_BPS = 5
+
+/** Total incentive cost: 15bps of incentivized volume */
+export const TOTAL_INCENTIVE_BPS = BUYER_INCENTIVE_BPS + SELLER_INCENTIVE_BPS
+export const INCENTIVE_COST_RATE = TOTAL_INCENTIVE_BPS / 10000 // 0.0015
+
+/** Incentives boost eligible volume share by this much (additive) */
+export const INCENTIVE_VOLUME_BOOST = 0.20 // +20%
+
+/** Cap on eligible share (even with incentives, can't exceed this) */
+export const MAX_ELIGIBLE_SHARE = 0.98
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
-export type SimMode = 'organic' | 'blitz'
+export type SimMode = 'organic' | 'blitz' | 'siege'
 
 export interface QuarterlySnapshot {
   quarter: number
   yearLabel: string
   float: number
+  stakedFloat: number
+  totalFloat: number
   annualVolume: number
   marketSharePct: number
   quarterlyGrossRevenue: number
   quarterlyTithe: number
   quarterlyOpEx: number
   quarterlyCapitalInjected: number
+  quarterlyStakingInflow: number
+  quarterlyStakerYieldPaid: number
+  quarterlyIncentiveCost: number
   quarterlyNetToFloat: number
   cumulativeReinvested: number
   cumulativeTithe: number
   cumulativeOpEx: number
   cumulativeCapital: number
+  cumulativeStaked: number
   eligibleSharePct: number
   variableBps: number
 }
@@ -192,6 +283,8 @@ export interface Milestone {
   label: string
   day: number
   float: number
+  stakedFloat: number
+  totalFloat: number
   volume: number
   eligiblePct: number
 }
@@ -203,6 +296,7 @@ export interface TropicalForceProjection {
   globalVolume: number
   annualGrowthRate: number
   daysTo50Pct: number | null
+  daysTo75Pct: number | null
   daysTo100Pct: number | null
   quarters: QuarterlySnapshot[]
   milestones: Milestone[]
@@ -212,6 +306,9 @@ export interface TropicalForceProjection {
     reinvested: number
     titheGiven: number
     opExSpent: number
+    externalStaked: number
+    stakerYieldPaid: number
+    incentiveCost: number
   }
 }
 
@@ -222,21 +319,26 @@ export interface TropicalForceProjection {
 /**
  * Run the tropical force simulation day by day.
  *
- * ORGANIC mode: pure compounding, no capital injection, fixed 30% eligible
- * BLITZ mode: capital raises + ramping eligible % + OpEx efficiency gains
+ * ORGANIC: pure compounding, no capital injection, fixed 30% eligible
+ * BLITZ:   capital raises + ramping eligible % + OpEx efficiency
+ * SIEGE:   blitz + external staking + buyer/seller incentives
  */
 export function simulateTropicalForce(
-  mode: SimMode = 'blitz',
+  mode: SimMode = 'siege',
   startingFloat: number = STARTING_FLOAT,
   maxDays: number = 365 * 30,
 ): TropicalForceProjection {
   const settlementDays = SETTLEMENT_HOURS / 24
 
   let float = startingFloat
+  let stakedFloat = 0
   let cumulativeReinvested = 0
   let cumulativeTithe = 0
   let cumulativeOpEx = 0
   let cumulativeCapital = 0
+  let cumulativeStaked = 0
+  let cumulativeStakerYield = 0
+  let cumulativeIncentiveCost = 0
   let reachedMax = false
 
   const dailyFixedOpEx = TOTAL_FIXED_OPEX / 365
@@ -246,22 +348,24 @@ export function simulateTropicalForce(
   const milestones: Milestone[] = []
   const milestonesHit = new Set<number>()
 
-  // Capital raise tracking (blitz only)
+  // Capital raise tracking (blitz + siege)
   const raisesUsed = new Set<number>()
   const raisesApplied: { day: number; amount: number; label: string }[] = []
 
   // Quarterly accumulators
   const quarters: QuarterlySnapshot[] = []
   let qGross = 0, qTithe = 0, qOpEx = 0, qNet = 0, qCapital = 0
+  let qStakingInflow = 0, qStakerYield = 0, qIncentiveCost = 0
 
   let daysTo50Pct: number | null = null
+  let daysTo75Pct: number | null = null
   let daysTo100Pct: number | null = null
 
   for (let day = 1; day <= maxDays; day++) {
     if (reachedMax) break
 
-    // === CAPITAL INJECTION (blitz only) ===
-    if (mode === 'blitz') {
+    // === CAPITAL INJECTION (blitz + siege) ===
+    if (mode !== 'organic') {
       for (const raise of BLITZ_CAPITAL_RAISES) {
         if (day === raise.atDay && !raisesUsed.has(raise.atDay)) {
           raisesUsed.add(raise.atDay)
@@ -273,43 +377,93 @@ export function simulateTropicalForce(
       }
     }
 
-    // Current capacity
-    const dailyVolume = float / settlementDays
+    // === STAKING INFLOWS (siege only) ===
+    let dailyStakingInflow = 0
+    let dailyStakerYieldPaid = 0
+
+    if (mode === 'siege') {
+      const yearFrac = day / 365
+      const totalStablecoinMarket = STABLECOIN_MARKET_BASE * Math.pow(1 + STABLECOIN_GROWTH_RATE, yearFrac)
+      const adoptionRate = getStakingAdoption(day)
+      const targetStaked = totalStablecoinMarket * adoptionRate
+
+      // Staked capital flows in gradually
+      const gap = targetStaked - stakedFloat
+      if (gap > 0) {
+        dailyStakingInflow = gap * STAKING_INFLOW_RATE
+        stakedFloat += dailyStakingInflow
+        cumulativeStaked += dailyStakingInflow
+        qStakingInflow += dailyStakingInflow
+      }
+
+      // Pay staker yield (cost to us, deducted from revenue)
+      dailyStakerYieldPaid = stakedFloat * STAKER_YIELD / 365
+      cumulativeStakerYield += dailyStakerYieldPaid
+      qStakerYield += dailyStakerYieldPaid
+    }
+
+    // Total effective float = our capital + staked capital
+    const totalFloat = float + stakedFloat
+    const dailyVolume = totalFloat / settlementDays
     const annualVolume = dailyVolume * 365
     const marketShare = annualVolume / GLOBAL_PAYMENT_VOLUME
 
     // Dynamic parameters based on mode
-    const eligibleShare = mode === 'blitz' ? getEligibleShare(marketShare) : PROCESSING_ELIGIBLE_SHARE
-    const varRate = mode === 'blitz'
-      ? getVariableBpsAtScale(marketShare) / 10000
-      : TOTAL_VARIABLE_RATE
+    let eligibleShare: number
+    let varRate: number
+
+    if (mode === 'organic') {
+      eligibleShare = PROCESSING_ELIGIBLE_SHARE
+      varRate = TOTAL_VARIABLE_RATE
+    } else {
+      const baseEligible = getEligibleShare(marketShare)
+      eligibleShare = mode === 'siege'
+        ? Math.min(MAX_ELIGIBLE_SHARE, baseEligible + INCENTIVE_VOLUME_BOOST)
+        : baseEligible
+      varRate = getVariableBpsAtScale(marketShare) / 10000
+    }
 
     // === GROSS REVENUE ===
     const dailyProcessingFees = dailyVolume * eligibleShare * PROCESSING_FEE_RATE
-    const dailyYield = float * TARGET_ROI / 365
-    const dailyGross = dailyProcessingFees + dailyYield
+    const dailyOwnYield = float * TARGET_ROI / 365
+    // On staked capital, we earn the full ROI but pay stakers their yield
+    // Net spread = TARGET_ROI - STAKER_YIELD = 2.5%
+    const dailyStakeSpread = stakedFloat * STAKING_SPREAD / 365
+    const dailyGross = dailyProcessingFees + dailyOwnYield + dailyStakeSpread
 
     // === DEDUCTIONS ===
     const dailyTithe = dailyGross * TITHE_RATE
     const dailyOpEx = dailyFixedOpEx + (dailyVolume * varRate)
-    const dailyNetToFloat = Math.max(0, dailyGross - dailyTithe - dailyOpEx)
 
-    // Compound
+    // Incentive costs (siege only) — we pay buyers/sellers to route through us
+    let dailyIncentiveCost = 0
+    if (mode === 'siege') {
+      dailyIncentiveCost = dailyVolume * eligibleShare * INCENTIVE_COST_RATE
+      cumulativeIncentiveCost += dailyIncentiveCost
+      qIncentiveCost += dailyIncentiveCost
+    }
+
+    const dailyNetToFloat = Math.max(0,
+      dailyGross - dailyTithe - dailyOpEx - dailyIncentiveCost - dailyStakerYieldPaid
+    )
+
+    // Compound into OUR float (not staked — stakers keep theirs)
     float += dailyNetToFloat
     cumulativeReinvested += dailyNetToFloat
     cumulativeTithe += dailyTithe
     cumulativeOpEx += dailyOpEx
-
-    if (float >= MAX_FLOAT) {
-      float = MAX_FLOAT
-      reachedMax = true
-    }
 
     // Accumulate quarterly
     qGross += dailyGross
     qTithe += dailyTithe
     qOpEx += dailyOpEx
     qNet += dailyNetToFloat
+
+    // Cap check
+    if (totalFloat >= MAX_FLOAT) {
+      float = MAX_FLOAT - stakedFloat
+      reachedMax = true
+    }
 
     // Track milestones
     for (const target of milestoneTargets) {
@@ -319,10 +473,13 @@ export function simulateTropicalForce(
           label: `${(target * 100).toFixed(0)}% market share`,
           day,
           float,
+          stakedFloat,
+          totalFloat,
           volume: annualVolume,
           eligiblePct: eligibleShare * 100,
         })
         if (target === 0.50) daysTo50Pct = day
+        if (target === 0.75) daysTo75Pct = day
         if (target === 1.0) daysTo100Pct = day
       }
     }
@@ -333,31 +490,39 @@ export function simulateTropicalForce(
       const year = Math.ceil(day / 365)
       const qInYear = Math.ceil((day % 365 || 365) / 91)
 
+      const currentTotalFloat = float + stakedFloat
       quarters.push({
         quarter: qNum,
         yearLabel: `Y${year} Q${qInYear}`,
         float,
-        annualVolume: (float / settlementDays) * 365,
-        marketSharePct: ((float / settlementDays) * 365 / GLOBAL_PAYMENT_VOLUME) * 100,
+        stakedFloat,
+        totalFloat: currentTotalFloat,
+        annualVolume: (currentTotalFloat / settlementDays) * 365,
+        marketSharePct: ((currentTotalFloat / settlementDays) * 365 / GLOBAL_PAYMENT_VOLUME) * 100,
         quarterlyGrossRevenue: qGross,
         quarterlyTithe: qTithe,
         quarterlyOpEx: qOpEx,
         quarterlyCapitalInjected: qCapital,
+        quarterlyStakingInflow: qStakingInflow,
+        quarterlyStakerYieldPaid: qStakerYield,
+        quarterlyIncentiveCost: qIncentiveCost,
         quarterlyNetToFloat: qNet,
         cumulativeReinvested,
         cumulativeTithe,
         cumulativeOpEx,
         cumulativeCapital,
+        cumulativeStaked,
         eligibleSharePct: eligibleShare * 100,
-        variableBps: mode === 'blitz' ? getVariableBpsAtScale(marketShare) : TOTAL_VARIABLE_BPS,
+        variableBps: mode === 'organic' ? TOTAL_VARIABLE_BPS : getVariableBpsAtScale(marketShare),
       })
 
       qGross = 0; qTithe = 0; qOpEx = 0; qNet = 0; qCapital = 0
+      qStakingInflow = 0; qStakerYield = 0; qIncentiveCost = 0
     }
   }
 
-  // Approximate annual growth rate from simulation
-  const endFloat = quarters.length > 0 ? quarters[quarters.length - 1].float : startingFloat
+  // Approximate annual growth rate
+  const endFloat = quarters.length > 0 ? quarters[quarters.length - 1].totalFloat : startingFloat
   const totalDays = quarters.length > 0 ? quarters[quarters.length - 1].quarter * 91 : 1
   const annualGrowthRate = totalDays > 365
     ? Math.pow(endFloat / startingFloat, 365 / totalDays) - 1
@@ -370,6 +535,7 @@ export function simulateTropicalForce(
     globalVolume: GLOBAL_PAYMENT_VOLUME,
     annualGrowthRate,
     daysTo50Pct,
+    daysTo75Pct,
     daysTo100Pct,
     quarters,
     milestones,
@@ -379,6 +545,9 @@ export function simulateTropicalForce(
       reinvested: cumulativeReinvested,
       titheGiven: cumulativeTithe,
       opExSpent: cumulativeOpEx,
+      externalStaked: cumulativeStaked,
+      stakerYieldPaid: cumulativeStakerYield,
+      incentiveCost: cumulativeIncentiveCost,
     },
   }
 }
@@ -388,15 +557,17 @@ export function simulateTropicalForce(
 // ============================================================================
 
 /**
- * Run both modes side by side for comparison.
+ * Run all three modes side by side.
  */
-export function compareModes(startingFloat?: number): {
+export function compareAllModes(startingFloat?: number): {
   organic: TropicalForceProjection
   blitz: TropicalForceProjection
+  siege: TropicalForceProjection
 } {
   return {
     organic: simulateTropicalForce('organic', startingFloat),
     blitz: simulateTropicalForce('blitz', startingFloat),
+    siege: simulateTropicalForce('siege', startingFloat),
   }
 }
 
@@ -421,17 +592,18 @@ function fmtDays(days: number): string {
 }
 
 /**
- * Generate the full tropical force report.
+ * Generate the full tropical force report for any mode.
  */
 export function generateTropicalForceSummary(
-  mode: SimMode = 'blitz',
+  mode: SimMode = 'siege',
   startingFloat?: number,
 ): string {
   const sim = simulateTropicalForce(mode, startingFloat)
+  const modeLabel = mode === 'siege' ? 'SIEGE MODE' : mode === 'blitz' ? 'BLITZ MODE' : 'ORGANIC MODE'
 
   const lines: string[] = [
     '═══════════════════════════════════════════════════════════════',
-    `TROPICAL FORCE — ${mode === 'blitz' ? 'BLITZ MODE' : 'ORGANIC MODE'}`,
+    `TROPICAL FORCE — ${modeLabel}`,
     '═══════════════════════════════════════════════════════════════',
     '',
     `Starting Float:       ${fmtUSD(sim.startingFloat)}`,
@@ -440,7 +612,7 @@ export function generateTropicalForceSummary(
     '',
   ]
 
-  if (mode === 'blitz' && sim.capitalRaises.length > 0) {
+  if (mode !== 'organic' && sim.capitalRaises.length > 0) {
     lines.push('─── Capital Raises (injected into float) ───')
     for (const r of sim.capitalRaises) {
       lines.push(`  Day ${String(r.day).padStart(5)} (${fmtDays(r.day).padStart(6)}): ${fmtUSD(r.amount).padStart(8)}  ${r.label}`)
@@ -450,7 +622,21 @@ export function generateTropicalForceSummary(
     lines.push('')
   }
 
-  lines.push('─── Deductions ───')
+  if (mode === 'siege') {
+    lines.push('─── Staking (external stablecoins locked into GRAIN) ───')
+    lines.push(`  Stablecoin market:  ${fmtUSD(STABLECOIN_MARKET_BASE)} base, ${(STABLECOIN_GROWTH_RATE * 100).toFixed(0)}%/yr growth`)
+    lines.push(`  Staker yield:       ${(STAKER_YIELD * 100).toFixed(1)}% APY`)
+    lines.push(`  Our spread:         ${(STAKING_SPREAD * 100).toFixed(1)}% (${(TARGET_ROI * 100).toFixed(0)}% ROI - ${(STAKER_YIELD * 100).toFixed(1)}% staker yield)`)
+    lines.push(`  Adoption:           2% → 5% → 10% → 15% → 20% over 5 years`)
+    lines.push('')
+    lines.push('─── Incentives (buyer cashback + seller rebates) ───')
+    lines.push(`  Buyer cashback:     ${BUYER_INCENTIVE_BPS}bps (0.${BUYER_INCENTIVE_BPS}%)`)
+    lines.push(`  Seller rebate:      ${SELLER_INCENTIVE_BPS}bps (0.0${SELLER_INCENTIVE_BPS}%)`)
+    lines.push(`  Volume boost:       +${(INCENTIVE_VOLUME_BOOST * 100).toFixed(0)}% eligible share`)
+    lines.push('')
+  }
+
+  lines.push('─── Deductions (always) ───')
   lines.push(`  Tithe:    10% off the top of all gross revenue`)
   lines.push(`  OpEx:     $14M/yr fixed + variable bps (scales down with share)`)
   lines.push('')
@@ -461,10 +647,11 @@ export function generateTropicalForceSummary(
   lines.push('')
 
   for (const m of sim.milestones) {
+    const stakeStr = mode === 'siege' ? `  Staked: ${fmtUSD(m.stakedFloat).padStart(8)}` : ''
     lines.push(
       `  ${m.label.padEnd(22)} Day ${String(m.day).padStart(5)} (${fmtDays(m.day).padStart(6)})  ` +
-      `Float: ${fmtUSD(m.float).padStart(10)}  Volume: ${fmtUSD(m.volume).padStart(10)}  ` +
-      `Eligible: ${m.eligiblePct.toFixed(0)}%`
+      `Float: ${fmtUSD(m.totalFloat).padStart(10)}  Volume: ${fmtUSD(m.volume).padStart(10)}  ` +
+      `Eligible: ${m.eligiblePct.toFixed(0)}%${stakeStr}`
     )
   }
 
@@ -472,34 +659,11 @@ export function generateTropicalForceSummary(
     lines.push('')
     lines.push(`  >>> 50% capture in ${fmtDays(sim.daysTo50Pct)}`)
   }
+  if (sim.daysTo75Pct) {
+    lines.push(`  >>> 75% capture in ${fmtDays(sim.daysTo75Pct)}`)
+  }
   if (sim.daysTo100Pct) {
     lines.push(`  >>> 100% capture in ${fmtDays(sim.daysTo100Pct)}`)
-  }
-
-  lines.push('')
-  lines.push('═══════════════════════════════════════════════════════════════')
-  lines.push('QUARTERLY TRAJECTORY')
-  lines.push('═══════════════════════════════════════════════════════════════')
-  lines.push('')
-  lines.push(
-    '  Quarter    Float          Volume        Share   Tithe        OpEx         Capital      → Float'
-  )
-  lines.push(
-    '  ───────    ─────          ──────        ─────   ─────        ────         ───────      ───────'
-  )
-
-  for (const q of sim.quarters) {
-    const capStr = q.quarterlyCapitalInjected > 0 ? fmtUSD(q.quarterlyCapitalInjected) : '—'
-    lines.push(
-      `  ${q.yearLabel.padEnd(9)} ` +
-      `${fmtUSD(q.float).padStart(10)}  ` +
-      `${fmtUSD(q.annualVolume).padStart(10)}  ` +
-      `${q.marketSharePct.toFixed(1).padStart(6)}%` +
-      `${fmtUSD(q.quarterlyTithe).padStart(10)}` +
-      `${fmtUSD(q.quarterlyOpEx).padStart(12)}` +
-      `${capStr.padStart(12)}` +
-      `${fmtUSD(q.quarterlyNetToFloat).padStart(12)}`
-    )
   }
 
   lines.push('')
@@ -508,6 +672,11 @@ export function generateTropicalForceSummary(
   lines.push(`  Organic Reinvested: ${fmtUSD(sim.totals.reinvested)}`)
   lines.push(`  Tithe Given:        ${fmtUSD(sim.totals.titheGiven)}`)
   lines.push(`  OpEx Spent:         ${fmtUSD(sim.totals.opExSpent)}`)
+  if (mode === 'siege') {
+    lines.push(`  External Staked:    ${fmtUSD(sim.totals.externalStaked)}`)
+    lines.push(`  Staker Yield Paid:  ${fmtUSD(sim.totals.stakerYieldPaid)}`)
+    lines.push(`  Incentive Cost:     ${fmtUSD(sim.totals.incentiveCost)}`)
+  }
   lines.push('')
   lines.push('═══════════════════════════════════════════════════════════════')
 
@@ -515,23 +684,28 @@ export function generateTropicalForceSummary(
 }
 
 /**
- * Generate side-by-side comparison of organic vs blitz.
+ * Generate side-by-side comparison of all three modes.
  */
 export function generateComparisonSummary(startingFloat?: number): string {
-  const { organic, blitz } = compareModes(startingFloat)
+  const { organic, blitz, siege } = compareAllModes(startingFloat)
+
+  const fmtTime = (d: number | null) => d ? fmtDays(d) : '30yr+'
 
   const lines: string[] = [
     '═══════════════════════════════════════════════════════════════',
-    'TROPICAL FORCE — ORGANIC vs BLITZ COMPARISON',
+    'TROPICAL FORCE — THREE MODE COMPARISON',
     '═══════════════════════════════════════════════════════════════',
     '',
-    '                          ORGANIC          BLITZ',
-    '  ─────────────────────   ───────          ─────',
-    `  50% capture:            ${organic.daysTo50Pct ? fmtDays(organic.daysTo50Pct).padEnd(16) : 'N/A'.padEnd(16)} ${blitz.daysTo50Pct ? fmtDays(blitz.daysTo50Pct) : 'N/A'}`,
-    `  100% capture:           ${organic.daysTo100Pct ? fmtDays(organic.daysTo100Pct).padEnd(16) : '30yr+'.padEnd(16)} ${blitz.daysTo100Pct ? fmtDays(blitz.daysTo100Pct) : '30yr+'}`,
-    `  Capital raised:         ${fmtUSD(organic.totals.capitalRaised).padEnd(16)} ${fmtUSD(blitz.totals.capitalRaised)}`,
-    `  Tithe given:            ${fmtUSD(organic.totals.titheGiven).padEnd(16)} ${fmtUSD(blitz.totals.titheGiven)}`,
-    `  OpEx spent:             ${fmtUSD(organic.totals.opExSpent).padEnd(16)} ${fmtUSD(blitz.totals.opExSpent)}`,
+    '                        ORGANIC      BLITZ        SIEGE',
+    '  ────────────────      ───────      ─────        ─────',
+    `  50% capture:          ${fmtTime(organic.daysTo50Pct).padEnd(12)} ${fmtTime(blitz.daysTo50Pct).padEnd(12)} ${fmtTime(siege.daysTo50Pct)}`,
+    `  75% capture:          ${fmtTime(organic.daysTo75Pct).padEnd(12)} ${fmtTime(blitz.daysTo75Pct).padEnd(12)} ${fmtTime(siege.daysTo75Pct)}`,
+    `  100% capture:         ${fmtTime(organic.daysTo100Pct).padEnd(12)} ${fmtTime(blitz.daysTo100Pct).padEnd(12)} ${fmtTime(siege.daysTo100Pct)}`,
+    '',
+    `  Capital raised:       ${fmtUSD(organic.totals.capitalRaised).padEnd(12)} ${fmtUSD(blitz.totals.capitalRaised).padEnd(12)} ${fmtUSD(siege.totals.capitalRaised)}`,
+    `  External staked:      ${fmtUSD(organic.totals.externalStaked).padEnd(12)} ${fmtUSD(blitz.totals.externalStaked).padEnd(12)} ${fmtUSD(siege.totals.externalStaked)}`,
+    `  Tithe given:          ${fmtUSD(organic.totals.titheGiven).padEnd(12)} ${fmtUSD(blitz.totals.titheGiven).padEnd(12)} ${fmtUSD(siege.totals.titheGiven)}`,
+    `  OpEx spent:           ${fmtUSD(organic.totals.opExSpent).padEnd(12)} ${fmtUSD(blitz.totals.opExSpent).padEnd(12)} ${fmtUSD(siege.totals.opExSpent)}`,
     '',
     '═══════════════════════════════════════════════════════════════',
   ]
