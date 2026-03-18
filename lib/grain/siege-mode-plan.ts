@@ -9,6 +9,121 @@
  * Starting: 3.3-7% market share via ERP corridor
  *
  * ═══════════════════════════════════════════════════════════════════════════════
+ * CRITICAL LEGAL UPDATE: THE GENIUS ACT (Signed July 18, 2025)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * The GENIUS Act is now federal law — the first US legislation regulating
+ * stablecoins. This CHANGES our legal structure significantly.
+ *
+ * WHAT THE GENIUS ACT SAYS:
+ *
+ * 1. Payment stablecoins must be backed 1:1 by USD/high-quality liquid assets
+ *    ✅ GRAIN already does this (MIN_BACKING_RATIO = 1.0)
+ *
+ * 2. Payment stablecoins are NOT securities or commodities
+ *    ✅ This is great — federal safe harbor from SEC
+ *
+ * 3. Payment stablecoins CANNOT pay interest or yield to holders
+ *    ⚠️ THIS IS THE ISSUE — GRAIN appreciates ("can only go UP")
+ *
+ * 4. CARVE-OUT: "loyalty, promotional, subscription or incentive programs"
+ *    and "activity-based rewards" are NOT considered interest/yield
+ *    ✅ Our 10bps buyer cashback + 5bps seller rebate = SAFE
+ *
+ * 5. Third parties can independently offer rewards on payment stablecoins
+ *    without the issuer being deemed to pay yield
+ *    ✅ This is how we structure staking (see below)
+ *
+ * 6. Federal charter (FQPSI) preempts ALL state MTLs
+ *    ✅ One license, nationwide — no more 49-state MTL gauntlet
+ *
+ * THE PROBLEM:
+ *
+ * GRAIN's current design — where value = (USDC + Asset Value) / Supply
+ * and "GRAIN can only go UP" — makes it an APPRECIATING token, which
+ * does NOT qualify as a "payment stablecoin" under GENIUS Act.
+ * Payment stablecoins must be pegged 1:1 to USD.
+ *
+ * THE SOLUTION — TWO-TOKEN ARCHITECTURE:
+ *
+ * We already have this in vault.ts! The two-layer model IS the answer:
+ *
+ * ┌───────────────────────────────────────────────────────────────────────────┐
+ * │  GRAIN (Payment Layer) — GENIUS Act Compliant                           │
+ * │  - 1:1 pegged to USD. Always redeemable at $1.00.                      │
+ * │  - Backed by USDC + T-bills + cash equivalents                         │
+ * │  - Qualifies as "payment stablecoin" under GENIUS Act                  │
+ * │  - NOT a security. Federal safe harbor.                                │
+ * │  - This is what buyers/sellers transact with                           │
+ * │  - This is what flows through the ERP corridor                         │
+ * │  - This is what generates the $33T payment volume                      │
+ * ├───────────────────────────────────────────────────────────────────────────┤
+ * │  gVAULT (Growth Layer) — Registered Investment Product                  │
+ * │  - Appreciates in value based on Asset Vault holdings                  │
+ * │  - Backed by: real estate, precious metals, DeFi yields, equity        │
+ * │  - Users opt-in to convert GRAIN → gVAULT for appreciation            │
+ * │  - Can only go UP (same invariant, just in the right legal wrapper)    │
+ * │  - Registered under Reg D (accredited) initially, then Reg A+         │
+ * │  - OR: structured as a tokenized money market fund                    │
+ * │  - The "yield" lives HERE, not in GRAIN                               │
+ * └───────────────────────────────────────────────────────────────────────────┘
+ *
+ * WHY THIS IS BETTER:
+ *
+ * 1. GRAIN as a pure payment stablecoin gets the GENIUS Act safe harbor.
+ *    No SEC. No securities registration. Federal charter preempts MTLs.
+ *    This is the FASTEST path to nationwide operation.
+ *
+ * 2. gVAULT captures ALL the appreciation, properly registered.
+ *    Users who want yield opt into gVAULT. Users who want to pay
+ *    just use GRAIN. Same economics, legally clean.
+ *
+ * 3. Staking becomes CLEAN:
+ *    - External stablecoins stake into the GRAIN treasury pool
+ *    - They earn yield through gVAULT (not through GRAIN itself)
+ *    - The GRAIN issuer (us) doesn't pay yield on GRAIN
+ *    - A separate entity (GRAIN Foundation) manages gVAULT yield
+ *    - This fits the GENIUS Act's third-party reward carve-out
+ *
+ * 4. Retention incentive becomes CLEAN:
+ *    - Holding GRAIN = no yield (it's a payment stablecoin)
+ *    - Converting to gVAULT = yield (it's a registered product)
+ *    - "Activity-based rewards" (cashback, rebates) = still fine
+ *    - The incentive to stay in the system is gVAULT appreciation
+ *
+ * 5. The float mechanics are IDENTICAL:
+ *    - GRAIN is still the settlement token (48hr float)
+ *    - gVAULT holders' capital still counts as float
+ *    - The three flywheels still work exactly the same
+ *    - We just split the legal wrapper into two tokens
+ *
+ * LICENSING PATH (GENIUS Act changes everything):
+ *
+ * OLD PATH: 49-state MTLs ($3-5M, 12-18 months)
+ * NEW PATH: One of three options:
+ *
+ * Option A: FQPSI (Federal Qualified Payment Stablecoin Issuer)
+ *   - Single federal license from OCC
+ *   - Preempts ALL state MTLs nationwide
+ *   - OCC rulemaking expected by July 2026
+ *   - Best option long-term
+ *
+ * Option B: SQPSI (State Qualified Payment Stablecoin Issuer)
+ *   - License from one favorable state (Wyoming, Texas)
+ *   - Preempts other states' MTL requirements
+ *   - Limited to <$10B in circulation (fine for cold start)
+ *   - Available sooner than FQPSI
+ *
+ * Option C: FDIC-insured bank subsidiary
+ *   - Partner with or acquire a bank charter
+ *   - FDIC rulemaking in progress (final rule expected 2026)
+ *   - Most credibility, most expensive
+ *
+ * RECOMMENDED: Start with Option B (SQPSI in Wyoming) for speed,
+ * transition to Option A (FQPSI) once OCC rules are final and
+ * GRAIN circulation approaches $10B.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════════
  * PHASE 0: LEGAL FOUNDATION (Months 0-6)
  * "You can't move fast if you're moving in court"
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -16,7 +131,7 @@
  * ─── 0A: ENTITY STRUCTURE ───
  *
  * 1. GRAIN Treasury LLC (Delaware)
- *    - Holds the reserve assets (USDC, T-bills, precious metals)
+ *    - Holds the GRAIN payment stablecoin reserves (USDC, T-bills, cash)
  *    - Segregated from operating company (bankruptcy-remote)
  *    - Purpose: If Wells Onyx goes bankrupt, GRAIN holders are protected
  *    - Legal precedent: PayPal's PYUSD structure via Paxos Trust
@@ -27,16 +142,17 @@
  *    - Receives 30% operating allocation from revenue
  *
  * 3. GRAIN Foundation (Cayman / BVI)
- *    - Governs protocol upgrades, staking parameters
- *    - Not required Day 1, but critical before staking goes live
- *    - Separates "protocol governance" from "company operations"
- *    - Why: If GRAIN staking is governed by a foundation, it's less
- *      likely to be classified as a security (no "efforts of others")
+ *    - Manages gVAULT — the appreciation/yield product
+ *    - Governs protocol upgrades, staking yield distribution
+ *    - Separates "payment stablecoin issuer" from "yield provider"
+ *    - Critical for GENIUS Act compliance: the GRAIN issuer does NOT
+ *      pay yield. The Foundation (separate entity) manages gVAULT yield.
+ *    - This fits the third-party reward carve-out perfectly
  *
- * 4. GRAIN Vault Trust (Wyoming SPDI or NY Trust Company)
- *    - Custodian of reserve assets
- *    - Wyoming SPDI (Special Purpose Depository Institution) allows
- *      digital asset custody with state banking charter
+ * 4. GRAIN Vault Trust (Wyoming SPDI)
+ *    - Custodian of ALL reserve assets (GRAIN + gVAULT)
+ *    - Wyoming SPDI allows digital asset custody with state banking charter
+ *    - Wyoming is the SQPSI home state for Option B licensing path
  *    - Alternative: Partner with existing qualified custodian
  *      (Anchorage Digital, BitGo, Coinbase Custody)
  *
@@ -44,10 +160,12 @@
  *
  * REQUIRED BEFORE LAUNCH:
  *
- * 1. Money Transmitter Licenses (MTLs)
- *    - Required in 49 states + DC + PR + USVI (all except Montana)
- *    - Timeline: 12-18 months for full coverage
- *    - Cost: $2-5M total (bonds, application fees, legal)
+ * 1. GRAIN (payment stablecoin) — GENIUS Act Path
+ *    - Apply for Wyoming SQPSI license (fastest path)
+ *    - This gives nationwide preemption for stablecoin activities
+ *    - No need for 49-state MTL gauntlet
+ *    - Parallel: Apply for OCC FQPSI once rulemaking is final (mid-2026)
+ *    - FALLBACK: Circle umbrella while SQPSI processes
  *    - SHORTCUT: Partner with licensed entity Day 1
  *      → Circle (already licensed, GRAIN is built on Circle SDK)
  *      → Circle handles USDC in/out, we handle GRAIN internally
@@ -68,38 +186,59 @@
  *    - Block transactions to/from sanctioned addresses
  *    - Already standard via Circle SDK (Circle does OFAC screening)
  *
- * 4. SEC Considerations — GRAIN Token Classification
- *    - GRAIN is NOT a security because:
- *      a) It's a payment stablecoin (medium of exchange, not investment)
- *      b) Value is backed 1:1 by reserves, not by "efforts of others"
- *      c) No expectation of profit from the token itself
- *         (appreciation comes from reserve management, not promoter efforts)
- *      d) Fits the "Reves" test for notes: resembles a currency, not an investment
- *    - KEY LEGAL OPINION NEEDED: Engage Sullivan & Cromwell, Davis Polk,
- *      or Debevoise to issue formal legal opinion that GRAIN is not a security
- *    - REFERENCE: GENIUS Act (2025) — federal stablecoin framework
- *      explicitly excludes payment stablecoins from securities classification
- *      if they maintain 1:1 reserves and are redeemable
+ * 4. SEC Considerations — Two-Token Structure
  *
- * 5. SEC Considerations — Staking Yield
- *    - THIS IS THE CRITICAL LEGAL QUESTION
- *    - Staking yield (4.5-6.0%) COULD be classified as a security under
- *      the Howey test if structured as "invest money + expect profits
- *      from efforts of others"
- *    - SAFE STRUCTURE:
- *      a) Frame as "lending" not "staking" — user lends stablecoins
- *         to the treasury, receives interest (like a bank CD)
- *      b) Use the GRAIN Foundation (not Wells Onyx) as the counterparty
- *      c) Yield comes from reserve management (T-bills, money market),
- *         not from "efforts of the promoter"
- *      d) All reserves are transparently audited and publicly visible
- *    - ALTERNATIVE: Operate under Reg D (accredited investors only)
- *      initially, then pursue Reg A+ for retail ($75M/yr cap)
- *    - REFERENCE: SEC v. Coinbase (staking) — the SEC's case was about
- *      proof-of-stake validation rewards, not lending yield. GRAIN's
- *      model is closer to a money market fund than PoS staking.
- *    - SAFEST PATH: Get SEC no-action letter or work with SEC's
- *      FinHub for guidance before launching staking yield
+ *    GRAIN (payment stablecoin):
+ *    - NOT a security under GENIUS Act (explicit federal safe harbor)
+ *    - 1:1 pegged, fully backed, redeemable on demand
+ *    - No yield, no appreciation — pure payment instrument
+ *    - No SEC registration required
+ *
+ *    gVAULT (growth token):
+ *    - IS likely a security under Howey (investment + profit expectation)
+ *    - Must be registered or exempt from registration
+ *    - THREE PATHS (choose based on speed vs scale):
+ *
+ *      Path 1: Reg D (506(c)) — Accredited Investors Only
+ *      - No SEC registration needed
+ *      - Unlimited raise amount
+ *      - Can advertise publicly (506(c) allows general solicitation)
+ *      - Restriction: Only accredited investors ($200K income or $1M net worth)
+ *      - BEST FOR: Cold start phase (institutional stakers, DeFi whales)
+ *      - Timeline: 2-4 weeks to set up
+ *
+ *      Path 2: Reg A+ — "Mini IPO" for Retail
+ *      - SEC-qualified offering (lighter than full registration)
+ *      - Tier 2: up to $75M/year
+ *      - Open to ALL investors (not just accredited)
+ *      - Requires annual audited financials
+ *      - BEST FOR: Phase 2 when retail staking opens
+ *      - Timeline: 3-6 months for SEC qualification
+ *
+ *      Path 3: Tokenized Money Market Fund (SEC-registered fund)
+ *      - Register gVAULT as a money market fund under Investment Company Act
+ *      - Most institutional credibility
+ *      - Full SEC reporting requirements
+ *      - BEST FOR: Phase 3 at scale ($10B+ AUM)
+ *      - Timeline: 6-12 months
+ *
+ *    RECOMMENDED SEQUENCE:
+ *    - Month 0-6:  Reg D (accredited stakers only)
+ *    - Month 6-12: Reg A+ qualification (retail access)
+ *    - Month 12+:  Evaluate fund registration at scale
+ *
+ * 5. Staking Yield — Clean Under Two-Token Model
+ *    - External stablecoins deposit into GRAIN treasury → get GRAIN (1:1)
+ *    - They then opt-in to convert GRAIN → gVAULT for yield
+ *    - The GRAIN issuer (GRAIN Treasury LLC) NEVER pays yield on GRAIN
+ *    - The GRAIN Foundation (separate entity) manages gVAULT yield
+ *    - Yield source: T-bills (~5%), money market, DeFi yields
+ *    - This fits GENIUS Act perfectly:
+ *      a) Payment stablecoin issuer doesn't pay yield ✅
+ *      b) Third-party (Foundation) offers yield separately ✅
+ *      c) Activity-based rewards (cashback) are carved out ✅
+ *    - No SEC issue with GRAIN itself
+ *    - gVAULT is properly registered (Reg D/A+)
  *
  * 6. Cashback / Incentive Programs
  *    - Buyer cashback (10bps) and seller rebates (5bps) are
@@ -132,17 +271,32 @@
  *
  * ─── 0D: LEGAL TIMELINE ───
  *
- * Month 1-2:  Engage law firm, file FinCEN MSB registration
- * Month 2-3:  Entity formation (LLC, Trust, Foundation)
- * Month 3-4:  SEC legal opinion on GRAIN token classification
- * Month 3-6:  MTL applications in top 10 states
- * Month 4-5:  SEC FinHub consultation on staking yield structure
- * Month 5-6:  Compliance infrastructure deployed (KYC, AML, monitoring)
- * Month 6:    LAUNCH (under Circle umbrella for MTL coverage)
- * Month 6-18: Complete remaining state MTL applications
+ * Month 1:    Engage law firm (Davis Polk, Sullivan & Cromwell, or Latham)
+ *             File FinCEN MSB registration (30 days)
+ * Month 1-2:  Entity formation (GRAIN Treasury LLC, Foundation, SPDI app)
+ * Month 2-3:  Apply for Wyoming SQPSI license (GRAIN payment stablecoin)
+ *             Set up Reg D (506c) for gVAULT (accredited stakers)
+ * Month 3-4:  Compliance infrastructure (KYC, AML, Chainalysis, OFAC)
+ *             Smart contract audit engagement (Trail of Bits)
+ * Month 4-5:  SQPSI approval (Wyoming is crypto-friendly, moves fast)
+ *             Reg D offering docs finalized
+ * Month 5-6:  LAUNCH — GRAIN payment stablecoin live (SQPSI licensed)
+ *             gVAULT staking live (Reg D, accredited only)
+ *             Buyer/seller incentives live (promotional, no registration)
+ * Month 6-9:  Begin Reg A+ qualification for gVAULT (retail access)
+ * Month 9-12: Apply for OCC FQPSI (federal charter, once rules finalize)
+ * Month 12+:  Reg A+ approved → gVAULT open to all investors
+ *             FQPSI → single federal license replaces SQPSI
  *
  * COST ESTIMATE: $3-5M legal + compliance setup
  * (Included in the $2B Seed/Series A war chest)
+ *
+ * KEY ADVANTAGE vs OLD PLAN:
+ * - No 49-state MTL gauntlet ($3-5M + 18 months saved)
+ * - GENIUS Act SQPSI = one state, nationwide preemption
+ * - GRAIN gets federal safe harbor from SEC (not a security)
+ * - gVAULT properly registered (Reg D → Reg A+)
+ * - Faster to market, cleaner structure, lower risk
  *
  * ═══════════════════════════════════════════════════════════════════════════════
  * PHASE 1: COLD START (Months 0-6)
@@ -471,28 +625,41 @@
  *
  * RISK                          PROBABILITY   IMPACT    MITIGATION
  * ────                          ───────────   ──────    ──────────
- * SEC classifies staking        Medium        High      Foundation structure,
- * yield as security                                     Reg D initially,
- *                                                       legal opinion
+ * SEC challenges gVAULT         Low           Medium    Reg D → Reg A+ path,
+ * registration                                          proper registration
+ *                                                       eliminates risk
  *
- * State MTL denial              Low           Medium    Circle umbrella,
- *                                                       multi-state strategy
+ * SQPSI license delayed         Low           Medium    Circle umbrella as
+ * or denied                                             fallback, Wyoming is
+ *                                                       crypto-friendly
+ *
+ * GENIUS Act rules              Medium        Medium    SQPSI buys time,
+ * unfavorable in final form                             FQPSI is backup,
+ *                                                       lobby via trade assoc
  *
  * Stablecoin depegging          Very Low      Critical  1:1 reserve, T-bills,
  * (reserve failure)                                     quarterly attestation,
- *                                                       insurance
+ *                                                       insurance, GENIUS Act
+ *                                                       requires insolvency
+ *                                                       priority for holders
  *
  * Smart contract exploit        Low           Critical  Audit (Trail of Bits,
  *                                                       OpenZeppelin), bug
  *                                                       bounty, insurance
  *
- * Competitor (USDC/USDT         Medium        Medium    Yield advantage,
+ * Competitor (USDC/USDT         Medium        Medium    gVAULT yield advantage,
  * adds yield natively)                                  ERP integration moat,
- *                                                       retention flywheel
+ *                                                       retention flywheel,
+ *                                                       GENIUS Act bans yield
+ *                                                       on payment stablecoins
+ *                                                       (helps us — competitors
+ *                                                       can't add yield to their
+ *                                                       payment stablecoin either)
  *
- * Regulatory environment        Medium        High      Federal charter if
- * shifts (new legislation)                              GENIUS Act passes,
- *                                                       lobby via trade assoc
+ * OCC FQPSI rulemaking          Medium        Low       SQPSI is viable
+ * takes longer than expected                            long-term alternative,
+ *                                                       $10B cap is fine for
+ *                                                       years 1-3
  *
  * Cold start failure            Low           High      $2B capital provides
  * (can't get volume)                                    3+ years runway,
@@ -522,16 +689,43 @@
  * BUILD ORDER (What to code first)
  * ═══════════════════════════════════════════════════════════════════════════════
  *
- * WEEK 1-2:   GRAINStaking.sol + stGRAIN.sol contracts
- * WEEK 2-4:   lib/grain/staking.ts + staking APIs
- * WEEK 3-6:   lib/grain/retention.ts + retention tiers
- * WEEK 5-8:   lib/grain/incentives.ts + deal integration
+ * WEEK 1-2:   Refactor GRAIN.sol → pure 1:1 payment stablecoin
+ *             Deploy gVAULT.sol → appreciation/yield token (ERC-4626 vault)
+ * WEEK 2-4:   GRAINStaking.sol → deposit stablecoins, receive GRAIN + gVAULT
+ *             lib/grain/staking.ts + staking APIs
+ * WEEK 3-6:   lib/grain/retention.ts → gVAULT retention tiers
+ *             lib/grain/gvault.ts → appreciation engine
+ * WEEK 5-8:   lib/grain/incentives.ts + deal integration (cashback/rebates)
  * WEEK 7-12:  ERP payment router + onboarding wizard
  * WEEK 9-14:  Frontend: staking dashboard, rewards, ERP connect
  * WEEK 13-16: Admin dashboard (Tropical Force real-time)
  *
- * Critical path: Staking contracts → Audit → Deploy
+ * Critical path: GRAIN refactor + gVAULT contract → Audit → Deploy
  * (Everything else can launch in parallel)
+ *
+ * CONTRACT ARCHITECTURE:
+ *
+ * contracts/GRAIN.sol (REFACTORED)
+ *   - Pure 1:1 payment stablecoin
+ *   - Remove appreciation logic
+ *   - GENIUS Act compliant
+ *   - Mint on USDC deposit, burn on USDC withdrawal
+ *   - backingRatio() must always return exactly 1:1
+ *
+ * contracts/gVAULT.sol (NEW)
+ *   - ERC-4626 tokenized vault standard
+ *   - Accepts GRAIN deposits → issues gVAULT shares
+ *   - Share price appreciates based on Asset Vault holdings
+ *   - "Can only go UP" invariant lives HERE
+ *   - Managed by GRAIN Foundation (separate from GRAIN issuer)
+ *   - Yield funded by: T-bills, money market, real estate, metals
+ *
+ * contracts/GRAINStaking.sol (NEW)
+ *   - Accepts USDC/USDT/DAI deposits
+ *   - Auto-converts to GRAIN (1:1) via GRAIN.sol
+ *   - Auto-deposits into gVAULT for yield
+ *   - Staker receives stGRAIN receipt token
+ *   - Withdrawal: gVAULT → GRAIN → original stablecoin
  *
  * ═══════════════════════════════════════════════════════════════════════════════
  */
@@ -541,21 +735,48 @@
 
 export const SIEGE_MODE_PLAN = {
   phases: ['legal-foundation', 'cold-start', 'build', 'scale'],
+
+  /** GENIUS Act changes: two-token architecture */
+  tokenArchitecture: {
+    grain: {
+      type: 'Payment stablecoin',
+      peg: '1:1 USD',
+      regulation: 'GENIUS Act (SQPSI → FQPSI)',
+      securities: false,
+      yield: false,
+      purpose: 'B2B payments, settlement, ERP corridor',
+    },
+    gVault: {
+      type: 'Appreciation/yield token',
+      peg: 'Floating (only goes up)',
+      regulation: 'SEC (Reg D → Reg A+ → Fund)',
+      securities: true,
+      yield: true,
+      purpose: 'Staking yield, retention, asset appreciation',
+    },
+  },
+
   legalEntities: [
-    'GRAIN Treasury LLC (Delaware)',
-    'Wells Onyx Inc (Delaware C-Corp)',
-    'GRAIN Foundation (Cayman)',
-    'GRAIN Vault Trust (Wyoming SPDI)',
+    'GRAIN Treasury LLC (Delaware) — payment stablecoin reserves',
+    'Wells Onyx Inc (Delaware C-Corp) — operating company',
+    'GRAIN Foundation (Cayman) — manages gVAULT yield (separate from issuer)',
+    'GRAIN Vault Trust (Wyoming SPDI) — custodian + SQPSI home state',
   ],
+
+  /** GENIUS Act licensing path replaces 49-state MTL gauntlet */
   requiredLicenses: [
-    'FinCEN MSB Registration',
-    'State MTLs (49 states + DC)',
-    'OFAC Compliance Program',
-    'SEC Legal Opinion (token + yield)',
+    'FinCEN MSB Registration (30 days)',
+    'Wyoming SQPSI license (GRAIN payment stablecoin — nationwide preemption)',
+    'OCC FQPSI application (when rules finalize, mid-2026)',
+    'SEC Reg D 506(c) (gVAULT — accredited stakers)',
+    'SEC Reg A+ (gVAULT — retail access, month 6-12)',
+    'OFAC Compliance Program (Chainalysis)',
+    'BSA/AML Program (required by GENIUS Act)',
   ],
+
   buildSprints: [
-    { sprint: 1, name: 'Staking Contracts', weeks: '1-4' },
-    { sprint: 2, name: 'Retention Engine', weeks: '3-6' },
+    { sprint: 1, name: 'GRAIN refactor + gVAULT contracts', weeks: '1-4' },
+    { sprint: 2, name: 'Staking + Retention Engine', weeks: '3-6' },
     { sprint: 3, name: 'Incentive System', weeks: '5-8' },
     { sprint: 4, name: 'ERP Payment Routing', weeks: '7-12' },
     { sprint: 5, name: 'Frontend', weeks: '9-14' },
