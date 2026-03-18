@@ -65,6 +65,13 @@ export const FLOAT_YIELD_RATE = 0.045 // 4.5% annual
  */
 export const WELLSAI_FEE_RATE = 0.01 // 1%
 
+/**
+ * Payment Processing Fee (secondary revenue)
+ * 33bps on eligible transaction volume (est. 30% of total)
+ */
+export const PROCESSING_FEE_RATE = 0.0033 // 33bps
+export const PROCESSING_ELIGIBLE_SHARE = 0.30 // 30% of volume is eligible
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -129,6 +136,25 @@ export function calculateWellsAIFeeBreakdown(feeAmount: number): {
     wellsOnyx: feeAmount * WELLSAI_FEE_ALLOCATION.wellsOnyx,
     liquidity: feeAmount * WELLSAI_FEE_ALLOCATION.liquidity,
     partners: feeAmount * WELLSAI_FEE_ALLOCATION.partners,
+  }
+}
+
+/**
+ * Calculate processing fee revenue
+ * 33bps on 30% of eligible transaction volume
+ * Does NOT write to database - just calculates
+ */
+export function calculateProcessingFeeRevenue(annualTransactionVolume: number): {
+  eligibleVolume: number
+  totalFees: number
+  dailyFees: number
+} {
+  const eligibleVolume = annualTransactionVolume * PROCESSING_ELIGIBLE_SHARE
+  const totalFees = eligibleVolume * PROCESSING_FEE_RATE
+  return {
+    eligibleVolume,
+    totalFees,
+    dailyFees: totalFees / 365,
   }
 }
 
@@ -402,6 +428,11 @@ export function projectRevenueAtScale(annualTransactionVolume: number): {
     liquidity: number
     partners: number
   }
+  processingFees: {
+    eligibleVolume: number
+    total: number
+    daily: number
+  }
   floatYield: {
     total: number
     tithe: number
@@ -411,6 +442,8 @@ export function projectRevenueAtScale(annualTransactionVolume: number): {
     wellsOnyx: number
     treasury: number
   }
+  totalRevenue: number
+  dailyRevenue: number
   totalToLiquidity: number
   totalToTreasury: number
   totalGrainAppreciation: number
@@ -422,6 +455,9 @@ export function projectRevenueAtScale(annualTransactionVolume: number): {
   const totalWellsAIFees = annualTransactionVolume * WELLSAI_FEE_RATE
   const wellsaiBreakdown = calculateWellsAIFeeBreakdown(totalWellsAIFees)
 
+  // Processing fees (33bps on 30% of volume)
+  const processingFees = calculateProcessingFeeRevenue(annualTransactionVolume)
+
   // Float yield (4.5% of deposits)
   const totalFloatYield = averageDepositBalance * FLOAT_YIELD_RATE
   const yieldBreakdown = calculateFloatYieldBreakdown(totalFloatYield)
@@ -431,6 +467,10 @@ export function projectRevenueAtScale(annualTransactionVolume: number): {
   const totalToTreasury = yieldBreakdown.treasury
   const totalGrainAppreciation = totalToLiquidity + totalToTreasury
 
+  // Combined revenue
+  const totalRevenue = totalWellsAIFees + processingFees.totalFees + totalFloatYield
+  const dailyRevenue = totalRevenue / 365
+
   return {
     transactionVolume: annualTransactionVolume,
     averageDepositBalance,
@@ -438,10 +478,17 @@ export function projectRevenueAtScale(annualTransactionVolume: number): {
       total: totalWellsAIFees,
       ...wellsaiBreakdown,
     },
+    processingFees: {
+      eligibleVolume: processingFees.eligibleVolume,
+      total: processingFees.totalFees,
+      daily: processingFees.dailyFees,
+    },
     floatYield: {
       total: totalFloatYield,
       ...yieldBreakdown,
     },
+    totalRevenue,
+    dailyRevenue,
     totalToLiquidity,
     totalToTreasury,
     totalGrainAppreciation,
@@ -469,10 +516,13 @@ export const RevenueAllocation = {
   FOUNDER_SPLIT,
   FLOAT_YIELD_RATE,
   WELLSAI_FEE_RATE,
+  PROCESSING_FEE_RATE,
+  PROCESSING_ELIGIBLE_SHARE,
 
   // Calculations
   calculateWellsAIFeeBreakdown,
   calculateFloatYieldBreakdown,
+  calculateProcessingFeeRevenue,
   calculateDailyFloatYield,
   calculateAnnualFloatYield,
 
