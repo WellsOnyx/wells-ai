@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint:fix)",
+      "Bash(npm run type-check)",
+      "Bash(npm run validate:all)",
+      "Bash(npm run test:*)",
+      "Bash(npx prisma generate)",
+      "Bash(npx prisma db push)",
+      "Bash(git *)"
+    ]
+  }
+}
