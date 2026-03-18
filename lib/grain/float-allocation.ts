@@ -24,10 +24,10 @@
  *
  *   Float = (Annual Volume / 365) × Settlement Days
  *
- * At scale (3-7% of $33T global payment volume):
- *   - Low:  $990B/yr → 48hr float = ~$5.4B
- *   - Mid:  $1.65T/yr → 48hr float = ~$9.0B
- *   - High: $2.31T/yr → 48hr float = ~$12.7B
+ * BASE CASE: 3.3% of $33T = $1T annual volume
+ *   $1T / 365 × 2 days = $5.48B float at any given time
+ *
+ * This $5.4B is the investable balance generating yield 24/7/365.
  *
  * The float is ALWAYS moving — money arrives and settles continuously.
  * Allocation must maximize yield while guaranteeing settlement liquidity.
@@ -681,16 +681,23 @@ export function calculateWithdrawalWaterfall(
 // ============================================================================
 
 /**
- * Project allocation and yield at various market share levels.
- * Models 3%, 5%, and 7% of the $33T global payment volume.
+ * BASE CASE: $1T annual volume (3.3% of $33T) → $5.4B float
+ * This is the anchor for all projections.
+ */
+export const BASE_CASE_ANNUAL_VOLUME = 1_000_000_000_000 // $1T
+
+/**
+ * Project allocation and yield at the base case and growth scenarios.
+ * Base: $1T (3.3% of $33T) — the $5.4B float
+ * Growth scenarios show what happens as market share expands.
  */
 export function projectAtScale(): ScaleProjection[] {
   const GLOBAL_PAYMENT_VOLUME = 33_000_000_000_000 // $33T
 
   const scenarios = [
-    { label: 'Conservative (3%)', share: 0.03 },
-    { label: 'Base Case (5%)', share: 0.05 },
-    { label: 'Aggressive (7%)', share: 0.07 },
+    { label: 'Base Case (3.3% — $1T)', share: 0.033 },
+    { label: 'Growth (5%)', share: 0.05 },
+    { label: 'Dominant (7%)', share: 0.07 },
   ]
 
   return scenarios.map(scenario => {

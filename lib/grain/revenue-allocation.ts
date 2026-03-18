@@ -449,12 +449,11 @@ export function projectRevenueAtScale(annualTransactionVolume: number): {
 }
 
 /**
- * Project at SAP scale (3.3% of $33T)
+ * Project at base case scale: $1T annual volume (3.3% of $33T)
+ * 48hr float = $5.4B at any given time
  */
 export function projectAtSAPScale(): ReturnType<typeof projectRevenueAtScale> {
-  const sapEcosystemVolume = 33_000_000_000_000 // $33T
-  const ourShare = 0.033 // 3.3%
-  const annualVolume = sapEcosystemVolume * ourShare // $1.09T
+  const annualVolume = 1_000_000_000_000 // $1T — base case
 
   return projectRevenueAtScale(annualVolume)
 }

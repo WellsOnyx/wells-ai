@@ -25,9 +25,8 @@ import {
   SETTLEMENT_HOURS,
   YIELD_ASSUMPTIONS,
   LIQUIDITY_TIERS,
+  BASE_CASE_ANNUAL_VOLUME,
 } from '@/lib/grain/float-allocation'
-
-const DEFAULT_ANNUAL_VOLUME = 33_000_000_000_000 * 0.033 // 3.3% of $33T
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,9 +54,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Single-volume analysis
+    // Default: $1T annual volume (3.3% of $33T) → $5.4B float
     const annualVolume = volumeParam
       ? parseFloat(volumeParam)
-      : DEFAULT_ANNUAL_VOLUME
+      : BASE_CASE_ANNUAL_VOLUME
 
     const float = calculateFloat(annualVolume)
     const targets = calculateTargetAllocation(float.totalFloat)

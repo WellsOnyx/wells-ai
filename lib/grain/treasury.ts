@@ -18,7 +18,7 @@
  * FLOAT MECHANICS:
  *   48-hour settlement window on all transactions
  *   Float = (Annual Volume / 365) × 2
- *   At 3-7% of $33T global payments = $5.4B - $12.7B float
+ *   Base case: $1T volume (3.3% of $33T) = $5.4B float at any given time
  *
  * This creates a deflationary stablecoin backed by:
  * - 100% USDC (floor)
@@ -39,6 +39,7 @@ import {
   RESERVE_ALLOCATION,
   TARGET_ROI,
   SETTLEMENT_HOURS,
+  BASE_CASE_ANNUAL_VOLUME,
   type FloatSnapshot,
   type AllocationState,
   type YieldProjection,
