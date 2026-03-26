@@ -666,7 +666,7 @@ export async function routeMessage(
     // Call Claude
     const startTime = Date.now()
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 1024,
       system: systemPrompt,
       tools,
@@ -700,7 +700,7 @@ export async function routeMessage(
       productContext: product,
       toolUse: toolUse ? { name: toolUse.name, input: toolUse.input } : undefined,
       tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
-      modelUsed: 'claude-sonnet-4-20250514',
+      modelUsed: 'claude-sonnet-4-5-20250514',
       latencyMs,
       metadata: {
         channel: normalizedMessage.channel,

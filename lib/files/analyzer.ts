@@ -140,7 +140,7 @@ export async function analyzeFile(
     if (modelProvider === 'anthropic') {
       const anthropic = getAnthropicClient();
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: options?.maxTokens || 4096,
         messages: [
           {
@@ -155,7 +155,7 @@ export async function analyzeFile(
         success: true,
         analysis,
         metadata: {
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-5-20250514',
           inputTokens: response.usage.input_tokens,
           outputTokens: response.usage.output_tokens,
         },

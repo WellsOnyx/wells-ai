@@ -1266,7 +1266,7 @@ Consider:
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1024,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
@@ -1425,7 +1425,7 @@ Generate your response as the seller. Be professional and aim to close the deal 
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 512,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
@@ -2255,7 +2255,7 @@ Respond in JSON:
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 1024,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
@@ -2774,7 +2774,7 @@ async function parseNaturalLanguageRequest(request: string): Promise<{
 } | null> {
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 512,
       system: `You parse procurement requests into structured data. Extract:
 - category: product category

@@ -240,7 +240,7 @@ export class EmployerAgent {
     // Use AI for deeper evaluation
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1000,
         messages: [{
           role: 'user',
@@ -696,7 +696,7 @@ Provide evaluation as JSON:
         .join('\n\n');
 
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 500,
         messages: [{
           role: 'user',

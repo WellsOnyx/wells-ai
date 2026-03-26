@@ -1299,7 +1299,7 @@ RESPOND WITH JSON ONLY:
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 500,
         system: systemPrompt,
         messages: [{ role: 'user', content: message }],
@@ -1352,7 +1352,7 @@ RESPOND WITH JSON:
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 600,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -1477,7 +1477,7 @@ Provide a clear, helpful explanation in 2-4 sentences.`;
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 200,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -1505,7 +1505,7 @@ Respond helpfully, asking for clarification if needed, and suggest what the user
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 200,
         messages: [{ role: 'user', content: prompt }],
       });

@@ -96,7 +96,7 @@ export async function draftMessage(
   const userPrompt = buildUserPrompt(profile, context, messageType)
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1500,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }]
@@ -466,7 +466,7 @@ export async function suggestImprovements(
   const limit = MESSAGE_LIMITS[messageType]
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1500,
     system: `You are Wells, reviewing a LinkedIn ${messageType.replace('_', ' ')}.
 
@@ -512,7 +512,7 @@ export async function shortenMessage(
   }
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 500,
     system: `Shorten this LinkedIn message to exactly ${targetLimit} characters or less.
 Preserve the core intent: "${preserveIntent}"

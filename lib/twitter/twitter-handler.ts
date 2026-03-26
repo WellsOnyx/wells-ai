@@ -111,7 +111,7 @@ Respond in JSON format:
 }`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 500,
     system: systemPrompt,
     messages: [
@@ -168,7 +168,7 @@ Rules:
 Generate 3 tweet options for the given topic.`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 800,
     system: systemPrompt,
     messages: [
@@ -208,7 +208,7 @@ Guidelines:
 This is cold outreach, so be respectful of their time.`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 500,
     system: systemPrompt,
     messages: [

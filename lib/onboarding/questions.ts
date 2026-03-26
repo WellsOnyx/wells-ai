@@ -416,7 +416,7 @@ export async function generateConversationalQuestion(
   if (recentMessages && recentMessages.length > 0) {
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 200,
         system: `You are Wells AI, having a friendly onboarding conversation. Generate a natural, conversational question to learn about the user.
 

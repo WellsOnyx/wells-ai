@@ -271,7 +271,7 @@ Respond in JSON format:
     : '\n\nThis is the opening proposal.'
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1024,
     system: systemPrompt,
     messages: [{
@@ -325,7 +325,7 @@ async function generateSummaries(
   ).join('\n')
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 512,
     messages: [{
       role: 'user',
@@ -410,7 +410,7 @@ Rate each seller 0-100 on MUTUAL compatibility (not just buyer fit) and suggest 
 Return JSON: { "matches": [{ "index": number, "compatibility": number, "suggestedTerms": {} }] }`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1024,
     messages: [{ role: 'user', content: matchPrompt }]
   })

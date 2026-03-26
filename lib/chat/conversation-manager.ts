@@ -571,7 +571,7 @@ export async function isConfirmation(message: string): Promise<'yes' | 'no' | 'u
   // Use AI for ambiguous cases
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 10,
       messages: [
         {

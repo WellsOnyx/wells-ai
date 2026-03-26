@@ -409,7 +409,7 @@ Respond naturally as if continuing the conversation.`
   const anthropic = new Anthropic()
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1024,
     system: systemPrompt,
     messages: messageHistory
@@ -838,7 +838,7 @@ export async function classifyMessage(content: string): Promise<{
   const anthropic = new Anthropic()
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 256,
     system: `Analyze this message and return JSON with:
 - intent: What does the sender want? (quote_request, support, sales_inquiry, partnership, complaint, general)

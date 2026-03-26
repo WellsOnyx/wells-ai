@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
 
     // Use Claude to generate response
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 250,
       system: systemPrompt + contextAddendum,
       messages: formattedMessages

@@ -286,7 +286,7 @@ export async function generateOutreach(
 
   // Generate with AI
   const aiResponse = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1000,
     messages: [
       {

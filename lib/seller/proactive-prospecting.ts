@@ -321,7 +321,7 @@ async function analyzeSignalContent(
   keywords: string[]
 }> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 500,
     system: `Analyze this ${source} content for B2B buying signals.
 

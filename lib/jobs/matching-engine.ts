@@ -645,7 +645,7 @@ export async function generateMatchExplanation(
   // For lower scores, use AI to generate thoughtful explanation
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 200,
       messages: [
         {

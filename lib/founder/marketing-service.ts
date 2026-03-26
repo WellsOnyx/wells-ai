@@ -251,7 +251,7 @@ export async function generateCopy(
   };
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 2000,
     messages: [
       {
@@ -347,7 +347,7 @@ export async function generateVariants(
   const original = mapRowToContent(contentResult.rows[0]);
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 3000,
     messages: [
       {
@@ -407,7 +407,7 @@ export async function generateHeadlines(
   count: number = 10
 ): Promise<{ headlines: string[]; message: string }> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1500,
     messages: [
       {
@@ -470,7 +470,7 @@ export async function generateAdCopy(
   const spec = platformSpecs[platform];
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 500,
     messages: [
       {
@@ -527,7 +527,7 @@ export async function improveCopy(
   const original = mapRowToContent(contentResult.rows[0]);
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 2000,
     messages: [
       {
@@ -587,7 +587,7 @@ export async function translateCopy(
   const original = mapRowToContent(contentResult.rows[0]);
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 2000,
     messages: [
       {
@@ -1235,7 +1235,7 @@ export async function generateCreativeVariants(
   }
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1000,
     messages: [
       {
@@ -2217,7 +2217,7 @@ export async function parseCopyBriefFromText(
   text: string
 ): Promise<{ brief: CopyBrief; message: string }> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 500,
     messages: [
       {
@@ -2297,7 +2297,7 @@ export async function parseCampaignFromText(
   text: string
 ): Promise<{ campaign: CampaignBrief; message: string }> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 500,
     messages: [
       {

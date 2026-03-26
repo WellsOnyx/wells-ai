@@ -225,7 +225,7 @@ RESPOND WITH JSON:
   const userPrompt = request.customPrompt || `Write a LinkedIn post about: ${topic}`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1500,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }]
@@ -307,7 +307,7 @@ RESPOND WITH JSON:
 }`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 500,
     system: systemPrompt,
     messages: [{ role: 'user', content: `Write an engaging comment for this post.` }]
@@ -390,7 +390,7 @@ RESPOND WITH JSON:
 }`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 2000,
     system: systemPrompt,
     messages: [{ role: 'user', content: 'Generate article ideas.' }]

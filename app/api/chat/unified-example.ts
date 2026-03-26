@@ -161,7 +161,7 @@ export async function POST_OPTION_3(request: NextRequest) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' })
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 1024,
       messages,
       // ... your existing system prompt and tools
@@ -207,7 +207,7 @@ export async function POST_OPTION_3(request: NextRequest) {
           content: assistantMessage,
           productContext: 'wellsai',
           tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
-          modelUsed: 'claude-sonnet-4-20250514',
+          modelUsed: 'claude-sonnet-4-5-20250514',
         })
       } catch (dbError) {
         // Don't fail the request if unified DB save fails

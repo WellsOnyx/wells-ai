@@ -291,7 +291,7 @@ export async function POST(req: NextRequest) {
 
     // Call Claude with scheduling tools
     const claudeResponse = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 1024,
       system: SCHEDULING_SYSTEM_PROMPT + `\n\nUSER CONTEXT:\n- Timezone: ${userTimezone}\n- Working hours: ${schedulingContext.workingHours.start} - ${schedulingContext.workingHours.end}\n${userPreferences.preferredTimes ? `- Prefers: ${userPreferences.preferredTimes.join(', ')} meetings` : ''}`,
       messages: conversationHistory,

@@ -470,7 +470,7 @@ Respond to their proposal.
   private async callBuyerAgent(context: string, room: NegotiationRoom): Promise<any> {
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1024,
         system: BUYER_AGENT_SYSTEM,
         messages: [{ role: 'user', content: context }],
@@ -500,7 +500,7 @@ Respond to their proposal.
   private async callSellerAgent(context: string, room: NegotiationRoom): Promise<any> {
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1024,
         system: SELLER_AGENT_SYSTEM,
         messages: [{ role: 'user', content: context }],

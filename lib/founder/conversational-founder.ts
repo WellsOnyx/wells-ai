@@ -1761,7 +1761,7 @@ Just talk to me naturally - I'll figure out what you need!`;
   private async generateAIInsight(data: Record<string, unknown>): Promise<string | null> {
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 150,
         messages: [
           {
@@ -1784,7 +1784,7 @@ Be specific and practical. Don't be generic.`,
   private async generateRecommendations(context: Record<string, unknown>): Promise<string> {
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 400,
         messages: [
           {

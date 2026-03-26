@@ -910,7 +910,7 @@ ${m.bodyText}
 ---`).join('\n');
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1024,
     messages: [{
       role: 'user',
@@ -970,7 +970,7 @@ export async function suggestReplies(
   }
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1024,
     messages: [{
       role: 'user',
@@ -1022,7 +1022,7 @@ export async function draftReply(
 [${m.direction === 'inbound' ? 'Them' : 'You'}]: ${m.bodyText}`).join('\n');
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 2048,
     messages: [{
       role: 'user',
@@ -1083,7 +1083,7 @@ Preview: ${t.preview}
 Participants: ${JSON.stringify(t.participants)}`).join('\n---\n');
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 4096,
     messages: [{
       role: 'user',
@@ -1148,7 +1148,7 @@ export async function extractActionItems(
 [${m.from.name || m.from.email}]: ${m.bodyText}`).join('\n');
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1024,
     messages: [{
       role: 'user',
@@ -1196,7 +1196,7 @@ export async function detectUrgency(
   }
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 512,
     messages: [{
       role: 'user',
@@ -1446,7 +1446,7 @@ export async function createTaskFromThread(
 
   // Use AI to generate task details
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1024,
     messages: [{
       role: 'user',

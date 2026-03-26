@@ -851,7 +851,7 @@ Keep response under 300 words unless they asked for a tutorial.`
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 500,
       system: systemPrompt,
       messages: [

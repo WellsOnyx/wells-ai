@@ -791,7 +791,7 @@ async function handleUnknown(
 ): Promise<ColdStartResponse> {
   // Use Claude to figure out what they want
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 500,
     system: `You are Wells, helping with cold start outreach. The user said something unclear.
 

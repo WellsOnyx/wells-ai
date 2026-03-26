@@ -172,7 +172,7 @@ export class InterviewPrepSystem {
   async researchCompany(companyName: string, role?: string): Promise<CompanyResearch> {
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1500,
         messages: [{
           role: 'user',
@@ -268,7 +268,7 @@ Be helpful but note that some information may need verification.`,
 
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 2000,
         messages: [{
           role: 'user',
@@ -434,7 +434,7 @@ Generate 8-10 questions. Return JSON array:
       for (const achievement of exp.achievements.slice(0, 2)) {
         try {
           const response = await this.anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-5-20250514',
             max_tokens: 600,
             messages: [{
               role: 'user',
@@ -536,7 +536,7 @@ Return JSON:
   ): Promise<InterviewFeedback> {
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 800,
         messages: [{
           role: 'user',

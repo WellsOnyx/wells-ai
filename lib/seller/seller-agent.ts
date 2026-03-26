@@ -1065,7 +1065,7 @@ export class SellerAgent {
 
     // Process with Claude using tools
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 2048,
       system: systemPrompt,
       tools: SELLER_TOOLS,
@@ -1089,7 +1089,7 @@ export class SellerAgent {
 
         // If tool was executed, get AI to generate a natural response
         const toolResultResponse = await anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-5-20250514',
           max_tokens: 1024,
           system: systemPrompt,
           messages: [
@@ -1396,7 +1396,7 @@ Return JSON:
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 512,
         messages: [{ role: 'user', content: prompt }]
       });

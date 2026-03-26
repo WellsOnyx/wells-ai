@@ -498,7 +498,7 @@ export class ConversationalJobsService {
   private async parseSearchQuery(query: string): Promise<JobSearchRequest['filters']> {
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 500,
         messages: [{
           role: 'user',
@@ -812,7 +812,7 @@ DO NOT use generic phrases like "I am writing to express my interest" or "I beli
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }],
       })
@@ -920,7 +920,7 @@ Provide:
 Format as JSON.`
 
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1500,
         messages: [{ role: 'user', content: prompt }],
       })

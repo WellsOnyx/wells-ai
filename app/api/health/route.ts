@@ -51,7 +51,7 @@ export async function GET() {
 
     const response = await withTimeout(
       anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Say ok' }]
       }),

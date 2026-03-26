@@ -558,7 +558,7 @@ export class SellerNegotiationAgent {
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 100,
         system: `You are negotiating on behalf of a seller. Be professional, confident, and concise (1-2 sentences). Emphasize value when possible. No markdown.`,
         messages: [{

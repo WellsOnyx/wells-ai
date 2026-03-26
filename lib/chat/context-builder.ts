@@ -217,7 +217,7 @@ async function summarizeMessages(messages: UnifiedMessage[]): Promise<string> {
 
     // Use Claude to summarize
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 300,
       messages: [
         {
@@ -248,7 +248,7 @@ export async function extractTopicsAndEntities(
 ): Promise<{ topics: string[]; entities: Record<string, any> }> {
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 200,
       messages: [
         {
@@ -301,7 +301,7 @@ export async function generateConversationTitle(
 
     // Use first message as basis for title
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 50,
       messages: [
         {

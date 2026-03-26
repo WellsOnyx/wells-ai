@@ -665,7 +665,7 @@ export async function parseProfileFromDescription(
   linkedinUrl?: string
 ): Promise<Partial<LinkedInProfile>> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 1000,
     system: `You extract LinkedIn profile information from natural language descriptions.
 Return ONLY valid JSON with these fields (all optional):

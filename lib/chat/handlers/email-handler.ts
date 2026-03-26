@@ -411,7 +411,7 @@ Send it?`,
     // Use AI to generate personalized content
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 500,
         system: `You are Wells, drafting an email. Write in a direct, friendly, professional tone.
 No corporate speak. Short sentences. Get to the point.
@@ -577,7 +577,7 @@ Send it?`,
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 300,
         system: `You are Wells, replying to an email thread.
 Keep it brief and direct. Match the conversation's tone.

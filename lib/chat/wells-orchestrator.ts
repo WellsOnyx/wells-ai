@@ -667,7 +667,7 @@ ${intent.suggestedAction ? `SUGGESTED ACTION: ${intent.suggestedAction}` : ''}`
     const tools = this.getToolsForIntent(intent)
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 1024,
       system: systemPrompt,
       messages,

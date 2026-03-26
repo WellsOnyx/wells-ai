@@ -498,7 +498,7 @@ Respond in JSON:
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 256,
         messages: [{ role: 'user', content: prompt }],
       });
@@ -553,7 +553,7 @@ Respond in JSON:
 
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 100,
         system: `You are negotiating on behalf of a buyer. Be professional and concise (1-2 sentences). No markdown.`,
         messages: [{

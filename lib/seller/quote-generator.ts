@@ -240,7 +240,7 @@ If no good matches, return empty array.`;
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 512,
       messages: [{ role: 'user', content: prompt }]
     });
@@ -453,7 +453,7 @@ Return JSON: { "explanation": "...", "confidence": 0.0-1.0 }`;
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 256,
       messages: [{ role: 'user', content: prompt }]
     });

@@ -210,7 +210,7 @@ export class CareerCompanion {
     // Use AI to generate path
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1500,
         messages: [{
           role: 'user',
@@ -313,7 +313,7 @@ Generate 3-4 intermediate milestones. Return JSON:
   }>> {
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1000,
         messages: [{
           role: 'user',
@@ -662,7 +662,7 @@ Suggest 4 possible next moves (mix of types). Return JSON array:
   private async identifySkillsForRole(role: string): Promise<string[]> {
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 200,
         messages: [{
           role: 'user',
@@ -865,7 +865,7 @@ Suggest 4 possible next moves (mix of types). Return JSON array:
     for (const exp of profile.experiences.slice(0, 5)) {
       try {
         const response = await this.anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-5-20250514',
           max_tokens: 300,
           messages: [{
             role: 'user',
@@ -944,7 +944,7 @@ Explain how this experience prepared them for the target role. Return JSON:
   ): Promise<CareerReflection> {
     try {
       const aiResponse = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 300,
         messages: [{
           role: 'user',

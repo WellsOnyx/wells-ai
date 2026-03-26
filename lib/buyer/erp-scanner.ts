@@ -529,7 +529,7 @@ async function generateOpportunitySummary(
   const totalValue = opportunities.reduce((sum, o) => sum + o.estimatedValue, 0);
 
   const aiResponse = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 300,
     messages: [
       {

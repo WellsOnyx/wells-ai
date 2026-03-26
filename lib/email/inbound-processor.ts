@@ -328,7 +328,7 @@ export async function classifyIntent(email: InboundEmail): Promise<IntentClassif
       .replace('{body}', body.substring(0, 2000))
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 500,
       messages: [
         { role: 'user', content: prompt },
@@ -637,7 +637,7 @@ function extractFirstName(name?: string, email?: string): string {
 async function generateQuestionAnswer(questions: string[], context: string): Promise<string> {
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 300,
       system: `You are Wells, a direct and helpful business AI assistant.
 Answer questions briefly and honestly. No corporate speak. Be helpful.
@@ -674,7 +674,7 @@ async function generatePersonalizedNextStep(
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 150,
       system: `You are Wells. Based on someone's positive reply email, suggest ONE specific next step.
 Be concise - one sentence. Don't be vague. Give a concrete action.`,

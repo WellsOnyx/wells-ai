@@ -326,7 +326,7 @@ export class JobsHandler {
     // Use AI to extract additional criteria from message
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 500,
         messages: [{
           role: 'user',
@@ -1063,7 +1063,7 @@ What would you like to counter with? You can say something like "counter at $200
   }> {
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 300,
         messages: [{
           role: 'user',
@@ -1520,7 +1520,7 @@ Would you like help negotiating or are you ready to decide?`,
     // Use AI to understand and respond
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 500,
         system: `You are Wells, a career assistant. Help the user with their job-related question. Be encouraging and actionable. Keep responses concise (2-3 sentences).`,
         messages: [{ role: 'user', content: message }],

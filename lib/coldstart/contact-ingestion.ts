@@ -705,7 +705,7 @@ export interface SegmentCriteria {
  */
 export async function parseSegmentDescription(description: string): Promise<SegmentCriteria> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5-20250514',
     max_tokens: 500,
     system: `You parse natural language descriptions of contact segments into structured criteria.
 

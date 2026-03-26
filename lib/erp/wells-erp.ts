@@ -814,7 +814,7 @@ export class WellsERP {
 
     // Use Claude with ERP tools
     const response = await this.anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 4096,
       system: WELLS_ERP_SYSTEM_PROMPT + `\n\nUser ID: ${this.userId}\nConversation ID: ${convId}`,
       tools: WELLS_ERP_TOOLS,
@@ -848,7 +848,7 @@ export class WellsERP {
       }))
 
       const continuation = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 4096,
         system: WELLS_ERP_SYSTEM_PROMPT + `\n\nUser ID: ${this.userId}\nConversation ID: ${convId}`,
         tools: WELLS_ERP_TOOLS,
@@ -1040,7 +1040,7 @@ export class WellsERP {
 
   private async interpretWithClaude(text: string, expectedAction: string): Promise<Record<string, unknown>> {
     const response = await this.anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250514',
       max_tokens: 1024,
       messages: [
         {

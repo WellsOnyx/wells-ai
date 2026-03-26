@@ -259,7 +259,7 @@ export class JobSeekerAgent {
 
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 1500,
         system: systemPrompt,
         messages: [
@@ -298,7 +298,7 @@ export class JobSeekerAgent {
   }> {
     try {
       const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 800,
         messages: [{
           role: 'user',
@@ -515,7 +515,7 @@ Provide analysis as JSON:
 
       // Enhance with AI
       const aiResponse = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250514',
         max_tokens: 500,
         messages: [{
           role: 'user',
