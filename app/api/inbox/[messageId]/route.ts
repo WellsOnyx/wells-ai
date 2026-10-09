@@ -1,15 +1,42 @@
 /**
- * Message Actions API Route
- * =========================
- * Individual message operations
+ * Unified Inbox API Route — single source of truth
+ * =================================================
+ * Merged 2026-10-09. Previously two sibling routes —
+ *   app/api/inbox/[id]/route.ts          (conversation-centric)
+ *   app/api/inbox/[messageId]/route.ts   (message-centric)
+ * — defined the same URL pattern with different param names, which Next.js
+ * forbids ("You cannot use different slug names for the same dynamic path").
+ * That crashed route boot and 500'd every invocation of the serverless
+ * functions sharing the manifest (notably /api/cold-start/check-replies,
+ * /api/cron/erp-sync, /api/companion/worker).
  *
- * GET /api/inbox/[messageId] - Get message details
- * PATCH /api/inbox/[messageId] - Update message (read, starred, etc.)
- * DELETE /api/inbox/[messageId] - Trash/delete message
- * POST /api/inbox/[messageId] - Perform action (archive, snooze, spam, etc.)
+ * All behaviors from both handlers are preserved below. The `messageId` URL
+ * param accepts either a unified message id or a conversation id; each
+ * handler resolves the entity it needs.
+ *
+ * GET    /api/inbox/[messageId] - Message details (optional thread, reply
+ *          suggestions, entities, action items); falls back to conversation
+ *          lookup when no message matches.
+ * PATCH  /api/inbox/[messageId] - Update message properties; or update
+ *          conversation status when the body carries only { status }.
+ * DELETE /api/inbox/[messageId] - Trash or permanently delete a message.
+ * POST   /api/inbox/[messageId] - Action dispatch. Message actions: archive,
+ *          unarchive, star, unstar, read, unread, snooze, unsnooze, spam,
+ *          notSpam, categorize, generateReply, undo, addLabel, removeLabel,
+ *          forward. Conversation actions: message, ai-response, approve, status.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+// Conversation-centric operations (formerly app/api/inbox/[id])
+import {
+  getConversation,
+  addMessage,
+  generateAIResponse,
+  approveAndSendMessage,
+  updateConversationStatus,
+  type ConversationStatus,
+} from '@/lib/inbox';
+// Message-centric operations (unified inbox)
 import {
   getMessage,
   getThread,
@@ -32,13 +59,18 @@ import {
 } from '@/lib/inbox/ai-assistant';
 import { sql } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ messageId: string }>;
 }
 
+// Actions handled by the conversation-centric logic (param = conversation id)
+const CONVERSATION_ACTIONS = new Set(['message', 'ai-response', 'approve', 'status']);
+
 /**
  * GET /api/inbox/[messageId]
- * Get detailed message information
+ * Message details, with fallback to conversation lookup.
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -46,68 +78,79 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const userId = request.headers.get('x-user-id') || 'default-user';
     const searchParams = request.nextUrl.searchParams;
 
+    // 1) Try unified message first
     const message = await getMessage(messageId, userId);
 
-    if (!message) {
+    if (message) {
+      const result: any = {
+        success: true,
+        message,
+      };
+
+      // Optionally include thread context
+      if (searchParams.get('includeThread') === 'true' && message.threadId) {
+        const threadData = await getThread(message.threadId, userId);
+        if (threadData) {
+          result.thread = threadData.thread;
+          result.threadMessages = threadData.messages;
+        }
+      }
+
+      // Optionally generate reply suggestions
+      if (searchParams.get('generateReplies') === 'true' && message.threadId) {
+        try {
+          result.replySuggestions = await generateReplySuggestions(
+            message.threadId,
+            userId,
+            {
+              tone: (searchParams.get('replyTone') as any) || 'professional',
+              count: parseInt(searchParams.get('replyCount') || '3'),
+            }
+          );
+        } catch (error) {
+          console.error('[Inbox] Reply generation failed:', error);
+        }
+      }
+
+      // Optionally extract entities
+      if (searchParams.get('extractEntities') === 'true') {
+        try {
+          result.entities = await extractEntities(messageId, userId);
+        } catch (error) {
+          console.error('[Inbox] Entity extraction failed:', error);
+        }
+      }
+
+      // Optionally extract action items
+      if (searchParams.get('extractActions') === 'true') {
+        try {
+          result.actionItems = await extractActionItems(messageId, userId);
+        } catch (error) {
+          console.error('[Inbox] Action extraction failed:', error);
+        }
+      }
+
+      return NextResponse.json(result);
+    }
+
+    // 2) Fall back to conversation lookup (formerly [id] GET)
+    const convData = await getConversation(messageId);
+
+    if (!convData) {
       return NextResponse.json(
-        { error: 'Message not found' },
+        { success: false, error: 'Conversation not found' },
         { status: 404 }
       );
     }
 
-    const result: any = {
+    return NextResponse.json({
       success: true,
-      message,
-    };
-
-    // Optionally include thread context
-    if (searchParams.get('includeThread') === 'true' && message.threadId) {
-      const threadData = await getThread(message.threadId, userId);
-      if (threadData) {
-        result.thread = threadData.thread;
-        result.threadMessages = threadData.messages;
-      }
-    }
-
-    // Optionally generate reply suggestions
-    if (searchParams.get('generateReplies') === 'true' && message.threadId) {
-      try {
-        result.replySuggestions = await generateReplySuggestions(
-          message.threadId,
-          userId,
-          {
-            tone: (searchParams.get('replyTone') as any) || 'professional',
-            count: parseInt(searchParams.get('replyCount') || '3'),
-          }
-        );
-      } catch (error) {
-        console.error('[MessageAction] Reply generation failed:', error);
-      }
-    }
-
-    // Optionally extract entities
-    if (searchParams.get('extractEntities') === 'true') {
-      try {
-        result.entities = await extractEntities(messageId, userId);
-      } catch (error) {
-        console.error('[MessageAction] Entity extraction failed:', error);
-      }
-    }
-
-    // Optionally extract action items
-    if (searchParams.get('extractActions') === 'true') {
-      try {
-        result.actionItems = await extractActionItems(messageId, userId);
-      } catch (error) {
-        console.error('[MessageAction] Action extraction failed:', error);
-      }
-    }
-
-    return NextResponse.json(result);
+      ...convData,
+    });
   } catch (error: any) {
-    console.error('[MessageAction] GET error:', error);
+    console.error('[Inbox] GET error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to get message' },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }
@@ -115,7 +158,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 /**
  * PATCH /api/inbox/[messageId]
- * Update message properties
+ * Update message properties — or conversation status when the body
+ * carries only { status } (formerly [id] PATCH).
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
@@ -131,7 +175,33 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       aiPriority,
       aiSentiment,
       aiSummary,
+      status,
     } = body;
+
+    const isMessageUpdate =
+      typeof isRead === 'boolean' ||
+      typeof isStarred === 'boolean' ||
+      labels !== undefined ||
+      aiCategory !== undefined ||
+      aiPriority !== undefined ||
+      aiSentiment !== undefined ||
+      aiSummary !== undefined;
+
+    if (!isMessageUpdate) {
+      // Conversation status update (formerly [id] PATCH)
+      if (status) {
+        const conversation = await updateConversationStatus(
+          messageId,
+          status as ConversationStatus
+        );
+        return NextResponse.json({ success: true, conversation });
+      }
+
+      return NextResponse.json(
+        { success: false, error: 'No updates provided' },
+        { status: 400 }
+      );
+    }
 
     // Build update fields
     const updates: string[] = [];
@@ -169,11 +239,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       values.push(messageId);
       values.push(userId);
 
-      await sql(`
+      await sql(
+        `
         UPDATE unified_messages
         SET ${updates.join(', ')}
         WHERE id = $${paramCount++} AND user_id = $${paramCount}
-      `, values);
+      `,
+        values
+      );
     }
 
     // Return updated message
@@ -184,9 +257,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       message,
     });
   } catch (error: any) {
-    console.error('[MessageAction] PATCH error:', error);
+    console.error('[Inbox] PATCH error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to update message' },
+      { error: error.message || 'Failed to update' },
       { status: 500 }
     );
   }
@@ -194,7 +267,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 /**
  * DELETE /api/inbox/[messageId]
- * Trash or permanently delete a message
+ * Trash or permanently delete a message.
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
@@ -213,10 +286,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     if (permanent) {
       // Permanent delete
-      await sql(`
+      await sql(
+        `
         DELETE FROM unified_messages
         WHERE id = $1 AND user_id = $2
-      `, [messageId, userId]);
+      `,
+        [messageId, userId]
+      );
 
       return NextResponse.json({
         success: true,
@@ -235,11 +311,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         });
       } else {
         // No thread, just mark message as trashed
-        await sql(`
+        await sql(
+          `
           UPDATE unified_messages
           SET is_trashed = true, updated_at = NOW()
           WHERE id = $1 AND user_id = $2
-        `, [messageId, userId]);
+        `,
+          [messageId, userId]
+        );
 
         return NextResponse.json({
           success: true,
@@ -249,7 +328,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }
     }
   } catch (error: any) {
-    console.error('[MessageAction] DELETE error:', error);
+    console.error('[Inbox] DELETE error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to delete message' },
       { status: 500 }
@@ -259,22 +338,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
 /**
  * POST /api/inbox/[messageId]
- * Perform action on message
- *
- * Actions:
- * - archive: Archive the message/thread
- * - unarchive: Restore from archive
- * - star: Star the message
- * - unstar: Remove star
- * - read: Mark as read
- * - unread: Mark as unread
- * - snooze: Snooze until specified time
- * - unsnooze: Cancel snooze
- * - spam: Mark as spam
- * - notSpam: Remove spam marking
- * - categorize: Run AI categorization
- * - generateReply: Generate AI reply draft
- * - undo: Undo previous action
+ * Action dispatch — message actions and conversation actions.
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -291,6 +355,97 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // ---- Conversation actions (param = conversation id) ----
+    if (CONVERSATION_ACTIONS.has(action)) {
+      switch (action) {
+        case 'message': {
+          // Add a new outbound message (manual reply)
+          const { content, sender_id, sender_name } = body;
+
+          if (!content) {
+            return NextResponse.json(
+              { success: false, error: 'Message content required' },
+              { status: 400 }
+            );
+          }
+
+          // Get conversation to know the channel
+          const convData = await getConversation(messageId);
+          if (!convData) {
+            return NextResponse.json(
+              { success: false, error: 'Conversation not found' },
+              { status: 404 }
+            );
+          }
+
+          const message = await addMessage({
+            conversation_id: messageId,
+            content,
+            direction: 'outbound',
+            sender_type: 'user',
+            sender_id,
+            sender_name,
+            channel: convData.conversation.channel,
+          });
+
+          return NextResponse.json({ success: true, message });
+        }
+
+        case 'ai-response': {
+          // Generate AI response
+          const { customPrompt } = body;
+          const result = await generateAIResponse(messageId, customPrompt);
+
+          return NextResponse.json({
+            success: true,
+            ...result,
+            status: 'pending_approval',
+          });
+        }
+
+        case 'approve': {
+          // Approve and send AI-generated message
+          const {
+            messageId: bodyMessageId,
+            userId: bodyUserId,
+            editedContent,
+          } = body;
+
+          if (!bodyMessageId || !bodyUserId) {
+            return NextResponse.json(
+              { success: false, error: 'messageId and userId required' },
+              { status: 400 }
+            );
+          }
+
+          const message = await approveAndSendMessage(
+            bodyMessageId,
+            bodyUserId,
+            editedContent
+          );
+
+          return NextResponse.json({ success: true, message });
+        }
+
+        case 'status': {
+          // Update conversation status
+          const { status } = body as { status: ConversationStatus };
+
+          if (!status) {
+            return NextResponse.json(
+              { success: false, error: 'Status required' },
+              { status: 400 }
+            );
+          }
+
+          const conversation = await updateConversationStatus(messageId, status);
+
+          return NextResponse.json({ success: true, conversation });
+        }
+      }
+    }
+
+    // ---- Message actions (param = unified message id) ----
     const message = await getMessage(messageId, userId);
 
     if (!message) {
@@ -310,11 +465,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           result.actionId = archiveResult.actionId;
           result.undoAvailable = true;
         } else {
-          await sql(`
+          await sql(
+            `
             UPDATE unified_messages
             SET is_archived = true, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
-          `, [messageId, userId]);
+          `,
+            [messageId, userId]
+          );
         }
         break;
       }
@@ -324,11 +482,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           const unarchiveResult = await archiveThreads([threadId], userId, false);
           result.actionId = unarchiveResult.actionId;
         } else {
-          await sql(`
+          await sql(
+            `
             UPDATE unified_messages
             SET is_archived = false, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
-          `, [messageId, userId]);
+          `,
+            [messageId, userId]
+          );
         }
         break;
       }
@@ -339,11 +500,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           result.actionId = starResult.actionId;
           result.undoAvailable = true;
         } else {
-          await sql(`
+          await sql(
+            `
             UPDATE unified_messages
             SET is_starred = true, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
-          `, [messageId, userId]);
+          `,
+            [messageId, userId]
+          );
         }
         break;
       }
@@ -353,11 +517,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           const unstarResult = await starThreads([threadId], userId, false);
           result.actionId = unstarResult.actionId;
         } else {
-          await sql(`
+          await sql(
+            `
             UPDATE unified_messages
             SET is_starred = false, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
-          `, [messageId, userId]);
+          `,
+            [messageId, userId]
+          );
         }
         break;
       }
@@ -367,11 +534,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           const readResult = await markThreadsRead([threadId], userId, true);
           result.actionId = readResult.actionId;
         } else {
-          await sql(`
+          await sql(
+            `
             UPDATE unified_messages
             SET is_read = true, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
-          `, [messageId, userId]);
+          `,
+            [messageId, userId]
+          );
         }
         break;
       }
@@ -382,11 +552,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           result.actionId = unreadResult.actionId;
           result.undoAvailable = true;
         } else {
-          await sql(`
+          await sql(
+            `
             UPDATE unified_messages
             SET is_read = false, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
-          `, [messageId, userId]);
+          `,
+            [messageId, userId]
+          );
         }
         break;
       }
@@ -413,17 +586,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           result.undoAvailable = true;
         } else {
           // Create snooze entry for message directly
-          const snoozeInsert = await sql(`
+          const snoozeInsert = await sql(
+            `
             INSERT INTO inbox_snooze_queue (user_id, message_id, snooze_until, reason)
             VALUES ($1, $2, $3, $4)
             RETURNING id
-          `, [userId, messageId, new Date(snoozeUntil), snoozeReason]);
+          `,
+            [userId, messageId, new Date(snoozeUntil), snoozeReason]
+          );
 
-          await sql(`
+          await sql(
+            `
             UPDATE unified_messages
             SET is_snoozed = true, snoozed_until = $1, updated_at = NOW()
             WHERE id = $2 AND user_id = $3
-          `, [new Date(snoozeUntil), messageId, userId]);
+          `,
+            [new Date(snoozeUntil), messageId, userId]
+          );
 
           result.snoozeId = snoozeInsert[0]?.id;
         }
@@ -435,17 +614,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           const unsnoozeResult = await unsnoozeThread(threadId, userId);
           result.actionId = unsnoozeResult.actionId;
         } else {
-          await sql(`
+          await sql(
+            `
             UPDATE unified_messages
             SET is_snoozed = false, snoozed_until = NULL, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
-          `, [messageId, userId]);
+          `,
+            [messageId, userId]
+          );
 
-          await sql(`
+          await sql(
+            `
             UPDATE inbox_snooze_queue
             SET processed = true, processed_at = NOW()
             WHERE message_id = $1 AND user_id = $2 AND processed = false
-          `, [messageId, userId]);
+          `,
+            [messageId, userId]
+          );
         }
         break;
       }
@@ -456,11 +641,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           result.actionId = spamResult.actionId;
           result.undoAvailable = true;
         } else {
-          await sql(`
+          await sql(
+            `
             UPDATE unified_messages
             SET ai_category = 'spam', is_archived = true, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
-          `, [messageId, userId]);
+          `,
+            [messageId, userId]
+          );
         }
         break;
       }
@@ -470,11 +658,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           const notSpamResult = await markAsSpam([threadId], userId, false);
           result.actionId = notSpamResult.actionId;
         } else {
-          await sql(`
+          await sql(
+            `
             UPDATE unified_messages
             SET ai_category = 'other', is_archived = false, updated_at = NOW()
             WHERE id = $1 AND user_id = $2
-          `, [messageId, userId]);
+          `,
+            [messageId, userId]
+          );
         }
         break;
       }
@@ -532,13 +723,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           );
         }
 
-        await sql(`
+        await sql(
+          `
           UPDATE unified_messages
           SET labels = array_append(COALESCE(labels, ARRAY[]::TEXT[]), $1),
               updated_at = NOW()
           WHERE id = $2 AND user_id = $3
             AND NOT ($1 = ANY(COALESCE(labels, ARRAY[]::TEXT[])))
-        `, [label, messageId, userId]);
+        `,
+          [label, messageId, userId]
+        );
 
         break;
       }
@@ -553,12 +747,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           );
         }
 
-        await sql(`
+        await sql(
+          `
           UPDATE unified_messages
           SET labels = array_remove(COALESCE(labels, ARRAY[]::TEXT[]), $1),
               updated_at = NOW()
           WHERE id = $2 AND user_id = $3
-        `, [label, messageId, userId]);
+        `,
+          [label, messageId, userId]
+        );
 
         break;
       }
@@ -576,7 +773,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 From: ${message.from?.name || ''} <${message.from?.address || ''}>
 Date: ${new Date(message.sentAt || message.receivedAt || '').toLocaleString()}
 Subject: ${message.subject || '(no subject)'}
-To: ${message.to?.map(t => t.address).join(', ') || ''}
+To: ${message.to?.map((t: any) => t.address).join(', ') || ''}
 
 ${message.bodyText || ''}
           `.trim(),
@@ -598,7 +795,7 @@ ${message.bodyText || ''}
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('[MessageAction] POST error:', error);
+    console.error('[Inbox] POST error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to perform action' },
       { status: 500 }
