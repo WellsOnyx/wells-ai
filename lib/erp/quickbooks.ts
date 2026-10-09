@@ -4,7 +4,8 @@
 import { neon } from '@neondatabase/serverless';
 import type { QBOBill, QBOVendor, QBOPayment, ERPConnection } from './types';
 
-const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
+const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
 const QBO_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
 const QBO_OAUTH_BASE = 'https://oauth.platform.intuit.com/oauth2/v1';

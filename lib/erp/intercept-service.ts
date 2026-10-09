@@ -11,7 +11,8 @@ import { sap } from './sap';
 import { oracle } from './oracle';
 import { dynamics365 } from './dynamics365';
 
-const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
+const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
 export class InterceptService {
   // Scan for payables across all connected ERPs

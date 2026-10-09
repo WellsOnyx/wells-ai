@@ -4,7 +4,8 @@
 import { neon } from '@neondatabase/serverless';
 import type { XeroInvoice, XeroContact, XeroPayment, ERPConnection } from './types';
 
-const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
+const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
 const XERO_API_BASE = 'https://api.xero.com/api.xro/2.0';
 const XERO_OAUTH_BASE = 'https://login.xero.com/identity/connect';

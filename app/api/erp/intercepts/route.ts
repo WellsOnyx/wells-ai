@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { interceptService } from '@/lib/erp/intercept-service';
 
-const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
+const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
 // Get all intercepts for a connection
 export async function GET(req: NextRequest) {

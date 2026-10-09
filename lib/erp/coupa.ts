@@ -5,7 +5,8 @@
 import { neon } from '@neondatabase/serverless';
 import type { ERPConnection } from './types';
 
-const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
+const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
 const REDIRECT_URI = process.env.COUPA_REDIRECT_URI || 'https://wellsai.app/api/erp/coupa/callback';
 

@@ -6,7 +6,8 @@ import { neon } from '@neondatabase/serverless';
 import * as crypto from 'crypto';
 import type { ERPConnection } from './types';
 
-const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
+const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
 // Sage Intacct Web Services API endpoints
 const INTACCT_ENDPOINT = 'https://api.intacct.com/ia/xml/xmlgw.phtml';

@@ -37,7 +37,8 @@ import type {
   ERPPayment,
 } from './types';
 
-const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null;
+const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
 // Normalized data types for unified access
 export interface NormalizedVendor {

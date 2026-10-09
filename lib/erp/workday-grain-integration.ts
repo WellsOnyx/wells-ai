@@ -23,9 +23,8 @@ import { neon } from '@neondatabase/serverless'
 import { credentialManager } from './credential-manager'
 import { trackFloat, distributeYield } from '@/lib/scale/float-treasury-integration'
 
-const sql = process.env.DATABASE_URL?.startsWith('postgres')
-  ? neon(process.env.DATABASE_URL)
-  : null
+const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
 // ============================================================================
 // TYPES

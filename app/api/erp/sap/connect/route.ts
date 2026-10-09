@@ -59,9 +59,8 @@ export async function POST(req: NextRequest) {
     }
 
     const { neon } = await import('@neondatabase/serverless');
-    const sql = process.env.DATABASE_URL?.startsWith('postgres')
-      ? neon(process.env.DATABASE_URL)
-      : null;
+    const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
     if (!sql) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 500 });

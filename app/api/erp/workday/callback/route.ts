@@ -18,9 +18,8 @@ import { neon } from '@neondatabase/serverless'
 import { workday } from '@/lib/erp/workday'
 import { credentialManager } from '@/lib/erp/credential-manager'
 
-const sql = process.env.DATABASE_URL?.startsWith('postgres')
-  ? neon(process.env.DATABASE_URL)
-  : null
+const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
 export const runtime = 'nodejs'
 export const maxDuration = 60

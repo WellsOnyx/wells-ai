@@ -38,7 +38,8 @@ import { acumatica } from '@/lib/erp/acumatica'
 import { infor } from '@/lib/erp/infor'
 import { unifiedERP } from '@/lib/erp/unified-erp-service'
 
-const sql = process.env.DATABASE_URL?.startsWith('postgres') ? neon(process.env.DATABASE_URL) : null
+const _dbUrl = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, "");
+const sql = _dbUrl ? neon(_dbUrl) : null;
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
