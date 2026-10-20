@@ -15,28 +15,28 @@ const SCENES = [
     n: '02',
     kicker: 'One sentence',
     title: 'She tells her agent.',
-    body: 'No forms. No back and forth. Just what she needs.',
+    body: 'Her agent is Pip, and Pip works for her. She tells Pip what she needs in one sentence.',
     clip: 'tell',
   },
   {
     n: '03',
-    kicker: 'The agents',
-    title: 'They negotiate in private.',
-    body: "Her agent finds a mill and talks with the mill's agent. Walk-away prices never cross.",
+    kicker: 'Two agents',
+    title: 'Pip finds a mill.',
+    body: 'The mill is run by Tomas. His agent is Juno. Pip and Juno agree a price. The most Lena will pay, and the least Tomas will accept, stay private.',
     clip: 'talk',
   },
   {
     n: '04',
     kicker: 'Both people',
-    title: 'Nothing settles until both confirm.',
-    body: 'Lena taps confirm. Tomas taps confirm. The deal waits for both.',
+    title: 'Both of them have to say yes.',
+    body: 'Lena taps confirm. Tomas, who runs the mill, taps confirm. Nothing is signed, and no money moves, until both do.',
     clip: 'confirm',
   },
   {
     n: '05',
-    kicker: 'GRAIN',
-    title: 'Payment settles instantly.',
-    body: 'Zero fees to the buyer. Vault writes the deal to a tamper-proof log.',
+    kicker: 'The payment',
+    title: 'Lena pays at once.',
+    body: 'She pays in GRAIN. GRAIN is money that moves instantly, and Lena pays no fee. Vault keeps a record of the deal that no one can change.',
     clip: 'settle',
   },
 ] as const
@@ -62,6 +62,26 @@ export function GrainStory() {
 
   return (
     <div className="gs" ref={root}>
+      <section className="gs-scene gs-open" aria-labelledby="gs-open-title">
+        <div className="gs-pin">
+          <p className="gs-kicker">
+            <span>Start</span>
+            The problem
+          </p>
+          <h2 id="gs-open-title">Buying takes too long.</h2>
+          <p className="gs-body">
+            Buying anything for a business means hours of back-and-forth. Moving the money costs fees and takes days.
+          </p>
+          <div className="gs-clip" aria-hidden="true">
+            <OldWayClip />
+          </div>
+          <p className="gs-thesis">
+            Grain & Vault is a personal agent that finds and negotiates deals for you, plus money (GRAIN) that settles instantly with zero fees, with Vault keeping every record honest.
+          </p>
+          <p className="gs-handoff">Here&apos;s how it works. Meet Lena.</p>
+        </div>
+      </section>
+
       {SCENES.map((scene) => (
         <article key={scene.n} className="gs-scene" aria-labelledby={`gs-${scene.n}`}>
           <div className="gs-pin">
@@ -99,6 +119,16 @@ export function GrainStory() {
   )
 }
 
+function OldWayClip() {
+  return (
+    <div className="gs-card gs-old">
+      <p className="gs-msg">Any word on the flour?</p>
+      <p className="gs-msg">Still waiting on a price.</p>
+      <p className="gs-msg gs-msg-wait">Payment · a few days · fees</p>
+    </div>
+  )
+}
+
 function NeedClip() {
   return (
     <div className="gs-card">
@@ -117,6 +147,7 @@ function TellClip() {
   return (
     <div className="gs-chat">
       <div className="gs-orb gs-orb-sm" />
+      <p className="gs-who">Lena, to Pip</p>
       <p className="gs-bubble">Find 200 bags of bread flour.</p>
     </div>
   )
@@ -129,14 +160,14 @@ function TalkClip() {
         <div className="gs-orb" />
         <b>Pip</b>
         <small>Lena's agent</small>
-        <p className="gs-lock">Walk-away price stays private</p>
+        <p className="gs-lock">Lena's limit stays private</p>
       </div>
       <div className="gs-agreed">$38</div>
       <div className="gs-card gs-mini">
         <div className="gs-orb gs-blue" />
         <b>Juno</b>
-        <small>Tomas Mill</small>
-        <p className="gs-lock">Walk-away price stays private</p>
+        <small>The mill's agent</small>
+        <p className="gs-lock">Tomas's limit stays private</p>
       </div>
     </div>
   )
@@ -146,11 +177,11 @@ function ConfirmClip() {
   return (
     <div className="gs-card">
       <div className="gs-confirm gs-yes-lena">
-        <span>Lena</span>
+        <span>Lena · the bakery</span>
         <b>Confirmed</b>
       </div>
       <div className="gs-confirm gs-yes-tomas">
-        <span>Tomas</span>
+        <span>Tomas · the mill</span>
         <b>Confirmed</b>
       </div>
       <p className="gs-both">Both confirmed</p>
@@ -162,11 +193,11 @@ function SettleClip() {
   return (
     <div className="gs-card">
       <p className="gs-figure">$7,600</p>
-      <p className="gs-what">Settled in GRAIN · buyer fee $0</p>
+      <p className="gs-what">Paid in GRAIN · Lena's fee $0</p>
       <ol className="gs-log">
-        <li>Lena's Bakery → Tomas Mill</li>
+        <li>Lena's bakery → Tomas's mill</li>
         <li>200 bags of bread flour</li>
-        <li>Vault log sealed</li>
+        <li>Saved in the Vault</li>
       </ol>
     </div>
   )

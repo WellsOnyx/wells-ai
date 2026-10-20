@@ -581,6 +581,8 @@
 .gc-skip:hover { color: var(--gc-ink); border-color: rgba(242, 180, 90, 0.35); }
 
 .gs-scene { position: relative; height: 132vh; }
+.gs-scene.gs-open { height: auto; }
+.gs-open .gs-pin { position: relative; }
 .gs-pin {
   position: sticky;
   top: 0;
@@ -609,9 +611,38 @@
 }
 .gs-body {
   color: var(--gc-dim);
-  max-width: 36ch;
+  max-width: 40ch;
   font-size: 16px;
   line-height: 1.5;
+}
+.gs-thesis {
+  max-width: 46ch;
+  margin-top: 8px;
+  color: var(--gc-ink);
+  font-size: clamp(16px, 3.6vw, 18px);
+  line-height: 1.45;
+}
+.gs-handoff {
+  margin-top: 4px;
+  color: var(--gc-amber-2);
+  font-size: clamp(18px, 4vw, 22px);
+  letter-spacing: -0.02em;
+}
+.gs-old { display: grid; gap: 8px; }
+.gs-msg {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--gc-line);
+  color: var(--gc-dim);
+  font-size: 14px;
+}
+.gs-msg-wait { color: var(--gc-faint); letter-spacing: 0.04em; }
+.gs-who {
+  color: var(--gc-faint);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .gs-clip { width: min(460px, 100%); margin-top: 18px; }
 .gs-card {
@@ -775,6 +806,11 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .gs-open .gs-msg { animation: gc-rise 0.7s var(--gc-ease) both; }
+  .gs-open .gs-msg:nth-child(2) { animation-delay: 0.16s; }
+  .gs-open .gs-msg:nth-child(3) { animation-delay: 0.32s; }
+  .gs-thesis { animation: gc-rise 0.8s var(--gc-ease) 0.4s both; }
+  .gs-handoff { animation: gc-rise 0.8s var(--gc-ease) 0.62s both; }
   .gs-meter::after { transform: scaleX(0.15); }
   .gs-scene[data-play="true"] .gs-meter::after {
     animation: gs-fill 1.3s var(--gc-ease) forwards;
@@ -825,5 +861,6 @@
   }
   .gs-scene { height: auto; }
   .gs-pin { position: relative; min-height: 100svh; }
-  .gs-agreed, .gs-both, .gs-log li, .gs-meter::after { opacity: 1; transform: none; }
+  .gs-agreed, .gs-both, .gs-log li, .gs-meter::after,
+  .gs-open .gs-msg, .gs-thesis, .gs-handoff { opacity: 1; transform: none; }
 }
