@@ -177,11 +177,11 @@ export function seedWorld(): World {
     source: 'seed',
   })
 
-  const lena: Person = {
-    userId: 'lena',
-    name: 'Lena Ortiz',
-    business: "Lena's Bakery",
-    agent: { agentId: 'agent-lena', name: "Lena's agent", personality: 'warm, curious, a bit witty' },
+  const buyer: Person = {
+    userId: 'you',
+    name: 'A bakery',
+    business: 'Bakery',
+    agent: { agentId: 'agent-wells', name: 'Wells', personality: 'warm, curious, a bit witty' },
     memory: [
       memory('profile', 'Bakery owner, buys bread flour, US-Southeast', 'shareable'),
       memory('preferences', 'Prefers weekday-morning delivery', 'private'),
@@ -190,11 +190,11 @@ export function seedWorld(): World {
     intents: [],
   }
 
-  const tomas: Person = {
-    userId: 'tomas',
-    name: 'Tomas Reed',
-    business: 'Tomas Mill',
-    agent: { agentId: 'agent-mill', name: "The mill's agent", personality: 'direct, dry humor' },
+  const mill: Person = {
+    userId: 'mill',
+    name: 'A grain mill',
+    business: 'Grain mill',
+    agent: { agentId: 'agent-mill-wells', name: "the mill's Wells", personality: 'direct, dry humor' },
     memory: [
       memory('profile', 'Miller, sells bread flour, US-Southeast', 'shareable'),
       memory('preferences', 'Prefers orders of 100+ bags', 'private'),
@@ -203,7 +203,7 @@ export function seedWorld(): World {
     intents: [],
   }
 
-  return { users: [lena, tomas], matches: [], sessions: [], blocked: [] }
+  return { users: [buyer, mill], matches: [], sessions: [], blocked: [] }
 }
 
 function user(world: World, id: string): Person {
@@ -480,13 +480,13 @@ export function replyTo(world: World, userId: string, message: string): { reply:
     const next = remember(world, userId, note || text)
     return {
       world: next,
-      reply: `I'll remember that privately, ${person.name.split(' ')[0]}. It never leaves your agent.`,
+      reply: `I'll remember that privately. It never leaves ${person.agent.name}.`,
     }
   }
   if (lower.includes('buy') || lower.includes('sell') || lower.includes('flour')) {
     return {
       world,
-      reply: `I'm your agent. I only match on what you approve, and nothing settles until both of you say yes.`,
+      reply: `I'm ${person.agent.name}. I only match on what you approve, and nothing settles until both of you say yes.`,
     }
   }
   if (lower.includes('know') || lower.includes('memory') || lower.includes('remember')) {
@@ -497,7 +497,7 @@ export function replyTo(world: World, userId: string, message: string): { reply:
   }
   return {
     world,
-    reply: `I'm your agent. Tell me what you need, or say “remember …” if something should stay private.`,
+    reply: `I'm ${person.agent.name}. Tell me what you need, or say “remember …” if something should stay private.`,
   }
 }
 
@@ -512,8 +512,8 @@ export const FLOUR_WINDOWS = {
 /** The scripted introduction. Private price bands never leave each person. */
 export function findFlour(world: World): { world: World; session: Session } {
   let current = world
-  const lena = addIntent(current, {
-    userId: 'lena',
+  const buyer = addIntent(current, {
+    userId: 'you',
     side: 'buy',
     ...FLOUR_WINDOWS,
     qtyMin: 150,
@@ -521,9 +521,9 @@ export function findFlour(world: World): { world: World; session: Session } {
     priceMinCents: 3500,
     priceMaxCents: 4000,
   })
-  current = approveIntent(lena.world, lena.intentId)
-  const tomas = addIntent(current, {
-    userId: 'tomas',
+  current = approveIntent(buyer.world, buyer.intentId)
+  const mill = addIntent(current, {
+    userId: 'mill',
     side: 'sell',
     ...FLOUR_WINDOWS,
     qtyMin: 100,
@@ -531,10 +531,10 @@ export function findFlour(world: World): { world: World; session: Session } {
     priceMinCents: 3700,
     priceMaxCents: 3900,
   })
-  current = approveIntent(tomas.world, tomas.intentId)
+  current = approveIntent(mill.world, mill.intentId)
   current = runMatching(current)
   const match = current.matches.find(
-    (item) => item.buyIntentId === lena.intentId && item.sellIntentId === tomas.intentId
+    (item) => item.buyIntentId === buyer.intentId && item.sellIntentId === mill.intentId
   )
   if (!match) throw new Error('No one is selling right now.')
   return openSession(current, match.matchId)

@@ -823,10 +823,10 @@
   .gs-scene[data-play="true"] .gs-mini:nth-child(3) { animation: gs-side-r 0.9s var(--gc-ease) both; }
   .gs-agreed { opacity: 0; }
   .gs-scene[data-play="true"] .gs-agreed { animation: gc-rise 0.7s var(--gc-ease) 0.45s forwards; }
-  .gs-yes-lena, .gs-yes-tomas { background: transparent; color: var(--gc-dim); border: 1px solid var(--gc-line); }
+  .gs-yes-you, .gs-yes-mill { background: transparent; color: var(--gc-dim); border: 1px solid var(--gc-line); }
   .gs-both { opacity: 0; }
-  .gs-scene[data-play="true"] .gs-yes-lena { animation: gs-tap 1.5s var(--gc-ease) forwards; }
-  .gs-scene[data-play="true"] .gs-yes-tomas { animation: gs-tap 1.5s var(--gc-ease) 0.55s forwards; }
+  .gs-scene[data-play="true"] .gs-yes-you { animation: gs-tap 1.5s var(--gc-ease) forwards; }
+  .gs-scene[data-play="true"] .gs-yes-mill { animation: gs-tap 1.5s var(--gc-ease) 0.55s forwards; }
   .gs-scene[data-play="true"] .gs-both { animation: gc-rise 0.6s var(--gc-ease) 1.3s forwards; }
   .gs-log li { opacity: 0; }
   .gs-scene[data-play="true"] .gs-log li { animation: gc-rise 0.55s var(--gc-ease) forwards; }

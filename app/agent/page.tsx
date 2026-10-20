@@ -7,9 +7,9 @@ import AgentExperience from '@/components/grain/AgentExperience'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Your agent · Grain & Vault',
+  title: 'Wells · Grain & Vault',
   description:
-    'Your agent introduces a buyer and a seller. Both people confirm before anything settles. Simulated. No real money.',
+    'Wells finds a deal for you. Both sides confirm before anything settles. Simulated. No real money.',
 }
 
 export default async function AgentPage() {

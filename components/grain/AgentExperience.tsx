@@ -20,8 +20,8 @@ import {
 } from '@/lib/grain-agent/engine'
 
 const PEOPLE = {
-  lena: { first: 'Lena', other: 'tomas' as const },
-  tomas: { first: 'Tomas', other: 'lena' as const },
+  you: { mark: 'Y', label: 'You', other: 'mill' as const },
+  mill: { mark: 'M', label: 'The mill', other: 'you' as const },
 }
 
 type ViewId = keyof typeof PEOPLE
@@ -51,17 +51,17 @@ function wait(ms: number): Promise<void> {
 }
 
 function agentTitle(id: ViewId): string {
-  return id === 'lena' ? "Lena's agent" : "The mill's agent"
+  return id === 'you' ? 'Wells' : "The mill's Wells"
 }
 
 function agentPhrase(id: ViewId): string {
-  return id === 'lena' ? "Lena's agent" : "the mill's agent"
+  return id === 'you' ? 'Wells' : "the mill's Wells"
 }
 
 export default function AgentExperience() {
   const [world, setWorld] = useState<World>(() => seedWorld())
   const [session, setSession] = useState<Session | null>(null)
-  const [view, setView] = useState<ViewId>('lena')
+  const [view, setView] = useState<ViewId>('you')
   const [phase, setPhase] = useState<'idle' | 'working' | 'deal'>('idle')
   const [workingLine, setWorkingLine] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -112,17 +112,17 @@ export default function AgentExperience() {
       }
     }
     if (!session || phase === 'idle') {
-      if (view === 'lena') {
+      if (view === 'you') {
         return {
           orb: '',
-          line: `${hello}, Lena.`,
+          line: 'Meet Wells.',
           sub: 'Want me to find your flour?',
           mode: 'ask' as const,
         }
       }
       return {
         orb: 'gc-blue',
-        line: `${hello}, Tomas.`,
+        line: `${hello}.`,
         sub: 'All quiet. I’ll let you know when a good buyer turns up.',
         mode: 'quiet' as const,
       }
@@ -130,14 +130,14 @@ export default function AgentExperience() {
     if (session.status === 'SETTLED') {
       return {
         orb: 'gc-done',
-        line: view === 'lena' ? 'Done. Flour’s on its way.' : 'Done. Payment’s on its way.',
+        line: view === 'you' ? 'Done. Flour’s on its way.' : 'Done. Payment’s on its way.',
         sub: `${session.summary.qty} bags · ${money(session.summary.totalCents)} · arriving ${day(session.summary.windowFrom)}`,
         mode: 'settled' as const,
       }
     }
     if (session.status === 'DECLINED') {
       return {
-        orb: view === 'tomas' ? 'gc-blue' : '',
+        orb: view === 'mill' ? 'gc-blue' : '',
         line: 'No problem.',
         sub: 'Nothing was signed or charged.',
         mode: 'declined' as const,
@@ -146,23 +146,23 @@ export default function AgentExperience() {
     if (mine === 'approve' && !theirs) {
       return {
         orb: 'gc-think',
-        line: `Waiting on ${PEOPLE[other].first}…`,
+        line: `Waiting on ${PEOPLE[other].label.toLowerCase()}…`,
         sub: 'You’re all set. I’ll finish the moment they say yes.',
         mode: 'waiting' as const,
       }
     }
-    if (view === 'lena') {
+    if (view === 'you') {
       return {
         orb: '',
-        line: 'I found you a good one.',
-        sub: `Tomas Reed at Tomas Mill. I got him to ${money(session.summary.unitPriceCents)}.`,
+        line: 'I found a grain mill.',
+        sub: `The price is ${money(session.summary.unitPriceCents)} a bag.`,
         mode: 'deal' as const,
       }
     }
     return {
       orb: 'gc-blue',
-      line: 'Lena wants your flour.',
-      sub: 'A bakery nearby, 200 bags, a fair price. Your agents already sorted the details.',
+      line: 'A bakery wants flour.',
+      sub: '200 bags, a fair price. Wells already agreed the details.',
       mode: 'deal' as const,
     }
   }, [phase, workingLine, session, view, hello, mine, theirs, other])
@@ -180,11 +180,11 @@ export default function AgentExperience() {
         if (prior) person.memory = structuredClone(prior.memory)
       }
       const result = findFlour(base)
-      setWorkingLine('Found a miller you’ll like.')
+      setWorkingLine('Found a grain mill.')
       await wait(1300)
-      setWorkingLine('Talking him down…')
+      setWorkingLine('Talking the price down…')
       await wait(1200)
-      setWorkingLine(`Got him to ${money(result.session.summary.unitPriceCents)}.`)
+      setWorkingLine(`The price is ${money(result.session.summary.unitPriceCents)} a bag.`)
       await wait(1100)
       setWorld(result.world)
       setSession(result.session)
@@ -214,14 +214,14 @@ export default function AgentExperience() {
     setWorld(seedWorld())
     setSession(null)
     setPhase('idle')
-    setView('lena')
+    setView('you')
     setSheet(null)
     setChat([])
   }
 
   function openChat() {
     setMenuOpen(false)
-    setChat([{ from: 'them', text: `Hi ${PEOPLE[view].first}. What’s on your mind?` }])
+    setChat([{ from: 'them', text: 'Hi. What’s on your mind?' }])
     setSheet('chat')
   }
 
@@ -248,7 +248,7 @@ export default function AgentExperience() {
   const memories = visibleMemory(world, view)
   const orbClass = [
     'gc-orb-wrap',
-    view === 'tomas' && scene.orb !== 'gc-done' ? 'gc-blue' : '',
+    view === 'mill' && scene.orb !== 'gc-done' ? 'gc-blue' : '',
     scene.orb === 'gc-blue' ? '' : scene.orb,
   ]
     .filter(Boolean)
@@ -263,20 +263,22 @@ export default function AgentExperience() {
         <div className="gc-right">
           <div className="gc-who" role="group" aria-label="Whose view">
             <button
-              aria-pressed={view === 'lena'}
-              aria-label="Lena's view"
-              className={view !== 'lena' && needs('lena') ? 'gc-ping' : ''}
-              onClick={() => setView('lena')}
+              aria-pressed={view === 'you'}
+              aria-label="Your view"
+              className={view !== 'you' && needs('you') ? 'gc-ping' : ''}
+              onClick={() => setView('you')}
             >
-              L<span className="gc-dot" />
+              {PEOPLE.you.mark}
+              <span className="gc-dot" />
             </button>
             <button
-              aria-pressed={view === 'tomas'}
-              aria-label="Tomas's view"
-              className={view !== 'tomas' && needs('tomas') ? 'gc-ping' : ''}
-              onClick={() => setView('tomas')}
+              aria-pressed={view === 'mill'}
+              aria-label="The mill's view"
+              className={view !== 'mill' && needs('mill') ? 'gc-ping' : ''}
+              onClick={() => setView('mill')}
             >
-              T<span className="gc-dot" />
+              {PEOPLE.mill.mark}
+              <span className="gc-dot" />
             </button>
           </div>
           <button
@@ -338,7 +340,7 @@ export default function AgentExperience() {
 
           {scene.mode === 'waiting' ? (
             <button className="gc-link" onClick={() => setView(other)}>
-              Switch to {PEOPLE[other].first}’s view →
+              Switch to {view === 'you' ? "the mill's view" : 'your view'} →
             </button>
           ) : null}
 
