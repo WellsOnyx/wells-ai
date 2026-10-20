@@ -203,11 +203,40 @@ function getProgress(step: Step): number {
 // MAIN COMPONENT
 // ============================================================================
 
-export default function JoinFlow({ calm = false }: { calm?: boolean }) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+type ClerkAuth = {
+  signUp: ReturnType<typeof useSignUp>['signUp']
+  signUpLoaded: boolean
+  setActive: ReturnType<typeof useSignUp>['setActive']
+  user: ReturnType<typeof useUser>['user']
+  userLoaded: boolean
+}
+
+function JoinFlowWithClerk({ calm = false }: { calm?: boolean }) {
   const { signUp, isLoaded: signUpLoaded, setActive } = useSignUp()
   const { user, isLoaded: userLoaded } = useUser()
+  return (
+    <JoinFlowBody
+      calm={calm}
+      auth={{ signUp, signUpLoaded, setActive, user, userLoaded }}
+    />
+  )
+}
+
+export default function JoinFlow({ calm = false }: { calm?: boolean }) {
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return <JoinFlowBody calm={calm} auth={null} />
+  }
+  return <JoinFlowWithClerk calm={calm} />
+}
+
+function JoinFlowBody({ calm = false, auth }: { calm?: boolean; auth: ClerkAuth | null }) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const signUp = auth?.signUp
+  const signUpLoaded = auth?.signUpLoaded ?? false
+  const setActive = auth?.setActive
+  const user = auth?.user
+  const userLoaded = auth?.userLoaded ?? false
 
   const [step, setStep] = useState<Step>('welcome')
   const [isLoading, setIsLoading] = useState(false)
@@ -312,7 +341,10 @@ export default function JoinFlow({ calm = false }: { calm?: boolean }) {
 
   // Create account with Clerk
   const handleCreateAccount = async () => {
-    if (!signUpLoaded || !signUp) return
+    if (!signUpLoaded || !signUp || !setActive) {
+      setError('Account creation is unavailable until sign-in is connected.')
+      return
+    }
 
     setIsLoading(true)
     setError(null)

@@ -76,11 +76,15 @@ export default function LegacySignIn() {
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-transparent to-teal-500/20 blur-3xl opacity-50" />
 
             <div className="relative">
-              <SignIn
-                appearance={signInAppearance}
-                signUpUrl="/join"
-                forceRedirectUrl="/dashboard"
-              />
+              {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+                <SignIn
+                  appearance={signInAppearance}
+                  signUpUrl="/join"
+                  forceRedirectUrl="/dashboard"
+                />
+              ) : (
+                <p className="text-center text-gray-400 py-8">Sign in is unavailable in this environment.</p>
+              )}
             </div>
           </div>
 

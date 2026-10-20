@@ -14,11 +14,17 @@ export default function GrainSignIn() {
       menu
     >
       <div className="gc-card" style={{ padding: 18 }}>
-        <SignIn
-          appearance={grainCalmSignInAppearance}
-          signUpUrl="/join?journey=treasury"
-          forceRedirectUrl="/dashboard?journey=treasury"
-        />
+        {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+          <SignIn
+            appearance={grainCalmSignInAppearance}
+            signUpUrl="/join?journey=treasury"
+            forceRedirectUrl="/dashboard?journey=treasury"
+          />
+        ) : (
+          <p className="gc-sub" style={{ margin: 0 }}>
+            Sign in opens when your account is connected.
+          </p>
+        )}
       </div>
       <p className="gc-fee">
         New here? <Link href="/join?journey=treasury">Open Your Vault</Link>
