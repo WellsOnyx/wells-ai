@@ -4,7 +4,7 @@
  *
  * "The Lord your God is with you wherever you go." - Joshua 1:9
  *
- * Like Ghost from Destiny, Wells is always there - always scanning,
+ * Wells is always there - always scanning,
  * always analyzing, always working for you. Even when you're not
  * actively chatting, Wells is present and aware.
  */

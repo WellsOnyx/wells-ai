@@ -6,7 +6,7 @@
  * are fully satisfied." - Proverbs 13:4
  *
  * Wells doesn't just wait to be asked - Wells reaches out with opportunities,
- * warnings, celebrations, and helpful reminders. Like Ghost from Destiny,
+ * warnings, celebrations, and helpful reminders.
  * Wells speaks up when there's something important to share.
  */
 

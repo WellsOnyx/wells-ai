@@ -2,7 +2,7 @@
  * Companion Memory Service
  *
  * Persists the emotional relationship between Wells and each user.
- * "I am Wells. I am Ghost."
+ * "I am Wells."
  */
 
 import { sqlQuery } from '@/lib/db'
@@ -11,7 +11,7 @@ import {
   detectEmotionalSignals,
   assessEmotionalState,
   getEmotionalResponse,
-  getGhostSystemPrompt,
+  getCompanionSystemPrompt,
   updateCompanionMemory,
 } from './ghost'
 
@@ -210,13 +210,13 @@ export async function recordEmotionalState(
 }
 
 // ============================================================================
-// GHOST INTEGRATION
+// COMPANION INTEGRATION
 // ============================================================================
 
 /**
  * Process a user message and get emotional context for the response
  */
-export async function processMessageWithGhost(
+export async function processMessageWithCompanion(
   userId: string,
   message: string,
   profile?: { firstName?: string; lastName?: string; company?: string; role?: string }
@@ -224,7 +224,7 @@ export async function processMessageWithGhost(
   companionMemory: CompanionMemory
   emotionalState: EmotionalState
   emotionalOpener: string
-  ghostSystemPrompt: string
+  companionPrompt: string
 }> {
   // Get or create companion memory
   const companionMemory = await getOrCreateCompanionMemory(userId, {
@@ -256,8 +256,7 @@ export async function processMessageWithGhost(
   // Get emotionally appropriate opener
   const emotionalOpener = getEmotionalResponse(emotionalState, companionMemory)
 
-  // Get the full Ghost system prompt
-  const ghostSystemPrompt = getGhostSystemPrompt(companionMemory)
+  const companionPrompt = getCompanionSystemPrompt(companionMemory)
 
   // Update companion memory with this interaction
   await updateCompanionMemoryInDb(userId, {
@@ -273,7 +272,7 @@ export async function processMessageWithGhost(
     companionMemory,
     emotionalState,
     emotionalOpener,
-    ghostSystemPrompt,
+    companionPrompt,
   }
 }
 
@@ -318,6 +317,6 @@ export {
   detectEmotionalSignals,
   assessEmotionalState,
   getEmotionalResponse,
-  getGhostSystemPrompt,
+  getCompanionSystemPrompt,
   updateCompanionMemory,
 }

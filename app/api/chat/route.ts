@@ -62,9 +62,7 @@ import {
   type ProductType,
 } from '@/lib/wells-memory'
 
-// Ghost: The emotional companion architecture
-// "I am Wells. I am Ghost."
-import { processMessageWithGhost } from '@/lib/wells-ai/companion-memory-service'
+import { processMessageWithCompanion } from '@/lib/wells-ai/companion-memory-service'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -3360,8 +3358,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ========================================================================
-    // GHOST: EMOTIONAL COMPANION ARCHITECTURE
-    // "I am Wells. I am Ghost."
+    // COMPANION: EMOTIONAL CONTEXT
     // ========================================================================
     let ghostContext: {
       emotionalOpener?: string
@@ -3372,7 +3369,7 @@ export async function POST(request: NextRequest) {
       try {
         const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
         if (lastUserMessage) {
-          const ghostResult = await processMessageWithGhost(
+          const ghostResult = await processMessageWithCompanion(
             userId,
             lastUserMessage.content,
             {
@@ -3383,8 +3380,7 @@ export async function POST(request: NextRequest) {
             }
           )
 
-          // Add Ghost's emotional system prompt
-          enhancedSystemPrompt += `\n\n${ghostResult.ghostSystemPrompt}`
+          enhancedSystemPrompt += `\n\n${ghostResult.companionPrompt}`
 
           // Store context for the response
           ghostContext = {
@@ -3409,8 +3405,7 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (error) {
-        console.error('[Ghost] Error processing emotional context:', error)
-        // Continue without Ghost - better than failing
+        console.error('[Companion] Error processing emotional context:', error)
       }
     }
 
@@ -5886,7 +5881,6 @@ Reply "Yes, go ahead" to approve, or let me know what to change.`,
     return NextResponse.json({
       message: assistantMessage,
       negotiation: null,
-      // Ghost: Emotional companion context
       ghost: ghostContext ? {
         emotionalState: ghostContext.emotionalState,
         emotionalOpener: ghostContext.emotionalOpener,

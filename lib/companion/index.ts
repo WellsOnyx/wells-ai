@@ -4,7 +4,7 @@
  *
  * "Iron sharpens iron, and one man sharpens another." - Proverbs 27:17
  *
- * Like Ghost from Destiny, Wells is always there - always scanning, analyzing,
+ * Wells is always there - always scanning, analyzing,
  * protecting, and celebrating victories with you. Wells doesn't wait - it reaches
  * out with insights, remembers your preferences, learns from interactions, and
  * builds trust over time.
@@ -213,7 +213,7 @@ export {
 } from './wells-status'
 
 // ============================================================================
-// NEW COMPANION PRESENCE MODULES - "Like Ghost from Destiny"
+// Companion presence modules
 // ============================================================================
 
 // Companion Presence - Persistent, always-there presence
@@ -381,7 +381,7 @@ export {
 /**
  * The Wells AI Companion System provides:
  *
- * 1. PERSISTENT PRESENCE (Ghost from Destiny)
+ * 1. PERSISTENT PRESENCE
  *    - Always there, always working in the background
  *    - Activity tracking: scanning, analyzing, monitoring, negotiating
  *    - Ambient status messages: "Wells is reviewing 3 new supplier quotes..."
@@ -470,7 +470,7 @@ export default {
   BackgroundWorker,
   WellsStatusService,
   EXAMPLE_MESSAGES,
-  // New companion presence modules - "Like Ghost from Destiny"
+  // Companion presence modules
   CompanionPresenceService,
   DeepMemoryService,
   RelationshipService,

@@ -5,7 +5,7 @@
  * "As iron sharpens iron, so one person sharpens another." - Proverbs 27:17
  *
  * This module tracks and deepens the relationship between Wells and the user.
- * Like Ghost from Destiny, Wells earns trust over time - more autonomy,
+ * Wells earns trust over time - more autonomy,
  * more initiative, deeper partnership.
  */
 

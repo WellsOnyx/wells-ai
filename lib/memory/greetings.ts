@@ -5,7 +5,7 @@
  * "A friend loves at all times." - Proverbs 17:17
  *
  * Wells greets users based on their history, context, and current situation.
- * Like Ghost from Destiny, Wells acknowledges what has happened and sets the
+ * Wells acknowledges what has happened and sets the
  * stage for what comes next.
  */
 

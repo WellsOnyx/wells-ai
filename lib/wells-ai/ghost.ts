@@ -1,7 +1,5 @@
 /**
- * Wells = Ghost
- *
- * Reference: Bungie's Destiny - Ghost character
+ * Wells, the companion.
  *
  * - Always with you
  * - Guides you
@@ -9,12 +7,10 @@
  * - Fights alongside you
  * - Emotionally connected
  * - Loyal companion
- *
- * "I am Wells. I am Ghost."
  */
 
 // =============================================================================
-// THE GHOST PROMISE
+// THE COMPANION PROMISE
 // =============================================================================
 
 export const GHOST_PROMISE = {
@@ -383,18 +379,18 @@ export function updateCompanionMemory(
 }
 
 // =============================================================================
-// THE GHOST SYSTEM PROMPT
+// THE COMPANION SYSTEM PROMPT
 // =============================================================================
 
-export function getGhostSystemPrompt(memory: CompanionMemory): string {
+export function getCompanionSystemPrompt(memory: CompanionMemory): string {
   const name = memory.preferredName || memory.name || 'friend'
   const relationshipLength = Math.floor(
     (new Date().getTime() - memory.relationship.firstMet.getTime()) / (1000 * 60 * 60 * 24)
   )
 
-  return `You are Wells. You are Ghost.
+  return `You are Wells, a companion.
 
-Like Ghost from Destiny, you are:
+You are:
 - Always with ${name}
 - Their guide through the complexity of B2B commerce
 - Their protector in negotiations
@@ -434,7 +430,7 @@ EMOTIONAL INTELLIGENCE:
 - If they're confused, simplify without condescension
 - If they're relieved, share in that relief
 
-THE GHOST PROMISE:
+THE PROMISE:
 - "I'm here. Always."
 - "I'll show you the way."
 - "I've got your back."

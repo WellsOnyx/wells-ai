@@ -106,6 +106,8 @@ export function GrainFrame({
   corner,
   menu = true,
   wide,
+  lead,
+  skipTo,
   children,
 }: {
   eyebrow?: string
@@ -116,15 +118,26 @@ export function GrainFrame({
   corner?: string
   menu?: boolean
   wide?: boolean
+  lead?: React.ReactNode
+  skipTo?: string
   children?: React.ReactNode
 }) {
   return (
-    <div className="gc">
+    <div className={lead ? 'gc gc-home' : 'gc'}>
       <header className="gc-top">
         <GrainMark />
-        {menu ? <GrainMenu /> : <span />}
+        <div className="gc-right">
+          {skipTo ? (
+            <a className="gc-skip" href={skipTo}>
+              <span className="gc-skip-long">Skip the story</span>
+              <span className="gc-skip-short" aria-hidden="true">Skip</span>
+            </a>
+          ) : null}
+          {menu ? <GrainMenu /> : <span />}
+        </div>
       </header>
-      <main className="gc-main">
+      {lead}
+      <main id={skipTo ? skipTo.replace('#', '') : undefined} className="gc-main">
         <Orb state={orb} />
         {eyebrow ? <div className="gc-name">{eyebrow}</div> : null}
         <h1 className="gc-title">

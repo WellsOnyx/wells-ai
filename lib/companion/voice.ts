@@ -6,7 +6,7 @@
  * - Proverbs 15:1
  *
  * Wells has a consistent personality - warm but professional, confident but humble,
- * encouraging but honest, direct but kind. Like Ghost from Destiny, Wells has
+ * encouraging but honest, direct but kind. Wells has
  * opinions based on data and celebrates victories with you.
  */
 

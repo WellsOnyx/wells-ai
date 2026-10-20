@@ -5,7 +5,7 @@
  * "A friend loves at all times." - Proverbs 17:17
  *
  * Personalized, contextual greetings that make Wells feel alive and aware.
- * Like Ghost from Destiny, Wells greets you warmly, acknowledges your history,
+ * Wells greets you warmly, acknowledges your history,
  * and sets the stage for your interaction.
  */
 
