@@ -2,8 +2,7 @@
 
 import Link from 'next/link'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import '@/app/grain-calm.css'
-import { greetingWord } from '@/components/grain/GrainFrame'
+import { SiteHeader } from '@/components/grain/SiteHeader'
 import {
   MemoryItem,
   Session,
@@ -72,11 +71,6 @@ export default function AgentExperience() {
   const [draft, setDraft] = useState('')
   const [memoryDraft, setMemoryDraft] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
-  const [hello, setHello] = useState('Hello')
-
-  useEffect(() => {
-    setHello(greetingWord())
-  }, [])
 
   useEffect(() => {
     if (!toast) return
@@ -121,9 +115,9 @@ export default function AgentExperience() {
         }
       }
       return {
-        orb: 'gc-blue',
-        line: `${hello}.`,
-        sub: 'All quiet. I’ll let you know when a good buyer turns up.',
+        orb: '',
+        line: 'All quiet.',
+        sub: 'I will let you know when a good buyer turns up.',
         mode: 'quiet' as const,
       }
     }
@@ -165,7 +159,7 @@ export default function AgentExperience() {
       sub: '200 bags, a fair price. Wells already agreed the details.',
       mode: 'deal' as const,
     }
-  }, [phase, workingLine, session, view, hello, mine, theirs, other])
+  }, [phase, workingLine, session, view, mine, theirs, other])
 
   async function find() {
     if (busy) return
@@ -246,221 +240,178 @@ export default function AgentExperience() {
 
   const deal = session && scene.mode === 'deal' ? publicDeal(session, view) : null
   const memories = visibleMemory(world, view)
-  const orbClass = [
-    'gc-orb-wrap',
-    view === 'mill' && scene.orb !== 'gc-done' ? 'gc-blue' : '',
-    scene.orb === 'gc-blue' ? '' : scene.orb,
-  ]
-    .filter(Boolean)
-    .join(' ')
 
   return (
-    <div className="gc">
-      <header className="gc-top">
-        <Link href="/" className="gc-brand">
-          <b>Grain & Vault</b>
-        </Link>
-        <div className="gc-right">
-          <div className="gc-who" role="group" aria-label="Whose view">
-            <button
-              aria-pressed={view === 'you'}
-              aria-label="Your view"
-              className={view !== 'you' && needs('you') ? 'gc-ping' : ''}
-              onClick={() => setView('you')}
-            >
-              {PEOPLE.you.mark}
-              <span className="gc-dot" />
+    <div className="gv-shell">
+      <a className="gv-skip" href="#wells">
+        Skip to Wells
+      </a>
+      <SiteHeader current="agent" />
+      <main id="wells" className="gv-stage" aria-live="polite">
+        <p className="gv-agent-name">{name}</p>
+        <h1>{scene.line}</h1>
+        {scene.sub ? <p className="gv-sub">{scene.sub}</p> : null}
+        <div className="gv-toolbar">
+          <div className="gv-switch" role="group" aria-label="Whose view">
+            <button aria-pressed={view === 'you'} onClick={() => setView('you')}>
+              Your view
+              {view !== 'you' && needs('you') ? <span className="gv-dot" /> : null}
             </button>
-            <button
-              aria-pressed={view === 'mill'}
-              aria-label="The mill's view"
-              className={view !== 'mill' && needs('mill') ? 'gc-ping' : ''}
-              onClick={() => setView('mill')}
-            >
-              {PEOPLE.mill.mark}
-              <span className="gc-dot" />
+            <button aria-pressed={view === 'mill'} onClick={() => setView('mill')}>
+              The mill&apos;s view
+              {view !== 'mill' && needs('mill') ? <span className="gv-dot" /> : null}
             </button>
           </div>
-          <button
-            className="gc-menu-btn"
-            aria-label="Menu"
-            aria-haspopup="true"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <span />
-          </button>
-          <nav className={`gc-pop${menuOpen ? ' gc-open' : ''}`} aria-label="Menu">
-            <button onClick={openChat}>Talk to {phrase}</button>
-            <button
-              onClick={() => {
-                setMenuOpen(false)
-                setSheet('memory')
-              }}
-            >
-              What {phrase} remembers
-            </button>
-            <button
-              onClick={() => {
-                setMenuOpen(false)
-                reset()
-              }}
-            >
-              Start over
-            </button>
-            <Link href="/" onClick={() => setMenuOpen(false)}>
-              Grain & Vault home
-            </Link>
-          </nav>
+          <details className="gv-more" open={menuOpen} onToggle={(event) => setMenuOpen((event.target as HTMLDetailsElement).open)}>
+            <summary>More</summary>
+            <div className="gv-more-panel">
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  openChat()
+                }}
+              >
+                Talk to {phrase}
+              </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  setSheet('memory')
+                }}
+              >
+                What {phrase} remembers
+              </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  reset()
+                }}
+              >
+                Start over
+              </button>
+              <Link href="/">Grain & Vault home</Link>
+            </div>
+          </details>
         </div>
-      </header>
-
-      <main className="gc-main" aria-live="polite">
-        <div className={orbClass}>
-          <button className="gc-orb gc-orb-btn" aria-label={`Talk to ${phrase}`} onClick={openChat} />
-          <div className="gc-check" aria-hidden="true">
-            <svg viewBox="0 0 54 54">
-              <path d="M15 28l8 8 16-18" />
-            </svg>
-          </div>
-        </div>
-        <div className="gc-name">{name}</div>
-        <h1 className="gc-title">
-          <span className="gc-fx" key={scene.line}>
-            {scene.line}
-          </span>
-        </h1>
-        <p className="gc-sub">{scene.sub}</p>
-        <div className="gc-stage">
+        <div className="gv-actions">
           {scene.mode === 'ask' ? (
-            <button className="gc-chip" onClick={find} disabled={busy} aria-label="Find 200 bags of bread flour">
-              <i>✦</i> Find 200 bags of bread flour
+            <button className="gv-chip" onClick={find} disabled={busy}>
+              Find 200 bags of bread flour
             </button>
           ) : null}
-
           {scene.mode === 'waiting' ? (
-            <button className="gc-link" onClick={() => setView(other)}>
-              Switch to {view === 'you' ? "the mill's view" : 'your view'} →
+            <button className="gv-linkish" onClick={() => setView(other)}>
+              Switch to {view === 'you' ? "the mill's view" : 'your view'}
             </button>
           ) : null}
-
-          {deal ? (
-            <DealCard deal={deal} busy={busy} onApprove={() => decide('approve')} onDecline={() => decide('decline')} />
-          ) : null}
-
-          {scene.mode === 'settled' ? (
-            <>
-              <span className="gc-tag">Mock payment · no real money</span>
-              <button className="gc-link" onClick={reset}>
+        </div>
+        {deal ? (
+          <DealCard deal={deal} busy={busy} onApprove={() => decide('approve')} onDecline={() => decide('decline')} />
+        ) : null}
+        {scene.mode === 'settled' ? (
+          <>
+            <span className="gv-tag">Mock payment. No real money.</span>
+            <div>
+              <button className="gv-linkish" onClick={reset}>
                 Run it again
               </button>
-            </>
-          ) : null}
-
-          {scene.mode === 'declined' ? (
-            <button className="gc-link" onClick={reset}>
-              Start fresh
-            </button>
-          ) : null}
-        </div>
+            </div>
+          </>
+        ) : null}
+        {scene.mode === 'declined' ? (
+          <button className="gv-linkish" onClick={reset}>
+            Start fresh
+          </button>
+        ) : null}
+        <p className="gv-mock">Simulated. No real money.</p>
       </main>
 
-      <div className="gc-corner">Simulated · no real money</div>
+      {sheet ? <div className="gv-shade" onClick={() => setSheet(null)} /> : null}
 
-      <div className={`gc-shade${sheet ? ' gc-open' : ''}`} onClick={() => setSheet(null)} />
-
-      <section
-        className={`gc-sheet${sheet === 'chat' ? ' gc-open' : ''}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Chat with ${phrase}`}
-      >
-        <div className="gc-grab" />
-        <div className="gc-sh">
-          <h2>{name}</h2>
-          <button className="gc-x" aria-label="Close" onClick={() => setSheet(null)}>
-            ✕
-          </button>
-        </div>
-        <div className="gc-msgs">
-          {chat.map((item, index) => (
-            <div key={`${item.from}-${index}`} className={`gc-b ${item.from === 'me' ? 'gc-me' : 'gc-them'}`}>
-              {item.text}
-            </div>
-          ))}
-        </div>
-        <form className="gc-ask" onSubmit={onChat}>
-          <input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="Say anything…"
-            aria-label="Message"
-            autoComplete="off"
-          />
-          <button className="gc-send" aria-label="Send" type="submit">
-            ↑
-          </button>
-        </form>
-      </section>
-
-      <section
-        className={`gc-sheet${sheet === 'memory' ? ' gc-open' : ''}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`What ${phrase} remembers`}
-      >
-        <div className="gc-grab" />
-        <div className="gc-sh">
-          <h2>What {phrase} remembers</h2>
-          <button className="gc-x" aria-label="Close" onClick={() => setSheet(null)}>
-            ✕
-          </button>
-        </div>
-        <p className="gc-hint">Items with a lock never leave your agent. Tap to edit, or remove anything.</p>
-        <div className="gc-mem">
-          {sheet === 'memory' && memories.length === 0 ? <p className="gc-hint">Nothing yet.</p> : null}
-          {sheet === 'memory'
-            ? memories.map((item) => (
-            <MemoryRow
-              key={item.id}
-              item={item}
-              editing={editing === item.id}
-              onEdit={() => {
-                if (editing === item.id) {
-                  const node = document.getElementById(`mem-${item.id}`)
-                  const text = node?.textContent?.trim() || item.text
-                  setWorld(updateMemory(world, view, item.id, text))
-                  setEditing(null)
-                  setToast('Updated.')
-                } else {
-                  setEditing(item.id)
-                }
-              }}
-              onRemove={() => {
-                setWorld(removeMemory(world, view, item.id))
-                setToast('Forgotten.')
-              }}
+      {sheet === 'chat' ? (
+        <section className="gv-sheet" role="dialog" aria-modal="true" aria-label={`Chat with ${phrase}`}>
+          <div className="gv-sh">
+            <h2>{name}</h2>
+            <button className="gv-x" aria-label="Close" onClick={() => setSheet(null)}>
+              ×
+            </button>
+          </div>
+          <div className="gv-msgs">
+            {chat.map((item, index) => (
+              <div key={`${item.from}-${index}`} className={`gv-b ${item.from === 'me' ? 'gv-me' : 'gv-them'}`}>
+                {item.text}
+              </div>
+            ))}
+          </div>
+          <form className="gv-ask" onSubmit={onChat}>
+            <input
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="Say anything"
+              aria-label="Message"
+              autoComplete="off"
             />
-            ))
-            : null}
-        </div>
-        <form className="gc-ask" onSubmit={onRemember}>
-          <input
-            value={memoryDraft}
-            onChange={(event) => setMemoryDraft(event.target.value)}
-            placeholder="Teach me something private…"
-            aria-label="New memory"
-            autoComplete="off"
-          />
-          <button className="gc-send" aria-label="Add" type="submit">
-            +
-          </button>
-        </form>
-      </section>
+            <button className="gv-send" aria-label="Send" type="submit">
+              ↑
+            </button>
+          </form>
+        </section>
+      ) : null}
 
-      <div className={`gc-toast${toast ? ' gc-on' : ''}`} role="status">
-        {toast}
-      </div>
+      {sheet === 'memory' ? (
+        <section className="gv-sheet" role="dialog" aria-modal="true" aria-label={`What ${phrase} remembers`}>
+          <div className="gv-sh">
+            <h2>What {phrase} remembers</h2>
+            <button className="gv-x" aria-label="Close" onClick={() => setSheet(null)}>
+              ×
+            </button>
+          </div>
+          <p className="gv-hint">Items with a lock never leave your agent. Edit or remove anything.</p>
+          <div className="gv-mem">
+            {memories.length === 0 ? <p className="gv-hint">Nothing yet.</p> : null}
+            {memories.map((item) => (
+              <MemoryRow
+                key={item.id}
+                item={item}
+                editing={editing === item.id}
+                onEdit={() => {
+                  if (editing === item.id) {
+                    const node = document.getElementById(`mem-${item.id}`)
+                    const text = node?.textContent?.trim() || item.text
+                    setWorld(updateMemory(world, view, item.id, text))
+                    setEditing(null)
+                    setToast('Updated.')
+                  } else {
+                    setEditing(item.id)
+                  }
+                }}
+                onRemove={() => {
+                  setWorld(removeMemory(world, view, item.id))
+                  setToast('Forgotten.')
+                }}
+              />
+            ))}
+          </div>
+          <form className="gv-ask" onSubmit={onRemember}>
+            <input
+              value={memoryDraft}
+              onChange={(event) => setMemoryDraft(event.target.value)}
+              placeholder="Teach me something private"
+              aria-label="New memory"
+              autoComplete="off"
+            />
+            <button className="gv-send" aria-label="Add" type="submit">
+              +
+            </button>
+          </form>
+        </section>
+      ) : null}
+
+      {toast ? (
+        <div className="gv-toast" role="status">
+          {toast}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -478,9 +429,9 @@ function DealCard({
 }) {
   return (
     <>
-      <article className="gc-card" aria-label="Proposed deal">
-        <div className="gc-party">
-          <div className="gc-av" aria-hidden="true">
+      <article className="gv-deal" aria-label="Proposed deal">
+        <div className="gv-party">
+          <div className="gv-av" aria-hidden="true">
             {deal.counterpartyInitial}
           </div>
           <div>
@@ -488,11 +439,11 @@ function DealCard({
             <small>{deal.counterpartyBusiness}</small>
           </div>
         </div>
-        <div className="gc-big">{money(deal.totalCents)}</div>
-        <div className="gc-what">
-          {deal.qty} bags of {deal.category} · {money(deal.unitPriceCents)}/bag
+        <div className="gv-big">{money(deal.totalCents)}</div>
+        <div className="gv-what">
+          {deal.qty} bags of {deal.category} · {money(deal.unitPriceCents)} a bag
         </div>
-        <div className="gc-rows">
+        <div className="gv-rows">
           <div>
             <span>Delivery</span>
             <b>
@@ -504,25 +455,25 @@ function DealCard({
             <b>{money(deal.amountCents)}</b>
           </div>
         </div>
-        <div className="gc-fee">
-          Fee {money(deal.feeCents)}, {deal.feePaidByYou ? 'paid by you' : 'paid by the seller'}. 33 bps.
+        <div className="gv-fee">
+          Fee {money(deal.feeCents)}, {deal.feePaidByYou ? 'paid by you' : 'paid by the seller'}. Mock payment.
         </div>
-        <div className="gc-actions">
-          <button className="gc-primary" onClick={onApprove} disabled={busy} aria-label="Approve this deal">
+        <div className="gv-deal-actions">
+          <button className="gv-btn" onClick={onApprove} disabled={busy}>
             Approve
           </button>
-          <button className="gc-quiet" onClick={onDecline} disabled={busy} aria-label="Decline this deal">
+          <button className="gv-quiet" onClick={onDecline} disabled={busy}>
             Not now
           </button>
         </div>
       </article>
-      <details className="gc-how">
+      <details className="gv-how">
         <summary>See how</summary>
         <ul>
           <li>Only matched on what you approved.</li>
-          <li>Your private notes stayed private.</li>
-          <li>Walk-away prices never cross.</li>
+          <li>Your private limit stays private.</li>
           <li>Nothing happens until you both say yes.</li>
+          <li>This deal is a mock. No real money moves.</li>
         </ul>
       </details>
     </>
@@ -541,14 +492,14 @@ function MemoryRow({
   onRemove: () => void
 }) {
   return (
-    <div className="gc-mi">
+    <div className="gv-mi">
       {item.visibility === 'never-shared' ? (
-        <svg className="gc-lock" viewBox="0 0 16 16" aria-label="Never shared" role="img">
+        <svg className="gv-lock" viewBox="0 0 16 16" aria-label="Never shared" role="img">
           <rect x="3" y="7" width="10" height="7" rx="2" fill="currentColor" />
           <path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.6" fill="none" />
         </svg>
       ) : (
-        <span className="gc-lock" />
+        <span className="gv-lock" />
       )}
       <p id={`mem-${item.id}`} contentEditable={editing} suppressContentEditableWarning>
         {item.text}
