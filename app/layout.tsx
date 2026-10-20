@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { grainVaultClerkAppearance } from '@/lib/clerk-theme'
+import { isWellsOnyxHost } from '@/lib/hosts'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -43,10 +44,27 @@ const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 // Domain configuration
 const GRAIN_VAULT_DOMAINS = ['grainandvault.com', 'www.grainandvault.com']
 
-function RootLayoutContent({ children }: { children: React.ReactNode }) {
+function headDescription(host: string, path: string): string | null {
+  if (isWellsOnyxHost(host)) {
+    if (path === '/') {
+      return 'Deposit your predictable spend. 100% protected. 0% interest credit line. 1% success fee. Powered by WellsAI.'
+    }
+    return null
+  }
+  if (path === '/agent') {
+    return 'Wells finds, negotiates, and settles a sample flour deal. You approve before anything moves. Simulated. No real money.'
+  }
+  if (path === '/') {
+    return 'Wells is an AI agent that finds and negotiates business deals. Grain is a dollar-backed stablecoin with zero fees. Vault keeps an audited record of every deal.'
+  }
+  return null
+}
+
+function RootLayoutContent({ children, description }: { children: React.ReactNode; description: string | null }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {description ? <meta name="description" content={description} /> : null}
         {/* Prevent flash of wrong theme */}
         <script
           dangerouslySetInnerHTML={{
@@ -83,10 +101,11 @@ export default async function RootLayout({
   const headersList = await headers()
   const host = headersList.get('host') || ''
   const isGrainVault = GRAIN_VAULT_DOMAINS.some(d => host.includes(d))
+  const description = headDescription(host, headersList.get('x-gv-path') || '')
 
   // If Clerk is not configured, render without it
   if (!clerkPublishableKey) {
-    return <RootLayoutContent>{children}</RootLayoutContent>
+    return <RootLayoutContent description={description}>{children}</RootLayoutContent>
   }
 
   // Configure ClerkProvider with unified auth flow
@@ -100,7 +119,7 @@ export default async function RootLayout({
       afterSignUpUrl={isGrainVault ? '/dashboard?journey=treasury' : '/dashboard'}
       appearance={grainVaultClerkAppearance}
     >
-      <RootLayoutContent>{children}</RootLayoutContent>
+      <RootLayoutContent description={description}>{children}</RootLayoutContent>
     </ClerkProvider>
   )
 }

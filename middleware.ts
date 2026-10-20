@@ -93,6 +93,12 @@ function clerkKeysPresent(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY)
 }
 
+function continueWithPath(request: NextRequest): NextResponse {
+  const headers = new Headers(request.headers)
+  headers.set('x-gv-path', request.nextUrl.pathname)
+  return NextResponse.next({ request: { headers } })
+}
+
 async function routeRequest(
   request: NextRequest,
   protect?: () => Promise<unknown>,
@@ -115,7 +121,7 @@ async function routeRequest(
   ]
 
   if (bypassClerkRoutes.some(route => pathname.startsWith(route))) {
-    return NextResponse.next()
+    return continueWithPath(request)
   }
 
   // ========================================
@@ -138,7 +144,7 @@ async function routeRequest(
     // Also rewrite /api/health for grainandvault.com
     if (pathname === '/api/health') {
       // Health endpoint works fine, just allow it
-      return NextResponse.next()
+      return continueWithPath(request)
     }
   }
 
@@ -197,7 +203,7 @@ async function routeRequest(
 
   // Skip auth check for public routes
   if (isPublicRoute(request) || isPublicApiRoute(request)) {
-    return NextResponse.next()
+    return continueWithPath(request)
   }
 
   // Protect authenticated routes. Without Clerk keys, refuse them
@@ -215,7 +221,7 @@ async function routeRequest(
   }
 
   // Add cache control headers
-  const response = NextResponse.next()
+  const response = continueWithPath(request)
   response.headers.set('Cache-Control', 'no-store, max-age=0')
 
   return response
