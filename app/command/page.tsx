@@ -350,7 +350,7 @@ export default function CommandCenter() {
           {/* Bottom tagline */}
           <div className="text-center mt-16">
             <p className="text-gray-500 text-sm">
-              "Your Ghost companion for the post-AI economy"
+              "Your companion for the post-AI economy"
             </p>
           </div>
         </div>

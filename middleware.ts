@@ -9,7 +9,7 @@
  */
 
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse, NextRequest } from 'next/server'
+import { NextResponse, NextRequest, type NextFetchEvent } from 'next/server'
 
 // ============================================================================
 // DOMAIN ROUTING
@@ -55,6 +55,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/signup(.*)',
+  '/agent',
+  '/grain/(.*)',
 ])
 
 // API routes that should be public (no auth required)
@@ -87,7 +89,14 @@ const isProtectedRoute = createRouteMatcher([
 // MAIN MIDDLEWARE
 // ============================================================================
 
-export default clerkMiddleware(async (auth, request: NextRequest) => {
+function clerkKeysPresent(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY)
+}
+
+async function routeRequest(
+  request: NextRequest,
+  protect?: () => Promise<unknown>,
+): Promise<NextResponse> {
   const host = request.headers.get('host') || ''
   const pathname = request.nextUrl.pathname
 
@@ -191,9 +200,18 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
     return NextResponse.next()
   }
 
-  // Protect authenticated routes
+  // Protect authenticated routes. Without Clerk keys, refuse them
+  // instead of letting clerkMiddleware throw before any page renders.
   if (isProtectedRoute(request)) {
-    await auth.protect()
+    if (protect) {
+      await protect()
+    } else if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    } else {
+      const url = request.nextUrl.clone()
+      url.pathname = '/sign-in'
+      return NextResponse.redirect(url)
+    }
   }
 
   // Add cache control headers
@@ -201,6 +219,10 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   response.headers.set('Cache-Control', 'no-store, max-age=0')
 
   return response
+}
+
+const withClerk = clerkMiddleware(async (auth, request: NextRequest) => {
+  return routeRequest(request, () => auth.protect())
 }, (req) => {
   const host = req.headers.get('host') || ''
   const isGrainVault = GRAIN_VAULT_DOMAINS.some(domain => host.includes(domain))
@@ -224,6 +246,13 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
     afterSignUpUrl: '/dashboard',
   }
 })
+
+export default function middleware(request: NextRequest, event: NextFetchEvent) {
+  if (!clerkKeysPresent()) {
+    return routeRequest(request)
+  }
+  return withClerk(request, event)
+}
 
 // ============================================================================
 // CONFIG
