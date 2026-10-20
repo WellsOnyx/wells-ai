@@ -275,6 +275,44 @@ export const signInAppearance: Appearance = {
   ...grainVaultClerkAppearance,
 }
 
+/** Calm Grain & Vault sign-in. Used only on Grain & Vault hosts. */
+export const grainCalmSignInAppearance: Appearance = {
+  layout: {
+    socialButtonsPlacement: 'top',
+    socialButtonsVariant: 'blockButton',
+    termsPageUrl: '/terms',
+    privacyPageUrl: '/privacy',
+    logoPlacement: 'none',
+    shimmer: true,
+    animations: true,
+    unsafe_disableDevelopmentModeWarnings: true,
+  },
+  variables: {
+    colorPrimary: '#f2b45a',
+    colorBackground: '#141418',
+    colorInputBackground: 'rgba(255,255,255,0.04)',
+    colorInputText: '#f4efe6',
+    colorText: '#f4efe6',
+    colorTextSecondary: 'rgba(244, 239, 230, 0.56)',
+    colorDanger: '#ef4444',
+    colorSuccess: '#9fe3b5',
+    borderRadius: '18px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif',
+  },
+  elements: {
+    rootBox: 'w-full',
+    card: 'bg-[rgba(20,20,24,0.86)] border border-[rgba(244,239,230,0.09)] shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl rounded-[28px]',
+    headerTitle: 'text-[#f4efe6] font-light',
+    headerSubtitle: 'text-[rgba(244,239,230,0.56)]',
+    socialButtonsBlockButton: 'border border-[rgba(244,239,230,0.09)] bg-[rgba(255,255,255,0.035)] text-[#f4efe6]',
+    formButtonPrimary: 'bg-gradient-to-b from-[#ffd08f] to-[#f2b45a] text-[#1c1204] shadow-[0_10px_40px_rgba(242,180,90,0.3)]',
+    formFieldInput: 'bg-[rgba(255,255,255,0.04)] border-[rgba(244,239,230,0.09)] text-[#f4efe6]',
+    footerActionLink: 'text-[#ffcf8a]',
+    footer: 'bg-transparent',
+    identityPreviewEditButton: 'text-[#ffcf8a]',
+  },
+}
+
 /**
  * Clerk appearance for sign-up only
  */

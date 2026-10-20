@@ -55,6 +55,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/signup(.*)',
+  '/agent',
+  '/grain/(.*)',
 ])
 
 // API routes that should be public (no auth required)
