@@ -15,14 +15,14 @@ const SCENES = [
     n: '02',
     kicker: 'One sentence',
     title: 'She tells her agent.',
-    body: 'Her agent is Pip, and Pip works for her. She tells Pip what she needs in one sentence.',
+    body: 'She tells her agent what she needs in one sentence.',
     clip: 'tell',
   },
   {
     n: '03',
     kicker: 'Two agents',
-    title: 'Pip finds a mill.',
-    body: 'The mill is run by Tomas. His agent is Juno. Pip and Juno agree a price. The most Lena will pay, and the least Tomas will accept, stay private.',
+    title: 'Her agent finds a mill.',
+    body: "The mill is run by Tomas. Her agent talks with the mill's agent, and they agree a price. The most Lena will pay, and the least Tomas will accept, stay private.",
     clip: 'talk',
   },
   {
@@ -147,7 +147,7 @@ function TellClip() {
   return (
     <div className="gs-chat">
       <div className="gs-orb gs-orb-sm" />
-      <p className="gs-who">Lena, to Pip</p>
+      <p className="gs-who">Lena, to her agent</p>
       <p className="gs-bubble">Find 200 bags of bread flour.</p>
     </div>
   )
@@ -158,15 +158,15 @@ function TalkClip() {
     <div className="gs-pair">
       <div className="gs-card gs-mini">
         <div className="gs-orb" />
-        <b>Pip</b>
-        <small>Lena's agent</small>
+        <b>Lena's agent</b>
+        <small>For Lena</small>
         <p className="gs-lock">Lena's limit stays private</p>
       </div>
       <div className="gs-agreed">$38</div>
       <div className="gs-card gs-mini">
         <div className="gs-orb gs-blue" />
-        <b>Juno</b>
-        <small>The mill's agent</small>
+        <b>The mill's agent</b>
+        <small>For Tomas</small>
         <p className="gs-lock">Tomas's limit stays private</p>
       </div>
     </div>

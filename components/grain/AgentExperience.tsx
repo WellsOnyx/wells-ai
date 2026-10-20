@@ -50,8 +50,12 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, reduced ? Math.min(ms, 120) : ms))
 }
 
-function agentName(world: World, id: ViewId): string {
-  return world.users.find((person) => person.userId === id)?.agent.name || 'Your agent'
+function agentTitle(id: ViewId): string {
+  return id === 'lena' ? "Lena's agent" : "The mill's agent"
+}
+
+function agentPhrase(id: ViewId): string {
+  return id === 'lena' ? "Lena's agent" : "the mill's agent"
 }
 
 export default function AgentExperience() {
@@ -91,7 +95,8 @@ export default function AgentExperience() {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
-  const name = agentName(world, view)
+  const name = agentTitle(view)
+  const phrase = agentPhrase(view)
   const other = PEOPLE[view].other
   const mine = session?.confirms[view]
   const theirs = session?.confirms[other]
@@ -284,14 +289,14 @@ export default function AgentExperience() {
             <span />
           </button>
           <nav className={`gc-pop${menuOpen ? ' gc-open' : ''}`} aria-label="Menu">
-            <button onClick={openChat}>Talk to {name}</button>
+            <button onClick={openChat}>Talk to {phrase}</button>
             <button
               onClick={() => {
                 setMenuOpen(false)
                 setSheet('memory')
               }}
             >
-              What {name} remembers
+              What {phrase} remembers
             </button>
             <button
               onClick={() => {
@@ -310,7 +315,7 @@ export default function AgentExperience() {
 
       <main className="gc-main" aria-live="polite">
         <div className={orbClass}>
-          <button className="gc-orb gc-orb-btn" aria-label={`Talk to ${name}`} onClick={openChat} />
+          <button className="gc-orb gc-orb-btn" aria-label={`Talk to ${phrase}`} onClick={openChat} />
           <div className="gc-check" aria-hidden="true">
             <svg viewBox="0 0 54 54">
               <path d="M15 28l8 8 16-18" />
@@ -366,7 +371,7 @@ export default function AgentExperience() {
         className={`gc-sheet${sheet === 'chat' ? ' gc-open' : ''}`}
         role="dialog"
         aria-modal="true"
-        aria-label={`Chat with ${name}`}
+        aria-label={`Chat with ${phrase}`}
       >
         <div className="gc-grab" />
         <div className="gc-sh">
@@ -400,11 +405,11 @@ export default function AgentExperience() {
         className={`gc-sheet${sheet === 'memory' ? ' gc-open' : ''}`}
         role="dialog"
         aria-modal="true"
-        aria-label={`What ${name} remembers`}
+        aria-label={`What ${phrase} remembers`}
       >
         <div className="gc-grab" />
         <div className="gc-sh">
-          <h2>What {name} remembers</h2>
+          <h2>What {phrase} remembers</h2>
           <button className="gc-x" aria-label="Close" onClick={() => setSheet(null)}>
             ✕
           </button>

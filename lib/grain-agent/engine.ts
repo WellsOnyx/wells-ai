@@ -181,7 +181,7 @@ export function seedWorld(): World {
     userId: 'lena',
     name: 'Lena Ortiz',
     business: "Lena's Bakery",
-    agent: { agentId: 'agent-pip', name: 'Pip', personality: 'warm, curious, a bit witty' },
+    agent: { agentId: 'agent-lena', name: "Lena's agent", personality: 'warm, curious, a bit witty' },
     memory: [
       memory('profile', 'Bakery owner, buys bread flour, US-Southeast', 'shareable'),
       memory('preferences', 'Prefers weekday-morning delivery', 'private'),
@@ -194,7 +194,7 @@ export function seedWorld(): World {
     userId: 'tomas',
     name: 'Tomas Reed',
     business: 'Tomas Mill',
-    agent: { agentId: 'agent-juno', name: 'Juno', personality: 'direct, dry humor' },
+    agent: { agentId: 'agent-mill', name: "The mill's agent", personality: 'direct, dry humor' },
     memory: [
       memory('profile', 'Miller, sells bread flour, US-Southeast', 'shareable'),
       memory('preferences', 'Prefers orders of 100+ bags', 'private'),
@@ -486,7 +486,7 @@ export function replyTo(world: World, userId: string, message: string): { reply:
   if (lower.includes('buy') || lower.includes('sell') || lower.includes('flour')) {
     return {
       world,
-      reply: `I'm ${person.agent.name}, your agent. I only match on what you approve, and nothing settles until both of you say yes.`,
+      reply: `I'm your agent. I only match on what you approve, and nothing settles until both of you say yes.`,
     }
   }
   if (lower.includes('know') || lower.includes('memory') || lower.includes('remember')) {
@@ -497,7 +497,7 @@ export function replyTo(world: World, userId: string, message: string): { reply:
   }
   return {
     world,
-    reply: `I'm ${person.agent.name}. Tell me what you need, or say “remember …” if something should stay private.`,
+    reply: `I'm your agent. Tell me what you need, or say “remember …” if something should stay private.`,
   }
 }
 
